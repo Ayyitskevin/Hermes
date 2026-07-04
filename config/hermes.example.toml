@@ -24,12 +24,12 @@ stale_after_minutes = 30
 provider = "alpaca"
 
 [regime]
-# "reference-v1" — the classifier that ships with Hermes: a composite of
-#     named, published methods (see docs/METHODOLOGY.md). A placeholder, honestly
-#     labeled, until the owner's own classifier is ported.
-# "v62" — Regime Label v6.2, the owner's classifier. Not yet ported;
-#     see docs/REGIME_V62_PORT.md for the port contract.
-classifier = "reference-v1"
+# "v62" — Regime Label v6.2, the owner's classifier, ported from its
+#     TradingView source (Daily preset; see docs/REGIME_V62_PORT.md for
+#     fidelity notes). The default.
+# "reference-v1" — a transparent composite of named, published methods
+#     (see docs/METHODOLOGY.md); useful as a second opinion.
+classifier = "v62"
 # Lookback (trading days) for the volatility percentile component.
 vol_percentile_lookback = 252
 

@@ -1,71 +1,57 @@
-# Porting Regime Label v6.2
+# Regime Label v6.2 — port status and fidelity notes
 
-Regime Label v6.2 is the owner's classifier — the one genuinely
-differentiated Market Regime asset in this project. Its specification lives
-outside this repository, so Hermes ships with `reference-v1` (five named
-published methods, honestly labeled a placeholder) and this contract for the
-real thing. **Hermes does not guess at v6.2**: `regime/v62.py` raises a loud
-`NotImplementedError` until the port is real.
+**Status: PORTED (2026-07).** `src/hermes/regime/v62.py` implements the core
+model of "Regime Label v6.2 Professional" from its TradingView Pine source,
+and `regime.classifier = "v62"` is the default. The original contract this
+document used to describe has been fulfilled; what remains here is the
+fidelity record — what was ported exactly, what deviates, and why.
 
-## The contract
+## Ported exactly (Daily preset)
 
-Implement `RegimeV62Classifier` in `src/hermes/regime/v62.py`:
+- `window_log_ret = ln(close/close[20])`, `regime_z = window_log_ret /
+  (population stdev of 1-bar log returns over 20 bars × √20)`
+- Volatility-percentile adaptive thresholds:
+  `factor = max(0.50, 1 + ((percentile − 50)/100) × 0.25)`,
+  `enter_z = max(0.10, 0.85 × factor)`,
+  `exit_z = max(0.05, min(0.55 × factor, enter_z − 0.05))`
+- EMA(100) direction filter (bull above / bear below, default on)
+- Enter/exit hysteresis over the previous **confirmed** state
+- Gap-shock guard: `|open − prior close| > 4 × ATR(14)` cannot *create* a
+  flip (neutralize-new-flips mode, the upstream default)
+- 2-bar confirmation; the state machine is **replayed over the full supplied
+  history** each run, so today's label is exactly what the machine arrives at
+- Strength `= min(100, |z| / (1.5 × enter_z) × 100)`, regime age, extension
+  risk (strength ≥ 85 and age > 20), chop risk from ADX(14,14) ≥ 20 and
+  efficiency ratio(20) ≥ 0.25
+- The honesty statement, verbatim in every reading: *a heuristic derived
+  from historical label-correlation, not a backtested edge*
 
-```python
-class RegimeV62Classifier:
-    version = "v62"
+## Declared deviations
 
-    def __init__(self, config: HermesConfig): ...
+| Deviation | Reason |
+|---|---|
+| Daily preset only (20 / 0.85 / 0.55 / 2) | Hermes V1 runs daily bars; 4H/Weekly presets ride with the multi-timeframe roadmap item |
+| Fixed-% mode, HTF vote, wider-neutral band, probabilistic strength omitted | All are upstream defaults-off; the HTF vote is also the upstream-flagged duplication hazard |
+| Regime-side quality gate Off (upstream default); ADX/ER still computed and shown as chop-risk evidence | Matches upstream defaults; the gate belongs to the playbook layer |
+| Recursive indicators (EMA/RMA/ATR/ADX) seeded per Wilder convention | Warmup deltas vs Pine decay geometrically; negligible at ≥500 bars of history |
+| `score`/`confidence` fields are Hermes presentation mappings (signed scaled z; strength/100 or band-centeredness) | Hermes' reading contract needs both; the v6.2 label/strength math is untouched and documented in the module |
+| Label mapping: Bull→`bull_trend`, Bear→`bear_trend`, Neutral→`chop`; the `stress` lane is unused by v62 | v6.2 has three states; the strip renders three lanes' worth of trace |
 
-    def classify(
-        self,
-        benchmark_bars: list[Bar],            # oldest-first daily bars
-        watchlist_bars: dict[str, list[Bar]], # per-symbol, oldest-first
-    ) -> RegimeReading: ...
-```
+## Verifying parity against the chart
 
-Requirements, in order of importance:
+Run the standalone v6.2 indicator on the same symbol/timeframe as Hermes'
+benchmark and compare the confirmed label bar by bar (the Hermes reading
+records `data_asof`). Small divergences immediately after data gaps or in
+the first ~500 bars of history are warmup artifacts; persistent divergence
+is a bug — file it with both readings attached.
 
-1. **Port the output faithfully.** Map v6.2's native labels onto
-   `RegimeLabel` — or extend the enum if v6.2's vocabulary doesn't collapse
-   into four states. NOTE: the frontend strip hardcodes its four lanes
-   (`LANES` in `web/js/charts.js`) and renders unknown labels on the RANGE
-   lane — extending the enum means extending `LANES` by hand in the same
-   change.
-2. **Carry v6.2's honesty statement verbatim** into `RegimeReading.honesty`:
-   it is *a heuristic derived from historical label-correlation, not a
-   backtested edge*. The calibration row renders this string on the
-   instrument's face. Do not soften it.
-3. **One `Evidence` entry per v6.2 component**, each with:
-   - `claim` — what the component asserts, in one plain sentence
-   - `methodology` — v6.2's own rule, named as the owner's validated rule
-     (this is the "or my own validated rules" branch of the traceability
-     requirement)
-   - `caveat` — what it does not prove; never empty
-   - `status: "missing"` with `signal=None` when an input is unavailable —
-     never interpolate
-4. **Set `classifier_version = "v62"`** so every stored reading and every
-   journal entry's frozen signal state records which brain produced it.
-5. If v6.2 has per-label historical stats (hit rates, sample sizes), put
-   them in each `Evidence.caveat` or `claim` so the teach-in worksheets can
-   show them — the interface teaches; v6.2 should teach its own numbers.
-
-## Switching it on
+## Swapping classifiers
 
 ```toml
-# config/hermes.toml
 [regime]
-classifier = "v62"
+classifier = "v62"          # default — the owner's brain
+# classifier = "reference-v1"  # published-methods composite, second opinion
 ```
 
-Nothing else changes: storage, strip, tape, posture, journal freezing, and
-the teach-in all run off the `RegimeReading` shape.
-
-## Suggested port tests
-
-- Golden-file test: known input bars → expected v6.2 label sequence
-  (port the owner's reference outputs, if any exist, as fixtures).
-- Missing-data test: truncated history yields `missing` evidence and reduced
-  confidence, not an exception and not a guess.
-- Round-trip test: store + reload a reading; evidence survives JSON intact
-  (see `tests/test_regime.py::test_reading_roundtrip` for the pattern).
+Both classifiers implement the same contract; the strip, tape, posture,
+journal signal-freeze, and teach-in all work identically with either.

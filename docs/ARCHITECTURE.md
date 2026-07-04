@@ -24,7 +24,7 @@ trading base URL, or order-shaped API ever appears.
 | Data source | **Alpaca** default (free real-time IEX feed; paper account is enough, no funding). **Databento** documented fallback. **Sample** provider for zero-key runs |
 | Where it runs | Always-on machine, as a real systemd service (`deploy/hermes.service`) |
 | AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud is a **reserved V2 slot** — the `ai.allow_cloud`/`ai.cloud_model` knobs and `ANTHROPIC_API_KEY` exist but are read by no V1 code |
-| Regime classifier | Pluggable. Ships with `reference-v1` (named published methods, honestly labeled a placeholder). **Regime Label v6.2 port slot** documented in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
+| Regime classifier | Pluggable. **Regime Label v6.2** (the owner's classifier, ported from its TradingView source) is the default; `reference-v1` (named published methods) remains as a second opinion. Fidelity notes in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
 | Open source | MIT. No personal paths/IPs/secrets; credentials via `.env` only (`.env.example` documented); README covers setup from zero |
 | Position sizing | Everything is % of account equity. No *account* dollar figures — balances, dollar position sizes, dollar P&L — are asked for, stored, or displayed; only per-share market prices appear, and sizing is derived from them as % of equity. Drawdown is tracked on a normalized 100-based equity index |
 
@@ -97,7 +97,7 @@ src/hermes/
 │   ├── models.py    RegimeReading + Evidence (claim/methodology/caveat)
 │   ├── indicators.py pure-function math (tested; returns None when data short)
 │   ├── reference.py reference-v1 classifier (five named methods)
-│   ├── v62.py       Regime Label v6.2 port slot (loud NotImplementedError)
+│   ├── v62.py       Regime Label v6.2 (owner's classifier, ported; DEFAULT)
 │   └── engine.py    registry + persistence
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
 ├── journal/service.py  propose/commit/close/resolve; equity index
