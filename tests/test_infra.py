@@ -11,6 +11,24 @@ from hermes.data.store import staleness
 from hermes.jobs.scheduler import _expected_last_fire
 
 
+def test_last_runs_breaks_same_second_ties_by_id(fresh_db):
+    """Two runs starting within the same second: the later row (higher id)
+    must win, or /api/health reports a stale outcome as the latest run."""
+    from hermes.jobs.runner import last_runs
+
+    conn = db.connect()
+    ts = "2026-07-04T23:27:06Z"
+    for outcome in ("fail", "ok"):
+        conn.execute(
+            "INSERT INTO job_runs (job, started_at, finished_at, outcome, detail, trigger)"
+            " VALUES ('daily_check', ?, ?, ?, ?, 'manual')",
+            (ts, ts, outcome, f"seeded {outcome}"),
+        )
+    conn.commit()
+    runs = last_runs("daily_check", limit=2)
+    assert [r["outcome"] for r in runs] == ["ok", "fail"]
+
+
 def test_migrations_idempotent(fresh_db):
     conn = db.connect()
     applied_again = db.apply_migrations(conn)

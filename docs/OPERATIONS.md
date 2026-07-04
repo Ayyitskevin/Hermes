@@ -66,6 +66,11 @@ the schedule: an expected fire with no row within 30 minutes shows **MISSED**
 on the dashboard and in `/api/health`. An empty error log is not success —
 if the process was down at 08:00, you'll see MISSED, not silence.
 
+**Day zero:** a fresh install deployed *after* a job's scheduled time shows
+MISSED for that job until its first real fire — correct (the fire genuinely
+didn't happen), and it clears the next scheduled run. To clear it
+immediately, trigger the job manually; a manual run is evidence too.
+
 ## Manual overrides
 
 - UI: "run now" next to every job in the Station Log.
@@ -87,6 +92,12 @@ if the process was down at 08:00, you'll see MISSED, not silence.
 
 - State is one SQLite file: `data/hermes.db` (WAL mode — copy with
   `sqlite3 data/hermes.db ".backup backup.db"` while running, or stop first).
+  No `sqlite3` CLI on the box? The stdlib works the same and is safe while
+  running:
+
+  ```bash
+  python3 -c "import sqlite3; s=sqlite3.connect('data/hermes.db'); d=sqlite3.connect('backup.db'); s.backup(d); d.close()"
+  ```
 - Upgrade: `git pull && .venv/bin/pip install -e . && sudo systemctl restart hermes`.
   Migrations apply automatically at startup and are recorded in
   `schema_migrations`.
