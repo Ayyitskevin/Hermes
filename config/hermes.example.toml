@@ -7,17 +7,20 @@
 # breadth context, and journal alpha resolution.
 benchmark = "SPY"
 watchlist = ["SPY", "QQQ", "IWM", "XLK", "XLE", "XLF", "XLV", "XLI", "XLP", "XLU"]
-# Bar timeframes used by the daily workflow. Hermes trades on daily/4H/weekly
-# structure; it deliberately does not consume tick data.
+# RESERVED: V1 workflows hardcode 1Day bars; this knob is currently read by
+# nothing (the V2+ roadmap covers 4H/weekly). Hermes deliberately does not
+# consume tick data at any point.
 timeframes = ["1Day"]
 # Data older than this many minutes during market hours is shown as STALE,
 # never silently served as if live.
 stale_after_minutes = 30
 
 [data]
-# "alpaca"  — default; free real-time-enough IEX feed, requires keys in .env
+# "alpaca"  — recommended for real data (this example selects it); free
+#             real-time-enough IEX feed, requires keys in .env
 # "databento" — fallback; requires DATABENTO_API_KEY in .env
-# "sample" — bundled offline sample data; runs with zero keys (demo / tests)
+# "sample" — bundled offline sample data; runs with zero keys (demo / tests).
+#            NOTE: sample is the BUILT-IN default when no config file exists.
 provider = "alpaca"
 
 [regime]
@@ -48,8 +51,9 @@ stale_open_after_days = 45
 # Local-first: routine narrative work goes to your own Ollama.
 ollama_url = "http://127.0.0.1:11434"
 ollama_model = "llama3.1"
-# Cloud calls are the deliberate exception, never the default. Set to true only
-# for tasks you opt into; requires ANTHROPIC_API_KEY in .env.
+# RESERVED V2 SLOT: no cloud code path ships in V1 — these two knobs are read
+# by nothing yet. When the cloud path lands it will be the deliberate
+# exception, never the default, and will require ANTHROPIC_API_KEY in .env.
 allow_cloud = false
 cloud_model = "claude-sonnet-5"
 
@@ -58,7 +62,7 @@ cloud_model = "claude-sonnet-5"
 timezone = "America/New_York"
 premarket_check = "0 8"      # daily market check: fetch, classify regime, risk sweep, report
 eod_sync = "30 16"           # end-of-day bar sync after the close
-journal_resolve = "0 17"     # resolve closable journal entries against reality
+journal_resolve = "0 17"     # count open/stale entries awaiting human resolution
 
 [server]
 host = "127.0.0.1"

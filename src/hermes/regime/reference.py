@@ -9,8 +9,8 @@ It classifies the market into four regimes from five components:
 
 1. Price vs 200-day SMA         — Faber (2007), "A Quantitative Approach to
                                   Tactical Asset Allocation" (10-month ≈ 200-day)
-2. 50-day SMA slope             — dual moving-average trend structure; tested
-                                  in Brock, Lakonishok & LeBaron (1992)
+2. 50-day SMA slope             — moving-average trend structure; the family
+                                  tested in Brock, Lakonishok & LeBaron (1992)
 3. Watchlist breadth            — "% above 50-day MA" breadth gauge (standard
                                   market-internals family)
 4. Realized-volatility regime   — volatility clustering (Engle 1982 ARCH line

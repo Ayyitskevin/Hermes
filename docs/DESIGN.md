@@ -102,8 +102,8 @@ trace** that jumps lanes on regime flips — identity by *position*, like a
 logic-analyzer channel, readable under every kind of color vision with no
 color at all. Behind the trace runs the **confidence ribbon** in 18%-opacity
 Course Magenta, its half-height tracking the classifier's confidence bar by
-bar: a fat ribbon is a confident reading; a ribbon pinched to nothing is the
-classifier saying *don't lean on me* — uncertainty drawn continuously,
+bar: a fat ribbon is a confident reading; a ribbon pinched to a hairline is
+the classifier saying *don't lean on me* — uncertainty drawn continuously,
 honestly. At the right terminus, the **reading head**: current regime in
 mono caps, confidence, readings-since-flip — a real button that opens the
 teach-in panel. Below, the **calibration row** prints the instrument's own

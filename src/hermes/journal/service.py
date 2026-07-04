@@ -76,7 +76,17 @@ def propose_entry(
 
 def commit_entry(config: HermesConfig, proposal: dict) -> int:
     """Stage 2: write the journal row. The reviewer verdict travels with the
-    entry forever — including a verdict the human chose to override."""
+    entry forever — including a verdict the human chose to override.
+
+    Callers must pass a server-built proposal (the API re-runs propose_entry
+    at commit time rather than trusting a client dict); the checks below are
+    defense in depth, not the primary gate."""
+    if not str(proposal.get("thesis", "")).strip():
+        raise JournalError("Proposal has no thesis")
+    if not (proposal.get("entry_price") or 0) > 0 or not (proposal.get("stop_price") or 0) > 0:
+        raise JournalError("Proposal has invalid prices")
+    if "sizing" not in proposal or "review" not in proposal:
+        raise JournalError("Proposal is missing sizing/review — run propose first")
     sizing = proposal["sizing"]
     conn = db.connect()
     cur = conn.execute(
@@ -98,21 +108,32 @@ def commit_entry(config: HermesConfig, proposal: dict) -> int:
     return int(cur.lastrowid)
 
 
+MAX_ANCHOR_STALENESS_DAYS = 5
+
+
 def _benchmark_return(config: HermesConfig, start_iso: str, end_iso: str) -> float | None:
     """Benchmark close-to-close return between two timestamps, from cached
-    bars. None (shown as missing) when history is absent — never guessed."""
+    bars. None (shown as missing) when history is absent OR when the anchor
+    bars are stale relative to the requested window — a return computed over
+    a silently-truncated window would quietly mean less than it claims."""
     conn = db.connect()
     row_start = conn.execute(
-        """SELECT close FROM bars WHERE symbol=? AND timeframe='1Day' AND ts<=?
+        """SELECT close, ts FROM bars WHERE symbol=? AND timeframe='1Day' AND ts<=?
            ORDER BY ts DESC LIMIT 1""",
         (config.market.benchmark, start_iso),
     ).fetchone()
     row_end = conn.execute(
-        """SELECT close FROM bars WHERE symbol=? AND timeframe='1Day' AND ts<=?
+        """SELECT close, ts FROM bars WHERE symbol=? AND timeframe='1Day' AND ts<=?
            ORDER BY ts DESC LIMIT 1""",
         (config.market.benchmark, end_iso),
     ).fetchone()
     if not row_start or not row_end or row_start["close"] == 0:
+        return None
+    from datetime import timedelta
+    max_gap = timedelta(days=MAX_ANCHOR_STALENESS_DAYS)
+    if parse_iso(start_iso) - parse_iso(row_start["ts"]) > max_gap:
+        return None
+    if parse_iso(end_iso) - parse_iso(row_end["ts"]) > max_gap:
         return None
     return (row_end["close"] / row_start["close"] - 1.0) * 100.0
 
@@ -149,16 +170,22 @@ def close_entry(
     bench = _benchmark_return(config, row["opened_at"], closed_at)
     alpha = realized - bench if bench is not None else None
 
-    conn.execute(
+    # Atomic close: the status guard in the UPDATE makes a concurrent double
+    # close impossible — the loser matches zero rows and the equity index is
+    # moved exactly once per entry.
+    cur = conn.execute(
         """UPDATE journal_entries SET
              status='closed', closed_at=?, exit_price=?, realized_return_pct=?,
              benchmark_return_pct=?, alpha_pct=?, thesis_played_out=?, resolution_note=?
-           WHERE id=?""",
+           WHERE id=? AND status='open'""",
         (closed_at, exit_price, round(realized, 3),
          round(bench, 3) if bench is not None else None,
          round(alpha, 3) if alpha is not None else None,
          thesis_played_out, resolution_note.strip(), entry_id),
     )
+    if cur.rowcount == 0:
+        conn.rollback()
+        raise JournalError(f"Entry #{entry_id} was already closed by another request")
 
     # Move the normalized equity index by the position-weighted realized return.
     size_frac = (row["size_pct_equity"] or 0.0) / 100.0

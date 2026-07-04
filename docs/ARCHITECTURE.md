@@ -23,10 +23,10 @@ trading base URL, or order-shaped API ever appears.
 | Trading style | Systematic regime-following swing trading — daily bars primary; 4H/weekly available (Alpaca supports `4Hour`/`1Week` timeframes) but V1 workflows run on `1Day` |
 | Data source | **Alpaca** default (free real-time IEX feed; paper account is enough, no funding). **Databento** documented fallback. **Sample** provider for zero-key runs |
 | Where it runs | Always-on machine, as a real systemd service (`deploy/hermes.service`) |
-| AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud (`ai.allow_cloud`) is opt-in per config, off by default |
+| AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud is a **reserved V2 slot** — the `ai.allow_cloud`/`ai.cloud_model` knobs and `ANTHROPIC_API_KEY` exist but are read by no V1 code |
 | Regime classifier | Pluggable. Ships with `reference-v1` (named published methods, honestly labeled a placeholder). **Regime Label v6.2 port slot** documented in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
 | Open source | MIT. No personal paths/IPs/secrets; credentials via `.env` only (`.env.example` documented); README covers setup from zero |
-| Position sizing | Everything is % of account equity. No dollar figures are asked for, stored, or displayed. Drawdown is tracked on a normalized 100-based equity index |
+| Position sizing | Everything is % of account equity. No *account* dollar figures — balances, dollar position sizes, dollar P&L — are asked for, stored, or displayed; only per-share market prices appear, and sizing is derived from them as % of equity. Drawdown is tracked on a normalized 100-based equity index |
 
 ## Reference architectures — verified, not assumed
 
@@ -145,13 +145,19 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
    risk critique, on Ollama (Pattern B's pipeline, decision-support only).
 5. **Databento full adapter** — live TCP client + failover drill.
 6. **Broker read-only position sync** — Alpaca paper positions into the risk
-   sweep (read scope only; the no-write boundary is unchanged).
+   sweep (read scope only; the no-write boundary is unchanged). NOTE: this
+   requires talking to Alpaca's paper-trading host, which the boundary guard
+   currently bans outright — the guard must evolve first (method-aware
+   allowlisting or a dedicated read-only module with its own surface lock)
+   before any trading-host URL may appear in source.
 7. **Monthly performance review** — regime-conditioned stats once samples
    are meaningful (Pattern A's monthly tier).
 8. **Options tools / pair-trade screener** (Pattern A satellites).
 9. **Crypto feeds** (Binance/Coinbase/Kraken public data) if crypto enters scope.
-10. **4H/weekly regime timeframes** — the classifier interface already takes
-    a timeframe; the daily workflow just doesn't ask yet.
+10. **4H/weekly regime timeframes** — the classifier consumes whatever-
+    timeframe bars it is handed (each `Bar` carries its timeframe); the daily
+    workflow just always hands it `1Day` bars today. The reserved
+    `market.timeframes` config knob is wired to nothing until this lands.
 
 ## Data-source reality (verified 2026-07-04)
 
@@ -160,10 +166,11 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
   IEX is ~2–3% of consolidated volume — fine for liquid ETFs/large caps on
   daily bars; thin names may have gaps (shown as gaps).
 - **Databento**: **no recurring free tier** — the "250k messages/month free"
-  claim in circulation is wrong; it's a **one-time $125 credit** (~6-month
-  expiry). Zero-license-fee equities datasets (DBEQ.BASIC, EQUS.MINI) make it
-  the right *paid* fallback; redistribution rights attach to an active
-  subscription. Hermes ships a thin daily-bars adapter and says exactly this.
+  claim in circulation is wrong; new accounts get a **one-time signup
+  credit** (~6-month expiry; current amount on databento.com). Zero-license-
+  fee equities datasets (DBEQ.BASIC, EQUS.MINI) make it the right *paid*
+  fallback; redistribution rights attach to an active subscription. Hermes
+  ships a thin daily-bars adapter and says exactly this.
 - **Polygon** (now Massive): free tier is end-of-day only, 5 req/min — not
   suitable for the daily premarket check. **IEX Cloud**: shut down 2024-08-31.
 - **Latency truth**: for daily/4H/weekly regime-following, seconds of latency

@@ -28,8 +28,10 @@ Requirements, in order of importance:
 
 1. **Port the output faithfully.** Map v6.2's native labels onto
    `RegimeLabel` — or extend the enum if v6.2's vocabulary doesn't collapse
-   into four states. The strip's lanes are generated from the enum, so new
-   labels appear as new lanes automatically.
+   into four states. NOTE: the frontend strip hardcodes its four lanes
+   (`LANES` in `web/js/charts.js`) and renders unknown labels on the RANGE
+   lane — extending the enum means extending `LANES` by hand in the same
+   change.
 2. **Carry v6.2's honesty statement verbatim** into `RegimeReading.honesty`:
    it is *a heuristic derived from historical label-correlation, not a
    backtested edge*. The calibration row renders this string on the

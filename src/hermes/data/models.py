@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class ProviderState(str, Enum):
+class ProviderState(StrEnum):
     """Provider health, surfaced verbatim on the dashboard. Degradation is
     always visible: rate-limited and stale states are first-class, never
     quietly mapped to 'fine'."""

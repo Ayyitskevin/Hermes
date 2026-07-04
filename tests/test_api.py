@@ -53,24 +53,29 @@ def test_daily_check_end_to_end(client):
 
 
 def test_unknown_job_404(client):
-    assert client.post("/api/jobs/place_orders/run").status_code == 404
+    assert client.post("/api/jobs/bake_bread/run").status_code == 404
 
 
 def test_journal_flow_over_http(client):
     client.post("/api/jobs/daily_check/run")
-    proposal = client.post("/api/journal/propose", json={
+    trade_params = {
         "symbol": "XLK", "side": "long", "entry_price": 100.0,
         "stop_price": 94.0, "thesis": "Tech leads while the regime holds bullish structure.",
         "sector": "tech", "setup_tag": "regime-pullback",
-    })
+    }
+    proposal = client.post("/api/journal/propose", json=trade_params)
     assert proposal.status_code == 200, proposal.text
     p = proposal.json()
     assert p["review"]["verdict"] in ("clear", "caution", "blocked")
     # signal state was frozen from the regime reading the daily check stored
     assert p["signal_state"]["label"] is not None
 
-    commit = client.post("/api/journal/commit", json={"proposal": p})
+    # Commit takes the RAW params and re-runs the proposal server-side —
+    # a client cannot forge sizing/review/signal state.
+    commit = client.post("/api/journal/commit", json=trade_params)
     assert commit.status_code == 200
+    assert commit.json()["review"]["verdict"] in ("clear", "caution", "blocked")
+    assert commit.json()["signal_state"]["label"] is not None
     entry_id = commit.json()["id"]
 
     listing = client.get("/api/journal").json()

@@ -113,16 +113,19 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         except (journal.JournalError, ValueError) as exc:
             raise HTTPException(422, str(exc)) from exc
 
-    class CommitBody(BaseModel):
-        proposal: dict
-
     @r.post("/journal/commit")
-    def commit(body: CommitBody) -> dict:
+    def commit(body: ProposeBody) -> dict:
+        """Commit takes the same raw parameters as propose and re-runs the
+        proposal SERVER-SIDE: the reviewer verdict and the frozen signal state
+        are rebuilt at commit time, so neither can be forged by the client nor
+        go stale between propose and commit."""
         try:
-            entry_id = journal.commit_entry(config, body.proposal)
-        except (KeyError, journal.JournalError) as exc:
-            raise HTTPException(422, f"Malformed proposal: {exc}") from exc
-        return {"id": entry_id}
+            proposal = journal.propose_entry(config, **body.model_dump())
+            entry_id = journal.commit_entry(config, proposal)
+        except (journal.JournalError, ValueError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"id": entry_id, "review": proposal["review"],
+                "signal_state": proposal["signal_state"]}
 
     @r.get("/journal")
     def list_journal(status: str | None = None) -> dict:
@@ -176,7 +179,14 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
     @r.get("/health")
     def health() -> dict:
         conn = db.connect()
-        db_ok = conn.execute("SELECT 1").fetchone()[0] == 1
+        # Positive evidence of WRITABILITY, not just reachability: acquiring
+        # a reserved write lock fails on a read-only database file.
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.rollback()
+            db_ok = True
+        except Exception:
+            db_ok = False
         bar_count = conn.execute("SELECT COUNT(*) FROM bars").fetchone()[0]
         return {
             "time": iso(utcnow()),

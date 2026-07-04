@@ -4,7 +4,7 @@
 import { api, chip, esc, fmtNum, fmtPct, fmtTime, initThemeToggle } from "./util.js";
 
 const $ = (sel) => document.querySelector(sel);
-let proposal = null;
+let proposedParams = null; // raw params; commit re-runs the proposal server-side
 
 async function refresh() {
   const j = await api("/api/journal");
@@ -29,10 +29,11 @@ $("#propose-form").addEventListener("submit", async (ev) => {
   };
   $("#verdict").innerHTML = `<p class="micro">running sizing + reviewer second-pass…</p>`;
   try {
-    proposal = await api("/api/journal/propose", { method: "POST", body: JSON.stringify(body) });
+    const proposal = await api("/api/journal/propose", { method: "POST", body: JSON.stringify(body) });
+    proposedParams = body;
     renderVerdict(proposal);
   } catch (err) {
-    proposal = null;
+    proposedParams = null;
     $("#verdict").innerHTML = `<div class="verdict v-blocked">${chip("fail")} ${esc(err.message)}</div>`;
   }
 });
@@ -69,12 +70,16 @@ function renderVerdict(p) {
       </button>
     </div>`;
   $("#commit-btn").addEventListener("click", async () => {
+    // Commit sends the raw params; the server re-runs sizing + reviewer +
+    // signal freeze at commit time so nothing client-held can be stale/forged.
     const res = await api("/api/journal/commit",
-      { method: "POST", body: JSON.stringify({ proposal }) });
+      { method: "POST", body: JSON.stringify(proposedParams) });
+    const rv = res.review?.verdict;
     $("#verdict").innerHTML =
-      `<div class="verdict v-clear">${chip("ok")} committed as entry #${res.id}</div>`;
+      `<div class="verdict v-clear">${chip("ok")} committed as entry #${res.id}` +
+      `${rv && rv !== "clear" ? ` — reviewer verdict at commit: ${esc(rv)} (recorded)` : ""}</div>`;
     $("#propose-form").reset();
-    proposal = null;
+    proposedParams = null;
     refresh();
   });
 }
@@ -90,23 +95,23 @@ function renderOpen(entries, staleIds) {
       <td class="num">${fmtNum(e.stop_price)}</td>
       <td class="num">${fmtNum(e.size_pct_equity, 1)}%</td>
       <td class="num">${fmtNum(e.planned_risk_pct)}%</td>
-      <td>${esc(e.thesis).slice(0, 140)}${e.thesis.length > 140 ? "…" : ""}
+      <td>${esc(e.thesis.slice(0, 140))}${e.thesis.length > 140 ? "…" : ""}
         <span class="micro">signal at entry: ${esc(e.signal_state?.label ?? "—")} ·
           reviewer: ${esc(e.review?.verdict ?? "—")}</span></td>
       <td>
         <details>
           <summary>close</summary>
           <form class="close-form" data-id="${e.id}">
-            <div class="field"><label>exit price</label>
-              <input name="exit_price" type="number" step="0.01" min="0.01" required></div>
-            <div class="field"><label>thesis played out?</label>
+            <div class="field"><label>exit price
+              <input name="exit_price" type="number" step="0.01" min="0.01" required></label></div>
+            <div class="field"><label>thesis played out?
               <select name="thesis_played_out" required>
                 <option value="yes">yes</option>
                 <option value="partial">partial</option>
                 <option value="no">no</option>
-              </select></div>
-            <div class="field"><label>what actually happened vs the thesis</label>
-              <textarea name="resolution_note" required minlength="5"></textarea></div>
+              </select></label></div>
+            <div class="field"><label>what actually happened vs the thesis
+              <textarea name="resolution_note" required minlength="5"></textarea></label></div>
             <button class="btn-primary">close &amp; resolve</button>
           </form>
         </details>

@@ -47,11 +47,13 @@ function renderRail() {
     const pct = gaugePct(c);
     if (pct === null) continue;
     const shortVal = (c.observed.match(/-?\d+(\.\d+)?%/) || [c.observed])[0];
+    // Never color-alone: warn/breach levels also carry their icon glyph.
+    const levelMark = c.level === "breach" ? " ■" : c.level === "warn" ? " ▲" : "";
     gauges.push(`
       <div class="gauge ${c.level === "breach" ? "breach" : c.level === "warn" ? "warn" : ""}">
-        <div class="gauge-label"><span>${esc(c.kind.replace(/_/g, " "))}</span>
+        <div class="gauge-label"><span>${esc(c.kind.replace(/_/g, " "))}${levelMark}</span>
           <span class="val">${esc(shortVal)} / ${esc((c.limit.match(/-?\d+(\.\d+)?%/) || [c.limit])[0])}</span></div>
-        <div class="gauge-track" role="img" aria-label="${esc(c.kind)}: ${esc(c.observed)}, limit ${esc(c.limit)}">
+        <div class="gauge-track" role="img" aria-label="${esc(c.kind)} (${esc(c.level)}): ${esc(c.observed)}, limit ${esc(c.limit)}">
           <div class="gauge-fill" style="width:${Math.min(pct, 100)}%"></div>
           <div class="gauge-limit" style="left:${Math.min(pct >= 100 ? 92 : 84, 92)}%"></div>
         </div>
@@ -70,7 +72,7 @@ function renderRail() {
   if (events.length) {
     ackBox.innerHTML = events.map((e) =>
       `<div class="micro">${chip(e.severity)} ${esc(e.kind)}: ${esc(e.message)}
-       <button class="rail-ack" data-ack="${e.id}">acknowledge</button></div>`).join("");
+       <button class="rail-ack" data-ack="${esc(e.id)}">acknowledge</button></div>`).join("");
     ackBox.querySelectorAll("[data-ack]").forEach((b) =>
       b.addEventListener("click", async () => {
         await api(`/api/risk/events/${b.dataset.ack}/ack`, { method: "POST" });
@@ -121,7 +123,7 @@ function renderRegime() {
         <span class="ws-value">${esc(e.value)}</span></summary>
       <div class="ws-body">
         <dl class="ws-row"><dt>Claim</dt><dd>${esc(e.claim)}</dd></dl>
-        <dl class="ws-row"><dt>Measured</dt><dd class="mono">${esc(e.value)}${e.signal !== null ? ` (vote ${e.signal > 0 ? "+" : ""}${e.signal})` : ""}</dd></dl>
+        <dl class="ws-row"><dt>Measured</dt><dd class="mono">${esc(e.value)}${e.signal != null ? ` (vote ${e.signal > 0 ? "+" : ""}${esc(e.signal)})` : ""}</dd></dl>
         <dl class="ws-row"><dt>Method</dt><dd>${esc(e.methodology)}</dd></dl>
         <dl class="ws-row caveat"><dt>Not proven</dt><dd>${esc(e.caveat)}</dd></dl>
       </div>
@@ -144,6 +146,8 @@ $("#reading-head").addEventListener("click", () => {
   const open = panel.hasAttribute("hidden");
   panel.toggleAttribute("hidden", !open);
   $("#reading-head").setAttribute("aria-expanded", String(open));
+  const hint = $("#reading-head .rh-hint");
+  if (hint) hint.textContent = open ? "▾ what is this claiming?" : "▸ what is this claiming?";
   if (open) panel.querySelector("details")?.setAttribute("open", "");
 });
 
@@ -200,7 +204,7 @@ function renderOps() {
   $("#ops").innerHTML = (data.jobs || []).map((j) => {
     const last = j.last_run;
     const lastLine = last
-      ? `${fmtTime(last.started_at)} · ${last.trigger} · ${last.outcome ?? "running"} · ${esc(last.detail ?? "")}`
+      ? `${fmtTime(last.started_at)} · ${esc(last.trigger)} · ${esc(last.outcome ?? "running")} · ${esc(last.detail ?? "")}`
       : "never ran";
     return `
       <div class="oprow">
@@ -232,4 +236,26 @@ initThemeToggle($("#theme-toggle"));
 $("#refresh-btn").addEventListener("click", refresh);
 refresh();
 setInterval(() => { if (!document.hidden) refresh(); }, 5 * 60 * 1000);
-window.addEventListener("resize", () => { if (data) { renderRegime(); renderChart(); } });
+
+// Debounced, width-gated resize: mobile URL-bar show/hide fires resize on
+// scroll, and a naive re-render would snap open teach-in worksheets shut.
+let lastWidth = window.innerWidth;
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  if (window.innerWidth === lastWidth || !data) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    lastWidth = window.innerWidth;
+    const openIdx = [...document.querySelectorAll("#teachin details")]
+      .map((d, i) => (d.open ? i : -1)).filter((i) => i >= 0);
+    const teachOpen = !$("#teachin").hasAttribute("hidden");
+    renderRegime();
+    renderChart();
+    if (teachOpen) {
+      $("#teachin").removeAttribute("hidden");
+      $("#reading-head").setAttribute("aria-expanded", "true");
+      const details = document.querySelectorAll("#teachin details");
+      openIdx.forEach((i) => details[i]?.setAttribute("open", ""));
+    }
+  }, 150);
+});

@@ -1,8 +1,9 @@
 """Databento fallback adapter — thin, honest, and optional.
 
 REALITY CHECK (verified 2026-07): Databento has NO recurring free tier. New
-accounts get a one-time $125 credit (expires ~6 months); ongoing use is
-usage-based or subscription. What makes it interesting as a fallback anyway:
+accounts get a one-time signup credit (expires after roughly six months);
+ongoing use is usage-based or subscription — check databento.com for current
+terms. What makes it interesting as a fallback anyway:
 the DBEQ.BASIC and EQUS.MINI US equities datasets carry zero exchange license
 fees and explicitly permit commercial/display use — relevant the moment a
 self-hosted Hermes is shared with others. (Redistribution rights attach to an

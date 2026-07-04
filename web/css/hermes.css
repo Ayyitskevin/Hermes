@@ -341,7 +341,9 @@ main { max-width: 1160px; margin: 0 auto; padding: 18px 18px 40px; }
   .riskrail { gap: 10px; padding: 8px 12px; }
   .rail-gauges { gap: 10px; }
   .gauge { min-width: 130px; }
-  .rail-health { display: none; }
+  /* Only the dashboard's health chips hide on mobile; the journal page keeps
+     its navigation + theme toggle (they live in .rail-health there). */
+  .rail-health--dash { display: none; }
   main { padding: 12px 10px 32px; }
   .plate { padding: 10px 10px 12px; }
   .plate > h2 { margin: -10px -10px 10px; padding: 6px 10px; }

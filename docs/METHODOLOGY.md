@@ -62,8 +62,15 @@ bear/stress ⇒ cash-priority; warn or rangebound ⇒ restrict; else allow.
 ## What is NOT traceable to a named methodology
 
 - The reviewer's specific thresholds (`MIN_STOP_DISTANCE_PCT = 0.35`,
-  conjunction count ≥ 4, `MIN_SETUP_SAMPLE = 10`) are Hermes conventions —
-  sensible, but not literature. They are constants at the top of
-  `review/reviewer.py`, labeled as such.
+  `WIDE_STOP_WARN_PCT = 15.0`, conjunction count ≥ 4,
+  `MIN_SETUP_SAMPLE = 10`) are Hermes conventions — sensible, but not
+  literature. They are constants at the top of `review/reviewer.py`.
+- reference-v1's composition constants are conventions too: the breadth
+  bullish/bearish cutoffs (≥60% / ≤40%) and its 5-symbol minimum, the ±0.5
+  composite-score label cutoffs, the +0.5 calm-volatility vote, and the
+  85th-percentile stress line (the last is flagged in its own caveat).
+- The journal's benchmark-anchor staleness bound
+  (`MAX_ANCHOR_STALENESS_DAYS = 5`) is a convention: staler anchors return
+  a missing benchmark rather than a silently-truncated one.
 - The sample provider's synthetic tape is a scripted random walk for demos
   and tests. It is stamped `source: sample` everywhere it appears.

@@ -116,6 +116,83 @@ def test_performance_summary_small_sample_honesty(fresh_db, config):
     assert "anecdote" in perf["note"]
 
 
+def test_benchmark_window_math_with_real_holding_period(fresh_db, config):
+    """Pin the benchmark window (opened_at -> closed_at) with a KNOWN nonzero
+    benchmark return — a swapped or mis-anchored window cannot pass this."""
+    conn = db.connect()
+    now = utcnow()
+    # Benchmark: 100.0 thirty days ago, rising 0.5/day → known values at both anchors.
+    for i in range(0, 31):
+        ts = iso(now - timedelta(days=30 - i))
+        px = 100.0 + 0.5 * i
+        conn.execute(
+            """INSERT INTO bars (symbol, timeframe, ts, open, high, low, close,
+               volume, source, fetched_at) VALUES ('SPY', '1Day', ?, ?, ?, ?, ?, 1, 'test', ?)""",
+            (ts, px, px, px, px, iso(now)),
+        )
+    # Entry opened 20 days ago (benchmark close then: 100 + 0.5*10 = 105.0);
+    # closing now anchors to today's bar (100 + 0.5*30 = 115.0).
+    opened_at = iso(now - timedelta(days=20))
+    conn.execute(
+        """INSERT INTO journal_entries
+           (symbol, side, opened_at, entry_price, stop_price, size_pct_equity,
+            planned_risk_pct, thesis)
+           VALUES ('XLK', 'long', ?, 100, 95, 10.0, 0.5, 'backdated test thesis')""",
+        (opened_at,),
+    )
+    conn.commit()
+    entry_id = conn.execute("SELECT MAX(id) AS i FROM journal_entries").fetchone()["i"]
+
+    result = close_entry(config, entry_id, exit_price=112.0,
+                         thesis_played_out="partial", resolution_note="Window math test.")
+    expected_bench = (115.0 / 105.0 - 1.0) * 100.0
+    assert result["benchmark_return_pct"] == pytest.approx(expected_bench, abs=0.01)
+    assert result["alpha_pct"] == pytest.approx(12.0 - expected_bench, abs=0.01)
+
+
+def test_stale_benchmark_anchor_yields_missing_not_truncated(fresh_db, config):
+    """If benchmark bars stopped syncing long before the close, alpha must be
+    missing — never quietly computed over a truncated window."""
+    conn = db.connect()
+    now = utcnow()
+    # Bars exist only 30..10 days ago; the close 'now' has no fresh anchor.
+    for i in range(0, 21):
+        ts = iso(now - timedelta(days=30 - i))
+        conn.execute(
+            """INSERT INTO bars (symbol, timeframe, ts, open, high, low, close,
+               volume, source, fetched_at)
+               VALUES ('SPY', '1Day', ?, 100, 100, 100, 100, 1, 'test', ?)""",
+            (ts, iso(now)),
+        )
+    opened_at = iso(now - timedelta(days=20))
+    conn.execute(
+        """INSERT INTO journal_entries
+           (symbol, side, opened_at, entry_price, stop_price, size_pct_equity,
+            planned_risk_pct, thesis)
+           VALUES ('XLE', 'long', ?, 80, 76, 10.0, 0.5, 'stale anchor test')""",
+        (opened_at,),
+    )
+    conn.commit()
+    entry_id = conn.execute("SELECT MAX(id) AS i FROM journal_entries").fetchone()["i"]
+    result = close_entry(config, entry_id, exit_price=84.0,
+                         thesis_played_out="yes", resolution_note="Anchor staleness test.")
+    assert result["benchmark_return_pct"] is None
+    assert result["alpha_pct"] is None
+
+
+def test_double_close_rejected_and_equity_moves_once(fresh_db, config):
+    p = propose_entry(config, symbol="QQQ", side="long", entry_price=100.0,
+                      stop_price=95.0, thesis="Double-close guard test thesis.")
+    entry_id = commit_entry(config, p)
+    close_entry(config, entry_id, exit_price=105.0, thesis_played_out="yes",
+                resolution_note="First close.")
+    with pytest.raises(JournalError):
+        close_entry(config, entry_id, exit_price=110.0, thesis_played_out="yes",
+                    resolution_note="Second close must fail.")
+    rows = db.connect().execute("SELECT COUNT(*) AS n FROM equity_index").fetchone()
+    assert rows["n"] == 1  # the equity index moved exactly once
+
+
 def test_missing_benchmark_yields_null_alpha_not_guess(fresh_db, config):
     # No SPY bars at all → benchmark/alpha must be None (missing), not 0
     p = propose_entry(config, symbol="XLE", side="long", entry_price=80.0,

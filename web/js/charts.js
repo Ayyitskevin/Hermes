@@ -226,7 +226,12 @@ function attachScrub(container, svg, items, xAt, describe, opts = {}) {
     scrub.className = "scrub";
     scrub.min = 0; scrub.max = items.length - 1; scrub.value = items.length - 1;
     scrub.setAttribute("aria-label", "Scrub history; readout appears above the chart");
-    scrub.addEventListener("input", () => show(Number(scrub.value)));
+    scrub.setAttribute("aria-valuetext", describe(items[items.length - 1]));
+    scrub.addEventListener("input", () => {
+      const i = Number(scrub.value);
+      show(i);
+      scrub.setAttribute("aria-valuetext", describe(items[i]));
+    });
     scrub.addEventListener("blur", hide);
     container.appendChild(scrub);
   }

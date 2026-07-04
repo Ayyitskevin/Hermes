@@ -5,7 +5,7 @@ Hermes runs as a real service, not a script you remember to restart.
 ## Deploy (systemd)
 
 ```bash
-# as a user with sudo, on the always-on machine
+# as a user with sudo, on the always-on machine (Python 3.11+ required)
 sudo mkdir -p /opt/hermes && sudo chown "$USER" /opt/hermes
 git clone https://github.com/Ayyitskevin/Hermes.git /opt/hermes
 cd /opt/hermes
@@ -13,8 +13,14 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 cp .env.example .env            # fill in your keys
 cp config/hermes.example.toml config/hermes.toml   # adjust limits/watchlist
 
+# The unit runs as a dedicated system user — create it, the runtime dirs,
+# and hand the tree over (the unit's ReadWritePaths expect these to exist):
+sudo useradd --system --home /opt/hermes --shell /usr/sbin/nologin hermes || true
+sudo install -d -o hermes -g hermes /opt/hermes/data /opt/hermes/logs
+sudo chown -R hermes:hermes /opt/hermes
+
 sudo cp deploy/hermes.service /etc/systemd/system/hermes.service
-# edit User= and WorkingDirectory= in the unit if you deviate from /opt/hermes
+# edit User= and the /opt/hermes paths in the unit if you deviate
 sudo systemctl daemon-reload
 sudo systemctl enable --now hermes
 ```
@@ -27,16 +33,17 @@ curl -s localhost:8642/api/health | python3 -m json.tool
 /opt/hermes/.venv/bin/hermes doctor         # config, db, provider, ollama
 ```
 
-`/api/health` reports db writability, cached bar count, provider state,
-Ollama reachability, and per-job missed flags — a timestamp that actually
-moved, never just "no crash".
+`/api/health` reports db writability (a real write-lock probe — a read-only
+database file reports `writable: false`), cached bar count, provider state,
+Ollama reachability, and per-job missed flags — positive evidence, never
+just "no crash".
 
 ## Logs
 
 Canonical line format, one file per component under `logs/`:
 
 ```
-timestamp · action · source · latency · outcome (ok/retry/fail) [· detail]
+timestamp · action · source · latency · outcome (ok/retry/fail/skip) [· detail]
 2026-07-04T12:31:07Z · GET /v2/stocks/SPY/bars · alpaca · 132ms · ok · SPY
 ```
 

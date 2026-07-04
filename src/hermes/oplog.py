@@ -2,7 +2,7 @@
 
 Every automated action writes one line:
 
-    timestamp · action · source · latency · outcome (ok/retry/fail)
+    timestamp · action · source · latency · outcome (ok/retry/fail/skip)
 
 to a per-component log file (logs/<component>.log) — never a shared file —
 and mirrors it to stdout so systemd's journal captures it too. A trailing

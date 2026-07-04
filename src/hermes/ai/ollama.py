@@ -1,8 +1,9 @@
 """Local-first AI inference via the owner's own Ollama.
 
 Routine, recurring analysis runs here — on hardware the owner controls, at
-zero marginal cost. Cloud calls (ai/cloud.py) exist only for tasks explicitly
-opted into via config; they are the exception, never the default.
+zero marginal cost. Cloud inference is a RESERVED V2 slot: the config knobs
+(ai.allow_cloud, ai.cloud_model, ANTHROPIC_API_KEY) exist but no cloud code
+path ships in V1 — setting them does nothing yet, and the docs say so.
 
 When Ollama is down the caller gets OllamaUnavailable and must degrade
 visibly — narrative sections render as 'local model unavailable', never as

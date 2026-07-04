@@ -38,8 +38,8 @@ mode — is a named, ordered roadmap in
 
 ## Quickstart — zero keys, two minutes
 
-Runs out of the box on a bundled deterministic sample tape (clearly stamped
-`sample` everywhere it appears):
+Requires **Python 3.11+**. Runs out of the box on a bundled deterministic
+sample tape (clearly stamped `sample` everywhere it appears):
 
 ```bash
 git clone https://github.com/Ayyitskevin/Hermes.git && cd Hermes
@@ -65,7 +65,8 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 Databento is wired as a documented fallback (`data.provider = "databento"`),
 with its economics stated honestly in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): there is no recurring free
-tier — new accounts get a one-time $125 credit.
+tier — new accounts get a one-time signup credit that expires after roughly
+six months (check databento.com for current terms).
 
 ## Local AI (optional)
 
@@ -73,8 +74,11 @@ If you run [Ollama](https://ollama.com), Hermes uses it — local-first — for
 the morning narrative and a skeptical second opinion on trade theses. Set
 `ai.ollama_url` / `ai.ollama_model` in the config. When Ollama is down,
 those sections say so on screen; the numbers never depend on it. Cloud
-inference is off by default (`ai.allow_cloud = false`) and is meant for
-tasks you opt into deliberately, not for every skill.
+inference is a **reserved V2 slot**: the config knobs (`ai.allow_cloud`,
+`ai.cloud_model`, `ANTHROPIC_API_KEY`) exist for forward-compatibility but no
+cloud code path ships in V1 — setting them currently does nothing, by design
+and on purpose (local-first means the cloud is the deliberate exception, and
+it hasn't been needed yet).
 
 ## Deploy as a service
 

@@ -23,6 +23,8 @@ class MarketConfig:
     watchlist: list[str] = field(default_factory=lambda: [
         "SPY", "QQQ", "IWM", "XLK", "XLE", "XLF", "XLV", "XLI", "XLP", "XLU",
     ])
+    # RESERVED: V1 workflows hardcode 1Day; this knob is read by nothing yet
+    # (V2+ roadmap item covers 4H/weekly timeframes).
     timeframes: list[str] = field(default_factory=lambda: ["1Day"])
     stale_after_minutes: int = 30
 
@@ -58,6 +60,8 @@ class JournalConfig:
 class AiConfig:
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "llama3.1"
+    # RESERVED V2 slot: no cloud code path ships in V1; these knobs are not
+    # read by any code yet and are documented as such.
     allow_cloud: bool = False
     cloud_model: str = "claude-sonnet-5"
 
