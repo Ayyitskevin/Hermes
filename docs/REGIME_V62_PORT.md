@@ -6,6 +6,16 @@ and `regime.classifier = "v62"` is the default. The original contract this
 document used to describe has been fulfilled; what remains here is the
 fidelity record — what was ported exactly, what deviates, and why.
 
+**Parity target (updated 2026-07-04):** on the owner's charts the v6.2 core
+now runs embedded as the regime module of the **Five-Tool Confluence AIO
+v3.2** strategy, which supersedes the standalone v6.2 indicator as the
+operating artifact. The port was re-verified line-by-line against that
+module: at the AIO's daily-chart defaults (preset `Auto` → Daily, `StDev`
+vol model, percentile adjustment on, hysteresis on, EMA(100) filter on,
+regime quality filter `Off`, gap handling `Neutralize new flips`, external
+override off) it is the same model, same constants, same state machine as
+what is ported here. No code change was required.
+
 ## Ported exactly (Daily preset)
 
 - `window_log_ret = ln(close/close[20])`, `regime_z = window_log_ret /
@@ -32,6 +42,8 @@ fidelity record — what was ported exactly, what deviates, and why.
 |---|---|
 | Daily preset only (20 / 0.85 / 0.55 / 2) | Hermes V1 runs daily bars; 4H/Weekly presets ride with the multi-timeframe roadmap item |
 | Fixed-% mode, HTF vote, wider-neutral band, probabilistic strength omitted | All are upstream defaults-off; the HTF vote is also the upstream-flagged duplication hazard |
+| AIO v3.2's selectable non-default options omitted: `EWMA`/`ATR%` vol models, `Custom` preset, `Off`/`Force Neutral` gap modes, regime-side quality filter variants, external regime override | All default to the ported behavior on a daily chart; same defaults-off policy as the row above |
+| The AIO's other modules (relative strength, divergence, AVWAP, risk/exits, order simulation) are not ported | They are strategy/execution layers, not the classifier. Order-shaped code is banned from this repo by the no-order-paths boundary; the RS module is the model for the V2 leadership-board roadmap item |
 | Regime-side quality gate Off (upstream default); ADX/ER still computed and shown as chop-risk evidence | Matches upstream defaults; the gate belongs to the playbook layer |
 | Recursive indicators (EMA/RMA/ATR/ADX) seeded per Wilder convention | Warmup deltas vs Pine decay geometrically; negligible at ≥500 bars of history |
 | `score`/`confidence` fields are Hermes presentation mappings (signed scaled z; strength/100 or band-centeredness) | Hermes' reading contract needs both; the v6.2 label/strength math is untouched and documented in the module |
@@ -39,11 +51,15 @@ fidelity record — what was ported exactly, what deviates, and why.
 
 ## Verifying parity against the chart
 
-Run the standalone v6.2 indicator on the same symbol/timeframe as Hermes'
-benchmark and compare the confirmed label bar by bar (the Hermes reading
-records `data_asof`). Small divergences immediately after data gaps or in
-the first ~500 bars of history are warmup artifacts; persistent divergence
-is a bug — file it with both readings attached.
+Run the Five-Tool Confluence AIO v3.2 on a **daily** chart of the same
+symbol as Hermes' benchmark, regime inputs at defaults (preset `Auto`,
+`StDev` vol model, quality filter `Off`, gap handling `Neutralize new
+flips`, external override off), and compare its confirmed regime against
+Hermes' reading bar by bar (the Hermes reading records `data_asof`). The
+standalone v6.2 indicator at its daily defaults reads identically and works
+too. Small divergences immediately after data gaps or in the first ~500
+bars of history are warmup artifacts; persistent divergence is a bug —
+file it with both readings attached.
 
 ## Swapping classifiers
 

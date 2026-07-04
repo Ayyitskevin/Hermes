@@ -30,8 +30,11 @@ enter/exit thresholds with hysteresis, EMA(100) direction filter, 4×ATR
 gap-shock guard, 2-bar confirmation. Supporting gauges: Wilder's ADX (1978)
 and Kaufman's efficiency ratio compose its chop-risk read. Its honesty
 statement is carried into the UI verbatim: *a heuristic derived from
-historical label-correlation, not a backtested edge.* Full fidelity record
-in [REGIME_V62_PORT.md](REGIME_V62_PORT.md).
+historical label-correlation, not a backtested edge.* On the owner's charts
+the same core now runs embedded as the regime module of the Five-Tool
+Confluence AIO v3.2 strategy — verified model-identical at daily defaults,
+so chart and dashboard share one brain. Full fidelity record in
+[REGIME_V62_PORT.md](REGIME_V62_PORT.md).
 
 ## Risk layer
 

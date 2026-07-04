@@ -35,6 +35,12 @@ PORT FIDELITY NOTES (deviations, all declared):
   * score/confidence are Hermes PRESENTATION mappings of v6.2's z and
     strength (documented on the fields below); the label logic itself is
     the ported machine, untouched.
+  * Parity target updated 2026-07-04: the owner now runs this core embedded
+    as the regime module of the Five-Tool Confluence AIO v3.2. Re-verified
+    line-by-line against that module — at its daily-chart defaults it is
+    this exact model (same constants, same state machine). Its extra
+    selectable options (EWMA/ATR% vol models, Custom preset, alternate gap
+    modes, external override) all default to the ported behavior.
 
 The honesty statement is carried verbatim per docs/REGIME_V62_PORT.md:
 this is a heuristic derived from historical label-correlation, not a
