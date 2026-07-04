@@ -1,0 +1,65 @@
+# Hermes configuration — copy to config/hermes.toml and adjust.
+# No secrets in this file (those live in .env), and no dollar figures anywhere:
+# every risk number is a percentage of account equity.
+
+[market]
+# Symbols Hermes watches daily. The benchmark is used for regime input,
+# breadth context, and journal alpha resolution.
+benchmark = "SPY"
+watchlist = ["SPY", "QQQ", "IWM", "XLK", "XLE", "XLF", "XLV", "XLI", "XLP", "XLU"]
+# Bar timeframes used by the daily workflow. Hermes trades on daily/4H/weekly
+# structure; it deliberately does not consume tick data.
+timeframes = ["1Day"]
+# Data older than this many minutes during market hours is shown as STALE,
+# never silently served as if live.
+stale_after_minutes = 30
+
+[data]
+# "alpaca"  — default; free real-time-enough IEX feed, requires keys in .env
+# "databento" — fallback; requires DATABENTO_API_KEY in .env
+# "sample" — bundled offline sample data; runs with zero keys (demo / tests)
+provider = "alpaca"
+
+[regime]
+# "reference-v1" — the classifier that ships with Hermes: a composite of
+#     named, published methods (see docs/METHODOLOGY.md). A placeholder, honestly
+#     labeled, until the owner's own classifier is ported.
+# "v62" — Regime Label v6.2, the owner's classifier. Not yet ported;
+#     see docs/REGIME_V62_PORT.md for the port contract.
+classifier = "reference-v1"
+# Lookback (trading days) for the volatility percentile component.
+vol_percentile_lookback = 252
+
+[risk]
+# All limits are % of account equity. Hermes never knows a dollar amount.
+max_risk_per_trade_pct = 1.0        # planned loss if a stop is hit
+max_open_risk_pct = 4.0             # sum of planned risk across open positions
+max_position_size_pct = 20.0        # single-position exposure ceiling
+max_sector_exposure_pct = 30.0      # per-sector exposure ceiling
+max_drawdown_pct = 10.0             # equity-index drawdown that trips the circuit breaker
+correlation_warn_threshold = 0.70   # pairwise 60-day return correlation between open positions
+correlation_lookback_days = 60
+
+[journal]
+# Trades still open after this many calendar days get a "stale thesis" nudge.
+stale_open_after_days = 45
+
+[ai]
+# Local-first: routine narrative work goes to your own Ollama.
+ollama_url = "http://127.0.0.1:11434"
+ollama_model = "llama3.1"
+# Cloud calls are the deliberate exception, never the default. Set to true only
+# for tasks you opt into; requires ANTHROPIC_API_KEY in .env.
+allow_cloud = false
+cloud_model = "claude-sonnet-5"
+
+[schedule]
+# Times are America/New_York (US market clock). Cron format: "MIN HOUR".
+timezone = "America/New_York"
+premarket_check = "0 8"      # daily market check: fetch, classify regime, risk sweep, report
+eod_sync = "30 16"           # end-of-day bar sync after the close
+journal_resolve = "0 17"     # resolve closable journal entries against reality
+
+[server]
+host = "127.0.0.1"
+port = 8642

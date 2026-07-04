@@ -1,0 +1,171 @@
+# Hermes — Architecture
+
+*The Phase 1 proposal, as built. Read together with [DESIGN.md](DESIGN.md) —
+the technical plan and the visual plan were reviewed as one.*
+
+## What Hermes is
+
+A self-hosted, open-source, AI-assisted **decision-support** dashboard for one
+systematic regime-following swing trader (daily/4H/weekly bars, US equities).
+It analyzes and recommends; a human places every trade.
+
+**The hard boundary, stated once and enforced everywhere:** there is no
+order-placement code, no broker write access, and no path by which Hermes
+could place or modify a live order. The only Alpaca host in the codebase is
+the data host (`data.alpaca.markets`). CI runs a guard test
+(`tests/test_no_order_paths.py`) that fails the build if a trading endpoint,
+trading base URL, or order-shaped API ever appears.
+
+## Phase 0 decisions (as configured)
+
+| Decision | Choice |
+|---|---|
+| Trading style | Systematic regime-following swing trading — daily bars primary; 4H/weekly available (Alpaca supports `4Hour`/`1Week` timeframes) but V1 workflows run on `1Day` |
+| Data source | **Alpaca** default (free real-time IEX feed; paper account is enough, no funding). **Databento** documented fallback. **Sample** provider for zero-key runs |
+| Where it runs | Always-on machine, as a real systemd service (`deploy/hermes.service`) |
+| AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud (`ai.allow_cloud`) is opt-in per config, off by default |
+| Regime classifier | Pluggable. Ships with `reference-v1` (named published methods, honestly labeled a placeholder). **Regime Label v6.2 port slot** documented in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
+| Open source | MIT. No personal paths/IPs/secrets; credentials via `.env` only (`.env.example` documented); README covers setup from zero |
+| Position sizing | Everything is % of account equity. No dollar figures are asked for, stored, or displayed. Drawdown is tracked on a normalized 100-based equity index |
+
+## Reference architectures — verified, not assumed
+
+Both references were re-verified against live sources on 2026-07-04:
+
+**Pattern A — `tradermonty/claude-trading-skills`** (MIT, ~2.2k stars — up
+from ~1.6k; actively maintained, commits within the last day). Confirmed: the
+seven skill categories, the five tiered workflows (plus four newer ones), the
+no-paid-API starter path, and `edge-strategy-reviewer` — a deterministic
+quality gate scoring overfitting risk, sample-size adequacy, and execution
+realism. Its `market-regime-daily` workflow outputs **a posture (allow /
+restrict / cash-priority), not a directive** — Hermes adopts that vocabulary
+verbatim. Its `portfolio-manager` reads holdings from Alpaca via MCP,
+read-only — the working precedent for Alpaca as a data source.
+
+**Pattern B — `TauricResearch/TradingAgents`** (Apache-2.0, ~90.7k stars,
+v0.3.0 June 2026). Confirmed: the analyst → bull/bear debate → trader → risk
+debate → portfolio-manager pipeline (analysts now run *sequentially*; the
+"concurrent" description is stale), multi-provider LLM support including
+Ollama, and no broker API anywhere. Its `TradingMemoryLog` + `Reflector`
+pattern — each decision resolved later against realized return and **alpha
+vs SPY**, then reflected on in prose — is the direct model for Hermes'
+journal resolution loop.
+
+What both share, kept as Hermes' first principle: no live broker connection
+by default, human decision gates central.
+
+## V1 scope (all of it built, none of it more)
+
+1. **Daily market check** — scheduled premarket job: sync → regime → risk
+   sweep → posture → morning report (+ optional local-LLM narrative,
+   visibly skipped when Ollama is down).
+2. **Regime engine** — pluggable classifier; `reference-v1` composite of
+   five named published methods, each carrying claim + methodology + caveat
+   (the teach-in payload); readings persisted with evidence and provenance.
+3. **Risk layer** — fixed-fractional sizing, open-risk budget, single-position
+   and sector concentration, pairwise correlation, drawdown circuit breaker
+   on the normalized equity index; `ok/warn/breach` state that dominates the
+   UI; breaches persist as events requiring acknowledgment.
+4. **Trade journal** — propose (sizing + reviewer verdict) → commit → close →
+   resolve against realized return, benchmark return, alpha, and a mandatory
+   *did-the-thesis-play-out* verdict; performance summary that calls its own
+   small samples anecdotes.
+
+Supporting V1 infrastructure: reviewer second-pass (rule checks always,
+local-LLM critique when available), observability (canonical log lines,
+per-component files, `job_runs` positive evidence, MISSED detection, manual
+run paths), three data providers, the web UI, tests, CI, systemd unit.
+
+## Module map
+
+```
+src/hermes/
+├── config.py        env + TOML config; secrets only from environment
+├── oplog.py         canonical log lines: ts · action · source · latency · outcome
+├── db.py            SQLite (WAL) + numbered SQL migrations
+├── migrations/      0001_init.sql — bars, snapshots, regime_readings,
+│                    journal_entries, equity_index, risk_events, job_runs, reports
+├── data/
+│   ├── models.py    Bar/Snapshot (source + as-of mandatory), ProviderState
+│   ├── provider.py  MarketDataProvider protocol (read-only by construction)
+│   ├── alpaca.py    default; data.alpaca.markets only; 429 → visible RATE_LIMITED
+│   ├── databento.py thin fallback (daily bars, honest about its limits)
+│   ├── sample.py    deterministic synthetic tape; zero-key runs and tests
+│   ├── registry.py  config-driven provider selection
+│   └── store.py     bar/snapshot cache + staleness (live/stale/dead)
+├── regime/
+│   ├── models.py    RegimeReading + Evidence (claim/methodology/caveat)
+│   ├── indicators.py pure-function math (tested; returns None when data short)
+│   ├── reference.py reference-v1 classifier (five named methods)
+│   ├── v62.py       Regime Label v6.2 port slot (loud NotImplementedError)
+│   └── engine.py    registry + persistence
+├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
+├── journal/service.py  propose/commit/close/resolve; equity index
+├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
+├── ai/ollama.py     local-first inference; failures degrade visibly
+├── jobs/
+│   ├── runner.py    job_runs positive evidence wrapper
+│   ├── sync.py      incremental bar/snapshot sync
+│   ├── daily_check.py the daily workflow + posture derivation
+│   └── scheduler.py APScheduler cron + MISSED detection
+├── api/routes.py    JSON API incl. manual job triggers + positive-evidence health
+└── main.py          FastAPI factory + CLI (serve / daily-check / sync / doctor)
+web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
+```
+
+## Data integrity contract
+
+- Every bar/snapshot row carries `source` and `fetched_at`; every displayed
+  number carries source + as-of on screen.
+- Missing values stay missing: indicators return `None` on short history,
+  evidence shows `status: missing`, the UI shows `∅ missing`. Nothing is
+  interpolated, ever.
+- Staleness is computed, labeled (`live/stale/dead`), and displayed.
+- Rate limits degrade visibly: Alpaca 429 → one logged retry → provider state
+  `rate_limited` on the dashboard. Never a cached number dressed as live.
+
+## Observability contract
+
+- Log line format: `timestamp · action · source · latency · outcome (ok/retry/fail)`
+  — written to per-component files under `logs/`, mirrored to stdout for journald.
+- Every job run writes a `job_runs` row (start, finish, outcome, trigger).
+  The dashboard compares evidence against the schedule and shows **MISSED**
+  when an expected fire has no row — silence is never read as success.
+- Every job has a manual override: `POST /api/jobs/{name}/run`, the UI's
+  "run now" buttons, and the `hermes daily-check` / `hermes sync` CLI.
+
+## V2+ roadmap (named, ordered, deliberately not in V1)
+
+1. **Weekly portfolio review** workflow (Pattern A's `core-portfolio-weekly`).
+2. **Swing-opportunity screener** — Minervini VCP / O'Neil CANSLIM /
+   Follow-Through-Day detection (Pattern A's swing tier).
+3. **Trade-memory reflection loop** — local-LLM one-paragraph reflection per
+   resolved trade (Pattern B's `Reflector`), appended to the journal.
+4. **Multi-agent debate mode** — bull/bear research debate → trader draft →
+   risk critique, on Ollama (Pattern B's pipeline, decision-support only).
+5. **Databento full adapter** — live TCP client + failover drill.
+6. **Broker read-only position sync** — Alpaca paper positions into the risk
+   sweep (read scope only; the no-write boundary is unchanged).
+7. **Monthly performance review** — regime-conditioned stats once samples
+   are meaningful (Pattern A's monthly tier).
+8. **Options tools / pair-trade screener** (Pattern A satellites).
+9. **Crypto feeds** (Binance/Coinbase/Kraken public data) if crypto enters scope.
+10. **4H/weekly regime timeframes** — the classifier interface already takes
+    a timeframe; the daily workflow just doesn't ask yet.
+
+## Data-source reality (verified 2026-07-04)
+
+- **Alpaca free tier**: real-time IEX quotes/trades/bars, ~200 req/min,
+  historical daily bars to ~2016, corporate actions, paper account sufficient.
+  IEX is ~2–3% of consolidated volume — fine for liquid ETFs/large caps on
+  daily bars; thin names may have gaps (shown as gaps).
+- **Databento**: **no recurring free tier** — the "250k messages/month free"
+  claim in circulation is wrong; it's a **one-time $125 credit** (~6-month
+  expiry). Zero-license-fee equities datasets (DBEQ.BASIC, EQUS.MINI) make it
+  the right *paid* fallback; redistribution rights attach to an active
+  subscription. Hermes ships a thin daily-bars adapter and says exactly this.
+- **Polygon** (now Massive): free tier is end-of-day only, 5 req/min — not
+  suitable for the daily premarket check. **IEX Cloud**: shut down 2024-08-31.
+- **Latency truth**: for daily/4H/weekly regime-following, seconds of latency
+  are indistinguishable from tick-level real-time. Hermes does not pretend
+  otherwise and does not over-engineer for it.
