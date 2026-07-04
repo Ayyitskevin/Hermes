@@ -1,0 +1,26 @@
+# Hermes — systemd unit.
+# Adjust User= and the /opt/hermes paths if you installed elsewhere.
+
+[Unit]
+Description=Hermes trading dashboard (decision-support only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+WorkingDirectory=/opt/hermes
+ExecStart=/opt/hermes/.venv/bin/hermes serve
+Restart=on-failure
+RestartSec=5
+
+# Hardening — Hermes needs the network (market data, local Ollama) and its
+# own working directory; nothing else.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/hermes/data /opt/hermes/logs
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

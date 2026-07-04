@@ -1,0 +1,23 @@
+# Secrets — never commit credentials
+.env
+
+# Runtime state (databases, logs, reports live outside version control).
+# Root-anchored: src/hermes/data is source code, not runtime state.
+/data/
+/logs/
+config/hermes.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# OS / editor noise
+.DS_Store
+*.swp

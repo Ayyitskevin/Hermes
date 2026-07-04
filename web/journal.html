@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Hermes — trade journal</title>
+  <link rel="stylesheet" href="/static/css/hermes.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="riskrail" aria-label="Journal header">
+    <div class="rail-state">
+      <div class="rail-word label-x">JOURNAL</div>
+      <div class="micro">the memory that grades itself against reality</div>
+    </div>
+    <div class="rail-health">
+      <a href="/">← daily station</a><br>
+      <button id="theme-toggle">theme: auto</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="plate" aria-label="Propose a trade">
+      <h2><span class="label-x">Propose</span>
+        <span class="micro">two steps by design: reviewer verdict first, commit second</span></h2>
+      <form id="propose-form" class="form-grid">
+        <div class="field"><label for="f-symbol">symbol</label>
+          <input id="f-symbol" name="symbol" required maxlength="10" autocomplete="off"></div>
+        <div class="field"><label for="f-side">side</label>
+          <select id="f-side" name="side"><option value="long">long</option>
+            <option value="short">short</option></select></div>
+        <div class="field"><label for="f-entry">entry price</label>
+          <input id="f-entry" name="entry_price" type="number" step="0.01" min="0.01" required></div>
+        <div class="field"><label for="f-stop">stop price</label>
+          <input id="f-stop" name="stop_price" type="number" step="0.01" min="0.01" required></div>
+        <div class="field"><label for="f-target">target price (optional)</label>
+          <input id="f-target" name="target_price" type="number" step="0.01" min="0"></div>
+        <div class="field"><label for="f-sector">sector tag</label>
+          <input id="f-sector" name="sector" placeholder="e.g. tech" autocomplete="off"></div>
+        <div class="field"><label for="f-setup">setup tag</label>
+          <input id="f-setup" name="setup_tag" placeholder="e.g. regime-pullback" autocomplete="off"></div>
+        <div class="field field-wide"><label for="f-thesis">thesis — what must happen, and what level does it defend?</label>
+          <textarea id="f-thesis" name="thesis" required minlength="10"></textarea></div>
+        <div class="field"><button class="btn-primary" type="submit">run reviewer</button></div>
+      </form>
+      <div id="verdict" aria-live="polite"></div>
+    </section>
+
+    <section class="plate" aria-label="Performance summary">
+      <h2><span class="label-x">Performance</span>
+        <span class="micro">below 20 closed trades these are anecdotes, and say so</span></h2>
+      <div id="performance"></div>
+    </section>
+
+    <section class="plate" aria-label="Open positions">
+      <h2><span class="label-x">Open</span></h2>
+      <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Trade</th><th>Entry</th><th>Stop</th><th>Size</th>
+          <th>Risk</th><th>Thesis / signal at entry</th><th></th></tr></thead>
+        <tbody id="open-body"></tbody>
+      </table>
+      </div>
+    </section>
+
+    <section class="plate" aria-label="Closed and resolved trades">
+      <h2><span class="label-x">Resolved</span>
+        <span class="micro">realized vs benchmark vs thesis — three separate questions</span></h2>
+      <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Trade</th><th>Held</th><th>Realized</th>
+          <th>Benchmark</th><th>Alpha</th><th>Thesis</th><th>Resolution note</th></tr></thead>
+        <tbody id="closed-body"></tbody>
+      </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="edgeprint">
+    <span class="micro">decision-support only — no order paths exist in this codebase.</span>
+  </footer>
+
+  <script type="module" src="/static/js/journal.js"></script>
+</body>
+</html>

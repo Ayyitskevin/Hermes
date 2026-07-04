@@ -1,0 +1,358 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Hermes design system — "Station" direction.
+   Synthesized from a three-direction panel + genericness critique;
+   full rationale in docs/DESIGN.md. Load-bearing rules:
+
+   · Risk outranks signal: the Limit Rail is first in DOM, sticky, owns the
+     page's largest numerals, and holds a monopoly on area-scale status
+     color. On breach it floods and everything below it literally stops down.
+   · One identity accent (Course Magenta) = provenance/attention. Banned
+     inside the Limit Rail. Never used for P&L or status.
+   · Regime identity is carried by POSITION (strip lanes) and lightness
+     (tape grays, constant across modes) — never by hue alone.
+   · Status colors ship with icon + text label, never color alone.
+     Palettes machine-validated (dataviz six checks) on both surfaces.
+   · No shadows, no rounded-card grids, no decoration: plates with 2px ink
+     borders, sharp corners, hairline rules.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("../fonts/Archivo-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-stretch: 62.5% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "B612 Mono";
+  src: url("../fonts/B612Mono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "B612 Mono";
+  src: url("../fonts/B612Mono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  /* Station Grey (light) */
+  --surface: #f1f4f3;
+  --plate: #f8fafa;
+  --ink: #1a2127;
+  --ink-muted: #5a6268;
+  --line: #c7d1d1;
+  --accent: #b3266e;
+  --good: #1e7a44;
+  --warn: #b58200;
+  --serious: #b0350c;
+  --crit: #96222a;
+  --crit-wash: #f6e1e3;
+  --warn-wash: #f4ead1;
+  /* Regime tape grays — identical in both modes (calibration constant) */
+  --rg-bull: #c9cfcc;
+  --rg-chop: #99a1a4;
+  --rg-bear: #6a7276;
+  --rg-stress: #3d4448;
+
+  --sans: "Archivo", system-ui, sans-serif;
+  --mono: "B612 Mono", ui-monospace, "Cascadia Mono", monospace;
+  --rail-h: 92px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Watch Slate (dark) — petrol with visible hue, deliberately NOT near-black */
+    --surface: #22303a;
+    --plate: #2a3944;
+    --ink: #e3eaed;
+    --ink-muted: #9daab2;
+    --line: #3d4c57;
+    --accent: #cb4a8a;
+    --good: #2e9861;
+    --warn: #c08a1e;
+    --serious: #cc5a28;
+    --crit: #d14b50;
+    --crit-wash: #46242a;
+    --warn-wash: #40371f;
+  }
+}
+:root[data-theme="light"] {
+  --surface: #f1f4f3; --plate: #f8fafa; --ink: #1a2127; --ink-muted: #5a6268;
+  --line: #c7d1d1; --accent: #b3266e; --good: #1e7a44; --warn: #b58200;
+  --serious: #b0350c; --crit: #96222a; --crit-wash: #f6e1e3; --warn-wash: #f4ead1;
+}
+:root[data-theme="dark"] {
+  --surface: #22303a; --plate: #2a3944; --ink: #e3eaed; --ink-muted: #9daab2;
+  --line: #3d4c57; --accent: #cb4a8a; --good: #2e9861; --warn: #c08a1e;
+  --serious: #cc5a28; --crit: #d14b50; --crit-wash: #46242a; --warn-wash: #40371f;
+}
+
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* The equipment-label register: state words, plate headings */
+.label-x {
+  font-family: var(--sans);
+  font-variation-settings: "wdth" 122, "wght" 640;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.mono { font-family: var(--mono); }
+.micro {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+
+a { color: var(--accent); }
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--plate);
+  border: 1.5px solid var(--ink);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+button:hover { background: var(--surface); }
+:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 99;
+  background: var(--plate); padding: 8px 14px; border: 2px solid var(--accent);
+}
+.skip:focus { left: 8px; top: 8px; }
+
+/* ── Limit Rail ─────────────────────────────────────────────────────────── */
+.riskrail {
+  position: sticky; top: 0; z-index: 50;
+  min-height: var(--rail-h);
+  background: var(--plate);
+  border-bottom: 2px solid var(--ink);
+  display: flex; align-items: stretch; gap: 20px;
+  padding: 10px 18px 12px;
+  flex-wrap: wrap;
+}
+.rail-state { display: flex; flex-direction: column; justify-content: center; min-width: 150px; }
+.rail-word { font-size: 21px; }
+.rail-word .st-ico { font-size: 16px; margin-right: 6px; }
+.rail-big {
+  font-family: var(--mono); font-weight: 700;
+  font-size: clamp(26px, 3.4vw, 40px); line-height: 1.05;
+}
+.rail-big small { font-size: 12px; font-weight: 400; color: var(--ink-muted); }
+.rail-gauges { display: flex; gap: 22px; flex: 1; align-items: center; flex-wrap: wrap; }
+.gauge { min-width: 170px; flex: 1; max-width: 300px; }
+.gauge-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.gauge-label .val { font-family: var(--mono); }
+.gauge-track {
+  position: relative; height: 10px; background: var(--surface);
+  border: 1px solid var(--line);
+}
+.gauge-fill { position: absolute; inset: 1px auto 1px 1px; background: var(--ink); }
+.gauge.warn .gauge-fill { background: var(--warn); }
+.gauge.breach .gauge-fill { background: var(--crit); }
+.gauge-limit {
+  position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink);
+}
+.rail-health { align-self: center; text-align: right; max-width: 300px; }
+.rail-ack { align-self: center; border-width: 2px; }
+
+/* status chips — icon + label, never color alone */
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 11px;
+  border: 1px solid var(--line); padding: 1px 7px;
+  white-space: nowrap;
+}
+.chip .st-ico { font-style: normal; }
+.st-good { color: var(--good); }
+.st-warn { color: var(--warn); }
+.st-serious { color: var(--serious); }
+.st-crit { color: var(--crit); }
+.chip.st-warn, .chip.st-serious, .chip.st-crit { border-color: currentColor; }
+
+/* Breach: rail floods, the world below stops down */
+body[data-risk="breach"] .riskrail {
+  background: var(--crit-wash);
+  border-bottom: 3px solid var(--crit);
+}
+body[data-risk="breach"] main,
+body[data-risk="breach"] .edgeprint {
+  filter: grayscale(0.55) opacity(0.72);
+}
+body[data-risk="warn"] .riskrail { background: var(--warn-wash); }
+
+/* ── Plates ─────────────────────────────────────────────────────────────── */
+main { max-width: 1160px; margin: 0 auto; padding: 18px 18px 40px; }
+.plate {
+  background: var(--plate);
+  border: 2px solid var(--ink);
+  margin-top: 18px;
+  padding: 14px 16px 16px;
+}
+.plate > h2 {
+  margin: -14px -16px 12px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+}
+.plate > h2 .micro { text-transform: none; letter-spacing: 0.02em; }
+
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+
+/* ── Regime strip (signature) ───────────────────────────────────────────── */
+.strip-wrap { position: relative; }
+.strip-svg { width: 100%; height: auto; display: block; }
+.lane-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  fill: var(--ink-muted); text-transform: uppercase; }
+.lane-rule { stroke: var(--line); stroke-width: 1; stroke-dasharray: 1 3; }
+.trace { stroke: var(--ink); stroke-width: 2.5; fill: none; }
+.ribbon { fill: var(--accent); opacity: 0.18; }
+.reading-head {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--plate);
+  border: none; border-left: 3px solid var(--accent);
+  padding: 4px 10px 4px 12px; text-align: left; cursor: pointer;
+  max-width: 190px;
+}
+.reading-head:hover { background: var(--surface); }
+.rh-label { font-family: var(--mono); font-weight: 700; font-size: 17px;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+.rh-sub { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); }
+.rh-hint { font-size: 10px; color: var(--accent); }
+.calibration { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+
+/* teach-in worksheets */
+.worksheet { border: 1px solid var(--line); margin-top: 8px; }
+.worksheet summary {
+  cursor: pointer; padding: 7px 10px; display: flex; gap: 10px; align-items: baseline;
+  list-style: none; flex-wrap: wrap;
+}
+.worksheet summary::-webkit-details-marker { display: none; }
+.worksheet summary .ws-title { border-bottom: 1.5px dotted var(--accent); }
+.worksheet summary .ws-value { font-family: var(--mono); margin-left: auto; }
+.worksheet[open] summary { border-bottom: 1px solid var(--line); }
+.ws-body { padding: 9px 12px 11px; display: grid; gap: 7px; }
+.ws-row { display: grid; grid-template-columns: 92px 1fr; gap: 10px; font-size: 13.5px; }
+.ws-row dt { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  color: var(--ink-muted); text-transform: uppercase; padding-top: 2px; }
+.ws-row dd { margin: 0; }
+.ws-row.caveat dd { color: var(--ink-muted); }
+
+/* ── Posture ────────────────────────────────────────────────────────────── */
+.posture-word { font-size: 26px; margin: 2px 0 6px; }
+.posture-allow .posture-word { color: var(--good); }
+.posture-restrict .posture-word { color: var(--warn); }
+.posture-cash .posture-word { color: var(--serious); }
+
+/* ── Charts ─────────────────────────────────────────────────────────────── */
+.chart-svg { width: 100%; height: auto; display: block; }
+.grid-line { stroke: var(--line); stroke-width: 1; }
+.price-line { stroke: var(--ink); stroke-width: 2; fill: none; }
+.axis-text { font-family: var(--mono); font-size: 10px; fill: var(--ink-muted); }
+.tape-cell-outline { stroke: var(--line); stroke-width: 0.5; }
+.crosshair { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 2; }
+.chart-tip {
+  position: absolute; pointer-events: none; background: var(--plate);
+  border: 1px solid var(--ink); padding: 4px 8px; font-family: var(--mono);
+  font-size: 11px; white-space: nowrap; z-index: 5;
+}
+.scrub {
+  width: 100%; margin: 2px 0 0; height: 14px;
+  accent-color: var(--accent); opacity: 0.55;
+}
+.scrub:focus-visible, .scrub:hover { opacity: 1; }
+
+/* ── Watchboard ─────────────────────────────────────────────────────────── */
+.watchboard table { width: 100%; border-collapse: collapse; }
+.watchboard th { text-align: left; font-size: 10px; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted);
+  border-bottom: 1px solid var(--line); padding: 4px 8px; }
+.watchboard td { padding: 5px 8px; border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 13px; }
+.watchboard td.sym { font-weight: 700; }
+.spark { display: block; }
+.spark path { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+
+/* ── Tables (journal, jobs) ─────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th { text-align: left; font-family: var(--mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted);
+  border-bottom: 1px solid var(--ink); padding: 5px 8px; }
+.tbl td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl td.num { font-family: var(--mono); text-align: right; }
+.tbl .neg { color: var(--serious); }
+.tbl .pos { color: var(--good); }
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-muted); }
+.field input, .field select, .field textarea {
+  font: inherit; font-family: var(--mono); font-size: 14px;
+  color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--line); padding: 7px 9px;
+}
+.field textarea { min-height: 84px; font-family: var(--sans); }
+.field-wide { grid-column: 1 / -1; }
+.btn-primary { border-width: 2px; font-variation-settings: "wdth" 116, "wght" 620;
+  text-transform: uppercase; letter-spacing: 0.05em; }
+
+.verdict { border: 2px solid var(--line); padding: 10px 12px; margin-top: 12px; }
+.verdict.v-clear { border-color: var(--good); }
+.verdict.v-caution { border-color: var(--warn); }
+.verdict.v-blocked { border-color: var(--crit); }
+
+/* ── Station log / ops ──────────────────────────────────────────────────── */
+.oprow { display: flex; gap: 10px; align-items: center; padding: 6px 0;
+  border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.oprow:last-child { border-bottom: none; }
+.oprow .jobname { font-family: var(--mono); font-weight: 700; min-width: 130px; }
+.oprow .micro { flex: 1; min-width: 200px; }
+.oprow button { font-size: 12px; padding: 3px 10px; }
+
+.edgeprint {
+  max-width: 1160px; margin: 0 auto; padding: 10px 18px 26px;
+  border-top: 1px solid var(--line);
+}
+
+.banner-info {
+  border: 1.5px dashed var(--warn); color: var(--ink);
+  padding: 8px 12px; margin-top: 14px; font-size: 13.5px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .riskrail { gap: 10px; padding: 8px 12px; }
+  .rail-gauges { gap: 10px; }
+  .gauge { min-width: 130px; }
+  /* Only the dashboard's health chips hide on mobile; the journal page keeps
+     its navigation + theme toggle (they live in .rail-health there). */
+  .rail-health--dash { display: none; }
+  main { padding: 12px 10px 32px; }
+  .plate { padding: 10px 10px 12px; }
+  .plate > h2 { margin: -10px -10px 10px; padding: 6px 10px; }
+  .reading-head { position: static; border-left-width: 3px; margin-top: 8px; max-width: none; }
+  .ws-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+.worksheet, .gauge-fill, button { transition: background-color 150ms ease, border-color 150ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
