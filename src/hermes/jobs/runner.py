@@ -48,8 +48,10 @@ def run_job(name: str, fn: Callable[[], str], trigger: str = "schedule") -> dict
 
 
 def last_runs(job: str, limit: int = 5) -> list[dict]:
+    # started_at has second granularity; id breaks same-second ties so the
+    # health endpoint never reports a stale outcome as the latest run.
     rows = db.connect().execute(
-        "SELECT * FROM job_runs WHERE job=? ORDER BY started_at DESC LIMIT ?",
+        "SELECT * FROM job_runs WHERE job=? ORDER BY started_at DESC, id DESC LIMIT ?",
         (job, limit),
     ).fetchall()
     return [dict(r) for r in rows]
