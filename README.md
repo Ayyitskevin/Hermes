@@ -18,9 +18,12 @@ recommends; a human places every trade.
   directive.
 - **Regime engine** — a pluggable classifier displayed as a strip-chart
   recorder: state lanes, a stepped ink trace, and a confidence ribbon that
-  visibly pinches when the classifier is unsure. Every component of the
-  reading opens a worksheet: what it claims, what was measured, which named
-  methodology it draws from, and what it does *not* prove.
+  visibly pinches when the classifier is unsure. The default brain is
+  **Regime Label v6.2** (the owner's volatility-adjusted momentum state
+  machine, ported from its TradingView source); a published-methods
+  composite (`reference-v1`) ships as a second opinion. Every component of
+  the reading opens a worksheet: what it claims, what was measured, which
+  named methodology it draws from, and what it does *not* prove.
 - **Risk layer** — fixed-fractional position sizing, open-risk budget,
   concentration and correlation checks, and a drawdown circuit breaker on a
   normalized equity index (Hermes never knows a dollar figure). Risk state

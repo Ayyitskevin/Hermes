@@ -20,10 +20,18 @@ text ships inside the app: regime evidence carries `methodology` and
 `reference-v1` deliberately has **zero fitted parameters** — nothing in it
 can be silently overfit. What it buys is transparency, not alpha.
 
-**Regime Label v6.2** (the owner's classifier) is *not* implemented; Hermes
-refuses to guess at it. See [REGIME_V62_PORT.md](REGIME_V62_PORT.md). Its
-honesty statement — a heuristic derived from historical label-correlation,
-not a backtested edge — must be carried into the UI verbatim when ported.
+## Regime engine — `v62` (default)
+
+**Regime Label v6.2**, the owner's classifier, ported from its TradingView
+source — this is the "owner's own validated rules" branch of the
+traceability requirement. Model: 20-day log return divided by realized
+window volatility (population stdev × √20), volatility-percentile adaptive
+enter/exit thresholds with hysteresis, EMA(100) direction filter, 4×ATR
+gap-shock guard, 2-bar confirmation. Supporting gauges: Wilder's ADX (1978)
+and Kaufman's efficiency ratio compose its chop-risk read. Its honesty
+statement is carried into the UI verbatim: *a heuristic derived from
+historical label-correlation, not a backtested edge.* Full fidelity record
+in [REGIME_V62_PORT.md](REGIME_V62_PORT.md).
 
 ## Risk layer
 

@@ -36,7 +36,9 @@ class DataConfig:
 
 @dataclass(frozen=True)
 class RegimeConfig:
-    classifier: str = "reference-v1"
+    # "v62" — Regime Label v6.2, the owner's classifier (ported 2026-07).
+    # "reference-v1" — the transparent published-methods composite.
+    classifier: str = "v62"
     vol_percentile_lookback: int = 252
 
 

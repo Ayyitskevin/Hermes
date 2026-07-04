@@ -93,12 +93,13 @@ def test_reading_roundtrip(fresh_db, config):
     assert loaded.evidence[0].methodology == reading.evidence[0].methodology
 
 
-def test_v62_slot_refuses_to_guess(config):
-    import pytest
-
+def test_v62_is_registered_and_default(config):
+    from hermes.config import RegimeConfig
+    from hermes.regime.engine import CLASSIFIERS
     from hermes.regime.v62 import RegimeV62Classifier
-    with pytest.raises(NotImplementedError):
-        RegimeV62Classifier(config)
+
+    assert RegimeConfig().classifier == "v62"
+    assert CLASSIFIERS["v62"] is RegimeV62Classifier
 
 
 def test_reference_has_no_nan_scores(config):

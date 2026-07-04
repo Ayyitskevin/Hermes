@@ -33,7 +33,7 @@ def test_daily_check_end_to_end(client):
     d = client.get("/api/dashboard").json()
     assert d["provider"]["name"] == "sample"
     assert d["regime"] is not None
-    assert d["regime"]["classifier_version"] == "reference-v1"
+    assert d["regime"]["classifier_version"] == "v62"
     assert len(d["regime"]["evidence"]) == 5
     assert "not a backtested edge" in d["regime"]["honesty"]
     assert d["posture"]["posture"] in ("allow", "restrict", "cash-priority")
