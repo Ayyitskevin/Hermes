@@ -71,6 +71,37 @@ recommends where to focus a review this Sunday — never a trade (no order path
 exists in this codebase). On a weekly cadence the underlying data can be up to
 a week stale between runs, and the caveat says so on screen.
 
+## Swing screener (Minervini Trend Template)
+
+| Component | Named methodology | What it does NOT prove |
+|---|---|---|
+| Criteria 1–5: close vs the 50/150/200-day SMAs, the 150>200 relationship, the 50>150>200 stack, and the 200-day SMA rising over ~22 bars | Mark Minervini (2013), *Trade Like a Stock Market Wizard* — the Trend Template's moving-average structure (itself in the Stan Weinstein / William O'Neil trend-following lineage) | That the trend continues. Every criterion describes the PAST arrangement of price and its averages; a stock "in a Stage-2 uptrend" is a description, not a forecast |
+| Criteria 6–7: close ≥ 30% above the 52-week low and within 25% (≥ 75%) of the 52-week high | Minervini's absolute-position criteria — a leader is far off its low and near its high | Range position, not momentum persistence; a name pinned near its high can still roll over the next session |
+| Criterion 8: Mansfield RS > 0 vs the benchmark | A **documented PROXY** for Minervini's market-wide "RS rating ≥ 70": Hermes has no full-market universe, so it substitutes the rs board's Mansfield RS line (Weinstein 1988) — the symbol/benchmark RS against its 200-bar zero line | It is NOT Minervini's cross-sectional RS rank. It measures outperformance vs one benchmark, not a percentile against the whole market — a genuine substitution, flagged as such |
+| Verdict PASS (8/8) / NEAR (6–7) / NO (<6); non-bull regime annotation | Explicit hand-written thresholds over the eight criteria plus the current regime reading; PASS/NEAR rows are annotated **context-only** (not suppressed) when the tape is not a bull trend | A verdict flags a **candidate** for review — it is never a trade signal, and never a "setup" (see below). No order path exists in this codebase |
+
+**Candidate, not setup — and the reviewer gate is elsewhere.** The screen
+outputs candidates: names worth a closer look. A candidate becomes a *setup*
+only when the human creates a journaled trade proposal, and that proposal runs
+the reviewer second-pass (`review.reviewer.review_entry`) at propose time. The
+screener deliberately does **not** call the reviewer and does **not** bypass it
+— the gate lives at propose time, by design, so the screen can never launder an
+un-reviewed idea into a "validated" one.
+
+**Filter, not edge.** The Trend Template is a trend-following filter: it
+describes a confirmed uptrend, it does not predict one. The Phase 4 validation
+campaign (2026-07-05) found filter-style signals did not add value at default
+parameters, so passing the screen is a screening *convenience*, not forward
+evidence — the caveat says this on screen, verbatim (`CAVEAT` in
+`src/hermes/screener/trend_template.py`).
+
+**Fundamentals are deliberately omitted.** Minervini's full method (and O'Neil's
+CANSLIM behind it) weighs earnings, sales, and institutional sponsorship. Hermes
+has **no fundamentals feed**, so it screens the price half only and says so
+plainly — a match is never a fundamental endorsement, and nothing here fakes one.
+Short history (<252 daily bars, or too little benchmark overlap for the RS proxy)
+renders as `missing`, never interpolated, per the data-integrity contract.
+
 ## Risk layer
 
 | Rule | Named methodology |

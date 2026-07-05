@@ -8,6 +8,7 @@ import { regimeStrip, priceChart, sparkline } from "./charts.js";
 const $ = (sel) => document.querySelector(sel);
 let data = null;
 let rsData = null;
+let scrData = null;
 
 async function refresh() {
   $("#refresh-state").textContent = "fetching…";
@@ -27,6 +28,16 @@ async function refresh() {
     $("#rs-body").innerHTML =
       `<tr><td colspan="7" class="micro">FETCH FAILED — ${esc(err.message)}</td></tr>`;
     $("#rs-calibration").innerHTML = "";
+  }
+  // The screener fetches separately too: a candidate screen is decision-support
+  // sugar, so its failure must never take the rail, regime, or leadership down.
+  try {
+    scrData = await api("/api/screener");
+    renderScreener();
+  } catch (err) {
+    $("#scr-body").innerHTML =
+      `<tr><td colspan="6" class="micro">FETCH FAILED — ${esc(err.message)}</td></tr>`;
+    $("#scr-calibration").innerHTML = "";
   }
 }
 
@@ -241,6 +252,40 @@ function renderLeadership() {
     `regime ${esc(regime.label_display ?? "no reading yet")}` +
     `${regime.capped ? " — non-bull cap: verdicts top out at WATCH" : ""} · ` +
     `bars as of ${esc(fmtTime(b.asof))} · ${esc(b.honesty.methodology)} ${esc(b.honesty.caveat)}</span>`;
+}
+
+// ── Swing screener (Minervini Trend Template) ────────────────────────────
+// Verdict chips reuse the existing status palette — the verdict word carries
+// the meaning, never color alone. A row is a CANDIDATE, never a setup.
+const SCR_CHIP = { PASS: "good", NEAR: "warn", NO: "serious" };
+
+function renderScreener() {
+  const s = scrData;
+  const rows = (s.rows || []).map((r) => {
+    const failed = r.status === "ok"
+      ? (r.failed.length
+          ? `<div class="micro rs-note">${r.failed.map(esc).join(" · ")}</div>`
+          : `<span class="micro st-good">all eight met</span>`)
+      : `<div class="micro rs-note">${esc(r.note)}</div>`;
+    return `
+    <tr>
+      <td class="sym">${esc(r.symbol)}</td>
+      <td>${r.verdict ? chip(SCR_CHIP[r.verdict] ?? "warn", r.verdict) : chip("missing")}
+        ${r.regime_note ? `<div class="micro rs-note">${esc(r.regime_note)}</div>` : ""}</td>
+      <td class="num">${r.score === null ? "—" : `${r.score}/8`}</td>
+      <td>${failed}</td>
+      <td>${chip(r.staleness)}</td>
+      <td class="micro">${esc(r.source ?? "—")} · ${esc(fmtTime(r.as_of))}</td>
+    </tr>`;
+  }).join("");
+  $("#scr-body").innerHTML = rows ||
+    `<tr><td colspan="6" class="micro">no watchlist symbols to screen — each needs 252 cached daily bars</td></tr>`;
+  const regime = s.regime || {};
+  $("#scr-calibration").innerHTML =
+    `<span class="micro">Trend Template (Minervini 2013) · 8 criteria · ` +
+    `PASS 8/8 · NEAR 6–7 · NO &lt;6 · regime ${esc(regime.label_display ?? "no reading yet")}` +
+    `${regime.bull ? "" : " — non-bull: PASS/NEAR rows annotated context-only"} · ` +
+    `bars as of ${esc(fmtTime(s.asof))} · candidates for review, never setups — ${esc(s.honesty.caveat)}</span>`;
 }
 
 // ── Station log ──────────────────────────────────────────────────────────
