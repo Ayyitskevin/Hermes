@@ -74,6 +74,9 @@ class ScheduleConfig:
     premarket_check: str = "0 8"
     eod_sync: str = "30 16"
     journal_resolve: str = "0 17"
+    # 'MIN HOUR DOW' — the optional third field is an APScheduler day_of_week
+    # string. Sunday 18:00 by default (a weekly cadence, not Mon–Fri).
+    weekly_review: str = "0 18 sun"
 
 
 @dataclass(frozen=True)

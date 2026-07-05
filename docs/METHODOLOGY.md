@@ -57,6 +57,20 @@ has tested it. The board's caveat says exactly this, on screen, verbatim
 bars) renders as `missing`, never interpolated, per the data-integrity
 contract.
 
+## Weekly portfolio review
+
+| Component | Named methodology | What it does NOT prove |
+|---|---|---|
+| Regime coherence per open position | Weinstein (1988) stage sense: a long is *with* the tape in a bull trend and *against* it otherwise (a short inverts) | Coherence is judged against a single benchmark-wide regime reading, not a per-symbol regime; "fighting" is a review flag, not an exit order |
+| Sector heat (Σ size% by sector) | The same aggregation as the risk engine's sector-concentration check | % of equity only; untagged positions surface as `unspecified` and are flagged, because an untagged book can hide concentration |
+| Full pairwise correlation matrix | Pearson correlation of daily returns between every open-position pair (the risk engine reports only the worst pair; this is the whole matrix) | Backward-looking over a fixed lookback — who HAS moved together, not who will; insufficient history renders as ∅ missing, never 0 |
+| Journal-informed exposure | Open count, Σ planned risk %, the journal's own `performance_summary` (self-labels small samples as anecdotes), and the count of stale open theses | A synthesis of already-computed layers, not a new measurement or a forecast |
+
+The weekly review is a scheduled **re-reading**, not a new signal: it
+recommends where to focus a review this Sunday — never a trade (no order path
+exists in this codebase). On a weekly cadence the underlying data can be up to
+a week stale between runs, and the caveat says so on screen.
+
 ## Risk layer
 
 | Rule | Named methodology |
