@@ -115,6 +115,7 @@ src/hermes/
 │   ├── sync.py      incremental bar/snapshot sync
 │   ├── daily_check.py the daily workflow + posture derivation
 │   ├── weekly_review.py the Sunday portfolio-review job (stores a report)
+│   ├── backup.py      nightly SQLite online-backup snapshot + retention prune
 │   └── scheduler.py APScheduler cron + MISSED detection (per-job day-of-week)
 ├── api/routes.py    JSON API incl. manual job triggers + positive-evidence health
 └── main.py          FastAPI factory + CLI (serve / daily-check / sync / doctor)
@@ -140,7 +141,12 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
   The dashboard compares evidence against the schedule and shows **MISSED**
   when an expected fire has no row — silence is never read as success.
 - Every job has a manual override: `POST /api/jobs/{name}/run`, the UI's
-  "run now" buttons, and the `hermes daily-check` / `hermes sync` CLI.
+  "run now" buttons, and the `hermes daily-check` / `hermes sync` /
+  `hermes backup` CLI.
+- Durability (ops hardening, Phase 6 #1): a nightly `backup` job snapshots
+  `hermes.db` via SQLite's online-backup API and prunes to a retention bound;
+  the latest snapshot is positive evidence in `/api/health`, and a backup that
+  stops firing is itself MISSED-flagged. See [OPERATIONS.md](OPERATIONS.md).
 
 ## V2+ roadmap (named, ordered, deliberately not in V1)
 

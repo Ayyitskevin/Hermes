@@ -77,6 +77,15 @@ class ScheduleConfig:
     # 'MIN HOUR DOW' — the optional third field is an APScheduler day_of_week
     # string. Sunday 18:00 by default (a weekly cadence, not Mon–Fri).
     weekly_review: str = "0 18 sun"
+    # Nightly DB snapshot — every day (mon–sun), not just the trading week,
+    # so a weekend of journalling is never left un-backed-up.
+    backup: str = "0 2 mon-sun"
+
+
+@dataclass(frozen=True)
+class BackupConfig:
+    retention: int = 14        # timestamped snapshots to keep; older are pruned
+    subdir: str = "backups"    # snapshot directory, relative to data_dir
 
 
 @dataclass(frozen=True)
@@ -104,6 +113,7 @@ class HermesConfig:
     journal: JournalConfig
     ai: AiConfig
     schedule: ScheduleConfig
+    backup: BackupConfig
     server: ServerConfig
     secrets: Secrets
     data_dir: Path
@@ -142,6 +152,7 @@ def load_config(root: Path | None = None) -> HermesConfig:
         journal=_section(raw, "journal", JournalConfig),
         ai=_section(raw, "ai", AiConfig),
         schedule=_section(raw, "schedule", ScheduleConfig),
+        backup=_section(raw, "backup", BackupConfig),
         server=server,
         secrets=Secrets(
             alpaca_key_id=os.environ.get("APCA_API_KEY_ID", ""),

@@ -20,7 +20,7 @@ from ..config import HermesConfig
 from ..data import store
 from ..data.models import iso, utcnow
 from ..data.provider import MarketDataProvider
-from ..jobs import daily_check, runner, scheduler, weekly_review
+from ..jobs import backup, daily_check, runner, scheduler, weekly_review
 from ..journal import service as journal
 from ..portfolio import review as portfolio_review
 from ..regime.engine import latest_reading, reading_history
@@ -308,6 +308,10 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             "jobs": [{"job": s["job"], "missed": s["missed"],
                       "last_outcome": (s["last_run"] or {}).get("outcome")}
                      for s in scheduler.job_status(config, provider)],
+            # Positive evidence the state is being snapshotted — null until the
+            # first backup runs (the MISSED flag on the 'backup' job catches a
+            # backup that stopped firing; this shows the most recent snapshot).
+            "backup": backup.latest_backup(config),
         }
 
     return r

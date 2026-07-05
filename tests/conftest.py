@@ -7,6 +7,7 @@ import pytest
 from hermes import db, oplog
 from hermes.config import (
     AiConfig,
+    BackupConfig,
     DataConfig,
     HermesConfig,
     JournalConfig,
@@ -33,6 +34,7 @@ def config(tmp_path) -> HermesConfig:
         # Point Ollama at a dead local port so LLM passes skip fast and visibly.
         ai=AiConfig(ollama_url="http://127.0.0.1:1", ollama_model="test"),
         schedule=ScheduleConfig(),
+        backup=BackupConfig(),
         server=ServerConfig(),
         secrets=Secrets(),
         data_dir=tmp_path / "data",

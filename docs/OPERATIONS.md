@@ -53,20 +53,23 @@ shows the merged stream while per-component files stay separable.
 
 ## Scheduled jobs and MISSED semantics
 
-Three jobs (times in `config/hermes.toml`, America/New_York, Mon–Fri):
+Jobs (times in `config/hermes.toml`, America/New_York):
 
 | Job | Default | Does |
 |---|---|---|
-| `daily_check` | 08:00 | sync → regime → risk sweep → posture → report |
-| `eod_sync` | 16:30 | pull the day's closed bars |
-| `journal_resolve` | 17:00 | count open/stale entries awaiting human resolution |
+| `daily_check` | Mon–Fri 08:00 | sync → regime → risk sweep → posture → report |
+| `eod_sync` | Mon–Fri 16:30 | pull the day's closed bars |
+| `journal_resolve` | Mon–Fri 17:00 | count open/stale entries awaiting human resolution |
 | `weekly_review` | Sun 18:00 | regime coherence, sector heat, correlation matrix, journal-informed exposure → stored report |
+| `backup` | Daily 02:00 | snapshot `hermes.db`, prune to retention (see Backup & upgrade) |
 
-The first three fire Mon–Fri; `weekly_review` is the one weekly job. The
-schedule grammar is `"MIN HOUR"` (defaults Mon–Fri) or `"MIN HOUR DOW"` — the
-optional day-of-week is an APScheduler string (`sun`, `mon-fri`, `mon,wed,fri`).
-MISSED detection understands each job's own cadence, so a weekly job is flagged
-MISSED only when a *Sunday* fire has no evidence row, never on a weekday.
+The market jobs fire Mon–Fri; `weekly_review` is weekly (Sunday); `backup`
+runs every day including weekends, so a weekend of journalling is never left
+un-snapshotted. The schedule grammar is `"MIN HOUR"` (defaults Mon–Fri) or
+`"MIN HOUR DOW"` — the optional day-of-week is an APScheduler string (`sun`,
+`mon-fri`, `mon-sun`, `mon,wed,fri`). MISSED detection understands each job's
+own cadence: a weekly job is flagged MISSED only when a *Sunday* fire has no
+evidence row, the backup only when a *daily* fire is missing.
 
 Every run writes a `job_runs` row. The Station Log compares evidence against
 the schedule: an expected fire with no row within 30 minutes shows **MISSED**
@@ -98,14 +101,26 @@ immediately, trigger the job manually; a manual run is evidence too.
 
 ## Backup & upgrade
 
-- State is one SQLite file: `data/hermes.db` (WAL mode — copy with
-  `sqlite3 data/hermes.db ".backup backup.db"` while running, or stop first).
-  No `sqlite3` CLI on the box? The stdlib works the same and is safe while
-  running:
+State is one SQLite file: `data/hermes.db` (WAL mode) — every journal entry,
+regime reading, risk event, and equity-index point.
+
+- **Automatic (default):** the `backup` job snapshots the database nightly at
+  02:00 (every day) to `data/backups/hermes-<timestamp>.db` and prunes to
+  `[backup] retention` (default 14). It uses SQLite's online backup API, so
+  it's safe against the live WAL database — no downtime. The most recent
+  snapshot shows in `/api/health` under `backup`; a backup that stops firing
+  is flagged **MISSED** like any other job (silence is not evidence).
+- **On demand:** `hermes backup` (same code path, same evidence, prunes to
+  retention) or `POST /api/jobs/backup/run`.
+- **Restore:** stop the service, copy a chosen snapshot over
+  `data/hermes.db`, restart. Snapshots are self-contained, restorable `.db`
+  files — do this once as a drill so restore is rehearsed, not assumed.
+- **No `sqlite3` CLI?** Not needed — the job uses the Python stdlib. For a
+  one-off manual copy without the CLI:
 
   ```bash
   python3 -c "import sqlite3; s=sqlite3.connect('data/hermes.db'); d=sqlite3.connect('backup.db'); s.backup(d); d.close()"
   ```
-- Upgrade: `git pull && .venv/bin/pip install -e . && sudo systemctl restart hermes`.
+- **Upgrade:** `git pull && .venv/bin/pip install -e . && sudo systemctl restart hermes`.
   Migrations apply automatically at startup and are recorded in
   `schema_migrations`.

@@ -18,7 +18,7 @@ from ..config import HermesConfig
 from ..data.models import utcnow
 from ..data.provider import MarketDataProvider
 from ..journal.service import list_entries, stale_open_entries
-from . import daily_check, runner, sync, weekly_review
+from . import backup, daily_check, runner, sync, weekly_review
 
 MISSED_TOLERANCE = timedelta(minutes=30)
 
@@ -83,6 +83,10 @@ def job_definitions(config: HermesConfig, provider: MarketDataProvider) -> dict:
         "weekly_review": (
             config.schedule.weekly_review,
             lambda: weekly_review.weekly_review(config),
+        ),
+        "backup": (
+            config.schedule.backup,
+            lambda: backup.backup_db(config),
         ),
     }
 
