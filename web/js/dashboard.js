@@ -7,6 +7,7 @@ import { regimeStrip, priceChart, sparkline } from "./charts.js";
 
 const $ = (sel) => document.querySelector(sel);
 let data = null;
+let rsData = null;
 
 async function refresh() {
   $("#refresh-state").textContent = "fetching…";
@@ -16,6 +17,16 @@ async function refresh() {
     $("#refresh-state").textContent = `updated ${fmtTime(data.generated_at)}`;
   } catch (err) {
     $("#refresh-state").textContent = `FETCH FAILED — ${err.message}`;
+  }
+  // The leadership board fetches separately: a board failure is shown in its
+  // own plate and never takes the risk rail or regime read down with it.
+  try {
+    rsData = await api("/api/rs/board");
+    renderLeadership();
+  } catch (err) {
+    $("#rs-body").innerHTML =
+      `<tr><td colspan="7" class="micro">FETCH FAILED — ${esc(err.message)}</td></tr>`;
+    $("#rs-calibration").innerHTML = "";
   }
 }
 
@@ -197,6 +208,39 @@ function renderWatchboard() {
     </tr>`).join("");
   $("#watchboard-body").innerHTML = rows ||
     `<tr><td colspan="5" class="micro">no symbols cached yet — run a sync</td></tr>`;
+}
+
+// ── Leadership board (Mansfield RS) ──────────────────────────────────────
+// Verdict chips reuse the existing status palette — no new colors, and the
+// verdict word itself carries the meaning, never color alone.
+const VERDICT_CHIP = {
+  "HI-CONV": "good", "LONG-OK": "ok", "WATCH": "warn", "SKIP-LAG": "serious",
+};
+
+function renderLeadership() {
+  const b = rsData;
+  const signed = (v, digits = 2) =>
+    v === null || v === undefined ? "—" : `${v >= 0 ? "+" : ""}${fmtNum(v, digits)}`;
+  const rows = (b.rows || []).map((r) => `
+    <tr>
+      <td class="sym">${esc(r.symbol)}</td>
+      <td>${r.verdict ? chip(VERDICT_CHIP[r.verdict] ?? "warn", r.verdict) : chip("missing")}
+        ${r.note ? `<div class="micro rs-note">${esc(r.note)}</div>` : ""}</td>
+      <td class="num">${r.mansfield === null ? "—" : `${signed(r.mansfield, 1)}%`}</td>
+      <td class="num">${signed(r.slope3)}</td>
+      <td class="rs-flag micro">${r.rs_new_high ? `<span class="st-good">↑ new 50-bar high</span>`
+        : r.rs_new_low ? `<span class="st-serious">↓ new 50-bar low</span>` : "—"}</td>
+      <td>${chip(r.staleness)}</td>
+      <td class="micro">${esc(r.source ?? "—")} · ${esc(fmtTime(r.as_of))}</td>
+    </tr>`).join("");
+  $("#rs-body").innerHTML = rows ||
+    `<tr><td colspan="7" class="micro">no watchlist symbols to rank — every name needs 200 cached daily bars</td></tr>`;
+  const regime = b.regime || {};
+  $("#rs-calibration").innerHTML =
+    `<span class="micro">RS = close/${esc(b.benchmark)} · Mansfield zero line = 200-bar avg of RS · ` +
+    `regime ${esc(regime.label_display ?? "no reading yet")}` +
+    `${regime.capped ? " — non-bull cap: verdicts top out at WATCH" : ""} · ` +
+    `bars as of ${esc(fmtTime(b.asof))} · ${esc(b.honesty.methodology)} ${esc(b.honesty.caveat)}</span>`;
 }
 
 // ── Station log ──────────────────────────────────────────────────────────

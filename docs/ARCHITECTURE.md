@@ -99,6 +99,8 @@ src/hermes/
 │   ├── reference.py reference-v1 classifier (five named methods)
 │   ├── v62.py       Regime Label v6.2 (owner's classifier, ported; DEFAULT)
 │   └── engine.py    registry + persistence
+├── rs/board.py      Mansfield RS leadership board (Weinstein 1988) — watchlist
+│                    vs benchmark, verdicts capped by the current regime
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
 ├── journal/service.py  propose/commit/close/resolve; equity index
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
@@ -136,25 +138,31 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 
 ## V2+ roadmap (named, ordered, deliberately not in V1)
 
-1. **Weekly portfolio review** workflow (Pattern A's `core-portfolio-weekly`).
-2. **Swing-opportunity screener** — Minervini VCP / O'Neil CANSLIM /
+1. **RS leadership board** — watchlist ranked by Mansfield relative strength
+   vs the benchmark (the AIO's RS module in decision-support form; the
+   "which names" layer of the premarket read).
+   **LANDED 2026-07-05:** `src/hermes/rs/board.py`, `GET /api/rs/board`, the
+   Leadership plate; methodology + caveats in
+   [METHODOLOGY.md](METHODOLOGY.md#rs-leadership-board).
+2. **Weekly portfolio review** workflow (Pattern A's `core-portfolio-weekly`).
+3. **Swing-opportunity screener** — Minervini VCP / O'Neil CANSLIM /
    Follow-Through-Day detection (Pattern A's swing tier).
-3. **Trade-memory reflection loop** — local-LLM one-paragraph reflection per
+4. **Trade-memory reflection loop** — local-LLM one-paragraph reflection per
    resolved trade (Pattern B's `Reflector`), appended to the journal.
-4. **Multi-agent debate mode** — bull/bear research debate → trader draft →
+5. **Multi-agent debate mode** — bull/bear research debate → trader draft →
    risk critique, on Ollama (Pattern B's pipeline, decision-support only).
-5. **Databento full adapter** — live TCP client + failover drill.
-6. **Broker read-only position sync** — Alpaca paper positions into the risk
+6. **Databento full adapter** — live TCP client + failover drill.
+7. **Broker read-only position sync** — Alpaca paper positions into the risk
    sweep (read scope only; the no-write boundary is unchanged). NOTE: this
    requires talking to Alpaca's paper-trading host, which the boundary guard
    currently bans outright — the guard must evolve first (method-aware
    allowlisting or a dedicated read-only module with its own surface lock)
    before any trading-host URL may appear in source.
-7. **Monthly performance review** — regime-conditioned stats once samples
+8. **Monthly performance review** — regime-conditioned stats once samples
    are meaningful (Pattern A's monthly tier).
-8. **Options tools / pair-trade screener** (Pattern A satellites).
-9. **Crypto feeds** (Binance/Coinbase/Kraken public data) if crypto enters scope.
-10. **4H/weekly regime timeframes** — the classifier consumes whatever-
+9. **Options tools / pair-trade screener** (Pattern A satellites).
+10. **Crypto feeds** (Binance/Coinbase/Kraken public data) if crypto enters scope.
+11. **4H/weekly regime timeframes** — the classifier consumes whatever-
     timeframe bars it is handed (each `Bar` carries its timeframe); the daily
     workflow just always hands it `1Day` bars today. The reserved
     `market.timeframes` config knob is wired to nothing until this lands.

@@ -288,6 +288,10 @@ main { max-width: 1160px; margin: 0 auto; padding: 18px 18px 40px; }
 .spark { display: block; }
 .spark path { stroke: var(--ink); stroke-width: 1.5; fill: none; }
 
+/* ── Leadership board (shares the watchboard table skin) ────────────────── */
+.watchboard td .rs-note { margin-top: 2px; white-space: normal; max-width: 340px; }
+.watchboard td.rs-flag { white-space: nowrap; }
+
 /* ── Tables (journal, jobs) ─────────────────────────────────────────────── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .tbl th { text-align: left; font-family: var(--mono); font-size: 10px;
