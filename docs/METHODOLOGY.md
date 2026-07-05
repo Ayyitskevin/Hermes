@@ -151,3 +151,12 @@ bear/stress ⇒ cash-priority; warn or rangebound ⇒ restrict; else allow.
   a missing benchmark rather than a silently-truncated one.
 - The sample provider's synthetic tape is a scripted random walk for demos
   and tests. It is stamped `source: sample` everywhere it appears.
+- The default watchlist (`config/hermes.example.toml`) is a diversified
+  cross-sector field — all 11 SPDR sector ETFs plus liquid leaders from each.
+  This is a **breadth convention**, chosen so the RS board and screener can
+  surface leadership across the whole market rather than a narrow, correlated
+  cluster; it is **not** a claim that these names carry an edge. Any edge
+  belongs to a trade the human places on the chart, validated on the chart —
+  Hermes screens and ranks, it never asserts alpha. Watchlist composition also
+  inherits watchlist bias in the breadth and RS reads (already flagged in
+  those rows).
