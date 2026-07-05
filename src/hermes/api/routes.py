@@ -24,6 +24,7 @@ from ..jobs import daily_check, runner, scheduler
 from ..journal import service as journal
 from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
+from ..rs import board as rs_board
 
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
@@ -157,6 +158,45 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         if not risk.acknowledge_event(event_id):
             raise HTTPException(404, f"No risk event #{event_id}")
         return {"acknowledged": event_id}
+
+    # ── RS leadership board ──────────────────────────────────────────────
+    @r.get("/rs/board")
+    def rs_leadership() -> dict:
+        """Watchlist ranked by Mansfield relative strength vs the benchmark,
+        verdicts read against the current regime. Recommends which names earn
+        a review first — never a trade."""
+        b = rs_board.build_board(config)
+        return {
+            "generated_at": iso(b.ts),
+            "asof": iso(b.benchmark_asof) if b.benchmark_asof else None,
+            "benchmark": b.benchmark,
+            "benchmark_source": b.benchmark_source,
+            "regime": {
+                "label": b.regime_label.value if b.regime_label else None,
+                "label_display": b.regime_label.display if b.regime_label else None,
+                "asof": iso(b.regime_asof) if b.regime_asof else None,
+                "classifier_version": b.regime_version,
+                "capped": b.capped,
+            },
+            "rows": [
+                {
+                    "symbol": row.symbol, "status": row.status,
+                    "verdict": row.verdict, "mansfield": row.mansfield,
+                    "slope3": row.slope3, "rs": row.rs,
+                    "rs_new_high": row.rs_new_high, "rs_new_low": row.rs_new_low,
+                    "bars_overlap": row.bars_overlap, "note": row.note,
+                    "source": row.source,
+                    "as_of": iso(row.as_of) if row.as_of else None,
+                    "staleness": row.staleness,
+                }
+                for row in b.rows
+            ],
+            "honesty": {
+                "claim": b.claim,
+                "methodology": b.methodology,
+                "caveat": b.caveat,
+            },
+        }
 
     # ── Jobs: observability + manual override ───────────────────────────
     @r.get("/jobs")

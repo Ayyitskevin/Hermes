@@ -36,6 +36,27 @@ Confluence AIO v3.2 strategy — verified model-identical at daily defaults,
 so chart and dashboard share one brain. Full fidelity record in
 [REGIME_V62_PORT.md](REGIME_V62_PORT.md).
 
+## RS leadership board
+
+| Component | Named methodology | What it does NOT prove |
+|---|---|---|
+| RS line = close_symbol / close_benchmark | Comparative relative-strength line — Weinstein (1988), *Secrets for Profiting in Bull and Bear Markets*; the Mansfield chart-service convention | A ratio of two prices: it says who HAS been outperforming, not who will |
+| Mansfield RS = (RS / SMA200(RS) − 1) × 100 | Mansfield relative strength — the RS line against its ~200-day zero line, the form used throughout Weinstein's stage analysis | **A relative-performance tilt, not persistence.** Above-zero states a fact about the past window; continuation is assumed by the stage framework, not demonstrated by it |
+| 3-bar Mansfield slope; 50-bar RS new-high/new-low flags | Hermes conventions for "rising/falling" and "new high/low" — readability choices, not fitted or validated parameters | Nothing — they label the direction and range position of the line |
+| Verdicts HI-CONV / LONG-OK / WATCH / SKIP-LAG, non-bull cap at WATCH | Explicit hand-written rules over the measures plus the current regime reading; the cap encodes *risk outranks selection* (SKIP-LAG alone survives any regime) | A verdict recommends which name earns a **review** first. It is never a trade signal — no order path exists in this codebase |
+
+**Gate vs selection — the campaign distinction, stated plainly.** The
+Phase 4 campaign (2026-07-05) tested RS as an **entry gate** on index
+vehicles — "only take the signal when RS agrees" — and found it did not add
+value at default parameters. This board makes a **different,
+cross-sectional selection claim**: given that you are looking at all, which
+watchlist name to look at first. That claim is not validated either — the
+campaign result neither supports nor condemns it, and no Hermes backtest
+has tested it. The board's caveat says exactly this, on screen, verbatim
+(`CAVEAT` in `src/hermes/rs/board.py`). Short history (<200 overlapping
+bars) renders as `missing`, never interpolated, per the data-integrity
+contract.
+
 ## Risk layer
 
 | Rule | Named methodology |
