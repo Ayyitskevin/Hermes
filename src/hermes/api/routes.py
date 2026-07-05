@@ -26,6 +26,7 @@ from ..portfolio import review as portfolio_review
 from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
 from ..rs import board as rs_board
+from ..screener import trend_template as screener
 
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
@@ -196,6 +197,54 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                 "claim": b.claim,
                 "methodology": b.methodology,
                 "caveat": b.caveat,
+            },
+        }
+
+    # ── Swing-opportunity screener (Minervini Trend Template) ────────────
+    @r.get("/screener")
+    def screener_route() -> dict:
+        """Watchlist scored against Minervini's eight-point Trend Template.
+        Rows are CANDIDATES worth a closer look — never setups, never trades.
+        A candidate becomes a setup only via a journaled proposal, which runs
+        the reviewer second-pass at propose time; this screen never calls it."""
+        s = screener.build_screen(config)
+        return {
+            "generated_at": iso(s.ts),
+            "asof": iso(s.benchmark_asof) if s.benchmark_asof else None,
+            "benchmark": s.benchmark,
+            "benchmark_source": s.benchmark_source,
+            "regime": {
+                "label": s.regime_label.value if s.regime_label else None,
+                "label_display": s.regime_label.display if s.regime_label else None,
+                "asof": iso(s.regime_asof) if s.regime_asof else None,
+                "classifier_version": s.regime_version,
+                "bull": s.bull_regime,
+            },
+            "rows": [
+                {
+                    "symbol": row.symbol, "status": row.status,
+                    "verdict": row.verdict, "score": row.score,
+                    "criteria": [
+                        {"key": c.key, "label": c.label, "passed": c.passed}
+                        for c in row.criteria
+                    ],
+                    "failed": row.failed,
+                    "close": row.close, "sma50": row.sma50, "sma150": row.sma150,
+                    "sma200": row.sma200, "low_52w": row.low_52w,
+                    "high_52w": row.high_52w, "mansfield": row.mansfield,
+                    "pct_above_low": row.pct_above_low,
+                    "pct_below_high": row.pct_below_high, "bars": row.bars,
+                    "regime_note": row.regime_note, "note": row.note,
+                    "source": row.source,
+                    "as_of": iso(row.as_of) if row.as_of else None,
+                    "staleness": row.staleness,
+                }
+                for row in s.rows
+            ],
+            "honesty": {
+                "claim": s.claim,
+                "methodology": s.methodology,
+                "caveat": s.caveat,
             },
         }
 

@@ -103,6 +103,9 @@ src/hermes/
 │                    vs benchmark, verdicts capped by the current regime
 ├── portfolio/review.py  weekly portfolio review: regime coherence, sector
 │                    heat, full correlation matrix, journal-informed exposure
+├── screener/trend_template.py  Minervini Trend Template (2013) — watchlist
+│                    scored 0–8 into PASS/NEAR/NO candidates (never setups);
+│                    RS criterion reuses the rs board's Mansfield line as a proxy
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
 ├── journal/service.py  propose/commit/close/resolve; equity index
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
@@ -158,6 +161,18 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
    [METHODOLOGY.md](METHODOLOGY.md#weekly-portfolio-review).
 3. **Swing-opportunity screener** — Minervini VCP / O'Neil CANSLIM /
    Follow-Through-Day detection (Pattern A's swing tier).
+   **LANDED 2026-07-05:** `src/hermes/screener/trend_template.py`,
+   `GET /api/screener`, the Screener plate — Minervini's eight-point Trend
+   Template (2013) scored per watchlist symbol into PASS (8/8) / NEAR (6–7) /
+   NO (<6) verdicts, ranked and read against the current regime (PASS/NEAR
+   rows annotated context-only, not suppressed, when the tape is not a bull
+   trend). Criterion 8 reuses the rs board's Mansfield RS line as a documented
+   proxy for Minervini's market-wide RS rating. Outputs **candidates**, never
+   setups: a candidate becomes a setup only via a journaled proposal, whose
+   reviewer second-pass is the gate — the screener never calls it. CANSLIM's
+   fundamentals are omitted (no fundamentals feed). On-demand like the RS
+   board (no scheduled job). Methodology + caveats in
+   [METHODOLOGY.md](METHODOLOGY.md#swing-screener-minervini-trend-template).
 4. **Trade-memory reflection loop** — local-LLM one-paragraph reflection per
    resolved trade (Pattern B's `Reflector`), appended to the journal.
 5. **Multi-agent debate mode** — bull/bear research debate → trader draft →
