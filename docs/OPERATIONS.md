@@ -60,6 +60,13 @@ Three jobs (times in `config/hermes.toml`, America/New_York, Mon–Fri):
 | `daily_check` | 08:00 | sync → regime → risk sweep → posture → report |
 | `eod_sync` | 16:30 | pull the day's closed bars |
 | `journal_resolve` | 17:00 | count open/stale entries awaiting human resolution |
+| `weekly_review` | Sun 18:00 | regime coherence, sector heat, correlation matrix, journal-informed exposure → stored report |
+
+The first three fire Mon–Fri; `weekly_review` is the one weekly job. The
+schedule grammar is `"MIN HOUR"` (defaults Mon–Fri) or `"MIN HOUR DOW"` — the
+optional day-of-week is an APScheduler string (`sun`, `mon-fri`, `mon,wed,fri`).
+MISSED detection understands each job's own cadence, so a weekly job is flagged
+MISSED only when a *Sunday* fire has no evidence row, never on a weekday.
 
 Every run writes a `job_runs` row. The Station Log compares evidence against
 the schedule: an expected fire with no row within 30 minutes shows **MISSED**
@@ -74,7 +81,8 @@ immediately, trigger the job manually; a manual run is evidence too.
 ## Manual overrides
 
 - UI: "run now" next to every job in the Station Log.
-- API: `POST /api/jobs/daily_check/run` (also `eod_sync`, `journal_resolve`).
+- API: `POST /api/jobs/daily_check/run` (also `eod_sync`, `journal_resolve`,
+  `weekly_review`).
 - CLI: `hermes daily-check`, `hermes sync` — same code path, same evidence.
 
 ## Degradation states (all visible, none silent)

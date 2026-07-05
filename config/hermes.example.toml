@@ -58,11 +58,14 @@ allow_cloud = false
 cloud_model = "claude-sonnet-5"
 
 [schedule]
-# Times are America/New_York (US market clock). Cron format: "MIN HOUR".
+# Times are America/New_York (US market clock). Cron format: "MIN HOUR"
+# (defaults to Mon–Fri) or "MIN HOUR DOW", where DOW is an APScheduler
+# day_of_week string ("sun", "mon-fri", "mon,wed,fri").
 timezone = "America/New_York"
 premarket_check = "0 8"      # daily market check: fetch, classify regime, risk sweep, report
 eod_sync = "30 16"           # end-of-day bar sync after the close
 journal_resolve = "0 17"     # count open/stale entries awaiting human resolution
+weekly_review = "0 18 sun"   # Sunday portfolio review: coherence, sector heat, correlation, exposure
 
 [server]
 host = "127.0.0.1"

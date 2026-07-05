@@ -101,6 +101,8 @@ src/hermes/
 │   └── engine.py    registry + persistence
 ├── rs/board.py      Mansfield RS leadership board (Weinstein 1988) — watchlist
 │                    vs benchmark, verdicts capped by the current regime
+├── portfolio/review.py  weekly portfolio review: regime coherence, sector
+│                    heat, full correlation matrix, journal-informed exposure
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
 ├── journal/service.py  propose/commit/close/resolve; equity index
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
@@ -109,7 +111,8 @@ src/hermes/
 │   ├── runner.py    job_runs positive evidence wrapper
 │   ├── sync.py      incremental bar/snapshot sync
 │   ├── daily_check.py the daily workflow + posture derivation
-│   └── scheduler.py APScheduler cron + MISSED detection
+│   ├── weekly_review.py the Sunday portfolio-review job (stores a report)
+│   └── scheduler.py APScheduler cron + MISSED detection (per-job day-of-week)
 ├── api/routes.py    JSON API incl. manual job triggers + positive-evidence health
 └── main.py          FastAPI factory + CLI (serve / daily-check / sync / doctor)
 web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
@@ -145,6 +148,14 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
    Leadership plate; methodology + caveats in
    [METHODOLOGY.md](METHODOLOGY.md#rs-leadership-board).
 2. **Weekly portfolio review** workflow (Pattern A's `core-portfolio-weekly`).
+   **LANDED 2026-07-05:** `src/hermes/portfolio/review.py`, the Sunday
+   `weekly_review` job, `GET /api/reports/weekly`; a synthesis (not a new
+   measurement) of regime coherence, sector heat, the full correlation
+   matrix, and journal-informed exposure. Adding it generalized the
+   scheduler's spec grammar to an optional per-job day-of-week
+   (`"MIN HOUR DOW"`), leaving the three daily jobs' MISSED detection
+   unchanged. Methodology + caveats in
+   [METHODOLOGY.md](METHODOLOGY.md#weekly-portfolio-review).
 3. **Swing-opportunity screener** — Minervini VCP / O'Neil CANSLIM /
    Follow-Through-Day detection (Pattern A's swing tier).
 4. **Trade-memory reflection loop** — local-LLM one-paragraph reflection per

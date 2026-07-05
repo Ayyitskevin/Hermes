@@ -19,7 +19,7 @@ def test_health_reports_positive_evidence(client):
     h = client.get("/api/health").json()
     assert h["db"]["writable"] is True
     assert h["provider"]["name"] == "sample"
-    assert isinstance(h["jobs"], list) and len(h["jobs"]) == 3
+    assert isinstance(h["jobs"], list) and len(h["jobs"]) == 4
 
 
 def test_daily_check_end_to_end(client):
@@ -54,6 +54,25 @@ def test_daily_check_end_to_end(client):
 
 def test_unknown_job_404(client):
     assert client.post("/api/jobs/bake_bread/run").status_code == 404
+
+
+def test_weekly_review_over_http(client):
+    # Before the first run: a null-bodied shape, but the honesty block is
+    # always present (the caveat is the product, even when the body is empty).
+    pre = client.get("/api/reports/weekly").json()
+    assert pre["body_md"] is None and pre["generated_at"] is None
+    assert "REVIEW" in pre["honesty"]["caveat"] and pre["honesty"]["methodology"]
+
+    # Manual trigger runs the Sunday job on demand (empty book is fine).
+    run = client.post("/api/jobs/weekly_review/run")
+    assert run.status_code == 200, run.text
+    assert run.json()["outcome"] == "ok"
+
+    post = client.get("/api/reports/weekly").json()
+    assert post["generated_at"] is not None
+    assert "Weekly portfolio review" in post["body_md"]
+    assert "$" not in post["body_md"]                 # % of equity only, ever
+    assert post["meta"]["open_count"] == 0            # no positions seeded
 
 
 def test_journal_flow_over_http(client):

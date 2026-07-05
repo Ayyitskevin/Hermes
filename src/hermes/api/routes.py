@@ -20,8 +20,9 @@ from ..config import HermesConfig
 from ..data import store
 from ..data.models import iso, utcnow
 from ..data.provider import MarketDataProvider
-from ..jobs import daily_check, runner, scheduler
+from ..jobs import daily_check, runner, scheduler, weekly_review
 from ..journal import service as journal
+from ..portfolio import review as portfolio_review
 from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
 from ..rs import board as rs_board
@@ -196,6 +197,27 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                 "methodology": b.methodology,
                 "caveat": b.caveat,
             },
+        }
+
+    # ── Weekly portfolio review ──────────────────────────────────────────
+    @r.get("/reports/weekly")
+    def weekly_report() -> dict:
+        """The latest stored weekly portfolio review. Returns a null-bodied
+        shape (honesty block still present) before the first run — the manual
+        trigger is POST /api/jobs/weekly_review/run."""
+        honesty = {
+            "claim": portfolio_review.CLAIM,
+            "methodology": portfolio_review.METHODOLOGY,
+            "caveat": portfolio_review.CAVEAT,
+        }
+        rpt = weekly_review.latest_weekly_review()
+        if rpt is None:
+            return {"generated_at": None, "body_md": None, "meta": {}, "honesty": honesty}
+        return {
+            "generated_at": rpt["ts"],
+            "body_md": rpt["body_md"],
+            "meta": rpt["meta"],
+            "honesty": honesty,
         }
 
     # ── Jobs: observability + manual override ───────────────────────────
