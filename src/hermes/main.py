@@ -4,6 +4,7 @@ Run modes:
     hermes serve            long-lived service (what systemd runs)
     hermes daily-check      run the daily market check once, now (manual override)
     hermes sync             sync bars once, now
+    hermes backup           snapshot the database once, now (prunes to retention)
     hermes doctor           startup checks + positive-evidence health, then exit
 """
 
@@ -90,6 +91,11 @@ def cli() -> None:
         result = runner.run_job(
             "eod_sync", lambda: sync.sync_bars(config, provider), trigger="manual")
         print(result["detail"])
+    elif command == "backup":
+        from .jobs import backup, runner
+        result = runner.run_job(
+            "backup", lambda: backup.backup_db(config), trigger="manual")
+        print(result["detail"])
     elif command == "doctor":
         from .ai.ollama import OllamaClient
         conn = db.connect()
@@ -102,7 +108,8 @@ def cli() -> None:
               f"at {config.ai.ollama_url}")
         print(f"classifier: {config.regime.classifier}")
     else:
-        print(f"Unknown command {command!r}. Commands: serve, daily-check, sync, doctor")
+        print(f"Unknown command {command!r}. "
+              "Commands: serve, daily-check, sync, backup, doctor")
         sys.exit(2)
 
 

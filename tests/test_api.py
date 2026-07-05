@@ -19,7 +19,9 @@ def test_health_reports_positive_evidence(client):
     h = client.get("/api/health").json()
     assert h["db"]["writable"] is True
     assert h["provider"]["name"] == "sample"
-    assert isinstance(h["jobs"], list) and len(h["jobs"]) == 4
+    assert isinstance(h["jobs"], list) and len(h["jobs"]) == 5
+    assert "backup" in {j["job"] for j in h["jobs"]}
+    assert "backup" in h                      # positive-evidence field present
 
 
 def test_daily_check_end_to_end(client):

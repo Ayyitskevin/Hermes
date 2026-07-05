@@ -124,6 +124,7 @@ def test_provider_write_surface_locked():
     or an order method on any of them fails this lock."""
     from hermes.config import (
         AiConfig,
+        BackupConfig,
         DataConfig,
         HermesConfig,
         JournalConfig,
@@ -145,8 +146,8 @@ def test_provider_write_surface_locked():
     cfg = HermesConfig(
         market=MarketConfig(), data=DataConfig(), regime=RegimeConfig(),
         risk=RiskConfig(), journal=JournalConfig(), ai=AiConfig(),
-        schedule=ScheduleConfig(), server=ServerConfig(), secrets=Secrets(),
-        data_dir=_P("/tmp"), log_dir=_P("/tmp"), config_path=None,
+        schedule=ScheduleConfig(), backup=BackupConfig(), server=ServerConfig(),
+        secrets=Secrets(), data_dir=_P("/tmp"), log_dir=_P("/tmp"), config_path=None,
     )
     allowed = {"fetch_bars", "fetch_snapshot", "state", "name"}
     for name, cls in PROVIDERS.items():

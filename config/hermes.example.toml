@@ -66,6 +66,13 @@ premarket_check = "0 8"      # daily market check: fetch, classify regime, risk 
 eod_sync = "30 16"           # end-of-day bar sync after the close
 journal_resolve = "0 17"     # count open/stale entries awaiting human resolution
 weekly_review = "0 18 sun"   # Sunday portfolio review: coherence, sector heat, correlation, exposure
+backup = "0 2 mon-sun"       # nightly DB snapshot (every day, incl. weekends)
+
+[backup]
+# Nightly snapshots of data/hermes.db (SQLite online backup — safe while
+# running). Restore: stop the service, copy a snapshot over data/hermes.db.
+retention = 14               # snapshots to keep; older are pruned
+subdir = "backups"           # snapshot directory, relative to the data dir
 
 [server]
 host = "127.0.0.1"
