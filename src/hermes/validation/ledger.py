@@ -63,6 +63,16 @@ CAMPAIGNS = [
      "hypothesis": "Relative-strength leadership predicts forward outperformance.",
      "result": "States a past tilt, not persistence. Never validated as a gate in Hermes; "
                "used to rank what earns a review first, never to trade."},
+    {"method": "Dedicated short-side system (AIO v3.5-SHORT, owner-side)", "verdict": "unvalidated",
+     "hypothesis": "Relative weakness + a failed-supply-reclaim / bear-flag trigger, gated by "
+                   "no-chase, support-room and squeeze-risk filters with a structural stop, "
+                   "makes shorting additive versus not shorting at all.",
+     "result": "A NEW behavior-changing variant, off by default, computed on the owner's "
+               "TradingView chart — its order logic is banned from this repo by the "
+               "no-order-paths boundary, so only this verdict is recorded here. Not proven: "
+               "pending the A/B campaign (v2-shorts vs legacy-mirror vs longs-only, full "
+               "cycle, out-of-sample, costs-on) in docs/campaigns/SHORT_SIDE_V2_CAMPAIGN.md. "
+               "Until it beats longs-only out of sample, the honest default is shorts OFF."},
 ]
 
 # What each tool MAY and MAY NOT claim — the epistemic contract, in one place.

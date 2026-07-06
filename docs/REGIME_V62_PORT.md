@@ -96,6 +96,23 @@ mode (stride = regime lookback) is a chart-only diagnostic that reduces
 overlap-inflated stickiness; it reads differently by construction, and the Data
 Window stride is shown so the choice stays honest.
 
+## Short-side variant (AIO v3.5-SHORT, owner-side, UNVALIDATED)
+
+The owner's chart also carries an experimental **dedicated short-side system**
+(AIO v3.5-SHORT): relative weakness + a failed-supply-reclaim / bear-flag trigger,
+gated by no-chase, support-room and squeeze-risk filters, stopped above the
+structural supply high, and exited on an AVWAP reclaim. It is a **behavior-changing
+variant, off by default** (`allow_shorts = false`).
+
+**It is deliberately NOT in this repo.** Its logic is order-shaped (entries, exits,
+sizing), which the no-order-paths boundary bans — `tests/test_no_order_paths.py`
+would (correctly) fail on it. The **regime engine underneath it is unchanged from
+v3.4.1**, so `v62.py` parity is unaffected. What this repo carries instead is the
+**honest verdict**: an `unvalidated` entry in the validation ledger
+(`src/hermes/validation/ledger.py`) and the campaign that must pass before it is
+trusted — `docs/campaigns/SHORT_SIDE_V2_CAMPAIGN.md`. Until that A/B campaign shows
+it beats longs-only out of sample net of costs, the operating default is shorts OFF.
+
 ## Swapping classifiers
 
 ```toml
