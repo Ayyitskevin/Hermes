@@ -62,6 +62,23 @@ def test_known_symbol_full_payload(fresh_db):
     assert tf.posture == "ALLOW"
 
 
+def test_ohlc_daychange_atr_and_range(fresh_db):
+    seed_bars("SPY", BENCH)
+    seed_bars("XLK", STRONG_UP)
+    seed_regime(RegimeLabel.BULL_TREND)
+    rep = build_instrument(fresh_db, "XLK", range_key="3M")
+    # day change vs the prior close (STRONG_UP rises, so it's positive)
+    assert rep.prev_close is not None and rep.day_change is not None
+    assert rep.day_change > 0 and rep.day_change_pct > 0
+    assert rep.open is not None and rep.high is not None and rep.low is not None
+    assert rep.atr14 is not None and rep.atr14 >= 0
+    assert rep.range_key == "3M"
+    # the chart window follows the range (3M ≈ 63 sessions)
+    assert len(rep.series) == 63
+    # an unknown range falls back to 6M, never errors
+    assert build_instrument(fresh_db, "XLK", range_key="bogus").range_key == "6M"
+
+
 def test_factors_sum_to_score(fresh_db):
     seed_bars("SPY", BENCH)
     seed_bars("XLK", STRONG_UP)

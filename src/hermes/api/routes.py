@@ -311,13 +311,15 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
 
     # ── Instrument / Terminal ─────────────────────────────────────────────
     @r.get("/instrument/{symbol}")
-    def instrument_route(symbol: str, narrative: bool = False, prefer: str | None = None) -> dict:
+    def instrument_route(symbol: str, narrative: bool = False, prefer: str | None = None,
+                         range: str = "6M") -> dict:
         """A per-symbol read composed from cached bars + existing engines:
         price/staleness, MA structure, RS + Trend-Template, in-book context, and
         a transparent thesis-fit (0–100 + posture ALLOW/WATCH/RESTRICT). The AI
         desk-read runs only when ?narrative=1 (keeps the chart free + fast); it
         degrades visibly when no model answers. Never a live fetch, never a trade."""
-        rep = instrument.build_instrument(config, symbol, ai=ai, narrative=narrative, prefer=prefer)
+        rep = instrument.build_instrument(config, symbol, ai=ai, narrative=narrative,
+                                          prefer=prefer, range_key=range)
         return _instrument_payload(rep)
 
     @r.get("/search")
@@ -339,6 +341,9 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             "low_52w": rep.low_52w, "high_52w": rep.high_52w,
             "pct_above_low": rep.pct_above_low, "pct_below_high": rep.pct_below_high,
             "bars": rep.bars,
+            "open": rep.open, "high": rep.high, "low": rep.low, "prev_close": rep.prev_close,
+            "day_change": rep.day_change, "day_change_pct": rep.day_change_pct,
+            "day_range_pct": rep.day_range_pct, "atr14": rep.atr14, "range_key": rep.range_key,
             "rs": rep.rs, "mansfield": rep.mansfield, "rs_verdict": rep.rs_verdict,
             "trend_score": rep.trend_score, "trend_verdict": rep.trend_verdict,
             "in_book": rep.in_book, "book_weight_pct": rep.book_weight_pct,

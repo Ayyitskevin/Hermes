@@ -123,6 +123,32 @@ class InstrumentReport:
     thesis_fit: ThesisFit | None
     series: list[dict] = field(default_factory=list)   # [{t, c}] for the chart
     narrative: dict | None = None                      # AI desk-read, when requested
+    # latest-session OHLC + day change + ATR (per-share prices / %, never dollars)
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    prev_close: float | None = None
+    day_change: float | None = None
+    day_change_pct: float | None = None
+    day_range_pct: float | None = None
+    atr14: float | None = None
+    range_key: str = "6M"
+
+
+# Chart windows for the timeframe selector (~trading days).
+RANGE_DAYS = {"1M": 21, "3M": 63, "6M": 126, "1Y": 252}
+
+
+def _atr(bars, period: int = 14) -> float | None:
+    """Wilder-style ATR over the last `period` bars (simple mean of true ranges).
+    None on short history — never faked."""
+    if len(bars) < period + 1:
+        return None
+    trs = []
+    for i in range(len(bars) - period, len(bars)):
+        h, low_, pc = bars[i].high, bars[i].low, bars[i - 1].close
+        trs.append(max(h - low_, abs(h - pc), abs(low_ - pc)))
+    return sum(trs) / len(trs)
 
 
 # ── factor helpers ───────────────────────────────────────────────────────────
@@ -247,7 +273,7 @@ def _posture(score: int, bull: bool, breach: bool) -> tuple[str, bool, str]:
 # ── the report ───────────────────────────────────────────────────────────────
 def build_instrument(
     config: HermesConfig, symbol: str, *, ai=None, narrative: bool = False,
-    prefer: str | None = None,
+    prefer: str | None = None, range_key: str = "6M",
 ) -> InstrumentReport:
     symbol = symbol.upper().strip()
     benchmark = config.market.benchmark
@@ -283,7 +309,7 @@ def build_instrument(
     # Rolling MA series for the chart overlays (computed over full history, then
     # sliced to the visible window — None where history is too short, never faked).
     ma50s, ma150s, ma200s = (sma_series(closes, w) for w in (50, 150, 200))
-    window_n = 120
+    window_n = RANGE_DAYS.get(range_key, 126)
     chart = [
         {"t": b.ts, "o": b.open, "h": b.high, "low": b.low, "c": b.close, "v": b.volume,
          "ma50": ma50s[i], "ma150": ma150s[i], "ma200": ma200s[i]}
@@ -327,6 +353,15 @@ def build_instrument(
             "and 200 benchmark-overlap bars for the regime-fit and setup-match factors",
             factors)
 
+    latest = sym_bars[-1]
+    prev_close = sym_bars[-2].close if len(sym_bars) >= 2 else None
+    day_change = round(close - prev_close, 2) if prev_close is not None else None
+    day_change_pct = (round((close / prev_close - 1) * 100, 2)
+                      if prev_close else None)
+    day_range_pct = (round((latest.high - latest.low) / close * 100, 2)
+                     if close else None)
+    atr = _atr(sym_bars)
+
     report = InstrumentReport(
         symbol=symbol, status="ok", note="",
         price=round(price, 2) if price is not None else None,
@@ -340,6 +375,12 @@ def build_instrument(
         pct_above_low=round((close / low_52w - 1) * 100, 1) if low_52w else None,
         pct_below_high=round((close / high_52w - 1) * 100, 1) if high_52w else None,
         bars=len(closes),
+        open=round(latest.open, 2), high=round(latest.high, 2), low=round(latest.low, 2),
+        prev_close=round(prev_close, 2) if prev_close is not None else None,
+        day_change=day_change, day_change_pct=day_change_pct,
+        day_range_pct=day_range_pct,
+        atr14=round(atr, 2) if atr is not None else None,
+        range_key=range_key if range_key in RANGE_DAYS else "6M",
         rs=rs_row.rs, mansfield=rs_row.mansfield, rs_verdict=rs_row.verdict,
         trend_score=scr_row.score, trend_verdict=scr_row.verdict,
         in_book=in_book, book_weight_pct=book_weight, book_side=book_side, sector=sector,

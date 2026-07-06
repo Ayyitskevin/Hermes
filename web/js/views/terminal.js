@@ -7,6 +7,8 @@ import { api, chip, esc, fmtNum, fmtPct, fmtTime, preferParam } from "../util.js
 import { candleChart } from "../charts.js";
 
 let searchTimer = null;
+let curSym = "SPY", curRange = "6M";
+const RANGES = ["1M", "3M", "6M", "1Y"];
 
 export default {
   mount(outlet) {
@@ -67,12 +69,13 @@ function wireSearch(outlet) {
 }
 
 // ── instrument load ──────────────────────────────────────────────────────
-async function load(outlet, symbol) {
+async function load(outlet, symbol, range) {
+  curSym = symbol; curRange = range || curRange;
   history.replaceState(null, "", `#/terminal?sym=${encodeURIComponent(symbol)}`);
   const body = $("#term-body", outlet);
   body.innerHTML = `<div class="plate"><p class="micro"><span class="spinner"></span> loading ${esc(symbol)}…</p></div>`;
   let d;
-  try { d = await api(`/api/instrument/${encodeURIComponent(symbol)}`); }
+  try { d = await api(`/api/instrument/${encodeURIComponent(symbol)}?range=${curRange}`); }
   catch (err) { body.innerHTML = `<div class="plate"><div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div></div>`; return; }
 
   if (d.status === "missing") {
@@ -85,7 +88,11 @@ async function load(outlet, symbol) {
     <div class="duo">
       <div class="plate accent">
         <h2><span class="label-x">${esc(d.symbol)}</span>
-          <span class="micro">${esc(d.price_source ?? "—")} · ${esc(fmtTime(d.price_as_of))} ${chip(d.staleness)}</span></h2>
+          <span class="px-last">${d.price === null ? "∅" : fmtNum(d.price)}</span>
+          ${dayChange(d)}
+          <span class="micro">${esc(d.price_source ?? "—")} · ${esc(fmtTime(d.price_as_of))} ${chip(d.staleness)}</span>
+          <span class="tf-btns" id="term-tf">${RANGES.map((r) =>
+            `<button class="tf ${r === d.range_key ? "on" : ""}" data-range="${r}">${r}</button>`).join("")}</span></h2>
         <div id="term-chart"></div>
         <div class="ma-legend"><span><i style="background:var(--violet)"></i>50-DMA</span>
           <span><i style="background:var(--cyan)"></i>150-DMA</span>
@@ -103,6 +110,16 @@ async function load(outlet, symbol) {
   renderStats(outlet, d);
   renderDesk(outlet, d);
   renderDebate(outlet, d);
+  $("#term-tf", outlet)?.querySelectorAll(".tf").forEach((b) =>
+    b.addEventListener("click", () => load(outlet, curSym, b.dataset.range)));
+}
+
+// day change vs prior close — per-share price + %, colored, never dollars-of-equity
+function dayChange(d) {
+  if (d.day_change === null || d.day_change === undefined) return "";
+  const cls = d.day_change > 0 ? "pos" : d.day_change < 0 ? "neg" : "flat";
+  const sign = d.day_change >= 0 ? "+" : "";
+  return `<span class="px-chg ${cls}">${sign}${fmtNum(d.day_change)} (${fmtPct(d.day_change_pct)})</span>`;
 }
 
 // ── AI desk debate (opt-in; bull → bear → risk; ends in tension) ──────────
@@ -181,19 +198,34 @@ function renderStats(outlet, d) {
   const tv = d.trend_verdict ? chip({ PASS: "good", NEAR: "warn", NO: "serious" }[d.trend_verdict] ?? "warn", `${d.trend_score}/8 ${d.trend_verdict}`) : "∅";
   $("#term-stats", outlet).innerHTML = `<div class="kv">
     ${cell("last", d.price === null ? "∅ missing" : fmtNum(d.price))}
+    ${cell("open", d.open === null ? "∅" : fmtNum(d.open))}
+    ${cell("prev close", d.prev_close === null ? "∅" : fmtNum(d.prev_close))}
+    ${cell("day range", d.high === null ? "∅" : `${fmtNum(d.low)}–${fmtNum(d.high)}${d.day_range_pct === null ? "" : ` (${fmtNum(d.day_range_pct)}%)`}`)}
+    ${cell("ATR(14)", d.atr14 === null ? "∅" : fmtNum(d.atr14))}
     ${cell("50-DMA", d.sma50 === null ? "∅" : fmtNum(d.sma50))}
     ${cell("150-DMA", d.sma150 === null ? "∅" : fmtNum(d.sma150))}
     ${cell("200-DMA", d.sma200 === null ? "∅" : fmtNum(d.sma200))}
-    ${cell("52w range", d.low_52w === null ? "∅" : `${fmtNum(d.low_52w)}–${fmtNum(d.high_52w)}`)}
-    ${cell("vs 52w low", d.pct_above_low === null ? "∅" : fmtPct(d.pct_above_low, 0))}
-    ${cell("vs 52w high", d.pct_below_high === null ? "∅" : fmtPct(d.pct_below_high, 0))}
     ${cell("Mansfield RS", d.mansfield === null ? "∅" : `${fmtNum(d.mansfield, 1)}%`)}
     ${cell("RS verdict", rsv)}
     ${cell("Trend Template", tv)}
     ${cell("in book", d.in_book ? `${d.book_side} ${fmtNum(d.book_weight_pct, 1)}%` : "no")}
     ${cell("sector", miss(d.sector))}
   </div>
-  <p class="micro" style="margin-top:8px">regime: ${esc(d.regime?.label_display ?? "no reading")} · ${d.bars} daily bars cached</p>`;
+  ${range52(d)}
+  <p class="micro" style="margin-top:8px">regime: ${esc(d.regime?.label_display ?? "no reading")} · ${d.bars} daily bars cached · window ${esc(d.range_key)}</p>`;
+}
+
+// 52-week range as a visual bar with a position marker (per-share prices only)
+function range52(d) {
+  if (d.low_52w === null || d.high_52w === null || d.price === null) return "";
+  const span = d.high_52w - d.low_52w || 1;
+  const pos = Math.max(0, Math.min(100, ((d.price - d.low_52w) / span) * 100));
+  return `<div class="rng52" style="margin-top:10px">
+    <div class="rng52-head micro"><span>52-week range</span>
+      <span>${fmtNum(d.low_52w)} <span class="rng52-now">now ${fmtNum(d.price)}</span> ${fmtNum(d.high_52w)}</span></div>
+    <div class="rng52-track"><div class="rng52-mark" style="left:${pos.toFixed(1)}%"></div></div>
+    <div class="rng52-sub micro">${d.pct_above_low === null ? "" : `+${fmtNum(d.pct_above_low, 0)}% off the low`} ·
+      ${d.pct_below_high === null ? "" : `${fmtPct(d.pct_below_high, 0)} from the high`}</div></div>`;
 }
 
 // ── AI desk read (opt-in; degrades visibly) ──────────────────────────────
