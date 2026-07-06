@@ -79,3 +79,19 @@ def correlation(a: list[float], b: list[float]) -> float | None:
     if va == 0 or vb == 0:
         return None
     return cov / math.sqrt(va * vb)
+
+
+def beta(asset: list[float], benchmark: list[float]) -> float | None:
+    """Slope of asset returns regressed on benchmark returns (cov / var_bench).
+    The series are aligned from their most recent ends; None when the benchmark
+    has no variance or the overlap is too short."""
+    n = min(len(asset), len(benchmark))
+    if n < 3:
+        return None
+    a, b = asset[-n:], benchmark[-n:]
+    ma_, mb = sum(a) / n, sum(b) / n
+    var_b = sum((y - mb) ** 2 for y in b)
+    if var_b == 0:
+        return None
+    cov = sum((x - ma_) * (y - mb) for x, y in zip(a, b, strict=True))
+    return cov / var_b

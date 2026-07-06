@@ -115,6 +115,10 @@ src/hermes/
 │                    scored 0–8 into PASS/NEAR/NO candidates (never setups);
 │                    RS criterion reuses the rs board's Mansfield line as a proxy
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
+├── stress/scenarios.py  stress test: shocks the open book (market −5/−10/−20%,
+│                    all-stops-hit, correlations→1 crisis) via per-position beta,
+│                    projects drawdown on the index, derives de-risk postures. %
+│                    only, no orders. GET /api/stress
 ├── sizing/desk.py   Size surface: fixed-fractional baseline → empirical half-Kelly
 │                    (journal R-multiples, shrunk by n/(n+30)) → limit-aware cap that
 │                    names the binding ceiling. % of equity only. GET /api/size
@@ -154,8 +158,8 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    surfaces, bound to real endpoints (terminal = candle chart +
 │                    thesis-fit; size = the sizing desk; regime-lab = the dual-
 │                    classifier deep read; pnl = the equity-index attribution;
-│                    scorecard = the model honesty grades); later phases fill the
-│                    remaining placeholders
+│                    scorecard = the model honesty grades; stress = the open-book
+│                    shock test); later phases fill the remaining placeholders
 ```
 
 ## Data integrity contract
@@ -349,6 +353,24 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     can't support one. Every graded figure carries its sample and a nonstationarity
     caveat. Methodology + caveats in
     [METHODOLOGY.md](METHODOLOGY.md#model-scorecard-the-honesty-surface).
+19. **Stress test + hedges (Stress surface)** — the open book shocked against
+    stylized regime shocks. **LANDED 2026-07:** `src/hermes/stress/scenarios.py`
+    (pure, unit-tested), a reusable `beta()` added to `regime/indicators.py`,
+    `GET /api/stress`, the Stress view (`web/js/views/stress.js`). Shocks the
+    CURRENT open book: market −5/−10/−20% via each position's beta to the
+    benchmark (side handled — longs lose, shorts gain), all-stops-hit (the exact
+    Σ planned risk %), and a correlations→1 crisis that floors long betas at 1.0
+    so low-beta names stop cushioning. Reports the projected drawdown on the
+    100-based index (from its running peak), which positions hurt most, whether
+    each scenario breaches the drawdown circuit breaker, and de-risk POSTURES
+    (cash-priority on a breach, trim the largest crisis contributor, a diversify
+    posture from the same-move crisis-vs-−20% gap, net-exposure + all-stops
+    notes). A position with no cached history is shocked at beta 1.0 and flagged.
+    Strictly a what-if in % of equity — beta/correlation are backward-looking and
+    the crisis floor is a stylized assumption, both stated; the postures are
+    context, never orders (the no-order-path guard + a no-dollars HTTP assertion
+    both hold). Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#stress-test-the-stress-surface).
 
 ## Data-source reality (verified 2026-07-04)
 

@@ -33,6 +33,7 @@ from ..rs import board as rs_board
 from ..scorecard import report as scorecard
 from ..screener import trend_template as screener
 from ..sizing import desk as sizing
+from ..stress import scenarios as stress
 
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
@@ -350,6 +351,34 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── Stress test ───────────────────────────────────────────────────────
+    @r.get("/stress")
+    def stress_route() -> dict:
+        """Shocks the CURRENT open book against stylized shocks (market −5/−10/−20%,
+        all-stops-hit, and a correlations→1 crisis), reporting the projected
+        drawdown on the 100-based index, which positions hurt most, and de-risk
+        POSTURES. A what-if, % of equity only — never a forecast, never a trade."""
+        return _stress_payload(stress.build_stress(config))
+
+    def _stress_payload(rep: stress.StressReport) -> dict:
+        return {
+            "generated_at": iso(rep.generated_at), "status": rep.status, "note": rep.note,
+            "benchmark": rep.benchmark, "lookback_days": rep.lookback_days,
+            "current_index": rep.current_index, "current_drawdown_pct": rep.current_drawdown_pct,
+            "max_drawdown_pct": rep.max_drawdown_pct, "open_risk_pct": rep.open_risk_pct,
+            "scenarios": [
+                {"key": s.key, "title": s.title, "kind": s.kind,
+                 "market_move_pct": s.market_move_pct, "total_impact_pct": s.total_impact_pct,
+                 "projected_index": s.projected_index,
+                 "projected_drawdown_pct": s.projected_drawdown_pct,
+                 "breaches_circuit": s.breaches_circuit,
+                 "positions": [asdict(p) for p in s.positions], "note": s.note}
+                for s in rep.scenarios
+            ],
+            "hedges": [asdict(h) for h in rep.hedges],
+            "honesty": {"claim": rep.claim, "methodology": rep.methodology, "caveat": rep.caveat},
         }
 
     # ── Model scorecard ───────────────────────────────────────────────────

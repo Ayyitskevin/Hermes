@@ -129,6 +129,22 @@ renders as `missing`, never interpolated, per the data-integrity contract.
 | Concentration caps (position / sector) | Basic diversification constraints (no attribution needed; arithmetic) |
 | Pairwise correlation warning | Pearson correlation of daily returns; the observation that correlated positions are one position wearing two tickers |
 
+## Stress test (the Stress surface)
+
+The Stress surface shocks the CURRENT open book against a few stylized shocks and
+reads out the projected drawdown on the 100-based equity index — a WHAT-IF, not a
+forecast, and always % of equity.
+
+| Scenario | Named methodology / model | What it does NOT prove |
+|---|---|---|
+| Market −5 / −10 / −20% | Single-factor beta: each position moves by β × market move (β = cov/var of the position's daily returns on the benchmark's over the lookback), with side handled — a long loses in a drop, a short gains. Contribution to equity = weight × β × move | β is backward-looking over the lookback and compresses in real panics, so the beta scenarios UNDERSTATE a crisis. A single-factor point estimate, not a scenario distribution |
+| All stops hit | The deterministic worst case: every open stop is taken, costing exactly Σ planned risk % (the risk the book already carries) — no beta, no model | Assumes stops fill at their level; a gap through the stop can cost more. It is the pre-committed risk, not a floor on loss |
+| Crisis: −20% + correlations→1 | The stylized regime where diversification fails: long betas are floored at 1.0 so low-beta names stop cushioning. The gap vs the plain −20% case is the diversification a crisis removes | Correlations→1 is imposed by fiat, not predicted. It is a deliberately pessimistic floor to counter beta's fair-weather optimism, not a forecast of any particular crash |
+| De-risk postures | Derived from the above: a cash-priority posture when a scenario breaches the drawdown circuit breaker, a trim posture for the largest crisis contributor, a diversify posture from the crisis-vs-−20% gap, and net-exposure / all-stops notes | Postures are context for a human decision — Hermes has no order path. None is a buy/sell/hedge instruction; the correlations they rest on are backward-looking |
+
+Projected drawdown is measured from the equity index's running peak. Everything is
+% of equity or an index value; there is no dollar figure in the payload or the view.
+
 ## Trade journal
 
 | Feature | Source pattern |

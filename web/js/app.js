@@ -12,6 +12,7 @@ import size from "./views/size.js";
 import regimeLab from "./views/regime-lab.js";
 import pnl from "./views/pnl.js";
 import scorecard from "./views/scorecard.js";
+import stress from "./views/stress.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -24,11 +25,11 @@ register("/size", size);
 register("/regime-lab", regimeLab);
 register("/pnl", pnl);
 register("/scorecard", scorecard);
+register("/stress", stress);
 
 // Surfaces whose engines/endpoints land in later phases — navigable now,
 // honest about what's not built yet.
 const SOON = [
-  ["/stress", "Stress test", "H"],
   ["/sector", "Sector drill", "I"], ["/ledger", "Validation ledger", "J"],
 ];
 for (const [route, title, phase] of SOON) register(route, placeholder(title, phase));
