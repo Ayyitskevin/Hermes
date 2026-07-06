@@ -410,6 +410,8 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         return {
             "generated_at": iso(led.generated_at), "benchmark": led.benchmark,
             "total_entries": led.total_entries,
+            "campaigns": led.campaigns, "campaign_tally": led.campaign_tally,
+            "epistemic": led.epistemic,
             "summaries": [asdict(s) for s in led.summaries],
             "entries": [
                 {"kind": e.kind, "subject": e.subject, "claim": e.claim,

@@ -35,6 +35,52 @@ from ..journal.service import list_entries
 from ..regime.engine import reading_history
 from ..regime.models import RegimeLabel
 
+# The method-level validation record — Hermes' OWN documented verdicts, including
+# the ones that found no edge. Sourced from the engine honesty strings + docs;
+# encoded here so the receipts (and the failures) live in one place.
+CAMPAIGNS = [
+    {"method": "Fixed-fractional sizing", "verdict": "validated",
+     "hypothesis": "Risking a fixed % of equity per trade controls path risk.",
+     "result": "An established, arithmetic position-sizing method (Van Tharp / Vince) — "
+               "it does what it claims: bounds per-trade loss. Not an alpha source."},
+    {"method": "Drawdown circuit breaker", "verdict": "validated",
+     "hypothesis": "Halting new risk at a drawdown threshold limits ruin.",
+     "result": "A standard, mechanical risk halt on the normalized equity index — it "
+               "enforces the rule it states; it does not predict the drawdown."},
+    {"method": "Regime Label v6.2", "verdict": "heuristic",
+     "hypothesis": "A vol-adjusted momentum state machine describes the market regime.",
+     "result": "A heuristic derived from historical label-correlation, NOT a backtested "
+               "edge. It classifies the present; it does not predict returns."},
+    {"method": "Reviewer second-pass", "verdict": "heuristic",
+     "hypothesis": "Rule checks catch overfitting / sample / execution problems at entry.",
+     "result": "Sensible conventions, not literature-calibrated thresholds. Advisory; "
+               "its calibration is tracked on the scorecard, not assumed."},
+    {"method": "Minervini Trend Template (as an entry gate)", "verdict": "no_edge",
+     "hypothesis": "An 8-point trend filter improves swing-entry outcomes.",
+     "result": "Hermes' one validation campaign found filter-style signals did NOT add "
+               "value at default parameters — a screening convenience, not evidence."},
+    {"method": "Mansfield / cross-sectional RS (as an entry gate)", "verdict": "unvalidated",
+     "hypothesis": "Relative-strength leadership predicts forward outperformance.",
+     "result": "States a past tilt, not persistence. Never validated as a gate in Hermes; "
+               "used to rank what earns a review first, never to trade."},
+]
+
+# What each tool MAY and MAY NOT claim — the epistemic contract, in one place.
+EPISTEMIC = [
+    {"tool": "Regime classifier", "may": "Describe the current market state with its evidence.",
+     "may_not": "Predict returns or the next regime — it disclaims forecasting."},
+    {"tool": "Mansfield RS", "may": "Report a symbol's past strength vs the benchmark.",
+     "may_not": "Claim that strength persists, or serve as a validated entry signal."},
+    {"tool": "Minervini Trend Template", "may": "Flag a confirmed trend structure as a candidate.",
+     "may_not": "Imply an edge — the one validation found none at the gate level."},
+    {"tool": "Fixed-fractional sizing", "may": "Bound per-trade loss to a chosen % of equity.",
+     "may_not": "Add alpha, or promise the empirical Kelly tilt is stationary."},
+    {"tool": "Reviewer", "may": "Raise advisory flags on overfitting / sample / execution.",
+     "may_not": "Block a trade, or claim its verdicts are proven — the human decides."},
+    {"tool": "Drawdown breaker", "may": "Halt new risk at the drawdown limit.",
+     "may_not": "Foresee the drawdown, or protect against a gap through the level."},
+]
+
 HORIZON_SESSIONS = 21       # ~1 trading month forward test for regime reads
 BAND_PCT = 2.0              # benchmark move within ±this is 'flat' over the horizon
 SMALL_SAMPLE = 20           # below this a resolved rate is an anecdote
@@ -91,6 +137,9 @@ class ValidationLedger:
     entries: list[LedgerEntry] = field(default_factory=list)
     summaries: list[KindSummary] = field(default_factory=list)
     total_entries: int = 0
+    campaigns: list[dict] = field(default_factory=list)
+    campaign_tally: dict = field(default_factory=dict)     # verdict → count
+    epistemic: list[dict] = field(default_factory=list)
     claim: str = CLAIM
     methodology: str = METHODOLOGY
     caveat: str = CAVEAT
@@ -210,10 +259,15 @@ def build_ledger(config: HermesConfig) -> ValidationLedger:
         _summary("journal", journal, {"confirmed"}, "hit rate"),
         _summary("regime", regime, {"aligned"}, "alignment"),
     ]
+    tally: dict[str, int] = {}
+    for c in CAMPAIGNS:
+        tally[c["verdict"]] = tally.get(c["verdict"], 0) + 1
+
     return ValidationLedger(
         generated_at=utcnow(), benchmark=config.market.benchmark,
         entries=all_entries[:MAX_ENTRIES], summaries=summaries,
-        total_entries=len(all_entries))
+        total_entries=len(all_entries),
+        campaigns=CAMPAIGNS, campaign_tally=tally, epistemic=EPISTEMIC)
 
 
 # ── small helpers ───────────────────────────────────────────────────────────

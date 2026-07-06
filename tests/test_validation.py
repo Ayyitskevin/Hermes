@@ -167,6 +167,18 @@ def test_debate_degrades_visibly(config):
     assert jp["debate"]["status"] == "unavailable"
 
 
+def test_ledger_campaigns_and_epistemic(fresh_db):
+    from hermes.validation.ledger import build_ledger
+    led = build_ledger(fresh_db)
+    # the honest record includes methods that found NO edge, not only wins
+    verdicts = {c["verdict"] for c in led.campaigns}
+    assert "validated" in verdicts and "no_edge" in verdicts and "heuristic" in verdicts
+    assert led.campaign_tally.get("no_edge", 0) >= 1     # the failures are counted
+    # every campaign carries hypothesis + result; epistemic rows carry may/may_not
+    assert all(c.get("hypothesis") and c.get("result") for c in led.campaigns)
+    assert all(e.get("may") and e.get("may_not") for e in led.epistemic)
+
+
 def test_ai_status_exposes_pricing_and_notes(config):
     app = create_app(config, with_scheduler=False)
     client = TestClient(app)

@@ -37,9 +37,33 @@ const STATUS = {
   pending: ["missing", "pending"],
 };
 
+const VERDICT = {
+  validated: ["good", "VALIDATED"], no_edge: ["serious", "NO EDGE"],
+  heuristic: ["warn", "HEURISTIC"], unvalidated: ["missing", "UNVALIDATED"],
+};
+
 function render(outlet, d) {
   const empty = d.total_entries === 0;
+  const t = d.campaign_tally || {};
   $("#lg-body", outlet).innerHTML = `
+    <div class="plate">
+      <h2><span class="label-x">Validation runs</span>
+        <span class="micro">the methods, graded — including the ones that found no edge</span></h2>
+      <div class="ai-head" style="margin-bottom:8px">
+        ${chip("good", `${t.validated || 0} validated`)} ${chip("serious", `${t.no_edge || 0} found no edge`)}
+        ${chip("warn", `${t.heuristic || 0} heuristic`)} ${chip("missing", `${t.unvalidated || 0} unvalidated`)}</div>
+      <div class="bento">${(d.campaigns || []).map(campaignCard).join("")}</div>
+    </div>
+    <div class="plate">
+      <h2><span class="label-x">What each tool may — and may not — claim</span>
+        <span class="micro">the epistemic contract, in one place</span></h2>
+      <div class="scroll-x"><table style="min-width:640px"><thead><tr>
+        <th>Tool</th><th>May claim</th><th>May NOT claim</th></tr></thead>
+        <tbody>${(d.epistemic || []).map((e) => `<tr>
+          <td class="sym">${esc(e.tool)}</td>
+          <td class="micro">${chip("ok")} ${esc(e.may)}</td>
+          <td class="micro">${chip("serious")} ${esc(e.may_not)}</td></tr>`).join("")}</tbody></table></div>
+    </div>
     <div class="bento">${d.summaries.map(summaryCard).join("")}</div>
     <div class="plate watchboard">
       <h2><span class="label-x">The ledger</span>
@@ -55,6 +79,14 @@ function render(outlet, d) {
         <dl class="ws-row"><dt>Method</dt><dd>${esc(d.honesty.methodology)}</dd></dl>
         <dl class="ws-row caveat"><dt>Not proven</dt><dd>${esc(d.honesty.caveat)}</dd></dl></div></details>`;
   if (!empty) renderRows(outlet, d);
+}
+
+function campaignCard(c) {
+  const [st, lab] = VERDICT[c.verdict] ?? ["warn", c.verdict];
+  return `<div class="plate col-6" style="margin-top:0">
+    <h2><span class="label-x">${esc(c.method)}</span> ${chip(st, lab)}</h2>
+    <p class="micro" style="margin:4px 0"><strong>Hypothesis:</strong> ${esc(c.hypothesis)}</p>
+    <p class="micro" style="color:var(--ink-2)">${esc(c.result)}</p></div>`;
 }
 
 function summaryCard(s) {
