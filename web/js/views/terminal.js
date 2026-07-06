@@ -95,12 +95,50 @@ async function load(outlet, symbol) {
     </div>
     <div class="plate"><h2><span class="label-x">Key stats</span>
       <span class="micro">every figure carries its source + as-of</span></h2><div id="term-stats"></div></div>
-    <div class="plate coach" id="term-desk"></div>`;
+    <div class="plate coach" id="term-desk"></div>
+    <div class="plate coach" id="term-debate"></div>`;
 
   candleChart($("#term-chart", outlet), d.series);
   renderFit(outlet, d);
   renderStats(outlet, d);
   renderDesk(outlet, d);
+  renderDebate(outlet, d);
+}
+
+// ── AI desk debate (opt-in; bull → bear → risk; ends in tension) ──────────
+function renderDebate(outlet, d) {
+  const el = $("#term-debate", outlet);
+  el.innerHTML = `
+    <h2><span class="label-x">Desk debate</span>
+      <span class="micro">bull vs bear over the computed facts — it ends in the tension, never a call</span></h2>
+    <p class="micro">A three-voice debate (bull · bear · risk critique) of ${esc(d.symbol)}, local-first. The model
+      rephrases the numbers above and invents none; it never tells you to buy or sell.</p>
+    <button class="btn-primary" id="debate-btn" style="margin-top:8px">run the debate (uses the model)</button>
+    <div id="debate-out" style="margin-top:10px"></div>`;
+  $("#debate-btn", outlet).addEventListener("click", async () => {
+    const btn = $("#debate-btn", outlet), out = $("#debate-out", outlet);
+    btn.disabled = true; out.innerHTML = `<p class="micro"><span class="spinner"></span> the desk is debating ${esc(d.symbol)}…</p>`;
+    let r;
+    try { r = await api(`/api/debate/${encodeURIComponent(d.symbol)}`); }
+    catch (err) { out.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; btn.disabled = false; return; }
+    const db = r.debate;
+    if (db && db.status === "ok") {
+      out.innerHTML = `<div class="ai-head">${chip("ok", `${db.backend} · ${db.model}`)}</div>${debateBody(db)}`;
+    } else {
+      out.innerHTML = `<div class="ai-unavail">${chip("warn", "model unavailable")} ${esc(db?.note || "no model answered — the facts above stand without it")}</div>`;
+    }
+    btn.disabled = false;
+  });
+}
+
+function debateBody(db) {
+  const s = db.sections;
+  if (!s) return `<div class="prose" style="white-space:pre-wrap">${esc(db.text)}</div>`;
+  const block = (label, cls, text) => text
+    ? `<div class="factor ${cls}" style="margin-top:8px"><div class="f-head"><strong>${label}</strong></div>
+       <div class="prose" style="white-space:pre-wrap;margin-top:4px">${esc(text)}</div></div>` : "";
+  return block("Bull case", "", s.bull) + block("Bear case", "serious", s.bear)
+    + block("Risk critique", "warn", s.risk);
 }
 
 // ── thesis-fit vs the book ───────────────────────────────────────────────

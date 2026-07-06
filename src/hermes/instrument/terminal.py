@@ -374,6 +374,28 @@ def report_facts(symbol, close, fit, rs_row, scr_row, regime_display, in_book, w
     return "\n".join(lines)
 
 
+def facts_from_report(rep: InstrumentReport) -> str:
+    """Computed-facts block built from a finished InstrumentReport's PUBLIC fields
+    — for the debate route, which has the report but not the internal rows. Numbers
+    only; the model rephrases and invents nothing."""
+    lines = [
+        f"Symbol: {rep.symbol}  ·  last close {rep.close}",
+        f"Regime: {rep.regime_display or 'no reading'}",
+        f"Mansfield RS: {rep.mansfield}  ·  RS verdict {rep.rs_verdict}",
+        f"Trend Template: {rep.trend_score}/8 ({rep.trend_verdict})",
+        f"In book: {'yes, ' + str(rep.book_weight_pct) + '% of equity' if rep.in_book else 'no'}",
+    ]
+    tf = rep.thesis_fit
+    if tf is not None and tf.score is not None:
+        lines.append(f"Thesis-fit: {tf.score}/100 → posture {tf.posture}"
+                     + (f" ({tf.cap_note})" if tf.capped else ""))
+        lines += [f"  · {f.label}: {f.points}/{f.max_points} — {f.measured}"
+                  for f in tf.factors]
+    else:
+        lines.append("Thesis-fit: ∅ missing (short history)")
+    return "\n".join(lines)
+
+
 def _desk_read(ai, facts_md: str) -> dict:
     """Optional AI narrative over the computed facts, degrading visibly."""
     res = ai.complete("desk_read", facts_md=facts_md)

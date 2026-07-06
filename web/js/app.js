@@ -14,6 +14,7 @@ import pnl from "./views/pnl.js";
 import scorecard from "./views/scorecard.js";
 import stress from "./views/stress.js";
 import sector from "./views/sector.js";
+import ledger from "./views/ledger.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -28,13 +29,9 @@ register("/pnl", pnl);
 register("/scorecard", scorecard);
 register("/stress", stress);
 register("/sector", sector);
+register("/ledger", ledger);
 
-// Surfaces whose engines/endpoints land in later phases — navigable now,
-// honest about what's not built yet.
-const SOON = [
-  ["/ledger", "Validation ledger", "J"],
-];
-for (const [route, title, phase] of SOON) register(route, placeholder(title, phase));
+// Every designed surface is now live against a real endpoint — no placeholders left.
 register("*", placeholder("Not found", null));
 
 start(document.querySelector("#view"));

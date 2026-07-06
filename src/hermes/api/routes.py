@@ -35,6 +35,7 @@ from ..screener import trend_template as screener
 from ..sector import drill as sector
 from ..sizing import desk as sizing
 from ..stress import scenarios as stress
+from ..validation import ledger as validation
 
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
@@ -352,6 +353,67 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── AI debate (opt-in; degrades visibly) ─────────────────────────────
+    @r.get("/debate/{symbol}")
+    def debate_route(symbol: str) -> dict:
+        """A three-voice desk debate (bull → bear → risk critique) over one
+        symbol's COMPUTED facts, routed local-first through the AI router (cloud
+        only if opted in). The model rephrases the facts and invents no numbers;
+        it ends in the tension between views, never a directive. Degrades visibly
+        when no model answers — the facts stand without it. Never a trade."""
+        rep = instrument.build_instrument(config, symbol)
+        if rep.status != "ok":
+            return {"symbol": rep.symbol, "status": "missing", "note": rep.note,
+                    "facts": None, "debate": None}
+        facts = instrument.facts_from_report(rep)
+        res = ai.complete("debate", facts_md=facts)
+        debate = ({"status": "ok", "sections": _split_debate(res.text), "text": res.text,
+                   "backend": res.backend, "model": res.model, "note": res.note}
+                  if res.status == "ok" else
+                  {"status": "unavailable", "text": None, "note": res.note})
+        return {"symbol": rep.symbol, "status": "ok", "note": "", "facts": facts,
+                "debate": debate}
+
+    def _split_debate(text: str) -> dict | None:
+        """Light split into bull / bear / risk on the fixed section headings; None
+        when the model didn't use them (the raw text is always returned too)."""
+        if not text:
+            return None
+        import re
+        marks = list(re.finditer(r"(?im)^\s*(BULL CASE|BEAR CASE|RISK CRITIQUE)\s*:?\s*$", text))
+        if len(marks) < 2:
+            return None
+        keys = {"BULL CASE": "bull", "BEAR CASE": "bear", "RISK CRITIQUE": "risk"}
+        out: dict[str, str] = {}
+        for i, m in enumerate(marks):
+            end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+            out[keys[m.group(1).upper()]] = text[m.end():end].strip()
+        return out or None
+
+    # ── Validation ledger ─────────────────────────────────────────────────
+    @r.get("/ledger")
+    def ledger_route() -> dict:
+        """The honest capstone: individual model claims vs what happened. Journaled
+        theses resolved to their own verdict, and regime reads checked for whether
+        the market aligned with them over ~21 sessions — each frozen when made,
+        computed from persisted records only. % / verdicts, never a trade."""
+        return _ledger_payload(validation.build_ledger(config))
+
+    def _ledger_payload(led: validation.ValidationLedger) -> dict:
+        return {
+            "generated_at": iso(led.generated_at), "benchmark": led.benchmark,
+            "total_entries": led.total_entries,
+            "summaries": [asdict(s) for s in led.summaries],
+            "entries": [
+                {"kind": e.kind, "subject": e.subject, "claim": e.claim,
+                 "as_of": iso(e.as_of) if e.as_of else None, "horizon": e.horizon,
+                 "status": e.status, "resolved": e.resolved, "outcome": e.outcome,
+                 "detail": e.detail}
+                for e in led.entries
+            ],
+            "honesty": {"claim": led.claim, "methodology": led.methodology, "caveat": led.caveat},
         }
 
     # ── Sector drill ──────────────────────────────────────────────────────

@@ -134,6 +134,10 @@ src/hermes/
 ├── scorecard/report.py  model scorecard: grades regime stability, live classifier
 │                    agreement, reviewer + thesis calibration on STORED evidence —
 │                    GRADED / THIN / NOT_TRACKED, fabricating none. GET /api/scorecard
+├── validation/ledger.py  validation ledger: individual model claims vs reality —
+│                    journal theses (confirmed/refuted) + regime reads forward-tested
+│                    (aligned/diverged), frozen when made. GET /api/ledger. The AI
+│                    debate (bull/bear/risk over computed facts) is GET /api/debate/{sym}
 ├── ai/
 │   ├── ollama.py    local-first inference (default); failures degrade visibly
 │   ├── claude.py    cloud path (Anthropic Messages API); the deliberate exception
@@ -162,8 +166,9 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    thesis-fit; size = the sizing desk; regime-lab = the dual-
 │                    classifier deep read; pnl = the equity-index attribution;
 │                    scorecard = the model honesty grades; stress = the open-book
-│                    shock test; sector = the sector drill); the Validation ledger
-│                    remains a placeholder
+│                    shock test; sector = the sector drill; ledger = the validation
+│                    capstone). Terminal also hosts the AI desk debate. Every designed
+│                    surface is now live against a real endpoint — no placeholders left
 ```
 
 ## Data integrity contract
@@ -389,6 +394,25 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     force-fit. Strictly % of equity + RS terms — no dollar figure (the
     no-order-path guard + a no-dollars HTTP assertion both hold). Methodology +
     caveats in [METHODOLOGY.md](METHODOLOGY.md#sector-drill-the-sector-surface).
+21. **AI debate + Validation ledger (the capstone)** — the final surfaces.
+    **LANDED 2026-07:** the **debate** wires the router's `debate` task (Phase A)
+    to a route — `GET /api/debate/{symbol}` assembles the instrument's COMPUTED
+    facts (`facts_from_report`) and runs a three-voice bull → bear → risk-critique
+    debate, local-first, cloud opt-in, ending in tension not a directive and
+    degrading visibly; the Terminal grew a "run the debate" panel that splits the
+    sections. The **validation ledger** (`src/hermes/validation/ledger.py`, pure +
+    unit-tested; `GET /api/ledger`; `web/js/views/ledger.js`) is the honest
+    capstone — individual model claims frozen when made vs how reality resolved
+    them: journal theses to the operator's own verdict (confirmed / partial /
+    refuted / pending), and regime reads forward-tested against the benchmark over
+    ~21 sessions with SOFTER language (aligned / mixed / diverged / pending) because
+    a regime label disclaims prediction — a `diverged` is not a model failure, and
+    the caveat says so. All computed from persisted records (no new table), so an
+    unresolvable claim stays pending, never faked; per-kind rates carry a
+    small-sample flag. Registering the ledger removed the LAST navigable
+    placeholder — every designed surface is now live against a real endpoint.
+    Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#validation-ledger-the-honest-capstone).
 
 ## Data-source reality (verified 2026-07-04)
 

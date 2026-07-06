@@ -277,6 +277,34 @@ Every graded number carries its sample and a nonstationarity caveat. Below the
 meaningful-sample threshold the item says so on its face. Nothing here is a dollar
 figure, and nothing here is a directive.
 
+## Validation ledger (the honest capstone)
+
+Where the scorecard grades in aggregate, the ledger lists individual claims —
+frozen when made — next to how reality resolved them. Two kinds, held to two
+deliberately-different standards, both computed from already-persisted records
+(no new table, so a resolution it cannot compute stays `pending`, never faked).
+
+| Kind | Claim & resolution | Standard / what it does NOT prove |
+|---|---|---|
+| Journal claim | A journaled thesis IS a claim; it resolves on close to the operator's own verdict — **confirmed** (thesis played out), **partial**, **refuted** (no); open trades **pending** | A fair test: the claim was actually made. The verdict is the human's own, not re-judged; realized % and alpha are shown alongside, not used to overrule it |
+| Regime read | A regime label forward-tested against the benchmark over ~21 sessions: **aligned** (market moved with the read's directional lean), **mixed**, **diverged**; too recent = **pending** | Softer vocabulary ON PURPOSE — every classifier's honesty statement says it does NOT predict returns, so a `diverged` is **not a model failure**. The ledger holds our own outputs to a forward test they never promised to pass, as radical honesty, and says so |
+
+Per-kind summaries report the resolved hit rate (journal) / alignment rate
+(regime) with a small-sample flag below 20 resolved. Everything is % / verdicts;
+no dollar figure, and nothing is a directive.
+
+## AI debate (the desk debate)
+
+The debate is a router task (`debate`, cloud opt-in) that runs a three-voice desk
+argument — **bull case → bear case → risk critique** — over one symbol's COMPUTED
+facts (the same instrument facts the desk-read uses). It is local-first (Ollama by
+default; Claude only when `ai.allow_cloud` and the operator opts in), the model
+restates only the given numbers and invents none, and by construction it **ends in
+the tension between the views, never a buy/sell recommendation**. It degrades
+visibly: when no backend answers, the surface says so and the computed facts stand
+without it. The prompt-level "no numbers, no directive" guard reinforces — never
+replaces — the structural boundary that no order path exists for the AI to reach.
+
 ## What is NOT traceable to a named methodology
 
 - The reviewer's specific thresholds (`MIN_STOP_DISTANCE_PCT = 0.35`,
