@@ -29,9 +29,9 @@ export function buildShell() {
   const today = new Date().toISOString().slice(0, 16).replace("T", " ") + "Z";
   chrome.innerHTML = `
     <a class="brand" href="#/desk">Hermes</a>
-    <nav class="nav" aria-label="Surfaces">
-      ${NAV.map((n) => `<a href="#${n.route}" data-key="${n.key}" class="${n.live ? "" : "soon"}"
-        title="${n.live ? "" : "lands in a later phase"}">${esc(n.label)}</a>`).join("")}
+    <nav class="nav" aria-label="Surfaces" title="press 1–0 to jump between surfaces">
+      ${NAV.map((n) => `<a href="#${n.route}" data-key="${n.key}"
+        title="${n.digit ? `press ${n.digit}` : ""}">${n.digit ? `<span class="nav-digit">${n.digit}</span>` : ""}${esc(n.label)}</a>`).join("")}
     </nav>
     <span class="live-pill" id="live-pill" aria-label="Risk state"><span class="dot"></span>—</span>
     <div class="search-pill"><span aria-hidden="true">▸</span>
@@ -94,31 +94,36 @@ async function refreshAiStatus() {
   btn.className = "model-btn " + (s.active === "ollama" ? "local" : s.active === "claude" ? "" : "off");
   model.textContent = active ? active.model : "model unavailable";
 
-  const kindOf = (n) => (n === "ollama" ? "local" : "frontier");
+  const kindOf = (b) => b.kind || (b.name === "ollama" ? "local" : "frontier");
   const usable = (b) => b.reachable && (b.name === "ollama" || s.allow_cloud);
+  const prefer = localStorage.getItem("hermes-prefer");
+  const preferName = prefer === "cloud" ? "claude" : prefer === "local" ? "ollama" : null;
+  const price = (b) => (b.price && (b.price.in_per_mtok || b.price.out_per_mtok)
+    ? `$${b.price.in_per_mtok}/$${b.price.out_per_mtok} per 1M tok` : "$0 · on device");
   pop.innerHTML = `
     <div class="pop-head"><span class="eyebrow">Model · routes this session</span>
       <button aria-label="close" id="pop-x" style="padding:2px 8px">✕</button></div>
     ${s.backends.map((b) => `
-      <div class="model-row ${usable(b) ? "" : "disabled"}" data-name="${b.name}">
+      <div class="model-row ${usable(b) ? "" : "disabled"} ${preferName === b.name ? "picked" : ""}" data-name="${b.name}">
         <div class="row-top">
           ${b.name === s.active ? `<span class="live-dot" aria-label="active"></span>` : ""}
           <span class="rname">${esc(b.model)}</span>
-          <span class="kind-badge ${kindOf(b.name)}">${kindOf(b.name)}</span>
+          <span class="kind-badge ${kindOf(b)}">${kindOf(b)}</span>
+          ${preferName === b.name ? `<span class="kind-badge" style="background:rgba(139,108,255,.2);color:var(--violet-ink)">picked</span>` : ""}
           <span class="rcost">${chip(b.reachable ? "ok" : "unreachable", b.reachable ? "reachable" : "unreachable")}</span>
         </div>
-        <span class="rnote">${b.name === "ollama"
-          ? "local · on device · $0 · the default"
-          : s.allow_cloud ? "cloud · the deliberate exception (allow_cloud on)"
-                          : "cloud · disabled — set ai.allow_cloud to enable"}</span>
+        <span class="rnote">${esc(b.note || "")} · ${esc(price(b))}</span>
       </div>`).join("")}
-    <div class="pop-usage">metered · ${s.session_usage.queries} queries · ~$${Number(s.session_usage.approx_cost).toFixed(3)} this session · cloud ${s.allow_cloud ? "allowed" : "off"}</div>`;
+    <div class="pop-usage">metered · ${s.session_usage.queries} queries · ~$${Number(s.session_usage.approx_cost).toFixed(3)} this session · cloud ${s.allow_cloud ? "allowed" : "off"}${preferName ? ` · picked: ${preferName}` : " · auto (local-first)"}</div>`;
   $("#pop-x").addEventListener("click", () => { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); });
   pop.querySelectorAll(".model-row").forEach((row) =>
     row.addEventListener("click", () => {
       if (row.classList.contains("disabled")) return;
-      localStorage.setItem("hermes-prefer", row.dataset.name === "ollama" ? "local" : "cloud");
-      pop.hidden = true; btn.setAttribute("aria-expanded", "false");
+      const pick = row.dataset.name === "ollama" ? "local" : "cloud";
+      // Toggle off if re-picking the same one → back to auto (local-first).
+      if (localStorage.getItem("hermes-prefer") === pick) localStorage.removeItem("hermes-prefer");
+      else localStorage.setItem("hermes-prefer", pick);
+      refreshAiStatus();      // re-render the popover so "picked" updates
     }));
 }
 
@@ -188,6 +193,18 @@ function renderRail(data) {
       </div></div>`;
   }).join("");
 
+  // The tightest constraint: the check closest to (or past) its limit. Names the
+  // binding limit in plain language — risk outranks signal, said out loud.
+  const ratios = (risk.checks || []).map((c) => {
+    const num = (s) => { const m = String(s).match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+    const o = num(c.observed), l = num(c.limit);
+    return o !== null && l ? { c, r: Math.abs(o) / Math.abs(l) } : null;
+  }).filter(Boolean).sort((a, b) => b.r - a.r);
+  const tightest = ratios[0]
+    ? `<div class="rail-tightest micro"><strong>${esc(ratios[0].c.kind.replace(/_/g, " "))}</strong> is your tightest constraint —
+        ${esc(ratios[0].c.observed)} vs ${esc(ratios[0].c.limit)} (${Math.round(ratios[0].r * 100)}% of the way)</div>`
+    : "";
+
   const missed = (data.jobs || []).filter((j) => j.missed).length;
   const health = `${chip(data.provider.state, `${data.provider.name}: ${data.provider.state.replace(/_/g, " ")}`)}<br>` +
     (missed ? chip("missed", `${missed} job(s) missed`) : `<span class="micro">jobs on schedule</span>`);
@@ -206,6 +223,7 @@ function renderRail(data) {
     </div>
     <div class="rail-gauges">${gauges || `<span class="micro">no active limits — no open positions</span>`}</div>
     <div class="rail-health">${health}</div>
+    ${tightest}
     ${ack}`;
 
   $("#rail").querySelectorAll("[data-ack]").forEach((b) =>

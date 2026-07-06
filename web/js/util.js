@@ -13,6 +13,14 @@ export async function api(path, opts = {}) {
   return resp.json();
 }
 
+// The model the operator picked in the chrome popover routes every AI call.
+// Stored by shell.js; read here so views append ?prefer= to the AI endpoints.
+export const aiPrefer = () => localStorage.getItem("hermes-prefer") || null;
+export const preferParam = (sep = "&") => {
+  const p = aiPrefer();
+  return p ? `${sep}prefer=${encodeURIComponent(p)}` : "";
+};
+
 export const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

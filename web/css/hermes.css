@@ -207,6 +207,12 @@ button:disabled { opacity: 0.5; cursor: default; }
   border-color: rgba(139, 108, 255, 0.45);
 }
 .nav a.soon { opacity: 0.55; }
+.nav-digit { display: inline-block; margin-right: 5px; min-width: 12px; text-align: center;
+  color: var(--ink-muted); font-size: 10px; font-weight: 700; opacity: 0.7; }
+.nav a.active .nav-digit, .nav a:hover .nav-digit { color: var(--violet-ink); opacity: 1; }
+.rail-tightest { flex-basis: 100%; padding: 7px 11px; margin-top: 4px; border-radius: 9px;
+  background: rgba(139, 108, 255, 0.08); border: 1px solid rgba(139, 108, 255, 0.2); color: var(--ink-2); }
+.model-row.picked { border-color: rgba(139, 108, 255, 0.5); background: rgba(139, 108, 255, 0.08); }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */

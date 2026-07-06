@@ -311,13 +311,13 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
 
     # ── Instrument / Terminal ─────────────────────────────────────────────
     @r.get("/instrument/{symbol}")
-    def instrument_route(symbol: str, narrative: bool = False) -> dict:
+    def instrument_route(symbol: str, narrative: bool = False, prefer: str | None = None) -> dict:
         """A per-symbol read composed from cached bars + existing engines:
         price/staleness, MA structure, RS + Trend-Template, in-book context, and
         a transparent thesis-fit (0–100 + posture ALLOW/WATCH/RESTRICT). The AI
         desk-read runs only when ?narrative=1 (keeps the chart free + fast); it
         degrades visibly when no model answers. Never a live fetch, never a trade."""
-        rep = instrument.build_instrument(config, symbol, ai=ai, narrative=narrative)
+        rep = instrument.build_instrument(config, symbol, ai=ai, narrative=narrative, prefer=prefer)
         return _instrument_payload(rep)
 
     @r.get("/search")
@@ -357,7 +357,7 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
 
     # ── AI debate (opt-in; degrades visibly) ─────────────────────────────
     @r.get("/debate/{symbol}")
-    def debate_route(symbol: str) -> dict:
+    def debate_route(symbol: str, prefer: str | None = None) -> dict:
         """A three-voice desk debate (bull → bear → risk critique) over one
         symbol's COMPUTED facts, routed local-first through the AI router (cloud
         only if opted in). The model rephrases the facts and invents no numbers;
@@ -368,7 +368,7 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             return {"symbol": rep.symbol, "status": "missing", "note": rep.note,
                     "facts": None, "debate": None}
         facts = instrument.facts_from_report(rep)
-        res = ai.complete("debate", facts_md=facts)
+        res = ai.complete("debate", facts_md=facts, prefer=prefer)
         debate = ({"status": "ok", "sections": _split_debate(res.text), "text": res.text,
                    "backend": res.backend, "model": res.model, "note": res.note}
                   if res.status == "ok" else

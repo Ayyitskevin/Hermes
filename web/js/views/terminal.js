@@ -3,7 +3,7 @@
 // carries its source/as-of; short history renders ∅ missing; the AI degrades
 // visibly. /api/instrument, /api/search.
 
-import { api, chip, esc, fmtNum, fmtPct, fmtTime } from "../util.js";
+import { api, chip, esc, fmtNum, fmtPct, fmtTime, preferParam } from "../util.js";
 import { candleChart } from "../charts.js";
 
 let searchTimer = null;
@@ -119,7 +119,7 @@ function renderDebate(outlet, d) {
     const btn = $("#debate-btn", outlet), out = $("#debate-out", outlet);
     btn.disabled = true; out.innerHTML = `<p class="micro"><span class="spinner"></span> the desk is debating ${esc(d.symbol)}…</p>`;
     let r;
-    try { r = await api(`/api/debate/${encodeURIComponent(d.symbol)}`); }
+    try { r = await api(`/api/debate/${encodeURIComponent(d.symbol)}?${preferParam("")}`); }
     catch (err) { out.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; btn.disabled = false; return; }
     const db = r.debate;
     if (db && db.status === "ok") {
@@ -209,7 +209,7 @@ function renderDesk(outlet, d) {
     const btn = $("#desk-btn", outlet), out = $("#desk-out", outlet);
     btn.disabled = true; out.innerHTML = `<p class="micro"><span class="spinner"></span> the desk is reading ${esc(d.symbol)}…</p>`;
     let r;
-    try { r = await api(`/api/instrument/${encodeURIComponent(d.symbol)}?narrative=1`); }
+    try { r = await api(`/api/instrument/${encodeURIComponent(d.symbol)}?narrative=1${preferParam()}`); }
     catch (err) { out.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; btn.disabled = false; return; }
     const nr = r.narrative;
     if (nr && nr.status === "ok") {

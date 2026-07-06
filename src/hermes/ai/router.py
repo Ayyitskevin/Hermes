@@ -175,12 +175,21 @@ class AIRouter:
             active = "claude"
         else:
             active = None
+        def priced(model: str) -> dict:
+            p_in, p_out = _PRICES.get(model, _PRICES["_default"])
+            return {"in_per_mtok": p_in, "out_per_mtok": p_out}
+
         return {
             "backends": [
                 {"name": "ollama", "model": self.config.ai.ollama_model,
-                 "reachable": ollama_ok},
+                 "reachable": ollama_ok, "kind": "local",
+                 "note": "on device · $0 · the default",
+                 "price": {"in_per_mtok": 0.0, "out_per_mtok": 0.0}},
                 {"name": "claude", "model": self.config.ai.cloud_model,
-                 "reachable": claude_ok},
+                 "reachable": claude_ok, "kind": "frontier",
+                 "note": ("cloud · the deliberate exception" if allow_cloud
+                          else "cloud · disabled — set ai.allow_cloud to enable"),
+                 "price": priced(self.config.ai.cloud_model)},
             ],
             "active": active,
             "session_usage": self.meter.snapshot(),

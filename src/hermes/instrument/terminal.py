@@ -247,6 +247,7 @@ def _posture(score: int, bull: bool, breach: bool) -> tuple[str, bool, str]:
 # ── the report ───────────────────────────────────────────────────────────────
 def build_instrument(
     config: HermesConfig, symbol: str, *, ai=None, narrative: bool = False,
+    prefer: str | None = None,
 ) -> InstrumentReport:
     symbol = symbol.upper().strip()
     benchmark = config.market.benchmark
@@ -348,7 +349,7 @@ def build_instrument(
         thesis_fit=fit,
         series=chart,
         narrative=_desk_read(ai, report_facts(symbol, close, fit, rs_row, scr_row,
-                                              regime_display, in_book, book_weight))
+                                              regime_display, in_book, book_weight), prefer)
         if (narrative and ai is not None) else None,
     )
     return report
@@ -396,9 +397,9 @@ def facts_from_report(rep: InstrumentReport) -> str:
     return "\n".join(lines)
 
 
-def _desk_read(ai, facts_md: str) -> dict:
+def _desk_read(ai, facts_md: str, prefer: str | None = None) -> dict:
     """Optional AI narrative over the computed facts, degrading visibly."""
-    res = ai.complete("desk_read", facts_md=facts_md)
+    res = ai.complete("desk_read", facts_md=facts_md, prefer=prefer)
     if res.status == "ok":
         return {"status": "ok", "text": res.text, "backend": res.backend,
                 "model": res.model, "note": res.note}

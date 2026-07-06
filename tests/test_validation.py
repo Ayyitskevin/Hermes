@@ -162,3 +162,19 @@ def test_debate_degrades_visibly(config):
     assert j["status"] == "ok" and j["facts"] and "Symbol: XLK" in j["facts"]
     # the local Ollama is pointed at a dead port in the config fixture → unavailable
     assert j["debate"]["status"] == "unavailable" and j["debate"]["text"] is None
+    # the model-picker preference is accepted and still degrades visibly
+    jp = client.get("/api/debate/XLK?prefer=cloud").json()
+    assert jp["debate"]["status"] == "unavailable"
+
+
+def test_ai_status_exposes_pricing_and_notes(config):
+    app = create_app(config, with_scheduler=False)
+    client = TestClient(app)
+    s = client.get("/api/ai/status").json()
+    assert {b["name"] for b in s["backends"]} == {"ollama", "claude"}
+    for b in s["backends"]:
+        assert b["kind"] in ("local", "frontier") and b["note"]
+        assert "in_per_mtok" in b["price"] and "out_per_mtok" in b["price"]
+    # local is free; the priced meter stays AI-infra dollars (never equity)
+    ollama = next(b for b in s["backends"] if b["name"] == "ollama")
+    assert ollama["price"]["in_per_mtok"] == 0.0
