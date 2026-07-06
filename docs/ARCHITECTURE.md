@@ -111,6 +111,9 @@ src/hermes/
 │                    scored 0–8 into PASS/NEAR/NO candidates (never setups);
 │                    RS criterion reuses the rs board's Mansfield line as a proxy
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
+├── sizing/desk.py   Size surface: fixed-fractional baseline → empirical half-Kelly
+│                    (journal R-multiples, shrunk by n/(n+30)) → limit-aware cap that
+│                    names the binding ceiling. % of equity only. GET /api/size
 ├── journal/service.py  propose/commit/close/resolve; equity index
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
 ├── ai/
@@ -135,7 +138,9 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    + B612 Mono), motion (rise, count-up, marquee), never-colour-alone
 │   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/…)
 │   js/{shell,store,router,app}.js  the shell, dashboard cache, hash-router, boot
-│   js/views/{desk,journal,weekly,placeholder}.js  the surfaces, bound to real endpoints
+│   js/views/{desk,journal,weekly,terminal,size,placeholder}.js  the surfaces, bound
+│                    to real endpoints (terminal = candle chart + thesis-fit; size =
+│                    the sizing desk); later phases fill the remaining placeholders
 ```
 
 ## Data integrity contract
@@ -264,6 +269,27 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     desk-read is opt-in (`?narrative=1`), routes through the AI router, and
     degrades visibly. Methodology + caveats in
     [METHODOLOGY.md](METHODOLOGY.md#instrument-thesis-fit-the-terminal).
+15. **Sizing desk (Size surface)** — planned-trade sizing beyond the risk
+    engine's fixed-fractional suggestion. **LANDED 2026-07:**
+    `src/hermes/sizing/desk.py` (a pure, unit-tested module), `GET
+    /api/size?symbol=&entry=&stop=&target=&sector=`, and the Size view
+    (`web/js/views/size.js`). Three visible layers: the **fixed-fractional
+    baseline** (Van Tharp / Vince), an **empirical half-Kelly** tilt computed
+    from the journal's OWN closed-trade R-multiples (`R = realized / planned
+    risk`; `f* = W − (1−W)/payoff`, halved), **shrunk** toward the baseline by
+    `n/(n+30)` (below 30 trades the edge is flagged an anecdote; with no closed
+    trades — or no losers to define a payoff — the desk reports the edge
+    `insufficient` and stays on the baseline rather than invent one), and a
+    **limit-aware cap** that clamps the size to the tightest ceiling
+    (per-position, remaining open-risk budget, optional sector) and **names the
+    binding constraint**. Side is inferred from stop-vs-entry; a high
+    correlation to an open position is surfaced as a warning, never a silent
+    size. Everything is % of equity or a per-share price — no dollar figure is
+    emitted, and the no-order-path guard still covers the module. Fixing this
+    surface also corrected a shared honesty bug: `animateCountUps` now writes the
+    final value under `prefers-reduced-motion` instead of leaving the `0`
+    placeholder (a reduced-motion reader must see the real number). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#sizing-desk-the-size-surface).
 
 ## Data-source reality (verified 2026-07-04)
 

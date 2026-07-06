@@ -8,6 +8,7 @@ import desk from "./views/desk.js";
 import journal from "./views/journal.js";
 import weekly from "./views/weekly.js";
 import terminal from "./views/terminal.js";
+import size from "./views/size.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -16,11 +17,11 @@ register("/desk", desk);
 register("/journal", journal);
 register("/weekly", weekly);
 register("/terminal", terminal);
+register("/size", size);
 
 // Surfaces whose engines/endpoints land in later phases — navigable now,
 // honest about what's not built yet.
 const SOON = [
-  ["/size", "Sizing desk", "D"],
   ["/regime-lab", "Regime Lab", "E"], ["/pnl", "P&L / attribution", "F"],
   ["/scorecard", "Model scorecard", "G"], ["/stress", "Stress test", "H"],
   ["/sector", "Sector drill", "I"], ["/ledger", "Validation ledger", "J"],

@@ -29,6 +29,7 @@ from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
 from ..rs import board as rs_board
 from ..screener import trend_template as screener
+from ..sizing import desk as sizing
 
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
@@ -346,6 +347,41 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── Sizing desk ───────────────────────────────────────────────────────
+    @r.get("/size")
+    def size_route(
+        symbol: str, entry: float, stop: float,
+        target: float | None = None, sector: str | None = None,
+    ) -> dict:
+        """Suggest a position size (% of equity) for a planned trade: the
+        fixed-fractional baseline, tilted by the journal's own realized edge
+        (half-Kelly, shrunk to the sample size), then clamped by the binding risk
+        limit. Side is inferred from stop-vs-entry. A suggestion only — Hermes has
+        no order path; the human sizes and places every trade."""
+        plan = sizing.build_size_plan(
+            config, symbol, entry=entry, stop=stop, target=target, sector=sector)
+        return _size_payload(plan)
+
+    def _size_payload(plan: sizing.SizePlan) -> dict:
+        return {
+            "status": plan.status, "symbol": plan.symbol, "note": plan.note,
+            "side": plan.side, "entry": plan.entry, "stop": plan.stop,
+            "target": plan.target, "stop_distance_pct": plan.stop_distance_pct,
+            "cached_last": plan.cached_last, "price_source": plan.price_source,
+            "as_of": iso(plan.as_of) if plan.as_of else None, "staleness": plan.staleness,
+            "fixed_risk_pct": plan.fixed_risk_pct, "shrink": plan.shrink,
+            "blended_risk_pct": plan.blended_risk_pct,
+            "size_pct_equity": plan.size_pct_equity,
+            "planned_risk_pct": plan.planned_risk_pct,
+            "reward_risk_ratio": plan.reward_risk_ratio,
+            "binding_constraint": plan.binding_constraint,
+            "caps": [asdict(c) for c in plan.caps],
+            "kelly": None if plan.kelly is None else asdict(plan.kelly),
+            "correlation": None if plan.correlation is None else asdict(plan.correlation),
+            "honesty": {"claim": plan.claim, "methodology": plan.methodology,
+                        "caveat": plan.caveat},
         }
 
     # ── Health: positive evidence only ───────────────────────────────────

@@ -161,6 +161,26 @@ desk-read runs through the router (`desk_read`) and only rephrases these compute
 facts — it invents no number and degrades visibly. This is decision-support only; no
 order path exists in this codebase.
 
+## Sizing desk (the Size surface)
+
+The Size desk turns a planned trade (entry / stop, side inferred from stop-vs-entry)
+into a **suggested position size as % of equity**, in three visible layers. It is a
+suggestion for a human — no order path exists in this codebase.
+
+| Layer | Named methodology | What it does NOT prove |
+|---|---|---|
+| Fixed-fractional baseline | The % risk model — risk a fixed % of equity per trade (`risk.max_risk_per_trade_pct`) and let the stop distance set the size: `size% = risk% / stop-distance%` (Van Tharp's position-sizing work; the fixed-fraction family per Ralph Vince) | A sober default, not an edge. It assumes only that you will honor the stop |
+| Empirical half-Kelly | The Kelly criterion (Kelly 1956; Thorp's market application) applied to the journal's OWN closed trades in R-multiples (`R = realized_return / planned_risk`): win rate `W`, payoff ratio `b = avg_win_R / avg_loss_R`, `f* = W − (1−W)/b`, **halved** (the half-Kelly convention — full Kelly is famously too aggressive) | Kelly assumes independent, stationary bets; markets are neither. With no closed trades, or no losers to define `b`, the edge is reported `insufficient` and the desk stays on the baseline rather than extrapolate one |
+| Confidence shrink | The blended risk is `shrink·half_kelly + (1−shrink)·fixed`, with `shrink = n/(n+30)` — a Beta-Bernoulli-style shrinkage toward the fixed prior (30 trades of prior weight). Below 30 closed trades the edge is flagged an **anecdote** on screen | Shrinkage narrows sampling error; it does not make a short, lucky record predictive. It deliberately pulls the size toward the sober baseline |
+| Limit-aware cap | The blended risk becomes a size, then is clamped by the tightest applicable ceiling — per-position (`max_position_size_pct`, net of any existing weight), remaining open-risk budget (`max_open_risk_pct` − Σ open planned risk), and optional sector ceiling (`max_sector_exposure_pct` − held-in-sector) — and the binding limit is **named** | Arithmetic over % of equity. A correlation to an open position is surfaced as a warning (Pearson over the lookback), never silently sized in |
+
+**Risk outranks the model**: the hard limits can only reduce the size, never raise it,
+and the constraint that bound is reported explicitly (a size of 0 when a budget is
+exhausted is stated, not hidden). Every figure is a % of equity or a per-share price —
+the desk never emits, stores, or displays a dollar balance, dollar P&L, or dollar
+position size. The Kelly number is an **upper reference** the desk deliberately halves,
+shrinks, and caps — not a target.
+
 ## AI router & cloud path
 
 | Component | Named methodology / rule | What it does NOT prove |
