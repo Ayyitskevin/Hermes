@@ -5,7 +5,7 @@
 // its source and as-of; missing stays missing.
 
 import { api, chip, esc, fmtNum, fmtPct, fmtTime, renderMarkdown, animateCountUps } from "../util.js";
-import { sparkline } from "../charts.js";
+import { sparkline, regimeStrip, priceChart } from "../charts.js";
 import { onDashboard, dashboard, refreshDashboard } from "../store.js";
 
 let outletRef = null, unsub = null;
@@ -33,6 +33,14 @@ function skeleton() {
       <div class="plate col-5" id="dk-book"></div>
       <div class="plate col-5" id="dk-regime"></div>
       <div class="plate col-7" id="dk-briefing"></div>
+      <div class="plate col-7" id="dk-chart">
+        <h2><span class="label-x" id="dk-chart-title">Benchmark</span>
+          <span class="micro">close + the regime tape on a shared x-scale</span></h2>
+        <div id="dk-chart-body"></div></div>
+      <div class="plate col-5" id="dk-strip">
+        <h2><span class="label-x">Regime signature</span>
+          <span class="micro">the last ~90 readings · lane = state, ribbon = confidence</span></h2>
+        <div id="dk-strip-body"></div></div>
       <div class="plate col-12" id="dk-surfaces"></div>
     </div>
     <div class="plate watchboard" id="dk-watch">
@@ -65,6 +73,7 @@ function onData(data, err) {
   }
   $("#dk-meta").textContent = `updated ${fmtTime(data.generated_at)}`;
   renderHero(data); renderBook(); renderRegime(data); renderBriefing();
+  renderChart(data); renderStrip(data);
   renderSurfaces(); renderWatchboard(data); renderOps(data);
   animateCountUps(outletRef);
 }
@@ -133,6 +142,28 @@ function renderBook() {
         <div class="v count" data-cu="${r.open_risk_pct ?? 0}" data-dec="2" data-suf="%">—</div><div class="sub">Σ planned risk</div></div>
     </div>${perf}`;
   animateCountUps($("#dk-book"));
+}
+
+// ── Benchmark chart (close + regime tape) + regime signature strip ─────────
+function renderChart(data) {
+  const bench = (data.watchlist || [])[0];   // watchlist is [benchmark, …]
+  const box = $("#dk-chart-body");
+  if (!box) return;
+  const titleEl = $("#dk-chart-title");
+  if (titleEl && bench) titleEl.textContent = `${bench.symbol} · benchmark`;
+  if (!bench || !(bench.series || []).length) {
+    box.innerHTML = `<p class="micro">no benchmark bars cached — run a sync</p>`;
+    return;
+  }
+  const regimeByDate = Object.fromEntries(
+    (data.regime_history || []).map((h) => [h.ts.slice(0, 10), h.label]));
+  priceChart(box, bench.series, regimeByDate);
+}
+
+function renderStrip(data) {
+  const box = $("#dk-strip-body");
+  if (!box) return;
+  regimeStrip(box, data.regime_history || []);
 }
 
 // ── Regime signature + teach-in ────────────────────────────────────────────
