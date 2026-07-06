@@ -47,6 +47,7 @@ function render(outlet, d) {
         <div class="stat"><div class="k">circuit breaker</div>
           <div class="v">${fmtNum(d.max_drawdown_pct)}%</div><div class="sub">max drawdown limit</div></div>
       </div>
+      ${breakerGauge(d)}
     </div>
     <div class="bento" id="st-scen"></div>
     <div class="plate" id="st-hedges"></div>
@@ -59,6 +60,29 @@ function render(outlet, d) {
   $("#st-scen", outlet).innerHTML = d.scenarios.map((s) => scenarioCard(s, d.max_drawdown_pct)).join("");
   renderHedges(outlet, d);
   animateCountUps($("#st-body", outlet));
+}
+
+// Drawdown circuit-breaker gauge: current DD + each scenario's projected DD as
+// ticks, against a 70% warn band and the breaker line. % / index only.
+function breakerGauge(d) {
+  const bk = d.max_drawdown_pct || 1;
+  const warn = 0.7 * bk;
+  const scale = bk * 1.15;                              // headroom past the breaker
+  const at = (v) => Math.min(100, (v / scale) * 100);
+  const cur = d.current_drawdown_pct || 0;
+  const ticks = (d.scenarios || []).filter((s) => s.kind === "market" || s.kind === "crisis")
+    .map((s) => `<div class="bk-tick ${s.breaches_circuit ? "breach" : ""}" style="left:${at(s.projected_drawdown_pct)}%"
+      title="${esc(s.title)}: projected ${fmtNum(s.projected_drawdown_pct)}% drawdown"></div>`).join("");
+  return `<div class="bk-wrap">
+    <div class="bk-head micro"><span>drawdown circuit breaker</span>
+      <span>now ${fmtNum(cur)}% · warn ${fmtNum(warn)}% · breaker ${fmtNum(bk)}%</span></div>
+    <div class="bk-track">
+      <div class="bk-warn" style="left:${at(warn)}%;width:${at(bk) - at(warn)}%"></div>
+      <div class="bk-fill" style="width:${at(cur)}%"></div>
+      <div class="bk-line warn" style="left:${at(warn)}%"></div>
+      <div class="bk-line breaker" style="left:${at(bk)}%"></div>
+      ${ticks}</div>
+    <div class="bk-sub micro">ticks are each scenario's projected drawdown — a tick past the breaker is a scenario that would trip it</div></div>`;
 }
 
 // crisis spans full width; the rest sit two-up

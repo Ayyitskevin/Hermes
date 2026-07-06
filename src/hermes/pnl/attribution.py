@@ -221,6 +221,9 @@ def _key_for(entry: dict, dimension: str) -> tuple[str, str]:
     if dimension == "side":
         side = entry.get("side") or "unknown"
         return side, side.capitalize()
+    if dimension == "position":
+        sym = entry.get("symbol") or "—"
+        return sym, sym
     raise ValueError(f"unknown attribution dimension {dimension!r}")
 
 
@@ -242,6 +245,7 @@ def _group(entries: list[dict], deltas: dict[int, float], key: str, label: str) 
 
 
 _DIMENSIONS = [
+    ("position", "By position — who carried, who dragged"),
     ("regime", "By regime at entry"),
     ("setup", "By setup"),
     ("sector", "By sector"),

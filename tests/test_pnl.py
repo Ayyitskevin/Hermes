@@ -124,7 +124,18 @@ def test_dimensions_present(fresh_db):
     idx = _Index()
     idx.move(seed_closed(1.0, side="short", sector="Tech", setup="pullback"), +1.0)
     dims = {a.dimension for a in build_pnl(fresh_db).attributions}
-    assert dims == {"regime", "setup", "sector", "side"}
+    assert dims == {"position", "regime", "setup", "sector", "side"}
+
+
+def test_per_position_attribution(fresh_db):
+    idx = _Index()
+    idx.move(seed_closed(4.0), +3.0)                    # AAA is seeded as symbol 'AAA'
+    idx.move(seed_closed(-2.0), -1.0)
+    rep = build_pnl(fresh_db)
+    pos = next(a for a in rep.attributions if a.dimension == "position")
+    # both closed trades are AAA → one bucket carrying the full move
+    assert pos.groups[0].label == "AAA" and pos.groups[0].n == 2
+    assert round(pos.groups[0].contribution_points, 4) == 2.0
 
 
 # ── small-sample honesty ─────────────────────────────────────────────────────
@@ -163,5 +174,5 @@ def test_pnl_over_http_and_no_dollars(config):
     j = client.get("/api/pnl").json()
     assert j["status"] == "ok"
     assert j["headline"]["index_now"] == 102.0
-    assert len(j["attributions"]) == 4
+    assert len(j["attributions"]) == 5      # position + regime/setup/sector/side
     assert "$" not in json.dumps(j)                     # % / index only, ever

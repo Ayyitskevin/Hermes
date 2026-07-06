@@ -55,7 +55,7 @@ function render(outlet, d) {
     <div class="plate watchboard">
       <h2><span class="label-x">Sectors</span><span class="micro">ranked by Mansfield RS — leaders first; RS is a past tilt, not persistence</span></h2>
       <div class="scroll-x"><table style="min-width:720px"><thead><tr>
-        <th>Sector</th><th>Read</th><th class="num">Mansfield</th><th>Verdict</th>
+        <th>Sector</th><th>Read</th><th class="num">Mansfield</th><th class="num">RS Δ3</th><th>Verdict</th>
         <th class="num">MA stack</th><th class="num">vs 52w</th><th class="num">Book</th><th>Freshness</th></tr></thead>
         <tbody id="se-rows"></tbody></table></div></div>
 
@@ -84,6 +84,8 @@ function renderRows(outlet, d) {
       <td class="sym">${esc(s.sector)} <span class="micro">${esc(s.symbol)}</span></td>
       <td>${chip(llc, lll)}</td>
       <td class="num ${(s.mansfield ?? 0) < 0 ? "st-serious" : "st-good"}">${s.mansfield === null ? "∅" : `${fmtNum(s.mansfield, 1)}%`}</td>
+      <td class="num micro">${s.slope3 === null || s.slope3 === undefined ? "∅" : `<span class="${s.slope3 >= 0 ? "st-good" : "st-serious"}">${s.slope3 >= 0 ? "▲" : "▼"} ${fmtNum(Math.abs(s.slope3), 1)}</span>`}
+        ${s.rs_new_high ? `<span class="st-good" title="RS at a new 50-bar high">↑hi</span>` : s.rs_new_low ? `<span class="st-serious" title="RS at a new 50-bar low">↓lo</span>` : ""}</td>
       <td>${s.verdict ? chip({ "HI-CONV": "good", "LONG-OK": "ok", "WATCH": "warn", "SKIP-LAG": "serious" }[s.verdict] ?? "warn", s.verdict) : "∅"}</td>
       <td class="num">${stack}</td>
       <td class="num micro">${vs52}</td>

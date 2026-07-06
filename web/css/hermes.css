@@ -244,6 +244,17 @@ button:disabled { opacity: 0.5; cursor: default; }
 .mx-cell .mx-ci { display: block; font-weight: 400; font-size: 8.5px; color: rgba(255,255,255,0.6); }
 .mx-current .mx-from { color: var(--violet-ink); }
 .mx-current .mx-cell { outline: 1px solid rgba(139,108,255,0.55); }
+/* Stress — drawdown circuit-breaker gauge */
+.bk-wrap { margin-top: 14px; }
+.bk-head { display: flex; justify-content: space-between; margin-bottom: 5px; color: var(--ink-2); }
+.bk-track { position: relative; height: 14px; border-radius: 7px; background: var(--plate-2); overflow: hidden; }
+.bk-warn { position: absolute; top: 0; height: 100%; background: rgba(251,191,36,0.14); }
+.bk-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 7px; background: linear-gradient(90deg,#8b6cff,#22d3ee); }
+.bk-line { position: absolute; top: -2px; height: 18px; width: 2px; }
+.bk-line.warn { background: var(--warn); } .bk-line.breaker { background: var(--serious); }
+.bk-tick { position: absolute; top: -3px; height: 20px; width: 2px; background: var(--ink); box-shadow: 0 0 0 1px var(--plate); }
+.bk-tick.breach { background: var(--serious); }
+.bk-sub { margin-top: 5px; color: var(--ink-muted); }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */

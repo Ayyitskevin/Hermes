@@ -441,7 +441,8 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                  "pct_above_low": s.pct_above_low, "pct_below_high": s.pct_below_high,
                  "book_weight_pct": s.book_weight_pct, "source": s.source,
                  "as_of": iso(s.as_of) if s.as_of else None,
-                 "staleness": s.staleness, "note": s.note}
+                 "staleness": s.staleness, "note": s.note,
+                 "slope3": s.slope3, "rs_new_high": s.rs_new_high, "rs_new_low": s.rs_new_low}
                 for s in d.sectors
             ],
             "book": [asdict(b) for b in d.book],

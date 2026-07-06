@@ -112,6 +112,9 @@ class SectorRow:
     as_of: datetime | None
     staleness: str
     note: str
+    slope3: float | None = None     # 3-bar change in the Mansfield RS line
+    rs_new_high: bool = False       # RS line at a new 50-bar high
+    rs_new_low: bool = False
 
 
 @dataclass(frozen=True)
@@ -196,7 +199,10 @@ def build_drill(config: HermesConfig) -> SectorDrill:
             source=row.source if row else None,
             as_of=row.as_of if row else None,
             staleness=row.staleness if row else "missing",
-            note=row.note if row else "no cached data for this sector ETF"))
+            note=row.note if row else "no cached data for this sector ETF",
+            slope3=row.slope3 if row else None,
+            rs_new_high=bool(row.rs_new_high) if row else False,
+            rs_new_low=bool(row.rs_new_low) if row else False))
 
     # Book overlay: group open positions by their sector tag, match to an ETF.
     positions = risk.open_positions()
