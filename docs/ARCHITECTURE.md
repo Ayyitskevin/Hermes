@@ -109,6 +109,9 @@ src/hermes/
 │                    ALLOW/WATCH/RESTRICT posture). GET /api/instrument, /api/search
 ├── rs/board.py      Mansfield RS leadership board (Weinstein 1988) — watchlist
 │                    vs benchmark, verdicts capped by the current regime
+├── sector/drill.py  sector drill: the SPDR sector ETFs in the watchlist ranked by
+│                    Mansfield RS (leading/lagging), each sector's MA structure, and
+│                    the open book overlaid (tailwind/headwind). GET /api/sector
 ├── portfolio/review.py  weekly portfolio review: regime coherence, sector
 │                    heat, full correlation matrix, journal-informed exposure
 ├── screener/trend_template.py  Minervini Trend Template (2013) — watchlist
@@ -159,7 +162,8 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    thesis-fit; size = the sizing desk; regime-lab = the dual-
 │                    classifier deep read; pnl = the equity-index attribution;
 │                    scorecard = the model honesty grades; stress = the open-book
-│                    shock test); later phases fill the remaining placeholders
+│                    shock test; sector = the sector drill); the Validation ledger
+│                    remains a placeholder
 ```
 
 ## Data integrity contract
@@ -371,6 +375,20 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     context, never orders (the no-order-path guard + a no-dollars HTTP assertion
     both hold). Methodology + caveats in
     [METHODOLOGY.md](METHODOLOGY.md#stress-test-the-stress-surface).
+20. **Sector drill (Sector surface)** — a sector read of the watchlist and the
+    book. **LANDED 2026-07:** `src/hermes/sector/drill.py` (pure, unit-tested),
+    `GET /api/sector`, the Sector Drill view (`web/js/views/sector.js`). Reuses the
+    RS board to rank the SPDR sector ETFs (XLK, XLE, XLF, …) present in the
+    watchlist by Mansfield RS vs the benchmark (leading = positive, lagging =
+    negative), adds each sector's MA stack + 52-week position from cached bars, and
+    overlays the open book: positions grouped by their free-text sector tag and
+    best-effort name-matched to a sector ETF (longest-alias-wins, so "biotech"
+    beats "tech"), each slug labeled tailwind / headwind / unbenchmarked. Coverage
+    is only the sector ETFs in the watchlist (uncovered SPDR sectors are listed,
+    not estimated); RS is backward-looking; unmatched tags are shown, never
+    force-fit. Strictly % of equity + RS terms — no dollar figure (the
+    no-order-path guard + a no-dollars HTTP assertion both hold). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#sector-drill-the-sector-surface).
 
 ## Data-source reality (verified 2026-07-04)
 

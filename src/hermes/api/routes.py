@@ -32,6 +32,7 @@ from ..risk import engine as risk
 from ..rs import board as rs_board
 from ..scorecard import report as scorecard
 from ..screener import trend_template as screener
+from ..sector import drill as sector
 from ..sizing import desk as sizing
 from ..stress import scenarios as stress
 
@@ -351,6 +352,37 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── Sector drill ──────────────────────────────────────────────────────
+    @r.get("/sector")
+    def sector_route() -> dict:
+        """A sector read: the SPDR sector ETFs in the watchlist ranked by Mansfield
+        relative strength vs the benchmark (leading / lagging), each sector's trend
+        structure, and where the open book's exposure sits against those reads
+        (tailwind / headwind). % of equity + RS terms only; never a trade."""
+        return _sector_payload(sector.build_drill(config))
+
+    def _sector_payload(d: sector.SectorDrill) -> dict:
+        return {
+            "generated_at": iso(d.generated_at), "status": d.status, "note": d.note,
+            "benchmark": d.benchmark, "regime_display": d.regime_display,
+            "sectors": [
+                {"symbol": s.symbol, "sector": s.sector, "status": s.status,
+                 "mansfield": s.mansfield, "verdict": s.verdict, "lead_lag": s.lead_lag,
+                 "close": s.close, "ma_stack": s.ma_stack,
+                 "pct_above_low": s.pct_above_low, "pct_below_high": s.pct_below_high,
+                 "book_weight_pct": s.book_weight_pct, "source": s.source,
+                 "as_of": iso(s.as_of) if s.as_of else None,
+                 "staleness": s.staleness, "note": s.note}
+                for s in d.sectors
+            ],
+            "book": [asdict(b) for b in d.book],
+            "covered": d.covered, "uncovered": d.uncovered,
+            "book_in_leading_pct": d.book_in_leading_pct,
+            "book_in_lagging_pct": d.book_in_lagging_pct,
+            "book_unbenchmarked_pct": d.book_unbenchmarked_pct,
+            "honesty": {"claim": d.claim, "methodology": d.methodology, "caveat": d.caveat},
         }
 
     # ── Stress test ───────────────────────────────────────────────────────

@@ -74,6 +74,21 @@ has tested it. The board's caveat says exactly this, on screen, verbatim
 bars) renders as `missing`, never interpolated, per the data-integrity
 contract.
 
+## Sector drill (the Sector surface)
+
+The Sector drill composes the RS board and the open book into a sector read. It
+introduces no new measurement — it reuses the Mansfield RS the board already
+computes and overlays the book.
+
+| Element | Composed from | What it does NOT prove |
+|---|---|---|
+| Sector ranking | The SPDR select-sector ETFs (XLK, XLE, XLF, …) present in the watchlist, ranked by Mansfield RS vs the benchmark — leading = positive Mansfield, lagging = negative (reused from the RS board) | RS is backward-looking — a past tilt, not persistence. Coverage is only the sector ETFs you watch, not the whole market (uncovered sectors are listed, not estimated) |
+| Trend structure | Each sector ETF's MA stack (close > 50 > 150 > 200) and distance from its 52-week range, from cached bars | Structure is a description of the present window, not a forecast |
+| Book overlay | Open positions grouped by their free-text sector tag, best-effort name-matched to a sector ETF (longest-alias-wins, so "biotech" beats "tech"); each slug labeled tailwind (leading sector), headwind (lagging), or unbenchmarked | The name match is heuristic; an unmatched tag is shown as unbenchmarked, never force-fit to a sector. Tailwind/headwind describes the sector's RS, not the position's own prospects |
+
+Everything is % of equity or RS terms — no dollar figure appears. A sector read is
+context for a human decision; nothing here is a directive.
+
 ## Weekly portfolio review
 
 | Component | Named methodology | What it does NOT prove |

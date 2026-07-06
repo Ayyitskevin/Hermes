@@ -13,6 +13,7 @@ import regimeLab from "./views/regime-lab.js";
 import pnl from "./views/pnl.js";
 import scorecard from "./views/scorecard.js";
 import stress from "./views/stress.js";
+import sector from "./views/sector.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -26,11 +27,12 @@ register("/regime-lab", regimeLab);
 register("/pnl", pnl);
 register("/scorecard", scorecard);
 register("/stress", stress);
+register("/sector", sector);
 
 // Surfaces whose engines/endpoints land in later phases — navigable now,
 // honest about what's not built yet.
 const SOON = [
-  ["/sector", "Sector drill", "I"], ["/ledger", "Validation ledger", "J"],
+  ["/ledger", "Validation ledger", "J"],
 ];
 for (const [route, title, phase] of SOON) register(route, placeholder(title, phase));
 register("*", placeholder("Not found", null));
