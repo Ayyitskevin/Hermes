@@ -25,6 +25,7 @@ from ..instrument import terminal as instrument
 from ..jobs import backup, daily_check, runner, scheduler, weekly_review
 from ..journal import service as journal
 from ..portfolio import review as portfolio_review
+from ..regime import lab as regime_lab
 from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
 from ..rs import board as rs_board
@@ -347,6 +348,54 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── Regime Lab ────────────────────────────────────────────────────────
+    @r.get("/regime/lab")
+    def regime_lab_route() -> dict:
+        """A deep read of the regime engine: BOTH classifiers run live on the same
+        cached bars (a read — never persisted), each component's evidence, the
+        confidence formula broken out, drift vs the last persisted reading, and the
+        transition history of the default classifier. Never a live fetch, never a
+        trade."""
+        return _lab_payload(regime_lab.build_lab(config))
+
+    def _cview_payload(v: regime_lab.ClassifierView) -> dict:
+        return {
+            "version": v.version, "is_default": v.is_default, "status": v.status,
+            "label": v.label, "label_display": v.label_display,
+            "score": v.score, "confidence": v.confidence,
+            "confidence_basis": v.confidence_basis,
+            "votes_available": v.votes_available, "votes_total": v.votes_total,
+            "evidence": [asdict(e) for e in v.evidence],
+            "data_asof": iso(v.data_asof) if v.data_asof else None,
+            "data_source": v.data_source, "honesty": v.honesty,
+        }
+
+    def _lab_payload(lab: regime_lab.RegimeLab) -> dict:
+        return {
+            "generated_at": iso(lab.generated_at), "benchmark": lab.benchmark,
+            "status": lab.status, "note": lab.note,
+            "default_classifier": lab.default_classifier,
+            "agree": lab.agree, "agreement_note": lab.agreement_note,
+            "classifiers": [_cview_payload(v) for v in lab.classifiers],
+            "persisted": {
+                "label": lab.persisted_label, "label_display": lab.persisted_display,
+                "asof": iso(lab.persisted_asof) if lab.persisted_asof else None,
+                "drifted": lab.drifted, "drift_note": lab.drift_note,
+            },
+            "history": [
+                {**h, "ts": iso(h["ts"]), "asof": iso(h["asof"]) if h["asof"] else None}
+                for h in lab.history
+            ],
+            "streak_readings": lab.streak_readings,
+            "transitions": [
+                {"ts": iso(t.ts), "from_label": t.from_label, "from_display": t.from_display,
+                 "to_label": t.to_label, "to_display": t.to_display}
+                for t in lab.transitions
+            ],
+            "dwell": lab.dwell, "history_n": lab.history_n, "small_sample": lab.small_sample,
+            "honesty": {"claim": lab.claim, "methodology": lab.methodology, "caveat": lab.caveat},
         }
 
     # ── Sizing desk ───────────────────────────────────────────────────────

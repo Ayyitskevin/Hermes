@@ -98,7 +98,11 @@ src/hermes/
 │   ├── indicators.py pure-function math (tested; returns None when data short)
 │   ├── reference.py reference-v1 classifier (five named methods)
 │   ├── v62.py       Regime Label v6.2 (owner's classifier, ported; DEFAULT)
-│   └── engine.py    registry + persistence
+│   ├── engine.py    registry + persistence
+│   └── lab.py       Regime Lab: runs BOTH classifiers live on the same cached
+│                    bars (a read — never persisted), breaks out the confidence
+│                    formula, flags drift vs the persisted reading, and computes
+│                    the streak/flips/dwell history. GET /api/regime/lab
 ├── instrument/terminal.py  per-symbol read composed from the engines below:
 │                    price/staleness + MA structure + RS + Trend-Template +
 │                    in-book context, plus a transparent thesis-fit (0–100 +
@@ -138,9 +142,10 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    + B612 Mono), motion (rise, count-up, marquee), never-colour-alone
 │   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/…)
 │   js/{shell,store,router,app}.js  the shell, dashboard cache, hash-router, boot
-│   js/views/{desk,journal,weekly,terminal,size,placeholder}.js  the surfaces, bound
-│                    to real endpoints (terminal = candle chart + thesis-fit; size =
-│                    the sizing desk); later phases fill the remaining placeholders
+│   js/views/{desk,journal,weekly,terminal,size,regime-lab,placeholder}.js  the
+│                    surfaces, bound to real endpoints (terminal = candle chart +
+│                    thesis-fit; size = the sizing desk; regime-lab = the dual-
+│                    classifier deep read); later phases fill the remaining placeholders
 ```
 
 ## Data integrity contract
@@ -290,6 +295,23 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     final value under `prefers-reduced-motion` instead of leaving the `0`
     placeholder (a reduced-motion reader must see the real number). Methodology +
     caveats in [METHODOLOGY.md](METHODOLOGY.md#sizing-desk-the-size-surface).
+16. **Regime Lab (deep read)** — the regime engine opened up for interrogation.
+    **LANDED 2026-07:** `src/hermes/regime/lab.py` (pure, unit-tested),
+    `GET /api/regime/lab`, and the Regime Lab view (`web/js/views/regime-lab.js`).
+    Runs **both** classifiers (`v62` + `reference-v1`) live on the same cached
+    benchmark + watchlist bars for a side-by-side second opinion — a READ, so the
+    non-default result is never persisted and the scheduled daily check keeps sole
+    ownership of the history. Only the four-state **label** is compared across
+    classifiers; each score/confidence stays on its own scale, with the confidence
+    formula and the votes-cast count broken out per card. It flags **drift** when
+    the live default label differs from the last persisted reading (bars moved
+    since the last check), and draws the default classifier's transition history —
+    streak, flips, dwell-per-regime (reusing `regimeStrip`) — flagged an anecdote
+    below 20 readings. Every evidence row keeps the teach-in `{label, chip, claim,
+    measured, caveat}` shape; short history renders `∅ missing`. Fixed a
+    view-local bug found in the browser smoke test (an unclosed plate `<div>` that
+    nested the second card inside the first). Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#regime-lab-the-deep-read).
 
 ## Data-source reality (verified 2026-07-04)
 

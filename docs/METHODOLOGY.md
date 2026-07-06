@@ -36,6 +36,23 @@ Confluence AIO v3.2 strategy — verified model-identical at daily defaults,
 so chart and dashboard share one brain. Full fidelity record in
 [REGIME_V62_PORT.md](REGIME_V62_PORT.md).
 
+## Regime Lab (the deep read)
+
+The Regime Lab composes the two regime classifiers and the stored reading history
+into one interrogation surface — it introduces **no new measurement**.
+
+| Element | What it does | What it does NOT prove |
+|---|---|---|
+| Dual-classifier read | Runs **both** `v62` and `reference-v1` over the same cached benchmark + watchlist bars (a read — the second, non-default result is never persisted, so the scheduled daily check keeps sole ownership of the history) | Agreement is corroboration, not proof: the two share inputs and both are heuristics, not backtested edges. A single instant, not a track record |
+| Label comparison only | The four-state label is the same enum for both, so it is compared directly | The per-classifier **score** and **confidence** are on different scales (reference-v1: mean of ±1 votes / agreement×coverage; v62: a mapped z / strength) and are deliberately **not** cross-compared — each card shows its own basis |
+| Confidence teach-in | Breaks the confidence number into its formula and reports how many components actually voted (`votes_available / votes_total`) | A heuristic for display, never a probability. Missing components lower coverage rather than being filled in |
+| Drift vs persisted | Flags when the LIVE default label differs from the last persisted reading — i.e. bars moved since the last daily check and a fresh check would relabel | It does not itself relabel or persist; it only surfaces that the authoritative reading is stale relative to current bars |
+| Transition history | Current streak, label flips, and dwell-per-regime over the persisted readings of the default classifier | Below 20 readings the stats are flagged an **anecdote**, not a base rate; dwell is descriptive of the window, not a forecast of the next regime |
+
+Every reading carries source + as-of; short history renders `∅ missing`, never
+interpolated. Nothing here is a directive — a regime label is context for a human
+decision, and no order path exists in this codebase.
+
 ## RS leadership board
 
 | Component | Named methodology | What it does NOT prove |
