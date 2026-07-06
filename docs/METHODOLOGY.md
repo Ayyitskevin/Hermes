@@ -136,6 +136,20 @@ A's `market-regime-daily`, whose output is explicitly "a posture, not a
 directive." Hermes' mapping: breach ⇒ cash-priority (risk outranks regime);
 bear/stress ⇒ cash-priority; warn or rangebound ⇒ restrict; else allow.
 
+## AI router & cloud path
+
+| Component | Named methodology / rule | What it does NOT prove |
+|---|---|---|
+| Local-first routing | Doctrine, not literature: Ollama is the default; the cloud (Claude) is the deliberate exception, taken only when `ai.allow_cloud` is true **and** a task opts in (`debate` / `coach` / `desk_read`) or the operator selects it. A down backend falls back to the other and labels which answered; both down returns a visible "model unavailable" state | Nothing about answer quality — it is a *routing* policy. Which backend answered is disclosed; a labeled fallback is not a silent substitution |
+| Data-in / prose-out | The model receives **computed** facts (regime label, evidence, risk state, thesis-fit rows, resolved journal history) and is instructed to restate only those facts. Numbers come from the pipeline; the AI writes prose about them | The AI does not compute, validate, or forecast any number. It can still phrase a caveat poorly — the numbers above it are complete without it, and render even when it is down |
+| Boundary language in every prompt | Each system prompt forbids inventing numbers and forbids directives; `debate` ends in the tension between views, never a "buy/sell" call. The AI layer is CI-covered by the no-order-path guard like the rest of the repo | It is a prompt-level guard, reinforcing (not replacing) the structural boundary: no order path exists in this codebase for the AI to reach even if asked |
+| Session usage meter (`approx_cost`) | Σ token usage × per-model USD list price, accumulated over the server process | An **approximation** of AI-infrastructure spend (list prices, not intro or negotiated rates), confined to `/api/ai/status`. It is NOT an account balance, P&L, or position size, and never enters the equity / % domain |
+| Backend reachability in `/api/ai/status` | Ollama: a live tags ping; Claude: key present **and** a live models-list probe (no generation, no tokens) | A probe at status time, not a guarantee the next call succeeds — an actual call still degrades visibly if the backend drops between the probe and the request |
+
+The router is honest by construction: it never dresses a fallback as the primary
+backend, never emits prose when both backends are down, and never lets a cloud
+dollar figure cross into the equity / % domain.
+
 ## What is NOT traceable to a named methodology
 
 - The reviewer's specific thresholds (`MIN_STOP_DISTANCE_PCT = 0.35`,

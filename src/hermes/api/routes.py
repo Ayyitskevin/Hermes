@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from .. import db
 from ..ai.ollama import OllamaClient
+from ..ai.router import AIRouter
 from ..config import HermesConfig
 from ..data import store
 from ..data.models import iso, utcnow
@@ -31,6 +32,10 @@ from ..screener import trend_template as screener
 
 def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRouter:
     r = APIRouter(prefix="/api")
+
+    # One AI router for the app's lifetime — its usage meter accumulates across
+    # requests (session = server process). Local-first; cloud is the exception.
+    ai = AIRouter(config)
 
     # ── Dashboard ────────────────────────────────────────────────────────
     @r.get("/dashboard")
@@ -285,6 +290,16 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         except Exception as exc:
             # The failure is already recorded in job_runs; surface it raw.
             raise HTTPException(502, f"{name} failed: {exc}") from exc
+
+    # ── AI: model selector + session usage meter ─────────────────────────
+    @r.get("/ai/status")
+    def ai_status() -> dict:
+        """Which backends are reachable, which one the local-first policy would
+        use now, and the session's cloud usage. `approx_cost` is AI-infrastructure
+        USD (never an account figure) and is confined to this endpoint. When no
+        backend is usable, `active` is null so the UI renders 'model unavailable'
+        while every computed number still shows."""
+        return ai.status()
 
     # ── Health: positive evidence only ───────────────────────────────────
     @r.get("/health")

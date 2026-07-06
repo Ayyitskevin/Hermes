@@ -23,7 +23,7 @@ trading base URL, or order-shaped API ever appears.
 | Trading style | Systematic regime-following swing trading — daily bars primary; 4H/weekly available (Alpaca supports `4Hour`/`1Week` timeframes) but V1 workflows run on `1Day` |
 | Data source | **Alpaca** default (free real-time IEX feed; paper account is enough, no funding). **Databento** documented fallback. **Sample** provider for zero-key runs |
 | Where it runs | Always-on machine, as a real systemd service (`deploy/hermes.service`) |
-| AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud is a **reserved V2 slot** — the `ai.allow_cloud`/`ai.cloud_model` knobs and `ANTHROPIC_API_KEY` exist but are read by no V1 code |
+| AI inference | **Local-first**: Ollama for routine narrative/critique work, chosen by default. Cloud (Claude) is the **deliberate exception** — off unless `ai.allow_cloud` is set. A router (`ai/router.py`) routes local-first and reaches for the cloud only when a task opts in or the operator asks; a down backend falls back to the other (labeled), both down degrades visibly. Landed V2 (see roadmap #12) |
 | Regime classifier | Pluggable. **Regime Label v6.2** (the owner's classifier, ported from its TradingView source) is the default; `reference-v1` (named published methods) remains as a second opinion. Fidelity notes in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
 | Open source | MIT. No personal paths/IPs/secrets; credentials via `.env` only (`.env.example` documented); README covers setup from zero |
 | Position sizing | Everything is % of account equity. No *account* dollar figures — balances, dollar position sizes, dollar P&L — are asked for, stored, or displayed; only per-share market prices appear, and sizing is derived from them as % of equity. Drawdown is tracked on a normalized 100-based equity index |
@@ -109,7 +109,10 @@ src/hermes/
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
 ├── journal/service.py  propose/commit/close/resolve; equity index
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
-├── ai/ollama.py     local-first inference; failures degrade visibly
+├── ai/
+│   ├── ollama.py    local-first inference (default); failures degrade visibly
+│   ├── claude.py    cloud path (Anthropic Messages API); the deliberate exception
+│   └── router.py    local-first routing + visible fallback + cloud usage meter
 ├── jobs/
 │   ├── runner.py    job_runs positive evidence wrapper
 │   ├── sync.py      incremental bar/snapshot sync
@@ -198,6 +201,23 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     timeframe bars it is handed (each `Bar` carries its timeframe); the daily
     workflow just always hands it `1Day` bars today. The reserved
     `market.timeframes` config knob is wired to nothing until this lands.
+12. **AI cloud router + cloud path** — the "AI as headline" unlock.
+    **LANDED 2026-07:** `src/hermes/ai/claude.py` (Anthropic Messages API client
+    mirroring `OllamaClient`'s surface + the product's `desk_read` / `coach` /
+    `debate` tasks), `src/hermes/ai/router.py` (`AIRouter` — local-first policy,
+    visible fallback, `UsageMeter`), and `GET /api/ai/status` (backend
+    reachability + the session usage meter that powers the model selector).
+    Local-first is preserved: cloud is used only when `ai.allow_cloud` is true
+    **and** a task opts in or the operator asks; if the chosen backend is down
+    the router falls back to the other and labels which answered; if both are
+    down it returns a visible "model unavailable" state while every computed
+    number still renders. The AI layer stays data-in/prose-out — it never sees
+    or emits an order. The only new outbound host is `api.anthropic.com`, an
+    inference host (not a broker host), allow-listed as a reviewed decision in
+    the boundary guard. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#ai-router--cloud-path). The existing daily
+    check keeps calling Ollama directly until the Desk surface is rebuilt (that
+    migration threads the router in without changing behavior when cloud is off).
 
 ## Data-source reality (verified 2026-07-04)
 

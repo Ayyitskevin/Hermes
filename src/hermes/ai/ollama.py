@@ -1,13 +1,14 @@
 """Local-first AI inference via the owner's own Ollama.
 
 Routine, recurring analysis runs here — on hardware the owner controls, at
-zero marginal cost. Cloud inference is a RESERVED V2 slot: the config knobs
-(ai.allow_cloud, ai.cloud_model, ANTHROPIC_API_KEY) exist but no cloud code
-path ships in V1 — setting them does nothing yet, and the docs say so.
+zero marginal cost. This is the DEFAULT path. Cloud (Claude) is the deliberate
+exception, off unless ai.allow_cloud is set; the router (ai/router.py) chooses
+between the two and both share this method surface.
 
 When Ollama is down the caller gets OllamaUnavailable and must degrade
 visibly — narrative sections render as 'local model unavailable', never as
-silently missing prose.
+silently missing prose. (The router turns that into a labeled fallback or a
+visible 'model unavailable' state; the numbers always still render.)
 """
 
 from __future__ import annotations
@@ -95,6 +96,53 @@ class OllamaClient:
                 f"Regime: {regime_label}\nProposed: {side.upper()} {symbol} @ "
                 f"{entry_price}, stop {stop_price}\nThesis: {thesis}"
             ),
+        )
+
+    def desk_read(self, facts_md: str) -> str:
+        """Narrate an instrument's thesis-fit vs the book — rephrases the computed
+        factor rows and posture, never restating a posture as a directive."""
+        return self._chat(
+            system=(
+                "You are a trading desk analyst reading one instrument against a "
+                "regime-following swing book. You receive computed facts: the "
+                "regime, the name's RS and trend structure, its thesis-fit score "
+                "and per-factor rows, and its posture (ALLOW / WATCH / RESTRICT). "
+                "Write at most 120 words explaining what the posture reflects and "
+                "which factors drive it. Restate only the facts given — invent no "
+                "numbers. Posture is context for a human decision, never a "
+                "directive: do not tell anyone to buy, sell, or size anything."
+            ),
+            user=facts_md,
+        )
+
+    def coach(self, question: str, facts_md: str) -> str:
+        """Answer a question over the trader's OWN resolved journal entries,
+        grounded strictly in the supplied resolved history."""
+        return self._chat(
+            system=(
+                "You are a trading journal coach. Answer the trader's question "
+                "using ONLY the resolved journal entries and per-setup statistics "
+                "provided — their own realized history. Quote the numbers you were "
+                "given; invent none. If a sample is small (n < 30) say it is "
+                "anecdote-grade. You reflect on what happened; you never tell them "
+                "what to trade next."
+            ),
+            user=f"Question: {question}\n\nResolved history:\n{facts_md}",
+        )
+
+    def debate(self, facts_md: str) -> str:
+        """Bull case → bear case → risk critique over a symbol/thesis. Decision
+        support only; ends in context, never a directive."""
+        return self._chat(
+            system=(
+                "You run a three-voice desk debate over a symbol and thesis, using "
+                "only the computed facts provided. Produce three short sections in "
+                "this fixed order: BULL CASE, BEAR CASE, RISK CRITIQUE. Restate "
+                "only the given facts — invent no numbers or catalysts. This is "
+                "decision support for a human: end in the tension between the "
+                "views, never a recommendation to buy or sell."
+            ),
+            user=facts_md,
         )
 
     def available(self) -> bool:

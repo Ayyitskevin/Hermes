@@ -62,10 +62,12 @@ class JournalConfig:
 class AiConfig:
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "llama3.1"
-    # RESERVED V2 slot: no cloud code path ships in V1; these knobs are not
-    # read by any code yet and are documented as such.
+    # Cloud is the deliberate exception, off by default. The router (ai/router.py)
+    # routes local-first and reaches for Claude only when allow_cloud is true and
+    # a task opts in or the operator asks. Requires ANTHROPIC_API_KEY in .env.
     allow_cloud: bool = False
-    cloud_model: str = "claude-sonnet-5"
+    cloud_model: str = "claude-sonnet-5"        # default cloud model
+    cloud_fast_model: str = "claude-haiku-4-5"  # fast lane for cheap/interactive turns
 
 
 @dataclass(frozen=True)
