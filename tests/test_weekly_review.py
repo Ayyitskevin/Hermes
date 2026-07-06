@@ -75,6 +75,29 @@ def test_coherence_rule_long_and_short():
     assert _coherence("short", RegimeLabel.CHOP) == FIGHTING
 
 
+def test_weekly_structured_endpoint(config):
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from hermes.main import create_app
+    app = create_app(config, with_scheduler=False)
+    client = TestClient(app)
+    seed_regime(RegimeLabel.BULL_TREND)
+    insert_position("AAPL", 18.0, 1.2, sector="Technology")
+    insert_position("DUK", 8.0, 1.0, sector="Utilities")     # a defensive sector
+    s = client.get("/api/reports/weekly").json()["structured"]
+    assert s["exposure"]["open_count"] == 2
+    # sector ballast classifies utilities as defensive, tech as cyclical
+    assert s["defensive_pct"] == 8.0 and s["cyclical_pct"] == 18.0
+    heat = {h["sector"]: h for h in s["sector_heat"]}
+    assert heat["Utilities"]["defensive"] is True and heat["Technology"]["defensive"] is False
+    # the staleness table carries per-position age + the standing thesis
+    assert {p["symbol"] for p in s["stale"]} == {"AAPL", "DUK"}
+    assert all("days_held" in p and "thesis" in p for p in s["stale"])
+    assert "$" not in json.dumps(s)                           # % of equity only
+
+
 # ── build_review: coherence cases ────────────────────────────────────────
 def test_build_review_coherent_case(fresh_db, config):
     seed_regime(RegimeLabel.BULL_TREND)

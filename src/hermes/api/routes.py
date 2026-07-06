@@ -19,7 +19,7 @@ from ..ai.ollama import OllamaClient
 from ..ai.router import AIRouter
 from ..config import HermesConfig
 from ..data import store
-from ..data.models import iso, utcnow
+from ..data.models import iso, parse_iso, utcnow
 from ..data.provider import MarketDataProvider
 from ..instrument import terminal as instrument
 from ..jobs import backup, daily_check, runner, scheduler, weekly_review
@@ -273,13 +273,67 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             "caveat": portfolio_review.CAVEAT,
         }
         rpt = weekly_review.latest_weekly_review()
+        structured = _weekly_structured()
         if rpt is None:
-            return {"generated_at": None, "body_md": None, "meta": {}, "honesty": honesty}
+            return {"generated_at": None, "body_md": None, "meta": {},
+                    "structured": structured, "honesty": honesty}
         return {
             "generated_at": rpt["ts"],
             "body_md": rpt["body_md"],
             "meta": rpt["meta"],
+            "structured": structured,
             "honesty": honesty,
+        }
+
+    _DEFENSIVE_ETF = {"XLP", "XLU", "XLV", "XLRE"}   # staples/utilities/health/reits
+
+    def _weekly_structured() -> dict:
+        """The weekly review as DATA (heatmap, sector ballast, exposure gauges,
+        thesis-staleness) — computed live from the current book, distinct from the
+        stored markdown narrative of the last scheduled run."""
+        rev = portfolio_review.build_review(config)
+        heat, defensive_pct, cyclical_pct = [], 0.0, 0.0
+        for s in rev.sector_heat:
+            etf = sector._match_etf(s.sector) if not s.untagged else None
+            is_def = etf in _DEFENSIVE_ETF
+            heat.append({"sector": s.sector, "pct_equity": s.pct_equity,
+                         "over_limit": s.over_limit, "untagged": s.untagged,
+                         "defensive": is_def})
+            if not s.untagged:
+                if is_def:
+                    defensive_pct += s.pct_equity
+                else:
+                    cyclical_pct += s.pct_equity
+        now = utcnow()
+        stale = []
+        for p in risk.open_positions():
+            held = (now - parse_iso(p["opened_at"])).days
+            stale.append({
+                "symbol": p["symbol"], "side": p["side"],
+                "sector": p["sector"] or "unspecified",
+                "size_pct": p["size_pct_equity"], "days_held": held,
+                "stale": held >= config.journal.stale_open_after_days,
+                "thesis": (p["thesis"] or "")[:180]})
+        _cur, dd = risk.current_equity_index()
+        r = config.risk
+        return {
+            "regime": {"display": rev.regime_display, "version": rev.regime_version,
+                       "asof": iso(rev.regime_asof) if rev.regime_asof else None},
+            "coherence": {"counts": rev.coherence_counts,
+                          "positions": [asdict(p) for p in rev.positions]},
+            "sector_heat": heat, "defensive_pct": round(defensive_pct, 1),
+            "cyclical_pct": round(cyclical_pct, 1), "untagged_pct": rev.untagged_pct,
+            "sector_leader": rev.sector_leader,
+            "corr": {"symbols": rev.corr_symbols, "matrix": rev.corr_matrix,
+                     "flags": rev.corr_flags, "lookback": rev.corr_lookback_days,
+                     "threshold": rev.corr_warn_threshold,
+                     "worst_pair": rev.worst_pair, "worst_corr": rev.worst_corr},
+            "exposure": {
+                "open_count": rev.open_count, "open_risk_pct": rev.open_risk_pct,
+                "max_open_risk": r.max_open_risk_pct, "max_sector_pct": rev.max_sector_pct,
+                "max_sector_limit": r.max_sector_exposure_pct,
+                "drawdown_pct": dd, "max_drawdown": r.max_drawdown_pct},
+            "stale": stale,
         }
 
     # ── Jobs: observability + manual override ───────────────────────────

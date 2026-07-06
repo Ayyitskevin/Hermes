@@ -276,6 +276,20 @@ button:disabled { opacity: 0.5; cursor: default; }
 .re-bar > i.pos { background: var(--good); } .re-bar > i.neg { background: var(--serious); }
 .re-val { font-family: var(--mono); font-size: 12px; font-weight: 700; text-align: right; }
 .re-n { color: var(--ink-muted); }
+/* Weekly — exposure gauges + correlation heatmap */
+.wk-gauge { margin-top: 10px; }
+.wk-g-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.wk-g-track { position: relative; height: 10px; border-radius: 6px; background: var(--plate-2); overflow: hidden; }
+.wk-g-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 6px; background: linear-gradient(90deg,#8b6cff,#22d3ee); }
+.wk-g-fill.warn { background: var(--warn); } .wk-g-fill.neg { background: var(--serious); }
+.wk-g-mark { position: absolute; top: -2px; height: 14px; width: 2px; }
+.wk-g-mark.warn { background: var(--warn); } .wk-g-mark.limit { background: var(--serious); }
+.cx-table { border-collapse: separate; border-spacing: 3px; font-family: var(--mono); }
+.cx-table th { font-size: 11px; color: var(--ink-muted); padding: 3px 6px; }
+.cx-table .cx-from { text-align: right; color: var(--ink); }
+.cx-cell { text-align: center; padding: 8px 10px; border-radius: 6px; color: var(--ink); font-size: 12px; min-width: 52px; }
+.cx-cell.cx-hot { outline: 1px solid var(--serious); font-weight: 700; }
+.cx-cell.cx-missing { color: var(--ink-muted); background: var(--plate-2); }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */
