@@ -30,6 +30,7 @@ from ..regime import lab as regime_lab
 from ..regime.engine import latest_reading, reading_history
 from ..risk import engine as risk
 from ..rs import board as rs_board
+from ..scorecard import report as scorecard
 from ..screener import trend_template as screener
 from ..sizing import desk as sizing
 
@@ -349,6 +350,29 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── Model scorecard ───────────────────────────────────────────────────
+    @r.get("/scorecard")
+    def scorecard_route() -> dict:
+        """Grades Hermes' own models on STORED evidence only — regime stability,
+        live classifier agreement, reviewer calibration, thesis-judgment
+        calibration — each marked GRADED / THIN / NOT_TRACKED with its sample. It
+        fabricates no grade; what the data can't support is named, not faked."""
+        return _scorecard_payload(scorecard.build_scorecard(config))
+
+    def _scorecard_payload(sc: scorecard.Scorecard) -> dict:
+        return {
+            "generated_at": iso(sc.generated_at),
+            "items": [
+                {"key": it.key, "title": it.title, "status": it.status, "n": it.n,
+                 "headline": it.headline, "detail": it.detail,
+                 "small_sample": it.small_sample,
+                 "rows": [asdict(row) for row in it.rows],
+                 "claim": it.claim, "caveat": it.caveat}
+                for it in sc.items
+            ],
+            "honesty": {"claim": sc.claim, "methodology": sc.methodology, "caveat": sc.caveat},
         }
 
     # ── P&L / attribution ─────────────────────────────────────────────────

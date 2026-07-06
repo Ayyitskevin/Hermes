@@ -228,6 +228,24 @@ The router is honest by construction: it never dresses a fallback as the primary
 backend, never emits prose when both backends are down, and never lets a cloud
 dollar figure cross into the equity / % domain.
 
+## Model scorecard (the honesty surface)
+
+The scorecard grades Hermes' own models — and is the surface most bound by
+"honesty is the product". It fabricates no grade: every item is marked GRADED,
+THIN, or NOT_TRACKED, and what the stored data cannot support is named, not faked.
+
+| Item | Computed from | Status logic / what it does NOT prove |
+|---|---|---|
+| Regime-classifier stability | Flips, average dwell, and current streak over the PERSISTED default-classifier readings | GRADED at ≥20 readings, else THIN. Descriptive of behavior only — stability is not accuracy; a rock that never moves could be missing real turns |
+| Classifier agreement (now) | Whether v62 and reference-v1 read the same label on the current bars (via the Regime Lab) | Always a single instant, flagged an anecdote. Historical agreement is deliberately NOT graded — only the default classifier's readings are persisted |
+| Reviewer calibration | Closed trades grouped by the reviewer's advisory verdict (clear / caution / blocked), realized win-rate and avg return per group | GRADED at ≥20 reviewed closed trades, else THIN. Whether cleared trades out-realized cautioned ones is an in-sample read of a nonstationary process, not proof the reviewer works |
+| Thesis-judgment calibration | Closed trades grouped by the operator's thesis verdict (yes / partial / no) vs realized outcome | GRADED at ≥20, else THIN. Grades the HUMAN's calls, not a Hermes model; "played out" and "made money" can diverge legitimately |
+| RS-board & screener follow-through | — | NOT_TRACKED: both are computed on demand and never persisted, so forward follow-through cannot be measured without first snapshotting the verdicts over time (a named future item). No number is shown rather than a fabricated one |
+
+Every graded number carries its sample and a nonstationarity caveat. Below the
+meaningful-sample threshold the item says so on its face. Nothing here is a dollar
+figure, and nothing here is a directive.
+
 ## What is NOT traceable to a named methodology
 
 - The reviewer's specific thresholds (`MIN_STOP_DISTANCE_PCT = 0.35`,

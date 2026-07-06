@@ -124,6 +124,9 @@ src/hermes/
 │                    regime/setup/sector/side weighted by each close's exact index
 │                    delta. % / index only, never dollars. GET /api/pnl
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
+├── scorecard/report.py  model scorecard: grades regime stability, live classifier
+│                    agreement, reviewer + thesis calibration on STORED evidence —
+│                    GRADED / THIN / NOT_TRACKED, fabricating none. GET /api/scorecard
 ├── ai/
 │   ├── ollama.py    local-first inference (default); failures degrade visibly
 │   ├── claude.py    cloud path (Anthropic Messages API); the deliberate exception
@@ -150,8 +153,9 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │   js/views/{desk,journal,weekly,terminal,size,regime-lab,placeholder}.js  the
 │                    surfaces, bound to real endpoints (terminal = candle chart +
 │                    thesis-fit; size = the sizing desk; regime-lab = the dual-
-│                    classifier deep read; pnl = the equity-index attribution);
-│                    later phases fill the remaining placeholders
+│                    classifier deep read; pnl = the equity-index attribution;
+│                    scorecard = the model honesty grades); later phases fill the
+│                    remaining placeholders
 ```
 
 ## Data integrity contract
@@ -332,6 +336,19 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     index / an R-multiple — no dollar figure exists in the payload or the view (the
     no-order-path guard and a no-dollars HTTP assertion both hold). Methodology +
     caveats in [METHODOLOGY.md](METHODOLOGY.md#pl--attribution-the-pl-surface).
+18. **Model scorecard** — the honesty surface that grades Hermes' own models.
+    **LANDED 2026-07:** `src/hermes/scorecard/report.py` (pure, unit-tested),
+    `GET /api/scorecard`, the Scorecard view (`web/js/views/scorecard.js`). Grades
+    ONLY what stored evidence supports and is loud about the rest: regime-classifier
+    stability (flips/dwell/streak over persisted readings), live classifier
+    agreement (one instant, flagged), reviewer calibration (did cautioned/blocked
+    trades realize worse than cleared?), and thesis-judgment calibration — each
+    marked GRADED / THIN (record too short, sample shown) / NOT_TRACKED. The RS
+    board and screener follow-through are NOT_TRACKED with the reason (both are
+    computed on demand and never persisted); no number is fabricated where the data
+    can't support one. Every graded figure carries its sample and a nonstationarity
+    caveat. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#model-scorecard-the-honesty-surface).
 
 ## Data-source reality (verified 2026-07-04)
 

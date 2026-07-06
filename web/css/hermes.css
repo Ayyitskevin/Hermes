@@ -541,9 +541,22 @@ td.rs-flag { white-space: nowrap; }
 /* ── Desk bento ──────────────────────────────────────────────────────────── */
 .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; margin-top: 4px; }
 .bento > .plate { margin-top: 0; }
-.col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; }
+.col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
 .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: 1 / -1; }
 @media (max-width: 860px) { .bento > * { grid-column: 1 / -1 !important; } }
+
+/* Scorecard rows — grade cards with a compact label · n · stat line */
+.sc-headline { font-family: var(--mono); font-weight: 700; font-size: 15px; margin-top: 4px; }
+.sc-headline.graded { color: var(--good); }
+.sc-headline.thin { color: var(--warn); }
+.sc-headline.not_tracked { color: var(--ink-muted); }
+.sc-rows { margin-top: 8px; display: grid; gap: 5px; }
+.sc-row { display: flex; align-items: baseline; gap: 8px; padding: 6px 9px; border: 1px solid var(--line);
+  border-radius: 9px; background: var(--plate-2); font-family: var(--mono); font-size: 12px; }
+.sc-label { color: var(--ink); font-weight: 700; }
+.sc-right { margin-left: auto; display: flex; gap: 10px; align-items: baseline; }
+.sc-stat { text-align: right; color: var(--ink-2); }
+.sc-stat.pos { color: var(--good); } .sc-stat.neg { color: var(--serious); }
 
 /* Hero posture plate — the dominant gradient card */
 .hero {
