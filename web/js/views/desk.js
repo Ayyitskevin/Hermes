@@ -236,6 +236,8 @@ function renderBriefing() {
       <div class="ask-chips">${["What's my biggest risk right now?", "Why this posture?", "Is the book too correlated?"]
         .map((q) => `<button class="ask-chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>
       <div id="dk-ask-out"></div>
+      <div style="margin-top:8px"><button class="ask-chip" id="dk-debate-btn">▸ run the desk debate (bull vs bear over the tape)</button></div>
+      <div id="dk-debate-out"></div>
       <p class="micro">The model quotes the numbers above and invents none — it explains the state, never a buy/sell. Local-first; degrades visibly.</p>
     </div>`;
   wireAsk();
@@ -258,8 +260,28 @@ function wireAsk() {
   };
   btn.addEventListener("click", run);
   input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
-  outletRef.querySelectorAll(".ask-chip").forEach((c) =>
+  outletRef.querySelectorAll(".ask-chip[data-q]").forEach((c) =>
     c.addEventListener("click", () => { input.value = c.dataset.q; run(); }));
+
+  const dbtn = $("#dk-debate-btn"), dout = $("#dk-debate-out");
+  dbtn?.addEventListener("click", async () => {
+    dbtn.disabled = true; dout.innerHTML = `<p class="micro"><span class="spinner"></span> the desk is debating the tape…</p>`;
+    let r;
+    try { r = await api(`/api/market-debate?${preferParam("")}`); }
+    catch (err) { dout.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; dbtn.disabled = false; return; }
+    const db = r.debate;
+    if (db && db.status === "ok") {
+      const s = db.sections;
+      dout.innerHTML = `<div class="ai-head">${chip("ok", `${db.backend} · ${db.model}`)}</div>` + (s
+        ? [["Bull case", "", s.bull], ["Bear case", "serious", s.bear], ["Risk critique", "warn", s.risk]]
+            .map(([l, cls, t]) => t ? `<div class="factor ${cls}" style="margin-top:8px"><div class="f-head"><strong>${l}</strong></div>
+              <div class="prose" style="white-space:pre-wrap;margin-top:4px">${esc(t)}</div></div>` : "").join("")
+        : `<div class="prose" style="white-space:pre-wrap">${esc(db.text)}</div>`);
+    } else {
+      dout.innerHTML = `<div class="ai-unavail">${chip("warn", "model unavailable")} ${esc(db?.note || "no model answered — the numbers above stand without it")}</div>`;
+    }
+    dbtn.disabled = false;
+  });
 }
 
 function renderSurfaces() {

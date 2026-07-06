@@ -290,6 +290,17 @@ button:disabled { opacity: 0.5; cursor: default; }
 .cx-cell { text-align: center; padding: 8px 10px; border-radius: 6px; color: var(--ink); font-size: 12px; min-width: 52px; }
 .cx-cell.cx-hot { outline: 1px solid var(--serious); font-weight: 700; }
 .cx-cell.cx-missing { color: var(--ink-muted); background: var(--plate-2); }
+/* Terminal watchlist strip */
+.wl-strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 2px; margin: 10px 0 2px; }
+.wl-item { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 11px; cursor: pointer;
+  background: var(--plate); border: 1px solid var(--line); white-space: nowrap; flex-shrink: 0; }
+.wl-item:hover { border-color: var(--violet); }
+.wl-item.on { border-color: rgba(139,108,255,0.55); background: rgba(139,108,255,0.1); }
+.wl-item .wl-sym { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--ink); }
+.wl-item .wl-spark svg path { stroke: var(--ink-muted); }
+.wl-item .wl-px { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.wl-item .wl-chg { font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.wl-item .wl-chg.pos { color: var(--good); } .wl-item .wl-chg.neg { color: var(--serious); } .wl-item .wl-chg.flat { color: var(--ink-muted); }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */

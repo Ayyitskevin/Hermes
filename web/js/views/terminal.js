@@ -4,7 +4,7 @@
 // visibly. /api/instrument, /api/search.
 
 import { api, chip, esc, fmtNum, fmtPct, fmtTime, preferParam } from "../util.js";
-import { candleChart } from "../charts.js";
+import { candleChart, sparkline } from "../charts.js";
 
 let searchTimer = null;
 let curSym = "SPY", curRange = "6M";
@@ -14,6 +14,7 @@ export default {
   mount(outlet) {
     outlet.innerHTML = layout();
     wireSearch(outlet);
+    renderWatchlist(outlet);
     const sym = new URLSearchParams((location.hash.split("?")[1] || "")).get("sym");
     load(outlet, (sym || "SPY").toUpperCase());
   },
@@ -31,7 +32,31 @@ function layout() {
         autocomplete="off" spellcheck="false">
       <div class="cmd-matches" id="cmd-matches" hidden></div>
     </div>
+    <div class="wl-strip" id="term-wl"></div>
     <div id="term-body"></div>`;
+}
+
+// ── watchlist strip (reuses the dashboard's cached watchlist) ─────────────
+async function renderWatchlist(outlet) {
+  const el = $("#term-wl", outlet);
+  let d;
+  try { d = await api("/api/dashboard"); }
+  catch { el.innerHTML = ""; return; }
+  const rows = d.watchlist || [];
+  if (!rows.length) { el.innerHTML = ""; return; }
+  el.innerHTML = rows.map((w) => {
+    const s = w.series || [];
+    const chg = s.length >= 2 && s[s.length - 2].c
+      ? (s[s.length - 1].c - s[s.length - 2].c) / s[s.length - 2].c * 100 : null;
+    const cls = chg === null ? "flat" : chg > 0 ? "pos" : chg < 0 ? "neg" : "flat";
+    return `<button class="wl-item ${w.symbol === curSym ? "on" : ""}" data-sym="${esc(w.symbol)}">
+      <span class="wl-sym">${esc(w.symbol)}</span>
+      <span class="wl-spark">${sparkline(s.map((p) => p.c), 60, 20)}</span>
+      <span class="wl-px">${w.price === null ? "∅" : fmtNum(w.price)}</span>
+      <span class="wl-chg ${cls}">${chg === null ? "" : `${chg >= 0 ? "+" : ""}${chg.toFixed(1)}%`}</span></button>`;
+  }).join("");
+  el.querySelectorAll(".wl-item").forEach((b) =>
+    b.addEventListener("click", () => load(outlet, b.dataset.sym)));
 }
 
 // ── search palette ───────────────────────────────────────────────────────
@@ -71,6 +96,7 @@ function wireSearch(outlet) {
 // ── instrument load ──────────────────────────────────────────────────────
 async function load(outlet, symbol, range) {
   curSym = symbol; curRange = range || curRange;
+  outlet.querySelectorAll(".wl-item").forEach((b) => b.classList.toggle("on", b.dataset.sym === symbol));
   history.replaceState(null, "", `#/terminal?sym=${encodeURIComponent(symbol)}`);
   const body = $("#term-body", outlet);
   body.innerHTML = `<div class="plate"><p class="micro"><span class="spinner"></span> loading ${esc(symbol)}…</p></div>`;

@@ -207,3 +207,14 @@ def test_ai_status_exposes_pricing_and_notes(config):
     # local is free; the priced meter stays AI-infra dollars (never equity)
     ollama = next(b for b in s["backends"] if b["name"] == "ollama")
     assert ollama["price"]["in_per_mtok"] == 0.0
+
+
+def test_market_debate_grounded_and_degrades(config):
+    app = create_app(config, with_scheduler=False)
+    client = TestClient(app)
+    seed_bench([100 * 1.01 ** i for i in range(30)])
+    seed_reading(RegimeLabel.BULL_TREND, days_ago=1)
+    j = client.get("/api/market-debate").json()
+    # market-level facts (regime + posture + risk + leadership), AI down → visible
+    assert "Regime:" in j["facts"] and "Leadership" in j["facts"]
+    assert j["debate"]["status"] == "unavailable" and j["debate"]["text"] is None

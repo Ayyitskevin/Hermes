@@ -506,6 +506,34 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             lines.append(f"  · setup {tag}: n={len(es)} · win {wr}% · avg realized {avg}%")
         return _ai_answer("coach", q, "\n".join(lines), prefer)
 
+    @r.get("/market-debate")
+    def market_debate_route(prefer: str | None = None) -> dict:
+        """A three-voice desk debate (bull → bear → risk critique) over the whole
+        TAPE — the current regime, posture, risk state, and leadership — not one
+        symbol. Ends in the tension between views, never a directive; degrades
+        visibly. Never a trade."""
+        reading = latest_reading()
+        risk_state = risk.evaluate(config)
+        posture = (daily_check.derive_posture(risk_state, reading) if reading
+                   else {"posture": "unknown", "why": "no regime reading yet"})
+        board = rs_board.build_board(config)
+        leaders = [f"{row.symbol} {row.verdict} (Mansfield {row.mansfield})"
+                   for row in board.rows if row.status == "ok" and row.verdict][:5]
+        facts = "\n".join([
+            f"Regime: {reading.label.display if reading else 'no reading'}"
+            + (f" (confidence {reading.confidence:.2f})" if reading else ""),
+            f"Posture: {posture.get('posture')} — {posture.get('why', '')}",
+            f"Risk: {risk_state.level} · open risk {risk_state.open_risk_pct:.2f}% "
+            f"· drawdown {risk_state.drawdown_pct:.1f}%",
+            "Leadership (Mansfield RS): " + ("; ".join(leaders) if leaders else "no ranked names"),
+        ])
+        res = ai.complete("debate", facts_md=facts, prefer=prefer)
+        debate = ({"status": "ok", "sections": _split_debate(res.text), "text": res.text,
+                   "backend": res.backend, "model": res.model, "note": res.note}
+                  if res.status == "ok" else
+                  {"status": "unavailable", "text": None, "note": res.note})
+        return {"facts": facts, "debate": debate}
+
     # ── Validation ledger ─────────────────────────────────────────────────
     @r.get("/ledger")
     def ledger_route() -> dict:
