@@ -617,3 +617,42 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: rgba(139, 
 
 /* Loading spinner */
 .spinner { width: 15px; height: 15px; border: 2px solid rgba(139, 108, 255, 0.3); border-top-color: var(--violet); border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; vertical-align: -3px; }
+
+/* ── Candle chart (Terminal) ─────────────────────────────────────────────── */
+.cndl-up { fill: var(--good); }
+.cndl-dn { fill: var(--serious); }
+.wick-up { stroke: var(--good); stroke-width: 1; }
+.wick-dn { stroke: var(--serious); stroke-width: 1; }
+.ma-50 { stroke: var(--violet); stroke-width: 1.4; fill: none; opacity: 0.9; }
+.ma-150 { stroke: var(--cyan); stroke-width: 1.4; fill: none; opacity: 0.85; }
+.ma-200 { stroke: var(--ink-muted); stroke-width: 1.4; fill: none; opacity: 0.8; }
+.vbar-up { fill: var(--good); opacity: 0.32; }
+.vbar-dn { fill: var(--serious); opacity: 0.32; }
+.ma-legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 10px; color: var(--ink-muted); margin-top: 6px; }
+.ma-legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+
+/* ── Terminal ────────────────────────────────────────────────────────────── */
+.cmd { display: flex; align-items: center; gap: 9px; background: var(--plate); border: 1px solid rgba(139,108,255,0.3); border-radius: 14px; padding: 12px 16px; box-shadow: 0 0 0 3px rgba(139,108,255,0.06); position: relative; }
+.cmd .p { color: var(--violet-ink); font-family: var(--mono); font-weight: 700; font-size: 16px; }
+.cmd input { flex: 1; font: inherit; font-family: var(--mono); font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); background: transparent; border: none; outline: none; }
+.cmd-matches { position: absolute; top: 52px; left: 0; right: 0; z-index: 30; background: #0c0e13; border: 1px solid var(--line-2); border-radius: 14px; padding: 6px; box-shadow: 0 30px 80px rgba(0,0,0,0.7); }
+.cmd-match { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: 10px; cursor: pointer; font-family: var(--mono); font-size: 13px; }
+.cmd-match:hover, .cmd-match.sel { background: rgba(139,108,255,0.12); }
+.cmd-match .m-sym { font-weight: 700; color: var(--ink); min-width: 56px; }
+.cmd-match .m-note { color: var(--ink-muted); font-size: 11px; margin-left: auto; }
+.fit-ring { display: flex; align-items: center; gap: 16px; }
+.fit-num { font-family: var(--mono); font-weight: 700; font-size: 40px; line-height: 1; }
+.fit-num.allow { color: var(--good); } .fit-num.watch { color: var(--warn); } .fit-num.restrict { color: var(--serious); }
+.fit-post { font-family: var(--mono); font-weight: 700; letter-spacing: 0.06em; }
+.factor { border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; margin-top: 10px; }
+.factor .f-head { display: flex; align-items: center; gap: 8px; }
+.factor .f-bar { height: 6px; border-radius: 4px; background: var(--plate-2); margin: 8px 0 6px; overflow: hidden; }
+.factor .f-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--accent-grad); }
+.factor.serious .f-bar > i { background: var(--serious); } .factor.warn .f-bar > i { background: var(--warn); }
+.factor .f-pts { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.factor .f-measured { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+.factor .f-caveat { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.kv .cell { background: var(--plate-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+.kv .cell .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
+.kv .cell .v { font-family: var(--mono); font-weight: 700; font-size: 15px; margin-top: 3px; }

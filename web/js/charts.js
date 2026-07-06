@@ -173,6 +173,71 @@ export function sparkline(values, w = 110, h = 26) {
   return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${pts.join("")}"/></svg>`;
 }
 
+// ── Candle chart — candles + 50/150/200-DMA overlays + a volume strip ────
+// Bound to the same x-scale, with the shared hover + keyboard scrub layer.
+export function candleChart(container, series) {
+  container.textContent = "";
+  if (!series || series.length < 2) {
+    container.innerHTML = `<p class="micro">no bar history cached — run a sync</p>`;
+    return;
+  }
+  const width = Math.max(container.clientWidth || 640, 320);
+  const H = 300, padL = 8, padR = 54, padT = 10;
+  const priceH = 208, volTop = priceH + 16, volH = 54;
+  const n = series.length;
+  const hi = Math.max(...series.map((p) => p.h));
+  const lo = Math.min(...series.map((p) => p.low));
+  const span = hi - lo || 1;
+  const vmax = Math.max(...series.map((p) => p.v || 0)) || 1;
+  const x0 = padL, x1 = width - padR;
+  const step = (x1 - x0) / n;
+  const cx = (i) => x0 + step * (i + 0.5);
+  const yP = (v) => padT + (priceH - padT) * (1 - (v - lo) / span);
+  const yV = (v) => volTop + volH * (1 - v / vmax);
+  const bw = Math.max(step * 0.62, 1);
+
+  const svg = el("svg", {
+    class: "chart-svg", viewBox: `0 0 ${width} ${H}`, width, height: H, role: "img",
+    "aria-label": `${n} daily candles with 50/150/200-day moving averages and volume`,
+  });
+
+  for (const frac of [0, 0.5, 1]) {
+    const v = lo + span * frac, y = yP(v);
+    svg.appendChild(el("line", { class: "grid-line", x1: x0, y1: y, x2: x1, y2: y }));
+    svg.appendChild(el("text", { class: "axis-text", x: x1 + 6, y: y + 3 }, v.toFixed(0)));
+  }
+
+  series.forEach((p, i) => {
+    const up = p.c >= p.o, y = yV(p.v || 0);
+    svg.appendChild(el("rect", {
+      class: up ? "vbar-up" : "vbar-dn", x: (cx(i) - bw / 2).toFixed(1),
+      y: y.toFixed(1), width: bw.toFixed(1), height: Math.max(volTop + volH - y, 0.5).toFixed(1),
+    }));
+  });
+
+  series.forEach((p, i) => {
+    const up = p.c >= p.o, x = cx(i), yo = yP(p.o), yc = yP(p.c);
+    svg.appendChild(el("line", { class: up ? "wick-up" : "wick-dn", x1: x, y1: yP(p.h), x2: x, y2: yP(p.low) }));
+    svg.appendChild(el("rect", {
+      class: up ? "cndl-up" : "cndl-dn", x: (x - bw / 2).toFixed(1),
+      y: Math.min(yo, yc).toFixed(1), width: bw.toFixed(1), height: Math.max(Math.abs(yc - yo), 1).toFixed(1),
+    }));
+  });
+
+  for (const [key, cls] of [["ma50", "ma-50"], ["ma150", "ma-150"], ["ma200", "ma-200"]]) {
+    const pts = series.map((p, i) => (p[key] == null ? null : `${cx(i).toFixed(1)},${yP(p[key]).toFixed(1)}`)).filter(Boolean);
+    if (pts.length >= 2) svg.appendChild(el("polyline", { class: cls, points: pts.join(" ") }));
+  }
+
+  const last = series[n - 1];
+  svg.appendChild(el("text", { class: "axis-text", x: x1 + 6, y: yP(last.c) + 3, "font-weight": "700" }, last.c.toFixed(2)));
+  svg.appendChild(el("text", { class: "axis-text", x: x0, y: volTop + volH + 11 }, "volume · 50 / 150 / 200-day MA overlaid"));
+
+  attachScrub(container, svg, series, cx, (p) =>
+    `${p.t.slice(0, 10)} · O ${p.o.toFixed(2)} H ${p.h.toFixed(2)} L ${p.low.toFixed(2)} C ${p.c.toFixed(2)} · vol ${(p.v || 0).toLocaleString()}`,
+    { yTop: padT, yBottom: volTop + volH });
+}
+
 // ── Shared hover + keyboard scrub layer ──────────────────────────────────
 function attachScrub(container, svg, items, xAt, describe, opts = {}) {
   const wrap = document.createElement("div");

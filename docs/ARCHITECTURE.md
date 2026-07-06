@@ -99,6 +99,10 @@ src/hermes/
 │   ├── reference.py reference-v1 classifier (five named methods)
 │   ├── v62.py       Regime Label v6.2 (owner's classifier, ported; DEFAULT)
 │   └── engine.py    registry + persistence
+├── instrument/terminal.py  per-symbol read composed from the engines below:
+│                    price/staleness + MA structure + RS + Trend-Template +
+│                    in-book context, plus a transparent thesis-fit (0–100 +
+│                    ALLOW/WATCH/RESTRICT posture). GET /api/instrument, /api/search
 ├── rs/board.py      Mansfield RS leadership board (Weinstein 1988) — watchlist
 │                    vs benchmark, verdicts capped by the current regime
 ├── portfolio/review.py  weekly portfolio review: regime coherence, sector
@@ -244,6 +248,22 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     a glyph + word. The remaining surfaces (Terminal, Size, P&L, Regime Lab,
     Stress, Scorecard, Sector, Validation) are navigable placeholders until their
     engines land (roadmap items above + the V2 elevation phases C–J).
+14. **Instrument / Terminal** — the ticker terminal (search → chart + stats +
+    thesis-fit vs the book + AI desk read). **LANDED 2026-07:**
+    `src/hermes/instrument/terminal.py` (a pure, unit-tested module that composes
+    the existing engines — never a live fetch, cached bars only), `GET
+    /api/instrument/{symbol}` + `GET /api/search?q=`, and the Terminal view
+    (`web/js/views/terminal.js`) with a candle chart + 50/150/200-DMA overlays +
+    volume (`candleChart` in `charts.js`) and a search palette. The **thesis-fit**
+    is a transparent 0–100 sum of four factors — regime-fit, setup-match,
+    sizing-posture, book-impact — each traced to an existing engine and carrying
+    the teach-in `{label, chip, claim, measured, caveat}` shape; the four points
+    sum to the score by construction. Posture is ALLOW/WATCH/RESTRICT, capped
+    below ALLOW off a bull regime and forced to RESTRICT on a risk breach (risk
+    outranks selection). Short history renders `∅ missing`, never zeros. The AI
+    desk-read is opt-in (`?narrative=1`), routes through the AI router, and
+    degrades visibly. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#instrument-thesis-fit-the-terminal).
 
 ## Data-source reality (verified 2026-07-04)
 

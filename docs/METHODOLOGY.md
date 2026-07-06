@@ -136,6 +136,31 @@ A's `market-regime-daily`, whose output is explicitly "a posture, not a
 directive." Hermes' mapping: breach ⇒ cash-priority (risk outranks regime);
 bear/stress ⇒ cash-priority; warn or rangebound ⇒ restrict; else allow.
 
+## Instrument thesis-fit (the Terminal)
+
+The Terminal's thesis-fit is a **composite of already-named readings**, not a new
+measurement. It sums four factors (each 0–25, summing to the 0–100 score by
+construction) and reads out a posture — ALLOW / WATCH / RESTRICT — that is context
+for a human decision, never a directive.
+
+| Factor | Composed from (named methodology) | What it does NOT prove |
+|---|---|---|
+| Regime-fit | The moving-average stack (Minervini/Weinstein trend structure), the Mansfield RS line (Weinstein 1988), and the current regime reading (`v62` / `reference-v1`) | Alignment is a description of the present. The MA stack and RS describe the past window; the regime is a heuristic read, not a backtested edge |
+| Setup-match | The Minervini Trend-Template score (2013) + the RS board's verdict (both reused verbatim, single-symbol) | The Phase-4 campaign found filter-style signals did not add value at default parameters — a match is a screening convenience, not forward evidence |
+| Sizing-posture | The risk engine's headroom: open-risk budget, single-position concentration, and pairwise correlation (Van Tharp / Chande–Elder portfolio heat; Pearson correlation) | Headroom is arithmetic over % of equity — it says there is room, not that the trade is good. Risk outranks selection |
+| Book-impact | In-book weight from the open journal + Pearson correlation of the name's returns to each open position | Correlation is backward-looking over the lookback; a highly correlated add is one position wearing two tickers |
+
+**The two caps are load-bearing** (risk outranks selection): a **non-bull regime
+caps the posture below ALLOW** (mirroring the RS board's WATCH cap), and a **risk
+breach forces RESTRICT**. Short history stays missing — a symbol without the 252
+daily bars / 200 benchmark-overlap bars the RS and Trend factors need returns those
+fields as `None` (never 0) and a null thesis-fit score, and each affected factor is
+flagged `missing`, not scored zero. Every factor carries the same teach-in shape the
+regime evidence uses (`{label, chip, claim, measured, caveat}`). The optional AI
+desk-read runs through the router (`desk_read`) and only rephrases these computed
+facts — it invents no number and degrades visibly. This is decision-support only; no
+order path exists in this codebase.
+
 ## AI router & cloud path
 
 | Component | Named methodology / rule | What it does NOT prove |

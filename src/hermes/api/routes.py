@@ -21,6 +21,7 @@ from ..config import HermesConfig
 from ..data import store
 from ..data.models import iso, utcnow
 from ..data.provider import MarketDataProvider
+from ..instrument import terminal as instrument
 from ..jobs import backup, daily_check, runner, scheduler, weekly_review
 from ..journal import service as journal
 from ..portfolio import review as portfolio_review
@@ -300,6 +301,52 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         backend is usable, `active` is null so the UI renders 'model unavailable'
         while every computed number still shows."""
         return ai.status()
+
+    # ── Instrument / Terminal ─────────────────────────────────────────────
+    @r.get("/instrument/{symbol}")
+    def instrument_route(symbol: str, narrative: bool = False) -> dict:
+        """A per-symbol read composed from cached bars + existing engines:
+        price/staleness, MA structure, RS + Trend-Template, in-book context, and
+        a transparent thesis-fit (0–100 + posture ALLOW/WATCH/RESTRICT). The AI
+        desk-read runs only when ?narrative=1 (keeps the chart free + fast); it
+        degrades visibly when no model answers. Never a live fetch, never a trade."""
+        rep = instrument.build_instrument(config, symbol, ai=ai, narrative=narrative)
+        return _instrument_payload(rep)
+
+    @r.get("/search")
+    def search_route(q: str = "") -> dict:
+        rows = instrument.search(config, q)
+        return {"query": q, "results": [
+            {**{k: v for k, v in row.items() if k != "as_of"},
+             "as_of": iso(row["as_of"]) if row.get("as_of") else None}
+            for row in rows]}
+
+    def _instrument_payload(rep: instrument.InstrumentReport) -> dict:
+        tf = rep.thesis_fit
+        return {
+            "symbol": rep.symbol, "status": rep.status, "note": rep.note,
+            "price": rep.price, "price_source": rep.price_source,
+            "price_as_of": iso(rep.price_as_of) if rep.price_as_of else None,
+            "staleness": rep.staleness,
+            "close": rep.close, "sma50": rep.sma50, "sma150": rep.sma150, "sma200": rep.sma200,
+            "low_52w": rep.low_52w, "high_52w": rep.high_52w,
+            "pct_above_low": rep.pct_above_low, "pct_below_high": rep.pct_below_high,
+            "bars": rep.bars,
+            "rs": rep.rs, "mansfield": rep.mansfield, "rs_verdict": rep.rs_verdict,
+            "trend_score": rep.trend_score, "trend_verdict": rep.trend_verdict,
+            "in_book": rep.in_book, "book_weight_pct": rep.book_weight_pct,
+            "book_side": rep.book_side, "sector": rep.sector,
+            "regime": {"label": rep.regime_label, "label_display": rep.regime_display,
+                       "asof": iso(rep.regime_asof) if rep.regime_asof else None},
+            "thesis_fit": None if tf is None else {
+                "status": tf.status, "score": tf.score, "posture": tf.posture,
+                "capped": tf.capped, "cap_note": tf.cap_note,
+                "factors": [asdict(f) for f in tf.factors],
+                "honesty": {"claim": tf.claim, "methodology": tf.methodology, "caveat": tf.caveat},
+            },
+            "series": [{**p, "t": iso(p["t"])} for p in rep.series],
+            "narrative": rep.narrative,
+        }
 
     # ── Health: positive evidence only ───────────────────────────────────
     @r.get("/health")
