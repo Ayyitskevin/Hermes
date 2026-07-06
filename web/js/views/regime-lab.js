@@ -46,6 +46,7 @@ function render(outlet, d) {
     <div class="duo" id="rl-cards"></div>
     <p class="micro" style="margin:2px 2px 0">Only the <strong>labels</strong> compare across classifiers — each score and
       confidence is on its own scale (see each card's basis). The default is authoritative; the other is a second opinion.</p>
+    <div class="plate" id="rl-markov"></div>
     <div class="plate"><h2><span class="label-x">Transition history</span>
       <span class="micro">${esc(d.default_classifier)} · one reading per daily check · ${d.history_n} readings</span></h2>
       <div id="rl-strip"></div>
@@ -57,6 +58,7 @@ function render(outlet, d) {
         <dl class="ws-row caveat"><dt>Not proven</dt><dd>${esc(d.honesty.caveat)}</dd></dl></div></details>`;
 
   $("#rl-cards", outlet).innerHTML = d.classifiers.map(classifierCard).join("");
+  renderMarkov(outlet, d);
   regimeStrip($("#rl-strip", outlet), d.history);
   renderHistory(outlet, d);
   animateCountUps(body);
@@ -109,6 +111,52 @@ function evidenceRow(e) {
       <dl class="ws-row"><dt>Measured</dt><dd class="mono">${esc(e.value)}${e.signal != null ? ` (vote ${e.signal > 0 ? "+" : ""}${esc(fmtNum(e.signal, 2))})` : ""}</dd></dl>
       <dl class="ws-row"><dt>Method</dt><dd>${esc(e.methodology)}</dd></dl>
       <dl class="ws-row caveat"><dt>Not proven</dt><dd>${esc(e.caveat)}</dd></dl></div></details>`;
+}
+
+// ── Markov transition matrix + dynamics ─────────────────────────────────────
+function renderMarkov(outlet, d) {
+  const m = d.markov;
+  const el = $("#rl-markov", outlet);
+  if (!m || m.status === "thin" && !m.rows.length) {
+    el.innerHTML = `<h2><span class="label-x">Transition matrix</span></h2>
+      <div class="ai-unavail">${chip("missing")} ${esc(m?.note || "not enough classified history")}</div>`;
+    return;
+  }
+  const abbr = { bull_trend: "Bull", chop: "Range", bear_trend: "Bear", stress: "Stress" };
+  const head = m.states.map((s) => `<th class="num">${abbr[s] ?? s}</th>`).join("");
+  const rows = m.rows.map((r) => {
+    const cur = r.from_label === m.current_state;
+    const cells = r.to.map((t) => {
+      const a = Math.min(0.85, 0.06 + t.prob_pct / 100 * 0.8);
+      return `<td class="mx-cell" style="background:rgba(139,108,255,${a.toFixed(2)})"
+        title="${esc(r.from_display)} → ${esc(t.display)}: ${t.prob_pct}% (95% CI ${t.lo_pct}–${t.hi_pct}%, n=${r.n})">
+        ${t.prob_pct}<span class="mx-ci">${t.lo_pct}–${t.hi_pct}</span></td>`;
+    }).join("");
+    return `<tr class="${cur ? "mx-current" : ""}"><th class="mx-from">${esc(r.from_display)}
+      <span class="micro">n=${r.n}${cur ? " · now" : ""}</span></th>${cells}</tr>`;
+  }).join("");
+
+  const dyn = m.current_state ? `
+    <div class="trio" style="margin-top:12px">
+      <div class="stat"><div class="k">holds (P stay)</div><div class="v">${fmtNum(m.p_stay_pct, 0)}%</div>
+        <div class="sub">from ${esc(m.current_display)}</div></div>
+      <div class="stat"><div class="k">mean dwell</div><div class="v">${m.mean_dwell === null ? "∅" : fmtNum(m.mean_dwell, 0)}</div>
+        <div class="sub">1/(1−p) sessions</div></div>
+      <div class="stat"><div class="k">current run</div><div class="v">${m.current_run}
+        <small style="font-size:12px;color:var(--ink-muted)"> ${esc(m.maturity)}</small></div>
+        <div class="sub">run vs mean dwell</div></div>
+    </div>
+    <div class="micro" style="margin-top:8px">stationary base rate:
+      ${m.stationary.map((s) => `${esc(s.display)} ${fmtNum(s.pct, 0)}%`).join(" · ")}
+      <span style="color:var(--ink-muted)">— a long-run frequency, not a forecast</span></div>` : "";
+
+  el.innerHTML = `
+    <h2><span class="label-x">Transition matrix</span>
+      <span class="micro">P(next | current) over ${m.total} classified sessions · Wilson 95% CI · ${m.status === "thin" ? "thin sample" : "row-normalized"}</span></h2>
+    <div class="scroll-x"><table class="mx-table"><thead><tr><th>from ↓ · to →</th>${head}</tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    ${dyn}
+    ${m.status === "thin" ? `<div class="micro" style="margin-top:8px">${chip("warn", "thin")} ${esc(m.note)}</div>` : ""}`;
 }
 
 // ── streak · flips · dwell ──────────────────────────────────────────────────

@@ -26,6 +26,7 @@ means a fresh daily check would move the label.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -56,6 +57,115 @@ CAVEAT = (
 )
 
 SMALL_SAMPLE_READINGS = 20     # below this, transition stats are an anecdote
+MARKOV_LOOKBACK = 220          # bars to replay the default classifier over
+_WILSON_Z = 1.96               # 95% two-sided
+
+
+@dataclass(frozen=True)
+class MarkovRow:
+    from_label: str
+    from_display: str
+    n: int                     # transitions observed out of this state
+    to: list[dict]             # [{label, display, count, prob_pct, lo_pct, hi_pct}]
+
+
+@dataclass(frozen=True)
+class Markov:
+    status: str                # 'ok' | 'thin'
+    lookback: int
+    total: int                 # transitions counted
+    states: list[str]
+    rows: list[MarkovRow] = field(default_factory=list)
+    current_state: str | None = None
+    current_display: str | None = None
+    p_stay_pct: float | None = None
+    mean_dwell: float | None = None       # 1/(1-p_stay), in sessions
+    current_run: int = 0
+    maturity: str = ""                    # 'on-trend' | 'mature' | ''
+    stationary: list[dict] = field(default_factory=list)   # [{label, display, pct}]
+    note: str = ""
+
+
+def _wilson(count: int, n: int) -> tuple[float, float, float]:
+    """(p, lo, hi) — Wilson 95% score interval for a proportion, in [0,1]."""
+    if n == 0:
+        return 0.0, 0.0, 0.0
+    p = count / n
+    z2 = _WILSON_Z ** 2
+    denom = 1 + z2 / n
+    center = (p + z2 / (2 * n)) / denom
+    half = (_WILSON_Z / denom) * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n))
+    return p, max(0.0, center - half), min(1.0, center + half)
+
+
+def _state_series(config: HermesConfig, benchmark_bars, watchlist_bars) -> list[RegimeLabel]:
+    """Replay the DEFAULT classifier over expanding windows of the cached bars to
+    recover the historical regime sequence — real n, not the thin persisted log.
+    (v62, the default, is single-symbol so the watchlist slice is a no-op for it.)"""
+    default = CLASSIFIERS[config.regime.classifier](config)
+    n = len(benchmark_bars)
+    start = max(21, n - MARKOV_LOOKBACK)
+    out: list[RegimeLabel] = []
+    for i in range(start, n + 1):
+        wl = {s: b[:i] for s, b in watchlist_bars.items()}
+        out.append(default.classify(benchmark_bars[:i], wl).label)
+    return out
+
+
+def _markov(series: list[RegimeLabel]) -> Markov:
+    if len(series) < 3:
+        return Markov("thin", MARKOV_LOOKBACK, 0, [],
+                      note="not enough classified history to estimate transitions")
+    # Ordered states actually seen (keeps the display stable and honest).
+    seen = [lab for lab in (RegimeLabel.BULL_TREND, RegimeLabel.CHOP,
+                            RegimeLabel.BEAR_TREND, RegimeLabel.STRESS) if lab in series]
+    counts = {a: {b: 0 for b in seen} for a in seen}
+    for a, b in zip(series[:-1], series[1:], strict=True):
+        counts[a][b] += 1
+    total = len(series) - 1
+
+    rows = []
+    for a in seen:
+        row_n = sum(counts[a].values())
+        to = []
+        for b in seen:
+            p, lo, hi = _wilson(counts[a][b], row_n)
+            to.append({"label": b.value, "display": b.display, "count": counts[a][b],
+                       "prob_pct": round(p * 100, 1), "lo_pct": round(lo * 100, 1),
+                       "hi_pct": round(hi * 100, 1)})
+        rows.append(MarkovRow(a.value, a.display, row_n, to))
+
+    # Stationary distribution via power iteration on the row-stochastic matrix.
+    idx = {lab: i for i, lab in enumerate(seen)}
+    P = [[(counts[a][b] / sum(counts[a].values())) if sum(counts[a].values()) else
+          (1.0 if a == b else 0.0) for b in seen] for a in seen]
+    pi = [1.0 / len(seen)] * len(seen)
+    for _ in range(200):
+        pi = [sum(pi[i] * P[i][j] for i in range(len(seen))) for j in range(len(seen))]
+        s = sum(pi) or 1.0
+        pi = [x / s for x in pi]
+    stationary = [{"label": lab.value, "display": lab.display, "pct": round(pi[idx[lab]] * 100, 1)}
+                  for lab in seen]
+
+    # Current-state dynamics.
+    cur = series[-1]
+    run = 0
+    for lab in reversed(series):
+        if lab == cur:
+            run += 1
+        else:
+            break
+    p_stay = counts[cur][cur] / sum(counts[cur].values()) if sum(counts[cur].values()) else None
+    mean_dwell = round(1.0 / (1.0 - p_stay), 1) if (p_stay is not None and p_stay < 1.0) else None
+    maturity = ("" if mean_dwell is None else
+                "mature" if run > mean_dwell else "on-trend")
+    thin = total < SMALL_SAMPLE_READINGS
+    return Markov(
+        "thin" if thin else "ok", MARKOV_LOOKBACK, total, [s.value for s in seen], rows,
+        current_state=cur.value, current_display=cur.display,
+        p_stay_pct=round(p_stay * 100, 1) if p_stay is not None else None,
+        mean_dwell=mean_dwell, current_run=run, maturity=maturity, stationary=stationary,
+        note=("estimated over a short window — treat as indicative" if thin else ""))
 
 
 @dataclass(frozen=True)
@@ -108,6 +218,7 @@ class RegimeLab:
     dwell: list[dict] = field(default_factory=list)
     history_n: int = 0
     small_sample: bool = True
+    markov: Markov | None = None
     claim: str = CLAIM
     methodology: str = METHODOLOGY
     caveat: str = CAVEAT
@@ -224,6 +335,8 @@ def build_lab(config: HermesConfig, *, history_limit: int = 90) -> RegimeLab:
                 f"from the last persisted one ({persisted.label.display}) — bars moved "
                 "since the last daily check; a fresh check would update it")
 
+    markov = _markov(_state_series(config, benchmark_bars, watchlist_bars))
+
     hist = reading_history(history_limit)
     transitions, dwell, streak = _transitions_and_dwell(hist)
     history_payload = [
@@ -242,5 +355,5 @@ def build_lab(config: HermesConfig, *, history_limit: int = 90) -> RegimeLab:
         drifted=drifted, drift_note=drift_note,
         history=history_payload, streak_readings=streak,
         transitions=transitions, dwell=dwell, history_n=len(hist),
-        small_sample=len(hist) < SMALL_SAMPLE_READINGS,
+        small_sample=len(hist) < SMALL_SAMPLE_READINGS, markov=markov,
     )

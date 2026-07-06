@@ -56,6 +56,27 @@ def test_both_classifiers_run_and_agree(fresh_db):
     assert lab.agree is True and "corroboration" in lab.agreement_note
 
 
+def test_markov_matrix_and_dynamics(fresh_db):
+    seed_bars("SPY", STRONG_UP)
+    m = build_lab(fresh_db).markov
+    assert m is not None and m.total > 0 and m.states
+    # rows are row-stochastic: each row's probs sum to ~100 with Wilson CIs present
+    for row in m.rows:
+        assert row.n >= 0
+        assert abs(sum(t["prob_pct"] for t in row.to) - 100.0) < 0.5 or row.n == 0
+        for t in row.to:
+            assert t["lo_pct"] <= t["prob_pct"] <= t["hi_pct"] + 1e-9
+    # a clean uptrend → current state Bull, high hold probability, a base rate
+    assert m.current_state == "bull_trend"
+    assert m.p_stay_pct is not None and m.p_stay_pct > 50
+    assert m.current_run >= 1
+    # a regime that never transitions out has p_stay 100% → mean_dwell is None
+    # (an infinite dwell, correctly not faked); otherwise it's a positive number
+    assert m.mean_dwell is None or m.mean_dwell > 0
+    assert m.maturity in ("on-trend", "mature", "")
+    assert abs(sum(s["pct"] for s in m.stationary) - 100.0) < 1.0
+
+
 def test_confidence_teach_in_present(fresh_db):
     seed_bars("SPY", STRONG_UP)
     lab = build_lab(fresh_db)

@@ -571,6 +571,10 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                 for t in lab.transitions
             ],
             "dwell": lab.dwell, "history_n": lab.history_n, "small_sample": lab.small_sample,
+            "markov": None if lab.markov is None else {
+                **{k: v for k, v in asdict(lab.markov).items() if k != "rows"},
+                "rows": [asdict(row) for row in lab.markov.rows],
+            },
             "honesty": {"claim": lab.claim, "methodology": lab.methodology, "caveat": lab.caveat},
         }
 
