@@ -96,3 +96,23 @@ export function renderMarkdown(md) {
       .replace(/\*([^*]+)\*/g, "<em>$1</em>");
   }
 }
+
+// Spring count-up on [data-cu] numbers (ease-out cubic, ~1.1s, runs once).
+// Honors data-dec (decimals), data-pre, data-suf; skipped under reduced-motion.
+export function animateCountUps(root = document) {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  root.querySelectorAll("[data-cu]").forEach((el) => {
+    if (el.dataset.cuDone) return;
+    el.dataset.cuDone = "1";
+    const to = parseFloat(el.dataset.cu) || 0;
+    const dec = parseInt(el.dataset.dec || "0", 10);
+    const pre = el.dataset.pre || "", suf = el.dataset.suf || "";
+    const dur = 1100, t0 = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = pre + (to * e).toFixed(dec) + suf;
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}

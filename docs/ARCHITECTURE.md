@@ -122,7 +122,16 @@ src/hermes/
 │   └── scheduler.py APScheduler cron + MISSED detection (per-job day-of-week)
 ├── api/routes.py    JSON API incl. manual job triggers + positive-evidence health
 └── main.py          FastAPI factory + CLI (serve / daily-check / sync / doctor)
-web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
+web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step —
+│                    a "V3 dark" single-page app: a persistent shell (chrome +
+│                    nav pills + model selector/usage meter + live marquee tape +
+│                    the global, dominant Limit Rail) and a tiny hash-router
+│                    (#/desk, #/journal, …) swapping ES-module views. See roadmap #13.
+│   css/hermes.css   V3 dark tokens (violet→cyan accent, provenance badges, Archivo
+│                    + B612 Mono), motion (rise, count-up, marquee), never-colour-alone
+│   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/…)
+│   js/{shell,store,router,app}.js  the shell, dashboard cache, hash-router, boot
+│   js/views/{desk,journal,weekly,placeholder}.js  the surfaces, bound to real endpoints
 ```
 
 ## Data integrity contract
@@ -218,6 +227,23 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     [METHODOLOGY.md](METHODOLOGY.md#ai-router--cloud-path). The existing daily
     check keeps calling Ollama directly until the Desk surface is rebuilt (that
     migration threads the router in without changing behavior when cloud is off).
+13. **Frontend "V3 dark" — app shell + re-skinned surfaces** — the light
+    "Station" UI replaced by a single-page dark terminal. **LANDED 2026-07:**
+    a new `web/css/hermes.css` (V3 tokens), a persistent shell (`web/js/shell.js`
+    — chrome, nav pills, the model selector + session-usage meter bound to
+    `/api/ai/status`, a live marquee ticker tape bound to the watchlist +
+    provider state with LIVE/DELAYED/EOD/SAMPLE badges, and the **global,
+    dominant Limit Rail** that floods and dims the surface on breach until
+    acknowledged), a tiny hash-router (`web/js/router.js`), and Desk / Journal /
+    Weekly rebuilt as ES-module views (`web/js/views/*`) against the **existing**
+    endpoints — no new backend risk. The Watchboard / Leadership / Screener
+    plates ride on the Desk. Doctrine carried over verbatim: every number keeps
+    source + as-of, missing renders `∅ missing`, sizing is % of equity / a
+    100-based index (never dollars — the prototype's `+$` figures were dropped),
+    posture stays a posture not a directive, and status colour always ships with
+    a glyph + word. The remaining surfaces (Terminal, Size, P&L, Regime Lab,
+    Stress, Scorecard, Sector, Validation) are navigable placeholders until their
+    engines land (roadmap items above + the V2 elevation phases C–J).
 
 ## Data-source reality (verified 2026-07-04)
 
