@@ -164,6 +164,41 @@ export function priceChart(container, series, regimeByDate = {}) {
   }, { yTop: padT, yBottom: tapeY + tapeH });
 }
 
+// ── Equity curve — the 100-based index against its flat-start baseline ─────
+// Deliberately NOT priceChart: this is an index, not a price, so the baseline
+// is a dashed 100 line and the readout says "index", never "close".
+export function equityCurve(container, curve) {
+  container.textContent = "";
+  if (!curve || !curve.length) {
+    container.innerHTML = `<p class="micro">the equity index sits at its 100 flat start — no closed trades yet</p>`;
+    return;
+  }
+  const pts = [{ ts: null, value: 100 }, ...curve];   // prepend the flat start
+  const width = Math.max(container.clientWidth || 600, 320);
+  const H = 220, padL = 8, padR = 58, padT = 12, plotH = 188;
+  const vals = pts.map((p) => p.value).concat([100]);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const x0 = padL, x1 = width - padR;
+  const xAt = (i) => x0 + (i * (x1 - x0)) / (pts.length - 1);
+  const yAt = (v) => padT + (plotH - padT) * (1 - (v - lo) / span);
+  const last = pts[pts.length - 1];
+  const svg = el("svg", {
+    class: "chart-svg", viewBox: `0 0 ${width} ${H}`, width, height: H, role: "img",
+    "aria-label": `Equity index, ${curve.length} closes, latest ${last.value.toFixed(2)} (100 = flat start)`,
+  });
+  const y100 = yAt(100);
+  svg.appendChild(el("line", { class: "grid-line", x1: x0, y1: y100, x2: x1, y2: y100, "stroke-dasharray": "3 3" }));
+  svg.appendChild(el("text", { class: "axis-text", x: x1 + 6, y: y100 + 3 }, "100"));
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${xAt(i).toFixed(1)},${yAt(p.value).toFixed(1)}`).join("");
+  svg.appendChild(el("path", { class: "price-line", d }));
+  svg.appendChild(el("text", {
+    class: "axis-text", x: x1 + 6, y: yAt(last.value) + 3, "font-weight": "700",
+  }, last.value.toFixed(2)));
+  attachScrub(container, svg, pts, xAt, (p) =>
+    p.ts ? `${fmtTime(p.ts).slice(0, 10)} · index ${p.value.toFixed(2)}` : "flat start · index 100.00",
+    { yTop: padT, yBottom: plotH });
+}
+
 // ── Sparkline ────────────────────────────────────────────────────────────
 export function sparkline(values, w = 110, h = 26) {
   if (!values || values.length < 2) return `<span class="micro">no data</span>`;

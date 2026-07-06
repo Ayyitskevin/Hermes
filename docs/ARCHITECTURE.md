@@ -119,6 +119,10 @@ src/hermes/
 │                    (journal R-multiples, shrunk by n/(n+30)) → limit-aware cap that
 │                    names the binding ceiling. % of equity only. GET /api/size
 ├── journal/service.py  propose/commit/close/resolve; equity index
+├── pnl/attribution.py  P&L surface: the resolved journal graded on the 100-based
+│                    equity index — headline stats, the curve, and attribution by
+│                    regime/setup/sector/side weighted by each close's exact index
+│                    delta. % / index only, never dollars. GET /api/pnl
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
 ├── ai/
 │   ├── ollama.py    local-first inference (default); failures degrade visibly
@@ -140,12 +144,14 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
 │                    (#/desk, #/journal, …) swapping ES-module views. See roadmap #13.
 │   css/hermes.css   V3 dark tokens (violet→cyan accent, provenance badges, Archivo
 │                    + B612 Mono), motion (rise, count-up, marquee), never-colour-alone
-│   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/…)
+│   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/
+│                    candleChart/equityCurve/…)
 │   js/{shell,store,router,app}.js  the shell, dashboard cache, hash-router, boot
 │   js/views/{desk,journal,weekly,terminal,size,regime-lab,placeholder}.js  the
 │                    surfaces, bound to real endpoints (terminal = candle chart +
 │                    thesis-fit; size = the sizing desk; regime-lab = the dual-
-│                    classifier deep read); later phases fill the remaining placeholders
+│                    classifier deep read; pnl = the equity-index attribution);
+│                    later phases fill the remaining placeholders
 ```
 
 ## Data integrity contract
@@ -312,6 +318,20 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     view-local bug found in the browser smoke test (an unclosed plate `<div>` that
     nested the second card inside the first). Methodology + caveats in
     [METHODOLOGY.md](METHODOLOGY.md#regime-lab-the-deep-read).
+17. **P&L / attribution (P&L surface)** — the resolved journal graded on the
+    normalized equity index. **LANDED 2026-07:** `src/hermes/pnl/attribution.py`
+    (pure, unit-tested), `GET /api/pnl`, the P&L view (`web/js/views/pnl.js`), and
+    a new honest `equityCurve` in `charts.js` (a 100-based index with a dashed
+    flat-start baseline — deliberately NOT priceChart, which says "close"). Headline
+    stats (index return, max drawdown on the curve, win/thesis/alpha, payoff,
+    expectancy in R), the equity curve, and attribution by regime-at-entry / setup /
+    sector / side. The attribution weight is each close's EXACT index delta
+    (recovered from the `equity_index` row whose `cause` is `journal_close:<id>`),
+    so bucket contributions sum to the index move by construction. Small samples are
+    flagged anecdotes book-wide (<20) and per bucket (<10). Strictly % of equity / an
+    index / an R-multiple — no dollar figure exists in the payload or the view (the
+    no-order-path guard and a no-dollars HTTP assertion both hold). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#pl--attribution-the-pl-surface).
 
 ## Data-source reality (verified 2026-07-04)
 

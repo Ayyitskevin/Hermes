@@ -138,6 +138,22 @@ renders as `missing`, never interpolated, per the data-integrity contract.
 | Mandatory thesis verdict (yes/partial/no) separate from P&L | Same pattern — "was the call right" ≠ "did it make money" |
 | Small-sample honesty (<20 closed trades = anecdotes) | Sample-size adequacy criterion from Pattern A's `edge-strategy-reviewer` |
 
+## P&L & attribution (the P&L surface)
+
+The P&L surface grades the resolved journal on the normalized equity index. It is
+a **record**, not a new measurement, and it never emits a dollar figure.
+
+| Element | Named methodology / rule | What it does NOT prove |
+|---|---|---|
+| Equity index | The 100-based index the journal moves on each close — `new = prev × (1 + realized% × size_frac)` (position-weighted, compounded). 100 = flat start; drawdown is the deepest peak-to-trough on this curve | An index of journaled trades only — not a mark-to-market of open positions or an account balance. It exists only in % / index space |
+| Per-trade attribution weight | The EXACT index delta each close wrote (recovered from its `equity_index` row's `cause = journal_close:<id>`), so bucket contributions sum to the index move by construction — no re-derived approximation | The delta is what happened, not what was expected. Contribution ≠ skill: a large mover can be one lucky trade |
+| Buckets | Closed trades grouped by regime-at-entry (frozen in the entry's signal state), setup tag, sector, and side; each bucket ranked by contribution to the index | Descriptive of the realized window. Correlation of a bucket with gains is not evidence that bucket is a repeatable edge |
+| Expectancy / payoff | Expectancy = mean R (`realized% / planned_risk%`); payoff = avg win% / avg loss%; win/thesis/alpha from `performance_summary()` | Sample statistics, not forward estimates. Alpha is vs the configured benchmark over each trade's own holding window |
+| Small-sample honesty | Book-level stats flagged anecdotes below 20 closed trades; each bucket flagged below 10 | Below threshold these are noise. The flag is shown on every level, not buried |
+
+Everything is % of equity, an index value, or an R-multiple. There is no dollar
+balance, dollar P&L, or dollar position size anywhere in the payload or the view.
+
 ## Reviewer second-pass
 
 Modeled on Pattern A's `edge-strategy-reviewer` (a deterministic quality

@@ -10,6 +10,7 @@ import weekly from "./views/weekly.js";
 import terminal from "./views/terminal.js";
 import size from "./views/size.js";
 import regimeLab from "./views/regime-lab.js";
+import pnl from "./views/pnl.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -20,11 +21,11 @@ register("/weekly", weekly);
 register("/terminal", terminal);
 register("/size", size);
 register("/regime-lab", regimeLab);
+register("/pnl", pnl);
 
 // Surfaces whose engines/endpoints land in later phases — navigable now,
 // honest about what's not built yet.
 const SOON = [
-  ["/pnl", "P&L / attribution", "F"],
   ["/scorecard", "Model scorecard", "G"], ["/stress", "Stress test", "H"],
   ["/sector", "Sector drill", "I"], ["/ledger", "Validation ledger", "J"],
 ];

@@ -24,6 +24,7 @@ from ..data.provider import MarketDataProvider
 from ..instrument import terminal as instrument
 from ..jobs import backup, daily_check, runner, scheduler, weekly_review
 from ..journal import service as journal
+from ..pnl import attribution as pnl
 from ..portfolio import review as portfolio_review
 from ..regime import lab as regime_lab
 from ..regime.engine import latest_reading, reading_history
@@ -348,6 +349,29 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             },
             "series": [{**p, "t": iso(p["t"])} for p in rep.series],
             "narrative": rep.narrative,
+        }
+
+    # ── P&L / attribution ─────────────────────────────────────────────────
+    @r.get("/pnl")
+    def pnl_route() -> dict:
+        """The resolved journal graded on the normalized (100-based) equity index:
+        headline stats, the equity curve, and attribution by regime-at-entry /
+        setup / sector / side. Everything is % of equity or an index — NO dollar
+        figure is ever emitted. Never a trade."""
+        return _pnl_payload(pnl.build_pnl(config))
+
+    def _pnl_payload(rep: pnl.PnLReport) -> dict:
+        h = rep.headline
+        return {
+            "generated_at": iso(rep.generated_at), "status": rep.status, "note": rep.note,
+            "headline": None if h is None else asdict(h),
+            "curve": [{"ts": iso(p.ts), "value": p.value, "cause": p.cause} for p in rep.curve],
+            "attributions": [
+                {"dimension": a.dimension, "label": a.label,
+                 "groups": [asdict(g) for g in a.groups]}
+                for a in rep.attributions
+            ],
+            "honesty": {"claim": rep.claim, "methodology": rep.methodology, "caveat": rep.caveat},
         }
 
     # ── Regime Lab ────────────────────────────────────────────────────────
