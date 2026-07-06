@@ -193,6 +193,23 @@ class ClaudeClient:
             max_tokens=512,
         )
 
+    def ask(self, question: str, facts_md: str) -> tuple[str, dict]:
+        """Answer a question about the desk state, grounded strictly in the
+        computed facts. Fast lane (interactive); never a directive."""
+        return self._chat(
+            system=(
+                "You are Hermes' desk assistant. Answer the operator's question "
+                "using ONLY the computed desk facts provided (regime, risk limits, "
+                "posture, watchlist). Quote the numbers you were given and cite "
+                "which fact you used; invent none. Everything is % of equity or an "
+                "index — never a dollar. You explain the current state; you never "
+                "tell them to buy or sell, and you never override the risk layer."
+            ),
+            user=f"Question: {question}\n\nDesk facts:\n{facts_md}",
+            fast=True,
+            max_tokens=512,
+        )
+
     def debate(self, facts_md: str) -> tuple[str, dict]:
         """Bull case → bear case → risk critique over a symbol/thesis. Decision
         support only; ends in context, never a directive."""

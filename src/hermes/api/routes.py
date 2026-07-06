@@ -397,6 +397,61 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
             out[keys[m.group(1).upper()]] = text[m.end():end].strip()
         return out or None
 
+    # ── AI: ask the desk / journal coach (grounded Q&A, opt-in) ──────────
+    def _ai_answer(task: str, question: str, facts: str, prefer: str | None) -> dict:
+        if not question.strip():
+            raise HTTPException(422, "a question is required")
+        res = ai.complete(task, question=question, facts_md=facts, prefer=prefer)
+        if res.status == "ok":
+            return {"status": "ok", "text": res.text, "facts": facts,
+                    "backend": res.backend, "model": res.model, "note": res.note}
+        return {"status": "unavailable", "text": None, "facts": facts, "note": res.note}
+
+    @r.get("/ask")
+    def ask_route(q: str = "", prefer: str | None = None) -> dict:
+        """Ask the desk: a grounded Q&A over the CURRENT computed desk facts —
+        regime, risk limits, posture, watchlist. The model quotes the numbers it
+        was given and invents none; it explains the state, never a buy/sell.
+        Degrades visibly. Never a trade."""
+        reading = latest_reading()
+        risk_state = risk.evaluate(config)
+        posture = (daily_check.derive_posture(risk_state, reading) if reading
+                   else {"posture": "unknown", "why": "no regime reading yet"})
+        reg = reading.label.display if reading else "no reading"
+        if reading:
+            reg += f" (confidence {reading.confidence:.2f}, {reading.classifier_version})"
+        lines = [
+            f"Regime: {reg}",
+            f"Posture: {posture.get('posture')} — {posture.get('why', '')}",
+            f"Risk state: {risk_state.level} · open risk {risk_state.open_risk_pct:.2f}% · "
+            f"drawdown {risk_state.drawdown_pct:.1f}% · equity index {risk_state.equity_index:.1f}",
+        ]
+        lines += [f"  · {c.kind}: {c.observed} (limit {c.limit}) [{c.level}]"
+                  for c in risk_state.checks]
+        return _ai_answer("ask", q, "\n".join(lines), prefer)
+
+    @r.get("/coach")
+    def coach_route(q: str = "", prefer: str | None = None) -> dict:
+        """Journal coach: a grounded Q&A over the trader's OWN resolved journal —
+        per-setup stats + the aggregate performance. Reflects on what happened;
+        never says what to trade next. Degrades visibly."""
+        perf = journal.performance_summary()
+        closed = journal.list_entries(status="closed")
+        lines = [f"Resolved trades: {perf.get('closed_trades', 0)} · win rate "
+                 f"{perf.get('win_rate_pct', '∅')}% · thesis hit "
+                 f"{perf.get('thesis_hit_rate_pct', '∅')}% · "
+                 f"avg alpha {perf.get('avg_alpha_pct', '∅')}%",
+                 perf.get("note", "")]
+        by_setup: dict[str, list] = {}
+        for e in closed:
+            by_setup.setdefault(e.get("setup_tag") or "untagged", []).append(e)
+        for tag, es in by_setup.items():
+            rs = [x["realized_return_pct"] for x in es if x["realized_return_pct"] is not None]
+            wr = round(sum(1 for x in rs if x > 0) / len(rs) * 100, 0) if rs else 0
+            avg = round(sum(rs) / len(rs), 2) if rs else 0
+            lines.append(f"  · setup {tag}: n={len(es)} · win {wr}% · avg realized {avg}%")
+        return _ai_answer("coach", q, "\n".join(lines), prefer)
+
     # ── Validation ledger ─────────────────────────────────────────────────
     @r.get("/ledger")
     def ledger_route() -> dict:

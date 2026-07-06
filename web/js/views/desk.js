@@ -4,7 +4,7 @@
 // Watchboard / Leadership / Screener plates + station log. Every number carries
 // its source and as-of; missing stays missing.
 
-import { api, chip, esc, fmtNum, fmtPct, fmtTime, renderMarkdown, animateCountUps } from "../util.js";
+import { api, chip, esc, fmtNum, fmtPct, fmtTime, renderMarkdown, animateCountUps, preferParam } from "../util.js";
 import { sparkline, regimeStrip, priceChart } from "../charts.js";
 import { onDashboard, dashboard, refreshDashboard } from "../store.js";
 
@@ -229,7 +229,37 @@ function renderBriefing() {
     <div class="ai-head">${modelChip}<span class="micro">${r ? esc(fmtTime(r.ts)) : "not run today"}</span></div>
     ${r ? `<div class="prose">${renderMarkdown(r.body_md)}</div>`
         : `<div class="ai-unavail">No daily check yet — trigger it from the station log below. The numbers above are complete without it.</div>`}
-    <p class="micro" style="margin-top:10px">Live desk-read, debate, and Q&amp;A arrive with the <code>/api/ai/*</code> task endpoints (later phases).</p>`;
+    <div class="ask-box">
+      <div class="ask-row"><span class="p" aria-hidden="true">▸</span>
+        <input id="dk-ask-in" placeholder="ask the desk — grounded in the numbers above" aria-label="Ask the desk">
+        <button class="btn-primary" id="dk-ask-btn">ask</button></div>
+      <div class="ask-chips">${["What's my biggest risk right now?", "Why this posture?", "Is the book too correlated?"]
+        .map((q) => `<button class="ask-chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+      <div id="dk-ask-out"></div>
+      <p class="micro">The model quotes the numbers above and invents none — it explains the state, never a buy/sell. Local-first; degrades visibly.</p>
+    </div>`;
+  wireAsk();
+}
+
+function wireAsk() {
+  const input = $("#dk-ask-in"), btn = $("#dk-ask-btn"), out = $("#dk-ask-out");
+  if (!input) return;
+  const run = async () => {
+    const q = input.value.trim();
+    if (!q) return;
+    btn.disabled = true; out.innerHTML = `<p class="micro"><span class="spinner"></span> the desk is reading the numbers…</p>`;
+    let r;
+    try { r = await api(`/api/ask?q=${encodeURIComponent(q)}${preferParam()}`); }
+    catch (err) { out.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; btn.disabled = false; return; }
+    out.innerHTML = r.status === "ok"
+      ? `<div class="ai-head">${chip("ok", `${r.backend} · ${r.model}`)}</div><div class="prose" style="white-space:pre-wrap">${esc(r.text)}</div>`
+      : `<div class="ai-unavail">${chip("warn", "model unavailable")} ${esc(r.note || "no model answered — the numbers above stand without it")}</div>`;
+    btn.disabled = false;
+  };
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
+  outletRef.querySelectorAll(".ask-chip").forEach((c) =>
+    c.addEventListener("click", () => { input.value = c.dataset.q; run(); }));
 }
 
 function renderSurfaces() {

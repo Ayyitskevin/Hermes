@@ -255,6 +255,18 @@ button:disabled { opacity: 0.5; cursor: default; }
 .bk-tick { position: absolute; top: -3px; height: 20px; width: 2px; background: var(--ink); box-shadow: 0 0 0 1px var(--plate); }
 .bk-tick.breach { background: var(--serious); }
 .bk-sub { margin-top: 5px; color: var(--ink-muted); }
+/* Ask the desk / journal coach */
+.ask-box { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.ask-row { display: flex; align-items: center; gap: 9px; background: var(--plate-2); border: 1px solid rgba(139,108,255,0.28);
+  border-radius: 12px; padding: 8px 12px; }
+.ask-row .p { color: var(--violet-ink); font-family: var(--mono); font-weight: 700; }
+.ask-row input { flex: 1; font: inherit; font-family: var(--sans); font-size: 13px; color: var(--ink); background: transparent; border: none; outline: none; }
+.ask-row .btn-primary { padding: 6px 16px; }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ask-chip { font-family: var(--mono); font-size: 10.5px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-2); color: var(--ink-muted); }
+.ask-chip:hover { color: var(--ink); border-color: var(--violet); }
+#dk-ask-out, #jr-ask-out { margin-top: 10px; }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */

@@ -3,7 +3,7 @@
 // coach is stubbed visibly until its endpoint lands (a later phase); the flow
 // itself binds only to the existing journal endpoints.
 
-import { api, chip, esc, fmtNum, fmtPct, fmtTime } from "../util.js";
+import { api, chip, esc, fmtNum, fmtPct, fmtTime, preferParam } from "../util.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 let proposed = null;   // raw params; commit re-runs the proposal server-side
@@ -13,9 +13,31 @@ export default {
   mount(outlet) {
     outlet.innerHTML = layout();
     $("#propose-form", outlet).addEventListener("submit", (ev) => onPropose(ev, outlet));
+    wireCoach(outlet);
     refresh(outlet);
   },
 };
+
+function wireCoach(outlet) {
+  const input = $("#jr-ask-in", outlet), btn = $("#jr-ask-btn", outlet), out = $("#jr-ask-out", outlet);
+  if (!input) return;
+  const run = async () => {
+    const q = input.value.trim();
+    if (!q) return;
+    btn.disabled = true; out.innerHTML = `<p class="micro"><span class="spinner"></span> the coach is reading your resolved trades…</p>`;
+    let r;
+    try { r = await api(`/api/coach?q=${encodeURIComponent(q)}${preferParam()}`); }
+    catch (err) { out.innerHTML = `<div class="ai-unavail">${chip("fail")} ${esc(err.message)}</div>`; btn.disabled = false; return; }
+    out.innerHTML = r.status === "ok"
+      ? `<div class="ai-head">${chip("ok", `${r.backend} · ${r.model}`)}</div><div class="prose" style="white-space:pre-wrap">${esc(r.text)}</div>`
+      : `<div class="ai-unavail">${chip("warn", "model unavailable")} ${esc(r.note || "no model answered — your resolved stats below stand without it")}</div>`;
+    btn.disabled = false;
+  };
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
+  outlet.querySelectorAll(".ask-chip").forEach((c) =>
+    c.addEventListener("click", () => { input.value = c.dataset.q; run(); }));
+}
 
 function layout() {
   return `
@@ -26,12 +48,14 @@ function layout() {
     <h2><span class="label-x">Journal coach</span>
       <span class="micro">answers only from your own resolved trades — never advice to place a trade</span></h2>
     <div class="ask-row">
-      <div class="ask-in"><span class="g"></span>
-        <input placeholder="AI coach lands with the /api/ai coach endpoint (a later phase)" disabled></div>
-      <button disabled>Ask</button>
+      <span class="p" aria-hidden="true">▸</span>
+      <input id="jr-ask-in" placeholder="ask about your own resolved trades — where's my edge? the leak?" aria-label="Ask the journal coach">
+      <button class="btn-primary" id="jr-ask-btn">ask</button>
     </div>
-    <p class="micro">The coach reads your resolved history and reflects on it. It arrives once the
-      <code>/api/ai/*</code> coach route is wired — the router and cloud path (Phase A) are already in place.</p>
+    <div class="ask-chips">${["Where does my edge live?", "What's my biggest leak?", "Which setup should I stop taking?"]
+      .map((q) => `<button class="ask-chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+    <div id="jr-ask-out"></div>
+    <p class="micro">The coach reads only your resolved history and reflects on it — it never tells you what to trade next. Local-first; degrades visibly.</p>
   </div>
 
   <div class="plate">

@@ -167,6 +167,23 @@ def test_debate_degrades_visibly(config):
     assert jp["debate"]["status"] == "unavailable"
 
 
+def test_ask_and_coach_grounded_and_degrade(config):
+    app = create_app(config, with_scheduler=False)
+    client = TestClient(app)
+    seed_bench([100 * 1.01 ** i for i in range(30)])
+    seed_reading(RegimeLabel.BULL_TREND, days_ago=1)
+    seed_closed("AAA", thesis_played_out="yes", realized=5.0)
+    ask = client.get("/api/ask?q=what is my biggest risk?").json()
+    # grounded facts are assembled + returned; the AI is down (dead-port Ollama)
+    assert "Regime:" in ask["facts"] and "Risk state:" in ask["facts"]
+    assert ask["status"] == "unavailable" and ask["text"] is None
+    coach = client.get("/api/coach?q=where is my edge?").json()
+    assert "Resolved trades:" in coach["facts"]
+    assert coach["status"] == "unavailable"
+    # an empty question is a 422, not a silent call
+    assert client.get("/api/ask?q=").status_code == 422
+
+
 def test_ledger_campaigns_and_epistemic(fresh_db):
     from hermes.validation.ledger import build_ledger
     led = build_ledger(fresh_db)

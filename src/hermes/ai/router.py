@@ -31,7 +31,7 @@ from .ollama import OllamaClient, OllamaUnavailable
 # Tasks that MAY reach for the cloud automatically when allow_cloud is true.
 # Everything else uses cloud only on an explicit operator request (prefer="cloud")
 # or as a visible fallback when local is down.
-CLOUD_OPT_IN_TASKS = frozenset({"debate", "coach", "desk_read"})
+CLOUD_OPT_IN_TASKS = frozenset({"debate", "coach", "desk_read", "ask"})
 
 # Per-1M-token USD list prices, for the approximate session-usage meter only.
 # Deliberately conservative (list, not intro). Missing models fall back to the

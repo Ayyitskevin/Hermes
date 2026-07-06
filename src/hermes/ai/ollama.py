@@ -130,6 +130,21 @@ class OllamaClient:
             user=f"Question: {question}\n\nResolved history:\n{facts_md}",
         )
 
+    def ask(self, question: str, facts_md: str) -> str:
+        """Answer a question about the desk state (regime, risk, posture, book),
+        grounded strictly in the supplied computed facts — never a directive."""
+        return self._chat(
+            system=(
+                "You are Hermes' desk assistant. Answer the operator's question "
+                "using ONLY the computed desk facts provided (regime, risk limits, "
+                "posture, watchlist). Quote the numbers you were given and cite "
+                "which fact you used; invent none. Everything is % of equity or an "
+                "index — never a dollar. You explain the current state; you never "
+                "tell them to buy or sell, and you never override the risk layer."
+            ),
+            user=f"Question: {question}\n\nDesk facts:\n{facts_md}",
+        )
+
     def debate(self, facts_md: str) -> str:
         """Bull case → bear case → risk critique over a symbol/thesis. Decision
         support only; ends in context, never a directive."""
