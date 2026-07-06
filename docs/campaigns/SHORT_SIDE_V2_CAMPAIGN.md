@@ -73,9 +73,17 @@ If any gate fails → **shorts stay OFF** and the ledger verdict stays `unvalida
    only delta between arms is the two short toggles.
 2. **Arm A** on the basket → log OOS net / PF / WR / trades, and the equity curve.
 3. **Arm B** → same logs.
-4. **Arm C** → same logs, plus the short-filter Data-Window exports
-   (`SHORT_*_BLOCK`, `SHORT_FAILED_RECLAIM`, `SHORT_BEAR_FLAG_BREAK`, `SHORT_STOP_PCT`)
-   so you can see *why* shorts fired or were blocked.
+4. **Arm C** → same logs, plus the short telemetry the chart now surfaces directly:
+   - The Validation panel splits **Longs vs Shorts** (net / PF / WR / trade count),
+     so the short book is judged on its own — never blended into the long total.
+     The Shorts row flags `!` when its sample is under `min_validation_trades`.
+   - Cumulative Data-Window counters: `SHORT_ENTRIES_{FAILRECLAIM,BEARFLAG,BEARFLIP}`
+     (shorts taken by trigger) and `SHORT_BLOCKED_{NO_CHASE,SUPPORT,SQUEEZE}`
+     (would-be shorts each filter suppressed) — so you can see which trigger drives
+     entries and which filter is doing the work.
+   - Note: per-trigger *P&L* (failed-AVWAP net vs bear-flag net) is not yet split —
+     that needs per-trade reason tagging (an entry-id refactor); the counts above are
+     the current proxy.
 5. **Per-symbol, not just aggregate.** A cross-section that only works because one
    name cratered is not a system.
 6. **Read the gates once, out of sample, and write the verdict down** before
