@@ -31,9 +31,17 @@ gap-shock guard, 2-bar confirmation. Supporting gauges: Wilder's ADX (1978)
 and Kaufman's efficiency ratio compose its chop-risk read. Its honesty
 statement is carried into the UI verbatim: *a heuristic derived from
 historical label-correlation, not a backtested edge.* On the owner's charts
-the same core now runs embedded as the regime module of the Five-Tool
-Confluence AIO v3.2 strategy — verified model-identical at daily defaults,
-so chart and dashboard share one brain. Full fidelity record in
+the same core now runs embedded as the regime module of the **Five-Tool
+Confluence AIO v3.5-SHORT** strategy — the owner's standing operating chart —
+verified model-identical at daily defaults, so chart and dashboard share one
+brain. The regime engine is unchanged from the v3.2 this was cut from:
+v3.3–v3.5-SHORT touched readout, validation-display, and (short-side)
+execution layers only, never the classifier math. v3.5-SHORT adds a
+dedicated short-side execution system that is order-shaped and therefore
+deliberately **absent from this repo** — recorded instead as an
+**unvalidated** campaign. Running it live as the day-to-day chart is a
+workflow choice, not validation: the honest default stays shorts-off until
+the A/B campaign clears it. Full fidelity record in
 [REGIME_V62_PORT.md](REGIME_V62_PORT.md).
 
 ## Regime Lab (the deep read)

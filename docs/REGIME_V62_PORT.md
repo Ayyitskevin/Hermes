@@ -8,16 +8,19 @@ fidelity record — what was ported exactly, what deviates, and why.
 
 **Parity target (updated 2026-07-06):** on the owner's charts the v6.2 core
 now runs embedded as the regime module of the **Five-Tool Confluence AIO
-v3.4.1** strategy, which supersedes the standalone v6.2 indicator as the
-operating artifact. The port was re-verified line-by-line against that
-module: at the AIO's daily-chart defaults (preset `Auto` → Daily, `StDev`
-vol model, percentile adjustment on, hysteresis on, EMA(100) filter on,
-regime quality filter `Off`, gap handling `Neutralize new flips`, external
-override off) it is the same model, same constants, same state machine as
-what is ported here. No code change was required. **The regime engine is
-unchanged from the v3.2 this was cut from** — v3.3 (equity-halt re-arm),
-v3.4 (Markov readout) and v3.4.1 (readout hoist/export + power-iteration
-convergence fix) all touched readout/validation layers only, never the
+v3.5-SHORT** strategy — the owner's standing operating chart, which
+supersedes the standalone v6.2 indicator as the operating artifact. Its
+regime module is **unchanged from v3.4.1**, and the port was re-verified
+line-by-line against that module: at the AIO's daily-chart defaults (preset
+`Auto` → Daily, `StDev` vol model, percentile adjustment on, hysteresis on,
+EMA(100) filter on, regime quality filter `Off`, gap handling `Neutralize
+new flips`, external override off) it is the same model, same constants, same
+state machine as what is ported here. No code change was required. **The
+regime engine is unchanged from the v3.2 this was cut from** — v3.3
+(equity-halt re-arm), v3.4 (Markov readout), v3.4.1 (readout hoist/export +
+power-iteration convergence fix) and v3.5-SHORT (dedicated short-side
+execution + Long/Short validation split + short telemetry) all touched
+readout, validation-display, and short-side execution layers only, never the
 entry/exit/threshold math ported here.
 
 ## Ported exactly (Daily preset)
@@ -98,11 +101,14 @@ Window stride is shown so the choice stays honest.
 
 ## Short-side variant (AIO v3.5-SHORT, owner-side, UNVALIDATED)
 
-The owner's chart also carries an experimental **dedicated short-side system**
-(AIO v3.5-SHORT): relative weakness + a failed-supply-reclaim / bear-flag trigger,
-gated by no-chase, support-room and squeeze-risk filters, stopped above the
-structural supply high, and exited on an AVWAP reclaim. It is a **behavior-changing
-variant, off by default** (`allow_shorts = false`).
+AIO v3.5-SHORT is now the owner's **standing operating chart**, and it carries a
+**dedicated short-side system**: relative weakness + a failed-supply-reclaim /
+bear-flag trigger, gated by no-chase, support-room and squeeze-risk filters, stopped
+above the structural supply high, and exited on an AVWAP reclaim. It is a
+**behavior-changing variant** whose short book still ships **off by default**
+(`allow_shorts = false`). Adopting v3.5-SHORT as the day-to-day chart does **not**
+promote its verdict: a live default is a workflow choice, not out-of-sample evidence,
+so the short book stays `unvalidated` no matter how long it runs live.
 
 **It is deliberately NOT in this repo.** Its logic is order-shaped (entries, exits,
 sizing), which the no-order-paths boundary bans — `tests/test_no_order_paths.py`
