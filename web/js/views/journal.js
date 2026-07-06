@@ -283,6 +283,39 @@ function renderSetups(outlet, closed) {
   renderSetupDetail(outlet, closed);
 }
 
+// Expectancy conditioned on the regime FROZEN at entry — does this setup only
+// work in its home regime? Uses each entry's signal_state.label (never re-derived).
+const REGIME_DISP = { bull_trend: "Bull trend", chop: "Rangebound", bear_trend: "Bear trend", stress: "Stress" };
+function regimeBreakdown(es) {
+  const groups = {};
+  for (const e of es) {
+    const lab = e.signal_state?.label || "no reading";
+    (groups[lab] ||= []).push(e);
+  }
+  const rows = Object.entries(groups).map(([lab, xs]) => {
+    const rs = xs.map((e) => (e.planned_risk_pct ? e.realized_return_pct / e.planned_risk_pct : null))
+      .filter((v) => v !== null && !Number.isNaN(v));
+    const exp = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : null;
+    const wins = xs.filter((e) => e.realized_return_pct > 0).length;
+    return { lab: REGIME_DISP[lab] || lab, n: xs.length, exp, winPct: (wins / xs.length) * 100 };
+  }).sort((a, b) => (b.exp ?? -99) - (a.exp ?? -99));
+  if (rows.length < 2) return "";   // only interesting when the setup spans regimes
+  const mx = Math.max(...rows.map((r) => Math.abs(r.exp ?? 0)), 0.5);
+  const best = rows[0], worst = rows[rows.length - 1];
+  const insight = (best.exp ?? 0) > 0 && (worst.exp ?? 0) < 0
+    ? `◆ this setup earns its edge in <strong>${esc(best.lab)}</strong> (${best.exp.toFixed(2)}R) and bleeds in
+       <strong>${esc(worst.lab)}</strong> (${worst.exp.toFixed(2)}R) — a home-regime setup taken out of regime.`
+    : `◆ expectancy conditioned on the regime frozen at entry.`;
+  return `<div class="regime-exp">
+    <div class="sz-sub" style="margin-top:4px">Expectancy by regime at entry</div>
+    ${rows.map((r) => `<div class="re-row">
+      <span class="re-lab">${esc(r.lab)}</span>
+      <div class="re-bar"><i class="${(r.exp ?? 0) < 0 ? "neg" : "pos"}" style="width:${Math.min(100, Math.abs(r.exp ?? 0) / mx * 100).toFixed(0)}%"></i></div>
+      <span class="re-val ${(r.exp ?? 0) < 0 ? "st-serious" : "st-good"}">${r.exp === null ? "∅" : `${r.exp >= 0 ? "+" : ""}${r.exp.toFixed(2)}R`}</span>
+      <span class="re-n micro">n=${r.n} · win ${fmtNum(r.winPct, 0)}%</span></div>`).join("")}
+    <p class="micro" style="margin-top:6px">${insight}</p></div>`;
+}
+
 function renderSetupDetail(outlet, closed) {
   const box = $("#setup-detail", outlet);
   if (!openSetup) { box.innerHTML = ""; return; }
@@ -296,6 +329,7 @@ function renderSetupDetail(outlet, closed) {
       <p class="micro">expectancy = mean(realized ÷ planned-risk) over ${s.n} resolved trade${s.n === 1 ? "" : "s"} =
         <strong>${s.exp === null ? "∅ missing" : `${s.exp >= 0 ? "+" : ""}${s.exp.toFixed(2)}R per trade`}</strong>${
         s.n < 30 ? ` · ${chip("warn", "anecdote-grade")}` : ""}</p>
+      ${regimeBreakdown(es)}
       <div class="scroll-x"><table class="tbl" style="min-width:480px"><thead><tr>
         <th>Trade</th><th class="num">Realized</th><th class="num">α</th><th>Thesis</th><th class="num">R</th></tr></thead>
         <tbody>${es.map((e) => {

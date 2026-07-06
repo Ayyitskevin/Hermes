@@ -267,6 +267,15 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: transparent; border: 1px solid var(--line-2); color: var(--ink-muted); }
 .ask-chip:hover { color: var(--ink); border-color: var(--violet); }
 #dk-ask-out, #jr-ask-out { margin-top: 10px; }
+/* Journal — expectancy by regime at entry */
+.regime-exp { margin: 8px 0 12px; }
+.re-row { display: grid; grid-template-columns: 90px 1fr 58px auto; align-items: center; gap: 9px; margin-top: 5px; }
+.re-lab { font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+.re-bar { height: 8px; border-radius: 5px; background: var(--plate-2); overflow: hidden; }
+.re-bar > i { display: block; height: 100%; border-radius: 5px; }
+.re-bar > i.pos { background: var(--good); } .re-bar > i.neg { background: var(--serious); }
+.re-val { font-family: var(--mono); font-size: 12px; font-weight: 700; text-align: right; }
+.re-n { color: var(--ink-muted); }
 .chrome-date { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
 
 /* ── Model bar (selector + usage meter) ──────────────────────────────────── */
