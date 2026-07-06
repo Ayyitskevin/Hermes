@@ -117,6 +117,16 @@ def test_kelly_math(fresh_db):
     assert k.payoff_ratio == 2.0
     assert k.kelly_full_pct == 40.0
     assert k.half_kelly_pct == 20.0
+    # design-parity extras: quarter Kelly, expectancy, avg win/loss, R strip, curve
+    assert k.quarter_kelly_pct == 10.0
+    assert k.expectancy_r == round((60 * 2 + 40 * -1) / 100, 2)   # 0.8R
+    assert k.avg_win_r == 2.0 and k.avg_loss_r == 1.0
+    assert len(k.r_multiples) == 100 and k.r_multiples == sorted(k.r_multiples)
+    # growth curve peaks at (or before) full Kelly and turns down past it
+    assert len(k.growth_curve) > 10
+    peak = max(k.growth_curve, key=lambda p: p["g"])
+    assert 0 < peak["f_pct"] <= k.kelly_full_pct + 5
+    assert k.growth_curve[-1]["g"] < peak["g"]           # ruin drag past the peak
 
 
 # ── layer 3: the tightest limit binds, and is named ─────────────────────────

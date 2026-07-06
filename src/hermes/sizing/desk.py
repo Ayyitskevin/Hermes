@@ -78,6 +78,29 @@ class KellyEdge:
     half_kelly_pct: float | None   # half-Kelly risk %
     anecdote: bool                 # n < 30 — an anecdote, not an edge
     note: str
+    quarter_kelly_pct: float | None = None
+    expectancy_r: float | None = None       # mean R over closed trades
+    avg_win_r: float | None = None
+    avg_loss_r: float | None = None         # positive magnitude
+    r_multiples: list[float] = field(default_factory=list)   # sorted, for the strip
+    growth_curve: list[dict] = field(default_factory=list)   # [{f_pct, g}] log-growth
+
+
+def _growth_curve(win_rate: float, payoff: float, kelly_full: float) -> list[dict]:
+    """Expected per-trade log-growth g(f) = W·ln(1+b·f) + (1−W)·ln(1−f) sampled
+    over the risk fraction f — the 'why more is not more' curve. Peaks at full
+    Kelly, turns negative past the ruin drag. Points as {f_pct, g}."""
+    import math
+    cap = min(0.9, max(0.04, kelly_full * 2.5 + 0.04))
+    n = 44
+    out = []
+    for i in range(n + 1):
+        f = cap * i / n
+        if f >= 1.0:
+            break
+        g = win_rate * math.log(1 + payoff * f) + (1 - win_rate) * math.log(1 - f)
+        out.append({"f_pct": round(f * 100, 2), "g": round(g, 5)})
+    return out
 
 
 @dataclass(frozen=True)
@@ -179,15 +202,22 @@ def _kelly_edge(config: HermesConfig) -> KellyEdge:
     payoff = avg_win / avg_loss
     kelly_full = max(0.0, win_rate - (1 - win_rate) / payoff)    # fraction of equity
     kelly_full_pct = kelly_full * 100.0
+    expectancy = sum(r_multiples) / n
     anecdote = n < 30
     note = (
         "below 30 closed trades — treat this edge as an anecdote; the size leans on "
         "the fixed baseline until the record grows"
         if anecdote else
         "empirical edge from the journal's closed-trade R-multiples")
+    curve = _growth_curve(win_rate, payoff, kelly_full) if kelly_full > 0 else []
     return KellyEdge(
         "ok", n, round(win_rate * 100, 1), round(payoff, 2),
-        round(kelly_full_pct, 2), round(kelly_full_pct / 2, 2), anecdote, note)
+        round(kelly_full_pct, 2), round(kelly_full_pct / 2, 2), anecdote, note,
+        quarter_kelly_pct=round(kelly_full_pct / 4, 2),
+        expectancy_r=round(expectancy, 2),
+        avg_win_r=round(avg_win, 2), avg_loss_r=round(avg_loss, 2),
+        r_multiples=sorted(round(r, 2) for r in r_multiples),
+        growth_curve=curve)
 
 
 def _correlation_flag(config: HermesConfig, symbol: str,

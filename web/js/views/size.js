@@ -147,12 +147,16 @@ function renderModel(outlet, d) {
     <div class="kv" style="margin-top:10px">
       <div class="cell"><div class="k">win rate</div><div class="v">${fmtNum(k.win_rate_pct, 0)}%</div></div>
       <div class="cell"><div class="k">payoff (R)</div><div class="v">${fmtNum(k.payoff_ratio)}×</div></div>
-      <div class="cell"><div class="k">full Kelly</div><div class="v">${fmtNum(k.kelly_full_pct)}%</div></div>
-      <div class="cell"><div class="k">half Kelly</div><div class="v">${fmtNum(k.half_kelly_pct)}%</div></div>
+      <div class="cell"><div class="k">expectancy</div><div class="v ${(k.expectancy_r ?? 0) < 0 ? "neg" : "pos"}">${fmtNum(k.expectancy_r)}R</div></div>
+      <div class="cell"><div class="k">avg win</div><div class="v pos">+${fmtNum(k.avg_win_r)}R</div></div>
+      <div class="cell"><div class="k">avg loss</div><div class="v neg">−${fmtNum(k.avg_loss_r)}R</div></div>
       <div class="cell"><div class="k">sample</div><div class="v">n=${k.n}</div></div>
     </div>
     ${k.anecdote ? `<div class="micro" style="margin-top:8px">${chip("warn", "anecdote")} ${esc(k.note)}</div>`
-                 : `<div class="micro" style="margin-top:8px">${chip("ok")} ${esc(k.note)}</div>`}`
+                 : `<div class="micro" style="margin-top:8px">${chip("ok")} ${esc(k.note)}</div>`}
+    ${discountLadder(k, d)}
+    ${growthCurve(k, d)}
+    ${rHistory(k)}`
     : `<div class="ai-unavail" style="margin-top:10px">${chip("missing")} ${esc(k.note || "no edge to measure")}</div>`;
 
   el.innerHTML = `
@@ -170,6 +174,65 @@ function renderModel(outlet, d) {
         <span>${shrunkPct}% edge</span></div>
       <div class="meter-track"><div class="meter-fill ${k.anecdote ? "warn" : ""}" style="width:${shrunkPct}%"></div></div></div>
     ${edgeBlock}`;
+}
+
+// Kelly discount ladder: full → half → quarter → Hermes-blended, each a bar
+// against the per-trade risk you'd take. Full Kelly is a reference, never a target.
+function discountLadder(k, d) {
+  const rows = [
+    ["Full Kelly", k.kelly_full_pct, "reference — too wild to trade", "serious"],
+    ["Half Kelly", k.half_kelly_pct, "the convention", "warn"],
+    ["Quarter Kelly", k.quarter_kelly_pct, "many desks live here", ""],
+    ["Hermes blended", d.blended_risk_pct, "half-Kelly shrunk to your sample → used to size", "pos"],
+  ];
+  const ref = Math.max(k.kelly_full_pct || 1, d.blended_risk_pct || 1, 0.1);
+  return `<div class="sz-sub">Kelly discount ladder <span class="micro">— risk % per trade; more is not more</span></div>
+    ${rows.map(([label, val, note, cls]) => val == null ? "" : `
+      <div class="ladder-row">
+        <span class="ladder-lbl">${label}</span>
+        <div class="ladder-bar"><i class="${cls}" style="width:${Math.min(100, (val / ref) * 100).toFixed(0)}%"></i></div>
+        <span class="ladder-val ${cls}">${fmtNum(val)}%</span>
+        <span class="ladder-note micro">${note}</span></div>`).join("")}`;
+}
+
+// The "why more is not more" curve: expected per-trade log-growth vs risk
+// fraction, peaking at full Kelly and turning negative past the ruin drag.
+function growthCurve(k, d) {
+  const pts = k.growth_curve || [];
+  if (pts.length < 2) return "";
+  const W = 460, H = 132, padL = 6, padR = 6, padT = 10, padB = 20;
+  const xmax = Math.max(...pts.map((p) => p.f_pct)) || 1;
+  const gs = pts.map((p) => p.g);
+  const gmin = Math.min(...gs, 0), gmax = Math.max(...gs), gspan = (gmax - gmin) || 1;
+  const xAt = (f) => padL + (f / xmax) * (W - padL - padR);
+  const yAt = (g) => padT + (1 - (g - gmin) / gspan) * (H - padT - padB);
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${xAt(p.f_pct).toFixed(1)},${yAt(p.g).toFixed(1)}`).join("");
+  const y0 = yAt(0);
+  const vmark = (f, cls, label) => (f == null || f > xmax) ? "" :
+    `<line x1="${xAt(f).toFixed(1)}" y1="${padT}" x2="${xAt(f).toFixed(1)}" y2="${H - padB}" class="gc-mark ${cls}"/>
+     <text x="${xAt(f).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="gc-lbl">${label}</text>`;
+  return `<div class="sz-sub">Growth curve <span class="micro">— expected log-growth per trade vs risk fraction</span></div>
+    <svg viewBox="0 0 ${W} ${H}" class="gc-svg" role="img" aria-label="Kelly growth curve — log-growth peaks at full Kelly and falls past it">
+      <line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W - padR}" y2="${y0.toFixed(1)}" class="gc-zero"/>
+      <path d="${path}" class="gc-line"/>
+      ${vmark(k.kelly_full_pct, "full", "full")}
+      ${vmark(k.half_kelly_pct, "half", "½")}
+      ${vmark(k.quarter_kelly_pct, "quarter", "¼")}
+      ${vmark(d.blended_risk_pct, "rec", "rec")}
+    </svg>
+    <p class="micro">peak at full Kelly (${fmtNum(k.kelly_full_pct)}%); past it, growth falls — the same reason Hermes sizes well below it.</p>`;
+}
+
+// The raw edge: every closed trade's R-multiple, sorted, as up/down bars.
+function rHistory(k) {
+  const rs = k.r_multiples || [];
+  if (!rs.length) return "";
+  const mx = Math.max(...rs.map(Math.abs), 1);
+  return `<div class="sz-sub">The ${rs.length} trades, sorted (R) <span class="micro">— the distribution behind the number</span></div>
+    <div class="rhist">${rs.map((r) => {
+      const h = Math.max(2, (Math.abs(r) / mx) * 26).toFixed(0);
+      return `<span class="rbar ${r >= 0 ? "up" : "dn"}" style="height:${h}px" title="${r}R"></span>`;
+    }).join("")}</div>`;
 }
 
 // ── layer 3: the limit ladder ────────────────────────────────────────────────
