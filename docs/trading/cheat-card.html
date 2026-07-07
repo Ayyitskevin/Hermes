@@ -1,0 +1,219 @@
+<style>
+  :root{
+    --ground:#0B0F12; --panel:#111A1F; --panel-2:#0E161A;
+    --line:rgba(91,214,176,.16); --line-strong:rgba(91,214,176,.30);
+    --ink:#E8EEF1; --ink-dim:#9BA9B2; --ink-faint:#6B7A84;
+    --gold:#FFD54F; --bull:#59A07D; --bear:#BE606F; --neut:#707E94; --amber:#E0A24E;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .card{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(91,214,176,.06), transparent 60%),
+      var(--ground);
+    color:var(--ink); font-family:var(--sans);
+    padding:28px 22px 40px; min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+
+  /* Header */
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);opacity:.9;margin:0 0 6px}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(20px,3.4vw,30px);line-height:1.05;letter-spacing:-.01em;margin:0;text-wrap:balance}
+  h1 .dim{color:var(--ink-faint);font-weight:500}
+  .sub{color:var(--ink-dim);font-size:13.5px;margin:8px 0 0;max-width:60ch}
+  .rule{height:1px;background:linear-gradient(90deg,var(--line-strong),transparent);margin:20px 0 22px;border:0}
+
+  /* Grid of panels */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .col-span{grid-column:1/-1}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+  .panel h2{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .panel h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--gold);flex:none}
+
+  /* 5-second gates */
+  .gates{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:640px){.gates{grid-template-columns:1fr}}
+  .gate{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;position:relative;overflow:hidden}
+  .gate .n{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.1em}
+  .gate .t{font-weight:650;font-size:15px;margin:6px 0 4px}
+  .gate .d{color:var(--ink-dim);font-size:12.5px;line-height:1.45}
+  .gate::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+
+  /* Chips */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+  .chip .dot{width:7px;height:7px;border-radius:50%}
+  .bull{color:var(--bull);background:rgba(89,159,125,.12);border-color:rgba(89,159,125,.3)} .bull .dot{background:var(--bull)}
+  .bear{color:var(--bear);background:rgba(190,96,111,.12);border-color:rgba(190,96,111,.3)} .bear .dot{background:var(--bear)}
+  .neut{color:var(--neut);background:rgba(112,126,148,.14);border-color:rgba(112,126,148,.32)} .neut .dot{background:var(--neut)}
+  .warn{color:var(--amber);background:rgba(224,162,78,.12);border-color:rgba(224,162,78,.32)} .warn .dot{background:var(--amber)}
+
+  /* Data rows */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td,th{text-align:left;padding:6px 4px;vertical-align:top;border-bottom:1px solid var(--line)}
+  tr:last-child td,tr:last-child th{border-bottom:0}
+  th{color:var(--ink-faint);font-weight:600;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+  .k{font-family:var(--mono);color:var(--ink);font-weight:600;white-space:nowrap}
+  .v{color:var(--ink-dim)}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--gold);font-weight:650}
+
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv .lab{color:var(--ink-dim)} .kv .val{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;text-align:right}
+
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-dim)}
+  .tag b{color:var(--ink);font-weight:600}
+
+  .note{font-size:12px;color:var(--ink-dim);line-height:1.5;margin:10px 0 0}
+  .lede{font-family:var(--mono);color:var(--gold);font-weight:650}
+
+  .foot{margin-top:22px;padding:16px 18px;border:1px dashed var(--line-strong);border-radius:12px;background:var(--panel-2)}
+  .foot p{margin:0;font-size:12.5px;color:var(--ink-dim);line-height:1.55}
+  .foot b{color:var(--ink)}
+
+  @media print{
+    body,.card{background:#fff;color:#111}
+    .card{padding:0}
+    .panel,.gate,.foot{border-color:#ccc;background:#fff}
+    .panel h2,.eyebrow{color:#555}
+    h1 .dim,.v,.note,.sub,.kv .lab{color:#333}
+    .num,.lede,.k,.kv .val{color:#111}
+    .rule{background:#bbb}
+  }
+</style>
+
+<div class="card">
+  <div class="wrap">
+    <p class="eyebrow">Quick Reference · keep beside the screen</p>
+    <h1>Five-Tool Confluence AIO <span class="dim">v3.5-SHORT</span></h1>
+    <p class="sub">Read the chart in five seconds, then confirm. This card decodes the go/no-go, the HUD states, and the risk rules — every number verified against the strategy source.</p>
+    <hr class="rule">
+
+    <!-- 5-SECOND GO/NO-GO -->
+    <div class="panel col-span" style="margin-bottom:14px">
+      <h2>The 5-second go / no-go — all three, or stand aside</h2>
+      <div class="gates">
+        <div class="gate">
+          <div class="n">01 · REGIME</div>
+          <div class="t">Are you with the tide?</div>
+          <div class="d"><span class="chip bull"><span class="dot"></span>Bull</span> arms longs · <span class="chip bear"><span class="dot"></span>Bear</span> arms shorts · <span class="chip neut"><span class="dot"></span>Neutral</span> = no trade.</div>
+        </div>
+        <div class="gate">
+          <div class="n">02 · SCORE ≥ 55</div>
+          <div class="t">Is the confluence there?</div>
+          <div class="d">The <b>Score L / Sv2</b> cell. Floor is <span class="num">55</span> for <em>both</em> sides. Below it, the stack isn't there — pass.</div>
+        </div>
+        <div class="gate">
+          <div class="n">03 · HALT</div>
+          <div class="t">Is risk clear?</div>
+          <div class="d">The status cell must read <span class="chip bull"><span class="dot"></span>Ready</span>. Anything <span class="chip warn"><span class="dot"></span>Paused</span> = the system is standing down. So do you.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- REGIME GATE -->
+      <div class="panel">
+        <h2>Regime gate (the hard rule)</h2>
+        <table>
+          <tr><td class="k"><span class="chip bull"><span class="dot"></span>Bull</span></td><td class="v">Longs armed. Shorts impossible.</td></tr>
+          <tr><td class="k"><span class="chip bear"><span class="dot"></span>Bear</span></td><td class="v">Shorts armed <em>only if</em> <b>Allow shorts</b> is ON.</td></tr>
+          <tr><td class="k"><span class="chip neut"><span class="dot"></span>Neutral</span></td><td class="v">No entries either side. Wait.</td></tr>
+        </table>
+        <p class="note">In this build <b>Allow shorts ships ON</b> — but the short book is an <b>unvalidated experiment</b> (see footer).</p>
+      </div>
+
+      <!-- AVWAP -->
+      <div class="panel">
+        <h2>AVWAP arrow</h2>
+        <table>
+          <tr><td class="k">↑</td><td class="v">Price <b>above</b> the anchored VWAP — buyers in control (bullish).</td></tr>
+          <tr><td class="k">↓</td><td class="v">Price <b>below</b> it — sellers in control. <b>Shorts require ↓.</b></td></tr>
+        </table>
+        <p class="note">The gold line re-anchors on every regime flip — read it as "since this leg began," not absolute.</p>
+      </div>
+
+      <!-- SIZE & RISK -->
+      <div class="panel">
+        <h2>Size &amp; risk — % of equity, in R</h2>
+        <div class="kv"><span class="lab">Risk per trade</span><span class="val">1.0% of equity</span></div>
+        <div class="kv"><span class="lab">Size formula</span><span class="val">risk% ÷ stop%</span></div>
+        <div class="kv"><span class="lab">Targets</span><span class="val">T1 = 1R · T2 = 2R</span></div>
+        <div class="kv"><span class="lab">After T1</span><span class="val">stop → breakeven</span></div>
+        <div class="kv"><span class="lab">Runner</span><span class="val">chandelier trail</span></div>
+        <div class="kv"><span class="lab">Equity-DD halt</span><span class="val">25%</span></div>
+      </div>
+
+      <!-- CHOP DE-RATING -->
+      <div class="panel">
+        <h2>Chop de-rating (auto size cut)</h2>
+        <div class="kv"><span class="lab"><span class="chip bull"><span class="dot"></span>Low</span> chop</span><span class="val">1.00×</span></div>
+        <div class="kv"><span class="lab"><span class="chip warn"><span class="dot"></span>Medium</span> chop</span><span class="val">0.75×</span></div>
+        <div class="kv"><span class="lab"><span class="chip bear"><span class="dot"></span>High</span> chop</span><span class="val">0.45×</span></div>
+        <p class="note">Risk Scale below 1.00× = the system is trading smaller <em>on purpose</em>. Respect it.</p>
+      </div>
+
+      <!-- HALT STATES -->
+      <div class="panel">
+        <h2>Halt cell decoder</h2>
+        <table>
+          <tr><td class="k"><span class="chip bull"><span class="dot"></span>Ready</span></td><td class="v">Entries allowed.</td></tr>
+          <tr><td class="k">Paused: Risk</td><td class="v">Drawdown / daily-loss breaker tripped.</td></tr>
+          <tr><td class="k">Paused: Cooldown</td><td class="v">Waiting after last trade.</td></tr>
+          <tr><td class="k">Paused: ATR</td><td class="v">Volatility out of band.</td></tr>
+          <tr><td class="k">Paused: Liquidity</td><td class="v">Dollar-volume too thin.</td></tr>
+        </table>
+      </div>
+
+      <!-- SHORT STATES -->
+      <div class="panel">
+        <h2>Short cell decoder</h2>
+        <table>
+          <tr><td class="k"><span class="chip bull"><span class="dot"></span>Review OK</span></td><td class="v">All short filters clear — the only green light.</td></tr>
+          <tr><td class="k">No Chase</td><td class="v">Too stretched / oversold / stop too wide.</td></tr>
+          <tr><td class="k">Support Near</td><td class="v">Too little room down to support.</td></tr>
+          <tr><td class="k">Squeeze Risk</td><td class="v">Bounce / gap / recovering RS — squeeze hazard.</td></tr>
+          <tr><td class="k">Not Ready</td><td class="v">Setup incomplete.</td></tr>
+        </table>
+      </div>
+
+      <!-- ! FLAG -->
+      <div class="panel">
+        <h2>The <span style="color:var(--bear)">!</span> flag = low sample</h2>
+        <table>
+          <tr><td class="k">Shorts / Longs row</td><td class="v">Fewer than <span class="num">100</span> trades — stats are an anecdote.</td></tr>
+          <tr><td class="k">Markov <b>n</b> column</td><td class="v">Row built on fewer than <span class="num">20</span> samples.</td></tr>
+        </table>
+        <p class="note"><b>Never</b> clear a <b>!</b> by lowering the threshold. That's hiding the truth from yourself — earn it with more trades.</p>
+      </div>
+
+      <!-- MARKER TAGS -->
+      <div class="panel">
+        <h2>Trade-marker tags</h2>
+        <p class="note" style="margin:0 0 9px"><b>L1–L3 / S1–S3</b> = the three scale-in legs (long / short). Entry label reads <span class="tag"><b>L1</b> · trigger · score</span></p>
+        <div style="margin-bottom:9px">
+          <div class="note" style="margin:0 0 5px;color:var(--bull)">LONG triggers</div>
+          <div class="tags"><span class="tag"><b>flip</b></span><span class="tag"><b>hidDiv</b></span><span class="tag"><b>regDiv</b></span><span class="tag"><b>reclaim</b></span></div>
+        </div>
+        <div style="margin-bottom:9px">
+          <div class="note" style="margin:0 0 5px;color:var(--bear)">SHORT triggers</div>
+          <div class="tags"><span class="tag"><b>failAVWAP</b></span><span class="tag"><b>bearFlag</b></span><span class="tag"><b>bearFlip</b></span></div>
+        </div>
+        <div>
+          <div class="note" style="margin:0 0 5px">EXITS</div>
+          <div class="tags"><span class="tag"><b>T1</b>/<b>T2</b> target</span><span class="tag"><b>RUN</b> trail</span><span class="tag"><b>PROT</b> stop</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="foot">
+      <p><span class="lede">Honesty is the product.</span> &nbsp;This tool <b>describes the present, it does not predict.</b> Every figure is a % of equity or an R-multiple — <b>never dollars</b>. The <b>long side is the tested workhorse</b>; the <b>short side is unvalidated</b> and net-negative in testing — treat it as a research project regardless of the default toggle. A candidate is not a setup; below ~100 trades, you know nothing.</p>
+    </div>
+  </div>
+</div>
