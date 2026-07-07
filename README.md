@@ -90,10 +90,39 @@ format (`timestamp · action · source · latency · outcome`), per-component
 log files, MISSED-run detection ("silence is not evidence"), manual
 overrides, backup.
 
+## The strategy it supports — and the playbook to run it
+
+Hermes is the dashboard-and-journal half of a two-surface system. The other
+half is the owner's TradingView strategy, the **Five-Tool Confluence AIO
+v3.5-SHORT** (regime · relative strength · divergence · anchored VWAP · risk),
+whose regime engine is the very `v62` classifier ported in
+[docs/REGIME_V62_PORT.md](docs/REGIME_V62_PORT.md) — so the chart and the
+dashboard read the same regime, bar for bar.
+
+Recent work on that strategy: an on-chart **empirical Markov transition
+readout** (the same persistence statistics Hermes' Regime Lab computes), a
+**Long/Short validation split** with sample-size flags, and a **dedicated
+short-side variant** that is firmly **off the validated path** — an unvalidated
+experiment recorded as a campaign in [docs/campaigns/](docs/campaigns/) and the
+validation ledger, net-negative in testing, and kept off until it beats
+longs-only out-of-sample.
+
+**The strategy's order code is deliberately not in this repo** (the
+no-order-paths boundary). What *is* here is the full human handbook — how to
+read the strategy, practice it, size it, journal it, and validate any change:
+
+**→ [docs/trading/](docs/trading/) — the Trading Strategy & Playbook handbook.**
+Start with [The Hermes Playbook](docs/trading/The-Hermes-Playbook.md) (how to
+play the thesis) and the
+[Chart Reading Guide](docs/trading/CHART_READING_GUIDE.md) (how to read every
+panel). Nothing in it promises profit; the long side is the tested workhorse,
+the short side is an unvalidated experiment, and every figure is % of equity.
+
 ## Documentation
 
 | Doc | What's in it |
 |---|---|
+| [docs/trading/](docs/trading/) | **The trading handbook** — playbook, chart-reading guide, cheat card, quickstart, learning path, setups, risk & sizing, journal, validation protocol, FAQ, anti-patterns |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The Phase 1 proposal: decisions, verified reference architectures, V1 scope, module map, V2+ roadmap |
 | [docs/DESIGN.md](docs/DESIGN.md) | The design plan and the genericness critique that shaped it |
 | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | Every skill traced to a named methodology — and what each does not prove |

@@ -50,6 +50,11 @@ ALLOWED_SRC_HOSTS = {
     "hist.databento.com",    # historical bars fallback
     "127.0.0.1",             # local Ollama default
     "localhost",
+    # AI text-generation host for the cloud path (ai/claude.py). A reviewed
+    # decision, not a drive-by: this is an inference host, NOT a broker host —
+    # the AI layer is data-in/prose-out and never emits an order. The no-write
+    # boundary and every FORBIDDEN_* pattern above are unchanged.
+    "api.anthropic.com",     # Anthropic Messages API (POST /v1/messages, GET /v1/models)
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache",

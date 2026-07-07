@@ -23,7 +23,7 @@ trading base URL, or order-shaped API ever appears.
 | Trading style | Systematic regime-following swing trading — daily bars primary; 4H/weekly available (Alpaca supports `4Hour`/`1Week` timeframes) but V1 workflows run on `1Day` |
 | Data source | **Alpaca** default (free real-time IEX feed; paper account is enough, no funding). **Databento** documented fallback. **Sample** provider for zero-key runs |
 | Where it runs | Always-on machine, as a real systemd service (`deploy/hermes.service`) |
-| AI inference | **Local-first**: Ollama for routine narrative/critique work. Cloud is a **reserved V2 slot** — the `ai.allow_cloud`/`ai.cloud_model` knobs and `ANTHROPIC_API_KEY` exist but are read by no V1 code |
+| AI inference | **Local-first**: Ollama for routine narrative/critique work, chosen by default. Cloud (Claude) is the **deliberate exception** — off unless `ai.allow_cloud` is set. A router (`ai/router.py`) routes local-first and reaches for the cloud only when a task opts in or the operator asks; a down backend falls back to the other (labeled), both down degrades visibly. Landed V2 (see roadmap #12) |
 | Regime classifier | Pluggable. **Regime Label v6.2** (the owner's classifier, ported from its TradingView source) is the default; `reference-v1` (named published methods) remains as a second opinion. Fidelity notes in [REGIME_V62_PORT.md](REGIME_V62_PORT.md) |
 | Open source | MIT. No personal paths/IPs/secrets; credentials via `.env` only (`.env.example` documented); README covers setup from zero |
 | Position sizing | Everything is % of account equity. No *account* dollar figures — balances, dollar position sizes, dollar P&L — are asked for, stored, or displayed; only per-share market prices appear, and sizing is derived from them as % of equity. Drawdown is tracked on a normalized 100-based equity index |
@@ -98,18 +98,50 @@ src/hermes/
 │   ├── indicators.py pure-function math (tested; returns None when data short)
 │   ├── reference.py reference-v1 classifier (five named methods)
 │   ├── v62.py       Regime Label v6.2 (owner's classifier, ported; DEFAULT)
-│   └── engine.py    registry + persistence
+│   ├── engine.py    registry + persistence
+│   └── lab.py       Regime Lab: runs BOTH classifiers live on the same cached
+│                    bars (a read — never persisted), breaks out the confidence
+│                    formula, flags drift vs the persisted reading, and computes
+│                    the streak/flips/dwell history. GET /api/regime/lab
+├── instrument/terminal.py  per-symbol read composed from the engines below:
+│                    price/staleness + MA structure + RS + Trend-Template +
+│                    in-book context, plus a transparent thesis-fit (0–100 +
+│                    ALLOW/WATCH/RESTRICT posture). GET /api/instrument, /api/search
 ├── rs/board.py      Mansfield RS leadership board (Weinstein 1988) — watchlist
 │                    vs benchmark, verdicts capped by the current regime
+├── sector/drill.py  sector drill: the SPDR sector ETFs in the watchlist ranked by
+│                    Mansfield RS (leading/lagging), each sector's MA structure, and
+│                    the open book overlaid (tailwind/headwind). GET /api/sector
 ├── portfolio/review.py  weekly portfolio review: regime coherence, sector
 │                    heat, full correlation matrix, journal-informed exposure
 ├── screener/trend_template.py  Minervini Trend Template (2013) — watchlist
 │                    scored 0–8 into PASS/NEAR/NO candidates (never setups);
 │                    RS criterion reuses the rs board's Mansfield line as a proxy
 ├── risk/engine.py   sizing, limits, correlation, drawdown; RiskState
+├── stress/scenarios.py  stress test: shocks the open book (market −5/−10/−20%,
+│                    all-stops-hit, correlations→1 crisis) via per-position beta,
+│                    projects drawdown on the index, derives de-risk postures. %
+│                    only, no orders. GET /api/stress
+├── sizing/desk.py   Size surface: fixed-fractional baseline → empirical half-Kelly
+│                    (journal R-multiples, shrunk by n/(n+30)) → limit-aware cap that
+│                    names the binding ceiling. % of equity only. GET /api/size
 ├── journal/service.py  propose/commit/close/resolve; equity index
+├── pnl/attribution.py  P&L surface: the resolved journal graded on the 100-based
+│                    equity index — headline stats, the curve, and attribution by
+│                    regime/setup/sector/side weighted by each close's exact index
+│                    delta. % / index only, never dollars. GET /api/pnl
 ├── review/reviewer.py  second-pass: overfitting, sample size, execution realism
-├── ai/ollama.py     local-first inference; failures degrade visibly
+├── scorecard/report.py  model scorecard: grades regime stability, live classifier
+│                    agreement, reviewer + thesis calibration on STORED evidence —
+│                    GRADED / THIN / NOT_TRACKED, fabricating none. GET /api/scorecard
+├── validation/ledger.py  validation ledger: individual model claims vs reality —
+│                    journal theses (confirmed/refuted) + regime reads forward-tested
+│                    (aligned/diverged), frozen when made. GET /api/ledger. The AI
+│                    debate (bull/bear/risk over computed facts) is GET /api/debate/{sym}
+├── ai/
+│   ├── ollama.py    local-first inference (default); failures degrade visibly
+│   ├── claude.py    cloud path (Anthropic Messages API); the deliberate exception
+│   └── router.py    local-first routing + visible fallback + cloud usage meter
 ├── jobs/
 │   ├── runner.py    job_runs positive evidence wrapper
 │   ├── sync.py      incremental bar/snapshot sync
@@ -119,7 +151,24 @@ src/hermes/
 │   └── scheduler.py APScheduler cron + MISSED detection (per-job day-of-week)
 ├── api/routes.py    JSON API incl. manual job triggers + positive-evidence health
 └── main.py          FastAPI factory + CLI (serve / daily-check / sync / doctor)
-web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
+web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step —
+│                    a "V3 dark" single-page app: a persistent shell (chrome +
+│                    nav pills + model selector/usage meter + live marquee tape +
+│                    the global, dominant Limit Rail) and a tiny hash-router
+│                    (#/desk, #/journal, …) swapping ES-module views. See roadmap #13.
+│   css/hermes.css   V3 dark tokens (violet→cyan accent, provenance badges, Archivo
+│                    + B612 Mono), motion (rise, count-up, marquee), never-colour-alone
+│   js/util.js·charts.js  reused helpers (api/chip/esc/fmt*, priceChart/regimeStrip/
+│                    candleChart/equityCurve/…)
+│   js/{shell,store,router,app}.js  the shell, dashboard cache, hash-router, boot
+│   js/views/{desk,journal,weekly,terminal,size,regime-lab,placeholder}.js  the
+│                    surfaces, bound to real endpoints (terminal = candle chart +
+│                    thesis-fit; size = the sizing desk; regime-lab = the dual-
+│                    classifier deep read; pnl = the equity-index attribution;
+│                    scorecard = the model honesty grades; stress = the open-book
+│                    shock test; sector = the sector drill; ledger = the validation
+│                    capstone). Terminal also hosts the AI desk debate. Every designed
+│                    surface is now live against a real endpoint — no placeholders left
 ```
 
 ## Data integrity contract
@@ -198,6 +247,172 @@ web/                 hand-written HTML/CSS/JS, vendored OFL fonts, no build step
     timeframe bars it is handed (each `Bar` carries its timeframe); the daily
     workflow just always hands it `1Day` bars today. The reserved
     `market.timeframes` config knob is wired to nothing until this lands.
+12. **AI cloud router + cloud path** — the "AI as headline" unlock.
+    **LANDED 2026-07:** `src/hermes/ai/claude.py` (Anthropic Messages API client
+    mirroring `OllamaClient`'s surface + the product's `desk_read` / `coach` /
+    `debate` tasks), `src/hermes/ai/router.py` (`AIRouter` — local-first policy,
+    visible fallback, `UsageMeter`), and `GET /api/ai/status` (backend
+    reachability + the session usage meter that powers the model selector).
+    Local-first is preserved: cloud is used only when `ai.allow_cloud` is true
+    **and** a task opts in or the operator asks; if the chosen backend is down
+    the router falls back to the other and labels which answered; if both are
+    down it returns a visible "model unavailable" state while every computed
+    number still renders. The AI layer stays data-in/prose-out — it never sees
+    or emits an order. The only new outbound host is `api.anthropic.com`, an
+    inference host (not a broker host), allow-listed as a reviewed decision in
+    the boundary guard. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#ai-router--cloud-path). The existing daily
+    check keeps calling Ollama directly until the Desk surface is rebuilt (that
+    migration threads the router in without changing behavior when cloud is off).
+13. **Frontend "V3 dark" — app shell + re-skinned surfaces** — the light
+    "Station" UI replaced by a single-page dark terminal. **LANDED 2026-07:**
+    a new `web/css/hermes.css` (V3 tokens), a persistent shell (`web/js/shell.js`
+    — chrome, nav pills, the model selector + session-usage meter bound to
+    `/api/ai/status`, a live marquee ticker tape bound to the watchlist +
+    provider state with LIVE/DELAYED/EOD/SAMPLE badges, and the **global,
+    dominant Limit Rail** that floods and dims the surface on breach until
+    acknowledged), a tiny hash-router (`web/js/router.js`), and Desk / Journal /
+    Weekly rebuilt as ES-module views (`web/js/views/*`) against the **existing**
+    endpoints — no new backend risk. The Watchboard / Leadership / Screener
+    plates ride on the Desk. Doctrine carried over verbatim: every number keeps
+    source + as-of, missing renders `∅ missing`, sizing is % of equity / a
+    100-based index (never dollars — the prototype's `+$` figures were dropped),
+    posture stays a posture not a directive, and status colour always ships with
+    a glyph + word. The remaining surfaces (Terminal, Size, P&L, Regime Lab,
+    Stress, Scorecard, Sector, Validation) are navigable placeholders until their
+    engines land (roadmap items above + the V2 elevation phases C–J).
+14. **Instrument / Terminal** — the ticker terminal (search → chart + stats +
+    thesis-fit vs the book + AI desk read). **LANDED 2026-07:**
+    `src/hermes/instrument/terminal.py` (a pure, unit-tested module that composes
+    the existing engines — never a live fetch, cached bars only), `GET
+    /api/instrument/{symbol}` + `GET /api/search?q=`, and the Terminal view
+    (`web/js/views/terminal.js`) with a candle chart + 50/150/200-DMA overlays +
+    volume (`candleChart` in `charts.js`) and a search palette. The **thesis-fit**
+    is a transparent 0–100 sum of four factors — regime-fit, setup-match,
+    sizing-posture, book-impact — each traced to an existing engine and carrying
+    the teach-in `{label, chip, claim, measured, caveat}` shape; the four points
+    sum to the score by construction. Posture is ALLOW/WATCH/RESTRICT, capped
+    below ALLOW off a bull regime and forced to RESTRICT on a risk breach (risk
+    outranks selection). Short history renders `∅ missing`, never zeros. The AI
+    desk-read is opt-in (`?narrative=1`), routes through the AI router, and
+    degrades visibly. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#instrument-thesis-fit-the-terminal).
+15. **Sizing desk (Size surface)** — planned-trade sizing beyond the risk
+    engine's fixed-fractional suggestion. **LANDED 2026-07:**
+    `src/hermes/sizing/desk.py` (a pure, unit-tested module), `GET
+    /api/size?symbol=&entry=&stop=&target=&sector=`, and the Size view
+    (`web/js/views/size.js`). Three visible layers: the **fixed-fractional
+    baseline** (Van Tharp / Vince), an **empirical half-Kelly** tilt computed
+    from the journal's OWN closed-trade R-multiples (`R = realized / planned
+    risk`; `f* = W − (1−W)/payoff`, halved), **shrunk** toward the baseline by
+    `n/(n+30)` (below 30 trades the edge is flagged an anecdote; with no closed
+    trades — or no losers to define a payoff — the desk reports the edge
+    `insufficient` and stays on the baseline rather than invent one), and a
+    **limit-aware cap** that clamps the size to the tightest ceiling
+    (per-position, remaining open-risk budget, optional sector) and **names the
+    binding constraint**. Side is inferred from stop-vs-entry; a high
+    correlation to an open position is surfaced as a warning, never a silent
+    size. Everything is % of equity or a per-share price — no dollar figure is
+    emitted, and the no-order-path guard still covers the module. Fixing this
+    surface also corrected a shared honesty bug: `animateCountUps` now writes the
+    final value under `prefers-reduced-motion` instead of leaving the `0`
+    placeholder (a reduced-motion reader must see the real number). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#sizing-desk-the-size-surface).
+16. **Regime Lab (deep read)** — the regime engine opened up for interrogation.
+    **LANDED 2026-07:** `src/hermes/regime/lab.py` (pure, unit-tested),
+    `GET /api/regime/lab`, and the Regime Lab view (`web/js/views/regime-lab.js`).
+    Runs **both** classifiers (`v62` + `reference-v1`) live on the same cached
+    benchmark + watchlist bars for a side-by-side second opinion — a READ, so the
+    non-default result is never persisted and the scheduled daily check keeps sole
+    ownership of the history. Only the four-state **label** is compared across
+    classifiers; each score/confidence stays on its own scale, with the confidence
+    formula and the votes-cast count broken out per card. It flags **drift** when
+    the live default label differs from the last persisted reading (bars moved
+    since the last check), and draws the default classifier's transition history —
+    streak, flips, dwell-per-regime (reusing `regimeStrip`) — flagged an anecdote
+    below 20 readings. Every evidence row keeps the teach-in `{label, chip, claim,
+    measured, caveat}` shape; short history renders `∅ missing`. Fixed a
+    view-local bug found in the browser smoke test (an unclosed plate `<div>` that
+    nested the second card inside the first). Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#regime-lab-the-deep-read).
+17. **P&L / attribution (P&L surface)** — the resolved journal graded on the
+    normalized equity index. **LANDED 2026-07:** `src/hermes/pnl/attribution.py`
+    (pure, unit-tested), `GET /api/pnl`, the P&L view (`web/js/views/pnl.js`), and
+    a new honest `equityCurve` in `charts.js` (a 100-based index with a dashed
+    flat-start baseline — deliberately NOT priceChart, which says "close"). Headline
+    stats (index return, max drawdown on the curve, win/thesis/alpha, payoff,
+    expectancy in R), the equity curve, and attribution by regime-at-entry / setup /
+    sector / side. The attribution weight is each close's EXACT index delta
+    (recovered from the `equity_index` row whose `cause` is `journal_close:<id>`),
+    so bucket contributions sum to the index move by construction. Small samples are
+    flagged anecdotes book-wide (<20) and per bucket (<10). Strictly % of equity / an
+    index / an R-multiple — no dollar figure exists in the payload or the view (the
+    no-order-path guard and a no-dollars HTTP assertion both hold). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#pl--attribution-the-pl-surface).
+18. **Model scorecard** — the honesty surface that grades Hermes' own models.
+    **LANDED 2026-07:** `src/hermes/scorecard/report.py` (pure, unit-tested),
+    `GET /api/scorecard`, the Scorecard view (`web/js/views/scorecard.js`). Grades
+    ONLY what stored evidence supports and is loud about the rest: regime-classifier
+    stability (flips/dwell/streak over persisted readings), live classifier
+    agreement (one instant, flagged), reviewer calibration (did cautioned/blocked
+    trades realize worse than cleared?), and thesis-judgment calibration — each
+    marked GRADED / THIN (record too short, sample shown) / NOT_TRACKED. The RS
+    board and screener follow-through are NOT_TRACKED with the reason (both are
+    computed on demand and never persisted); no number is fabricated where the data
+    can't support one. Every graded figure carries its sample and a nonstationarity
+    caveat. Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#model-scorecard-the-honesty-surface).
+19. **Stress test + hedges (Stress surface)** — the open book shocked against
+    stylized regime shocks. **LANDED 2026-07:** `src/hermes/stress/scenarios.py`
+    (pure, unit-tested), a reusable `beta()` added to `regime/indicators.py`,
+    `GET /api/stress`, the Stress view (`web/js/views/stress.js`). Shocks the
+    CURRENT open book: market −5/−10/−20% via each position's beta to the
+    benchmark (side handled — longs lose, shorts gain), all-stops-hit (the exact
+    Σ planned risk %), and a correlations→1 crisis that floors long betas at 1.0
+    so low-beta names stop cushioning. Reports the projected drawdown on the
+    100-based index (from its running peak), which positions hurt most, whether
+    each scenario breaches the drawdown circuit breaker, and de-risk POSTURES
+    (cash-priority on a breach, trim the largest crisis contributor, a diversify
+    posture from the same-move crisis-vs-−20% gap, net-exposure + all-stops
+    notes). A position with no cached history is shocked at beta 1.0 and flagged.
+    Strictly a what-if in % of equity — beta/correlation are backward-looking and
+    the crisis floor is a stylized assumption, both stated; the postures are
+    context, never orders (the no-order-path guard + a no-dollars HTTP assertion
+    both hold). Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#stress-test-the-stress-surface).
+20. **Sector drill (Sector surface)** — a sector read of the watchlist and the
+    book. **LANDED 2026-07:** `src/hermes/sector/drill.py` (pure, unit-tested),
+    `GET /api/sector`, the Sector Drill view (`web/js/views/sector.js`). Reuses the
+    RS board to rank the SPDR sector ETFs (XLK, XLE, XLF, …) present in the
+    watchlist by Mansfield RS vs the benchmark (leading = positive, lagging =
+    negative), adds each sector's MA stack + 52-week position from cached bars, and
+    overlays the open book: positions grouped by their free-text sector tag and
+    best-effort name-matched to a sector ETF (longest-alias-wins, so "biotech"
+    beats "tech"), each slug labeled tailwind / headwind / unbenchmarked. Coverage
+    is only the sector ETFs in the watchlist (uncovered SPDR sectors are listed,
+    not estimated); RS is backward-looking; unmatched tags are shown, never
+    force-fit. Strictly % of equity + RS terms — no dollar figure (the
+    no-order-path guard + a no-dollars HTTP assertion both hold). Methodology +
+    caveats in [METHODOLOGY.md](METHODOLOGY.md#sector-drill-the-sector-surface).
+21. **AI debate + Validation ledger (the capstone)** — the final surfaces.
+    **LANDED 2026-07:** the **debate** wires the router's `debate` task (Phase A)
+    to a route — `GET /api/debate/{symbol}` assembles the instrument's COMPUTED
+    facts (`facts_from_report`) and runs a three-voice bull → bear → risk-critique
+    debate, local-first, cloud opt-in, ending in tension not a directive and
+    degrading visibly; the Terminal grew a "run the debate" panel that splits the
+    sections. The **validation ledger** (`src/hermes/validation/ledger.py`, pure +
+    unit-tested; `GET /api/ledger`; `web/js/views/ledger.js`) is the honest
+    capstone — individual model claims frozen when made vs how reality resolved
+    them: journal theses to the operator's own verdict (confirmed / partial /
+    refuted / pending), and regime reads forward-tested against the benchmark over
+    ~21 sessions with SOFTER language (aligned / mixed / diverged / pending) because
+    a regime label disclaims prediction — a `diverged` is not a model failure, and
+    the caveat says so. All computed from persisted records (no new table), so an
+    unresolvable claim stays pending, never faked; per-kind rates carry a
+    small-sample flag. Registering the ledger removed the LAST navigable
+    placeholder — every designed surface is now live against a real endpoint.
+    Methodology + caveats in
+    [METHODOLOGY.md](METHODOLOGY.md#validation-ledger-the-honest-capstone).
 
 ## Data-source reality (verified 2026-07-04)
 

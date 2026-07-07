@@ -63,11 +63,15 @@ stale_open_after_days = 45
 # Local-first: routine narrative work goes to your own Ollama.
 ollama_url = "http://127.0.0.1:11434"
 ollama_model = "llama3.1"
-# RESERVED V2 SLOT: no cloud code path ships in V1 — these two knobs are read
-# by nothing yet. When the cloud path lands it will be the deliberate
-# exception, never the default, and will require ANTHROPIC_API_KEY in .env.
+# Cloud is the DELIBERATE EXCEPTION, off by default. When allow_cloud = true the
+# router (src/hermes/ai/router.py) still routes local-first and only reaches for
+# Claude when a task opts in or you pick it in the UI; if a backend is down it
+# falls back to the other and labels which answered; if both are down it degrades
+# visibly ("model unavailable") while every computed number still renders.
+# Requires ANTHROPIC_API_KEY in .env. Never sees or emits an order.
 allow_cloud = false
-cloud_model = "claude-sonnet-5"
+cloud_model = "claude-sonnet-5"        # default cloud model
+cloud_fast_model = "claude-haiku-4-5"  # fast lane for cheap / interactive turns
 
 [schedule]
 # Times are America/New_York (US market clock). Cron format: "MIN HOUR"

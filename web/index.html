@@ -3,106 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>Hermes — daily station</title>
+  <meta name="color-scheme" content="dark light">
+  <title>Hermes — terminal</title>
   <link rel="stylesheet" href="/static/css/hermes.css">
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#view">Skip to content</a>
 
-  <!-- Limit Rail: first in DOM, sticky, the dominant element by rule.
-       Course Magenta is banned inside this element. -->
-  <header class="riskrail" aria-label="Risk state — outranks everything below">
-    <div class="rail-state">
-      <div id="rail-word" class="rail-word label-x">…</div>
-      <div id="rail-big" class="rail-big">—</div>
-    </div>
-    <div id="rail-gauges" class="rail-gauges" aria-label="Risk limit gauges"></div>
-    <div id="rail-ack-box"></div>
-    <div class="rail-health rail-health--dash" id="rail-health"></div>
-  </header>
+  <!-- Persistent shell: chrome (brand, nav, model selector, tape) + the global
+       Limit Rail, which is dominant on every surface and floods on breach. -->
+  <header class="chrome" id="chrome"></header>
+  <div class="tape" id="tape" aria-label="Live ticker tape"></div>
+  <header class="riskrail" id="rail" aria-label="Risk state — outranks everything below"></header>
 
-  <main id="main">
-    <section class="plate" aria-label="Market regime">
-      <h2><span class="label-x">Regime</span>
-        <span>
-          <button id="refresh-btn">refresh</button>
-          <button id="theme-toggle">theme: auto</button>
-          <span class="micro" id="refresh-state">loading…</span>
-        </span>
-      </h2>
-      <div class="strip-wrap">
-        <div id="strip"></div>
-        <button id="reading-head" class="reading-head" aria-expanded="false"
-                aria-controls="teachin"></button>
-      </div>
-      <div class="calibration" id="calibration"></div>
-      <div id="teachin" hidden></div>
-    </section>
-
-    <section class="duo">
-      <div class="plate" id="posture" aria-label="Trading posture"></div>
-      <div class="plate" id="report" aria-label="Daily report"></div>
-    </section>
-
-    <section class="plate" aria-label="Benchmark chart">
-      <h2 id="chart-title"><span class="label-x">Benchmark</span></h2>
-      <div id="chart"></div>
-    </section>
-
-    <section class="plate watchboard" aria-label="Watchlist">
-      <h2><span class="label-x">Watchboard</span>
-        <span class="micro">every price carries its source and as-of stamp</span></h2>
-      <div style="overflow-x:auto">
-      <table style="min-width:640px">
-        <thead><tr><th>Symbol</th><th>Last</th><th>Freshness</th><th>60 days</th><th>Provenance</th></tr></thead>
-        <tbody id="watchboard-body"></tbody>
-      </table>
-      </div>
-    </section>
-
-    <section class="plate watchboard" aria-label="Leadership board — relative strength">
-      <h2><span class="label-x">Leadership</span>
-        <span class="micro">Mansfield RS vs the benchmark — recommends reviews, never trades</span></h2>
-      <div style="overflow-x:auto">
-      <table style="min-width:640px">
-        <thead><tr><th>Symbol</th><th>Verdict</th><th>Mansfield</th><th>3-bar Δ</th>
-          <th>RS range</th><th>Freshness</th><th>Provenance</th></tr></thead>
-        <tbody id="rs-body"></tbody>
-      </table>
-      </div>
-      <div class="calibration" id="rs-calibration"></div>
-    </section>
-
-    <section class="plate watchboard" aria-label="Swing screener — Minervini Trend Template">
-      <h2><span class="label-x">Screener</span>
-        <span class="micro">Minervini Trend Template — surfaces candidates for review, never setups or trades</span></h2>
-      <div style="overflow-x:auto">
-      <table style="min-width:640px">
-        <thead><tr><th>Symbol</th><th>Verdict</th><th>Score</th>
-          <th>Failing criteria</th><th>Freshness</th><th>Provenance</th></tr></thead>
-        <tbody id="scr-body"></tbody>
-      </table>
-      </div>
-      <div class="calibration" id="scr-calibration"></div>
-    </section>
-
-    <section class="plate" aria-label="Journal shortcut">
-      <h2><span class="label-x">Journal</span>
-        <span class="micro"><a href="/journal">open the trade journal →</a></span></h2>
-      <p class="micro">Propose → reviewer second-pass → commit → close → resolve against
-        realized return, benchmark alpha, and whether the thesis actually played out.</p>
-    </section>
-
-    <section class="plate" aria-label="Station log — job evidence">
-      <h2><span class="label-x">Station log</span>
-        <span class="micro">silence is not evidence — a missing run shows as MISSED</span></h2>
-      <div id="ops"></div>
-    </section>
-  </main>
-
+  <main id="view"></main>
   <footer class="edgeprint" id="edgeprint"></footer>
 
-  <script type="module" src="/static/js/dashboard.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
 </body>
 </html>
