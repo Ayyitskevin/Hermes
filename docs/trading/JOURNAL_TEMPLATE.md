@@ -267,6 +267,6 @@ Print this. Tape it above the journal.
 
 ---
 
-*This is a record-keeping companion to a decision-support process, not investment advice. It records posture, not predictions. Every figure is a percent of equity or an R-multiple — there are no dollar amounts anywhere by design. The short side is an unvalidated experiment that ran net-negative in testing. No statistic here promises a profit: an edge is something a large sample and disciplined execution must **earn and re-validate out-of-sample** — never something the journal, or the strategy, can assume. When the thesis ledger and the P&L ledger disagree, trust the thesis ledger to grade your process and the sample size to tell you whether either number means anything yet.*
+*This is a record-keeping companion to a decision-support process, not investment advice. It records posture, not predictions. Keep your own journal in percent of equity and R-multiples; the only dollar figures in the workflow come from TradingView's own Strategy Tester (a simulated $100k account) — convert them to R, never treat them as targets. The short side is an unvalidated experiment that ran net-negative in testing. No statistic here promises a profit: an edge is something a large sample and disciplined execution must **earn and re-validate out-of-sample** — never something the journal, or the strategy, can assume. When the thesis ledger and the P&L ledger disagree, trust the thesis ledger to grade your process and the sample size to tell you whether either number means anything yet.*
 
 **— The Hermes Desk**

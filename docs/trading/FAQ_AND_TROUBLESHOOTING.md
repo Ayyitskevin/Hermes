@@ -158,4 +158,4 @@ Before you file it as a bug, ask:
 
 ---
 
-*This is a troubleshooting reference for a decision-support tool, not investment advice. Every figure is a percent of equity or an R-multiple — there are no dollar amounts anywhere in this system. The short side is an unvalidated experiment that has run net-negative in testing; the long side is the tested workhorse. Nothing here predicts price or guarantees a result.*
+*This is a troubleshooting reference for a decision-support tool, not investment advice. Hermes and this handbook deal only in percent of equity and R-multiples; the one place you will see dollar figures is TradingView's own Strategy Tester panel (a simulated $100k account) — read those as R-multiples, not dollar targets. The short side is an unvalidated experiment that has run net-negative in testing; the long side is the tested workhorse. Nothing here predicts price or guarantees a result.*

@@ -40,6 +40,8 @@ Four phases. Each one builds a **single skill**, has a **daily/weekly routine**,
 ### Do this, in order
 - [ ] Load the **Five-Tool Confluence AIO v3.5-SHORT** strategy on your platform.
 - [ ] Save the **🟢 PURE BULL** chart config exactly as specified in Playbook §8: `Allow shorts` **OFF**, all four long triggers **ON**, `min_score` **55**, defaults. This is your only chart for Phases 1 and 2. Do not save the Bear or Hybrid configs yet — you don't need them, and having them visible invites drift.
+
+  > ⚠️ **Shorts ship ON.** In this build `Allow shorts` defaults to **ON** (the input tooltip even says so). A longs-first student who loads raw defaults will have the short book live from bar one. Turning it **OFF** in the Pure Bull config above is not optional housekeeping — it *is* Phases 1–2.
 - [ ] Build the **three-timeframe stack** (Playbook §4): Weekly (the Tide), Daily (the Trade), 1-Hour (the Time). Save the layout so it opens the same way every session.
 - [ ] Read **The Hermes Playbook** end to end. You are not memorizing it; you are learning what's in it so you can find a rule when you need it.
 - [ ] Read the **Chart Reading Guide** with the Pure Bull chart open beside you. Point at each HUD cell as you read its section. Do the "first 5 seconds" drill (Guide §1) ten times until Regime → Score → Halt is automatic.

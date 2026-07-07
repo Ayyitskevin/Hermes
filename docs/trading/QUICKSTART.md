@@ -71,6 +71,8 @@ Same strategy, three configurations. **Keep them as separate saved charts so the
 
 This is your tested long book and the number every experiment must beat — a tested edge still has to prove out out-of-sample, so treat it as a benchmark to validate against, not a guarantee.
 
+> ⚠️ `Allow shorts` ships **ON** by default in this build, so setting it **OFF** here is required, not optional — loading raw defaults leaves the short book live.
+
 - [ ] **Allow shorts** — `OFF`
 - [ ] **Trigger: regime flip** — `ON`
 - [ ] **Trigger: hidden continuation divergence** — `ON`
