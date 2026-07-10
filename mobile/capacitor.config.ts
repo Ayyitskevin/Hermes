@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.kleephotography.hermes",
-  appName: "Hermes",
+  appId: "app.hermesjournal.mobile",
+  appName: "Hermes Journal",
   webDir: "dist-mobile",
 };
 

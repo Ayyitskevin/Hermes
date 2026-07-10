@@ -1,7 +1,7 @@
 import "./styles.css";
 import { browserPreferences } from "./adapters/browser-preferences";
 import { OnboardingPreferences } from "./application/onboarding-preferences";
-import { sampleDataSource } from "./data/sample";
+import { demoDataSource } from "./data/demo";
 import { startApp } from "./ui/app";
 
 const root = document.querySelector<HTMLElement>("#app");
@@ -12,7 +12,7 @@ if (!root) {
 
 startApp({
   root,
-  dataSource: sampleDataSource,
+  dataSource: demoDataSource,
   onboarding: new OnboardingPreferences(browserPreferences),
 }).catch((error: unknown) => {
   root.textContent = error instanceof Error ? error.message : "Hermes could not start.";

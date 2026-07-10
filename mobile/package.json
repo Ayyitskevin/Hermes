@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Hermes premium local-first mobile app",
+  "description": "Hermes Journal local-first mobile trading journal",
   "engines": {
     "node": ">=22.12.0"
   },

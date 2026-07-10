@@ -48,4 +48,4 @@ jobs:
       - name: Build and run mobile UI smoke
         run: npm run test:e2e
       - name: Verify the iOS project can receive the bundle
-        run: npx cap sync ios
+        run: npm run ios:sync

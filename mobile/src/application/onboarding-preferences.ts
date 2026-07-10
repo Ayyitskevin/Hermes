@@ -4,7 +4,7 @@ export interface KeyValueStore {
   remove(key: string): void;
 }
 
-const ONBOARDING_KEY = "hermes.mobile.onboarding.v1";
+const ONBOARDING_KEY = "hermes.journal.onboarding.v2";
 
 export class OnboardingPreferences {
   constructor(private readonly store: KeyValueStore) {}
