@@ -15,6 +15,10 @@ __pycache__/
 venv/
 dist/
 build/
+mobile/node_modules/
+mobile/dist-mobile/
+mobile/playwright-report/
+mobile/test-results/
 .pytest_cache/
 .ruff_cache/
 

@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -21,3 +24,28 @@ jobs:
         run: ruff check src tests
       - name: Tests (includes the no-order-paths guard)
         run: pytest -v
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install locked mobile dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Install mobile browser
+        run: npx playwright install --with-deps chromium
+      - name: Build and run mobile UI smoke
+        run: npm run test:e2e
+      - name: Verify the iOS project can receive the bundle
+        run: npm run ios:sync
