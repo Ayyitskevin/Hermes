@@ -16,22 +16,34 @@ npm run typecheck
 npm test
 npm run test:e2e
 npm run ios:sync
+cd ios/App
+pod install
+cd ../..
 npm run ios:open
 ```
 
 `ios:sync` rebuilds the local bundle before copying it into Xcode. The production
-Capacitor configuration deliberately has no remote `server.url`.
+Capacitor configuration deliberately has no remote `server.url`. Linux cannot
+run CocoaPods, so the first reviewed Mac run must generate `Podfile.lock` and
+`App.xcworkspace`; review and commit both plus any CocoaPods project-phase
+changes before treating native dependency resolution as reproducible.
 
 ## Xcode setup
 
-1. Open `mobile/ios/App/App.xcodeproj` through `npm run ios:open`.
+1. Run `pod install`, then open `mobile/ios/App/App.xcworkspace` through
+   `npm run ios:open`. Do not build the `.xcodeproj` directly.
 2. Select the `App` target and the project's Apple development team.
 3. Confirm display name `Hermes Journal`, marketing version `1.0`, build `1`,
    automatic signing, iPhone-only device family, and iOS 16 minimum.
 4. Confirm provisional bundle ID `app.hermesjournal.mobile`. Do not register the
    final App Store record or upload a build until name and identifier ownership
    are cleared; Apple does not permit changing the bundle ID after build upload.
-5. Resolve the local Swift package; Capacitor is locked to 8.4.1.
+5. Confirm `Podfile.lock` resolves Capacitor/CapacitorCordova 8.4.1 and
+   CapacitorCommunitySqlite 8.1.0. The project intentionally uses CocoaPods:
+   the plugin's current Swift-package manifest can resolve a different Capacitor
+   patch line than the app. Confirm CocoaPods generated every framework and
+   resource-copy phase, then commit the lockfile, workspace, and reviewed project
+   changes; never commit `Pods/`.
 6. Replace the generated Capacitor icon and splash assets before distribution.
 7. Run on Simulator and at least one physical supported iPhone.
 
@@ -39,11 +51,35 @@ Do not add network, tracking, credential, background, or entitlement capabilitie
 to silence a warning. Each capability must correspond to reviewed product behavior
 and an App Store disclosure.
 
-## Foundation device acceptance
+## Execution-ledger device acceptance
 
 - Delete/reinstall and launch in airplane mode.
 - Complete all three welcome pages; force quit and confirm completion persists.
-- Confirm `DEMO` remains visible and every displayed result is labeled fictional.
+- Choose **Start my journal** and confirm the empty journal is primary. Separately
+  choose the demo and confirm `DEMO` remains visible and every result is fictional.
+- Import a two-fill CSV, confirm the preview/mapping/receipt, force quit, relaunch,
+  and reconcile the closed-trade P&L including both fees.
+- Re-import the same file and confirm no duplicate execution or performance.
+- Reuse the same external execution ID with a changed symbol or price and
+  confirm the entire batch is rejected without partial state. A generic no-ID
+  export cannot prove that a changed row is a correction.
+- Roll back the receipt; confirm projections disappear while the source rows,
+  receipt, and rollback audit remain.
+- Import that exact file again; confirm a new committed receipt restores the
+  executions while the first receipt remains visibly rolled back.
+- Import overlapping files A(shared fill) and B(shared fill + new fill). Roll
+  back A and confirm both B fills remain active; then roll back B and confirm
+  fills for which B was the final active reference are deactivated.
+- Import equal-timestamp entry and exit fills across separate batches, then
+  repeat rollback/restore with reversed CSV rows. Confirm the original stable
+  ledger order and P&L remain unchanged.
+- With two accounts, confirm every receipt retains its own account label and
+  every new/restore import requires explicit account selection.
+- Inspect the native database with an approved debug procedure and confirm it is
+  SQLCipher-encrypted; no passphrase may appear in logs, preferences, or files.
+- Exercise a missing/corrupt Keychain secret and a corrupt/interrupted database
+  migration. Both must fail visibly without silently creating a replacement
+  journal over existing data.
 - Visit Dashboard, Trades, Journal, Reports, and More with VoiceOver.
 - Search trades by symbol, setup, side, and tag; verify the empty search state.
 - Verify the Dashboard metric values reconcile with the eight bundled records.
@@ -52,7 +88,8 @@ and an App Store disclosure.
 - Verify all tabs at 320–430 CSS-pixel widths, portrait and landscape.
 - Test 200% accessibility text, reduced motion, and numeric keyboards.
 - Inspect the WebView network log: demo mode may load bundled files only.
-- Confirm the app offers no durable mutation before the SQLite slice lands.
+- Verify kill/relaunch, low-storage/interrupted import, device restart, app update,
+  and migration behavior with positive state evidence.
 
 Record device model, iOS version, Xcode version, commit SHA, result, screenshots,
 and every skipped check. A clean console alone is not evidence.
@@ -68,6 +105,9 @@ and every skipped check. A clean console alone is not evidence.
    age rating, category, screenshots, description, keywords, and review notes.
 6. Verify the archive and every bundled SDK before claiming `Data Not Collected`.
    Device/iCloud backup behavior must be described accurately.
+   SQLCipher also requires an export-compliance determination; do not set
+   `ITSAppUsesNonExemptEncryption` or answer App Store encryption questions by
+   guesswork.
 7. Archive, validate, upload, and distribute through TestFlight first.
 8. Submit only after persistence/import, physical-device, privacy, brand, and
    human financial-disclosure gates in `IOS_ROADMAP.md` are green.
@@ -79,7 +119,15 @@ and every skipped check. A clean console alone is not evidence.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.
-- Durable SQLite records, manual entry, CSV import, export, restore, and deletion
-  are Phase 1 and are not represented by the read-only demo.
+- SQLCipher is configured and the schema/import repository is tested on Linux,
+  but native encryption/Keychain behavior has not been observed on a Mac/iPhone.
+- The database is configured in the app's `Documents` container so the plugin
+  does not apply its custom-directory backup-exclusion flag. Actual device and
+  iCloud backup inclusion—and whether the matching Keychain item restores—remain
+  unresolved until measured and reflected in privacy/help copy.
+- Manual entry, annotations, attachments, export, restore, and delete-all remain
+  incomplete Phase 1 work.
+- `Podfile.lock`, `App.xcworkspace`, and final CocoaPods-generated build phases
+  are Mac gates and are not yet present/reviewed.
 - Direct broker/market-data connectivity is outside the launch path until rights,
   privacy, security, and recurring-cost reviews are complete.

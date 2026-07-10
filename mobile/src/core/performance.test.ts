@@ -42,6 +42,7 @@ describe("journal performance", () => {
       averageR: 0.25,
       rTradeCount: 2,
       ruleAdherencePct: 50,
+      ruleReviewCount: 2,
       tradeCount: 2,
     });
   });
@@ -59,7 +60,19 @@ describe("journal performance", () => {
       averageR: null,
       rTradeCount: 0,
       ruleAdherencePct: 100,
+      ruleReviewCount: 1,
       tradeCount: 1,
+    });
+  });
+
+  it("keeps unreviewed plan adherence unknown and includes realized partial exits", () => {
+    expect(calculatePerformance([
+      trade({ status: "open", resultPnl: 25, resultR: null, followedPlan: null }),
+    ])).toMatchObject({
+      netPnl: 25,
+      tradeCount: 1,
+      ruleAdherencePct: null,
+      ruleReviewCount: 0,
     });
   });
 

@@ -19,7 +19,7 @@ export interface TradePreview {
   readonly accountLabel: string;
   readonly note: string;
   readonly tags: readonly string[];
-  readonly followedPlan: boolean;
+  readonly followedPlan: boolean | null;
 }
 
 export interface PerformanceSnapshot {
@@ -29,16 +29,25 @@ export interface PerformanceSnapshot {
   readonly profitFactor: number | null;
   readonly averageR: number | null;
   readonly rTradeCount: number;
-  readonly ruleAdherencePct: number;
+  readonly ruleAdherencePct: number | null;
+  readonly ruleReviewCount: number;
   readonly tradeCount: number;
 }
 
 export interface ImportSummary {
+  readonly receiptId: string | null;
+  readonly accountLabel: string;
   readonly sourceLabel: string;
   readonly importedAtLabel: string;
-  readonly trades: number;
+  readonly executions: number;
   readonly accounts: number;
   readonly rejectedRows: number;
+  readonly skippedRows: number;
+  readonly rolledBack: boolean;
+}
+
+export interface ImportHistoryPreview extends ImportSummary {
+  readonly warningCount: number;
 }
 
 export interface CalendarSession {
@@ -67,12 +76,16 @@ export interface PlaybookPreview {
 }
 
 export interface JournalWorkspaceSnapshot {
-  readonly provenance: "demo";
+  readonly provenance: "empty" | "demo" | "local";
   readonly provenanceLabel: string;
+  /** One display currency. A workspace never silently aggregates currencies. */
+  readonly currencyCode: string;
+  readonly timeZone: string;
   readonly accountLabel: string;
   readonly periodLabel: string;
   readonly performance: PerformanceSnapshot;
   readonly importSummary: ImportSummary;
+  readonly importHistory: readonly ImportHistoryPreview[];
   readonly equityCurve: readonly number[];
   readonly calendar: readonly CalendarSession[];
   readonly trades: readonly TradePreview[];
