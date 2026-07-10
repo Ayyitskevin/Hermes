@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#05060a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/hermes-192.png">
   <title>Hermes — terminal</title>
   <link rel="stylesheet" href="/static/css/hermes.css">
 </head>
@@ -20,5 +25,10 @@
   <footer class="edgeprint" id="edgeprint"></footer>
 
   <script type="module" src="/static/js/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+    }
+  </script>
 </body>
 </html>

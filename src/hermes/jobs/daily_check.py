@@ -106,11 +106,13 @@ def daily_check(config: HermesConfig, provider: MarketDataProvider) -> str:
     sync_detail = sync.sync_bars(config, provider)
     snap_detail = sync.sync_snapshots(config, provider)
 
-    # 2 — regime
+    # 2 — regime on the configured primary timeframe (default 1Day; C2 multi-TF
+    # comparison lives on GET /api/regime/multi-tf and does not replace this).
+    primary_tf = getattr(config.regime, "primary_timeframe", "1Day") or "1Day"
     classifier = build_classifier(config)
-    benchmark_bars = store.get_bars(config.market.benchmark, "1Day", limit=600)
+    benchmark_bars = store.get_bars(config.market.benchmark, primary_tf, limit=600)
     watchlist_bars = {
-        s: store.get_bars(s, "1Day", limit=120) for s in config.market.watchlist
+        s: store.get_bars(s, primary_tf, limit=120) for s in config.market.watchlist
     }
     reading = classifier.classify(benchmark_bars, watchlist_bars)
     store_reading(reading)

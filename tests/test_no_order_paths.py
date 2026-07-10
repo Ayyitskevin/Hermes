@@ -52,6 +52,10 @@ ALLOWED_SRC_HOSTS = {
     "127.0.0.1",             # local Ollama default
     "localhost",
     "api.anthropic.com",     # Anthropic Messages API (inference, not broker)
+    # Public crypto market data (C4) — OHLCV only, no trading hosts.
+    "api.binance.com",
+    "api.exchange.coinbase.com",
+    "api.kraken.com",
     # Paper trading host — ONLY inside broker_ro/ (enforced below).
     PAPER_HOST,
 }
@@ -59,6 +63,7 @@ ALLOWED_SRC_HOSTS = {
 # Public methods the sealed RO client may expose (write-surface lock).
 BROKER_RO_ALLOWED = {
     "fetch_positions_pct", "available", "source_name", "sync_to_cache",
+    "fetch_fills", "propose_from_fills",
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache",

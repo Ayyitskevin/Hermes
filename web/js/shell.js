@@ -23,6 +23,8 @@ const NAV = [
   { key: "sector", label: "Sector", route: "/sector", digit: "" },
   { key: "stress", label: "Stress", route: "/stress", digit: "" },
   { key: "regime-lab", label: "Regime Lab", route: "/regime-lab", digit: "" },
+  { key: "multi-tf", label: "Multi-TF", route: "/multi-tf", digit: "" },
+  { key: "pairs", label: "Pairs", route: "/pairs", digit: "" },
 ];
 
 const $ = (s, r = document) => r.querySelector(s);

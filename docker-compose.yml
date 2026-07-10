@@ -1,0 +1,13 @@
+# Single-operator compose. Bind localhost only — Hermes is decision-support for one trader.
+services:
+  hermes:
+    build: .
+    ports:
+      - "127.0.0.1:8642:8642"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config/hermes.toml:/app/config/hermes.toml:ro
+    restart: unless-stopped

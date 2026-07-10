@@ -19,6 +19,8 @@ import briefing from "./views/briefing.js";
 import parity from "./views/parity.js";
 import campaign from "./views/campaign.js";
 import monthly from "./views/monthly.js";
+import pairs from "./views/pairs.js";
+import multiTf from "./views/multi-tf.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
@@ -31,6 +33,8 @@ register("/monthly", monthly);
 register("/terminal", terminal);
 register("/size", size);
 register("/regime-lab", regimeLab);
+register("/multi-tf", multiTf);
+register("/pairs", pairs);
 register("/pnl", pnl);
 register("/scorecard", scorecard);
 register("/stress", stress);

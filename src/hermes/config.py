@@ -23,8 +23,8 @@ class MarketConfig:
     watchlist: list[str] = field(default_factory=lambda: [
         "SPY", "QQQ", "IWM", "XLK", "XLE", "XLF", "XLV", "XLI", "XLP", "XLU",
     ])
-    # RESERVED: V1 workflows hardcode 1Day; this knob is read by nothing yet
-    # (V2+ roadmap item covers 4H/weekly timeframes).
+    # Bars synced and available to multi-TF regime (C2). First entry is the
+    # primary cadence for the daily-check persisted reading (usually 1Day).
     timeframes: list[str] = field(default_factory=lambda: ["1Day"])
     stale_after_minutes: int = 30
 
@@ -32,14 +32,22 @@ class MarketConfig:
 @dataclass(frozen=True)
 class DataConfig:
     provider: str = "sample"  # safe default: runs with zero keys
+    # Ordered fallbacks tried when primary cannot serve bars (C1).
+    # Example: ["databento"] when provider = "alpaca".
+    failover: list[str] = field(default_factory=list)
+    # When true, wrap primary+failover in FailoverProvider.
+    use_failover: bool = True
 
 
 @dataclass(frozen=True)
 class RegimeConfig:
     # "v62" — Regime Label v6.2, the owner's classifier (ported 2026-07).
     # "reference-v1" — the transparent published-methods composite.
+    # "dual-ma-v1" — simple dual-MA + vol third opinion (C8).
     classifier: str = "v62"
     vol_percentile_lookback: int = 252
+    # Primary bar timeframe for the persisted daily reading.
+    primary_timeframe: str = "1Day"
 
 
 @dataclass(frozen=True)

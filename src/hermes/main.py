@@ -127,10 +127,18 @@ def cli() -> None:
     elif command == "briefing":
         from .briefing.morning import build_briefing
         print(build_briefing(config, provider)["body_md"])
+    elif command == "failover-drill":
+        from .data.failover import FailoverProvider
+        if isinstance(provider, FailoverProvider):
+            import json as _json
+            print(_json.dumps(provider.probe(), indent=2))
+        else:
+            print(f"single provider active: {provider.name} "
+                  f"state={provider.state().value} (no failover chain)")
     else:
         print(f"Unknown command {command!r}. "
               "Commands: serve, daily-check, sync, backup, doctor, "
-              "restore-drill, book-sync, briefing")
+              "restore-drill, book-sync, briefing, failover-drill")
         sys.exit(2)
 
 

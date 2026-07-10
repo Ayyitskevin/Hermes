@@ -48,11 +48,12 @@ def test_both_classifiers_run_and_agree(fresh_db):
     seed_bars("SPY", STRONG_UP)
     lab = build_lab(fresh_db)
     assert lab.status == "ok"
-    assert len(lab.classifiers) == 2
+    # default first, then every registered second-opinion classifier (C8 dual-ma-v1 too)
+    assert len(lab.classifiers) >= 2
     assert lab.classifiers[0].is_default and lab.classifiers[0].version == "v62"
     assert not lab.classifiers[1].is_default
-    # a clean strong uptrend should read bull on both → agreement
-    assert all(v.label == "bull_trend" for v in lab.classifiers)
+    # a clean strong uptrend should read bull on the live panel → agreement
+    assert all(v.label == "bull_trend" for v in lab.classifiers if v.status == "ok")
     assert lab.agree is True and "corroboration" in lab.agreement_note
 
 
@@ -148,7 +149,7 @@ def test_lab_over_http_and_no_dollars(config):
     seed_reading(RegimeLabel.BULL_TREND, days_ago=1)
     j = client.get("/api/regime/lab").json()
     assert j["status"] == "ok"
-    assert len(j["classifiers"]) == 2
+    assert len(j["classifiers"]) >= 2
     assert j["classifiers"][0]["is_default"] is True
     assert j["agree"] in (True, False, None)
     assert "$" not in json.dumps(j)                     # no dollar figures, ever

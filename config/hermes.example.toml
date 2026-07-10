@@ -22,7 +22,7 @@ watchlist = [
 # RESERVED: V1 workflows hardcode 1Day bars; this knob is currently read by
 # nothing (the V2+ roadmap covers 4H/weekly). Hermes deliberately does not
 # consume tick data at any point.
-timeframes = ["1Day"]
+timeframes = ["1Day", "4Hour", "1Week"]  # C2 multi-TF; primary still 1Day
 # Data older than this many minutes during market hours is shown as STALE,
 # never silently served as if live.
 stale_after_minutes = 30
@@ -34,6 +34,9 @@ stale_after_minutes = 30
 # "sample" — bundled offline sample data; runs with zero keys (demo / tests).
 #            NOTE: sample is the BUILT-IN default when no config file exists.
 provider = "alpaca"
+# Ordered fallbacks when primary cannot serve bars (C1). Empty = no chain.
+failover = ["databento"]
+use_failover = true
 
 [regime]
 # "v62" — Regime Label v6.2, the owner's classifier, ported from its
@@ -42,6 +45,8 @@ provider = "alpaca"
 # "reference-v1" — a transparent composite of named, published methods
 #     (see docs/METHODOLOGY.md); useful as a second opinion.
 classifier = "v62"
+# primary_timeframe = "1Day"   # persisted daily-check cadence (C2)
+# dual-ma-v1 is a third-opinion classifier (C8), not the default
 # Lookback (trading days) for the volatility percentile component.
 vol_percentile_lookback = 252
 

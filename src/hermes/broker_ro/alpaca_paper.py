@@ -26,7 +26,10 @@ _POSITIONS_PATH = "/v2/positions"
 _ACCOUNT_PATH = "/v2/account"
 
 # Public surface lock — mirrored by the boundary guard for this package.
-ALLOWED_METHODS = frozenset({"fetch_positions_pct", "available", "source_name", "sync_to_cache"})
+ALLOWED_METHODS = frozenset({
+    "fetch_positions_pct", "available", "source_name", "sync_to_cache",
+    "fetch_fills", "propose_from_fills",
+})
 
 
 class BrokerROUnavailable(Exception):
@@ -167,6 +170,92 @@ class AlpacaPaperRO:
             )
         conn.commit()
         return f"synced {len(positions)} paper positions (% equity only) via {self.name}"
+
+
+    def fetch_fills(self, *, limit: int = 50) -> list[dict]:
+        """GET account FILL activities — prices only, no dollar P&L retained.
+
+        Path deliberately avoids any order-shaped URL. Each fill is reduced to
+        symbol / side / qty / price / ts for journal proposal drafting.
+        """
+        raw = self._get(f"/v2/account/activities?activity_types=FILL&page_size={int(limit)}")
+        if not isinstance(raw, list):
+            # Some Alpaca shapes return a single object or dict wrapper
+            if isinstance(raw, dict):
+                raw = raw.get("activities") or raw.get("data") or []
+            else:
+                raise BrokerROError("fills payload unexpected")
+        out = []
+        for a in raw:
+            try:
+                symbol = str(a.get("symbol") or "").upper()
+                side = str(a.get("side") or "").lower()
+                if side in ("buy", "buy_to_open"):
+                    side = "long"
+                elif side in ("sell", "sell_to_open", "sell_short"):
+                    side = "short" if "short" in str(a.get("side", "")).lower() else "long"
+                # activity side for sell of long is still a closing sell — mark long exit
+                qty = abs(float(a.get("qty") or a.get("quantity") or 0))
+                price = float(a.get("price") or a.get("fill_price") or 0)
+                if not symbol or price <= 0:
+                    continue
+                out.append({
+                    "symbol": symbol,
+                    "side_hint": side if side in ("long", "short") else "long",
+                    "qty": qty,
+                    "price": price,
+                    "ts": a.get("transaction_time") or a.get("date") or iso(utcnow()),
+                    "activity_id": a.get("id") or a.get("activity_id"),
+                    "source": self.name,
+                })
+            except (TypeError, ValueError):
+                continue
+        return out
+
+    def propose_from_fills(self, config: HermesConfig, *, limit: int = 20) -> list[dict]:
+        """Draft journal proposals from recent fills (C7). Never commits.
+
+        Stop is inferred as 2% adverse from fill price (explicitly labeled) so
+        sizing can run; the human must edit thesis/stop before commit.
+        """
+        from ..journal import service as journal
+
+        fills = self.fetch_fills(limit=limit)
+        drafts = []
+        for f in fills:
+            side = f["side_hint"]
+            entry = f["price"]
+            stop = entry * (0.98 if side == "long" else 1.02)
+            thesis = (
+                f"Imported from paper FILL activity {f.get('activity_id') or ''} "
+                f"at {f['ts']}. Thesis REQUIRED — replace this placeholder before commit. "
+                f"Default stop is a 2% scaffold, not a strategy stop."
+            )
+            try:
+                prop = journal.propose_entry(
+                    config,
+                    symbol=f["symbol"],
+                    side=side,
+                    entry_price=entry,
+                    stop_price=round(stop, 4),
+                    thesis=thesis,
+                    setup_tag="broker-import",
+                )
+                prop["import_meta"] = {
+                    "activity_id": f.get("activity_id"),
+                    "fill_ts": f.get("ts"),
+                    "source": f.get("source"),
+                    "note": "scaffold stop 2%; human must edit before commit",
+                }
+                drafts.append(prop)
+            except Exception as exc:  # noqa: BLE001 — surface per-fill, continue
+                drafts.append({
+                    "error": str(exc),
+                    "symbol": f["symbol"],
+                    "import_meta": f,
+                })
+        return drafts
+
 
 
 def cached_book_positions() -> list[dict]:

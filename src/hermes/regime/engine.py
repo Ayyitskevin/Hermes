@@ -7,6 +7,7 @@ import json
 from .. import db
 from ..config import HermesConfig
 from ..data.models import iso, parse_iso
+from .dual_ma import DualMAClassifier
 from .models import Evidence, RegimeLabel, RegimeReading
 from .reference import ReferenceRegimeClassifier
 from .v62 import RegimeV62Classifier
@@ -14,6 +15,7 @@ from .v62 import RegimeV62Classifier
 CLASSIFIERS = {
     "reference-v1": ReferenceRegimeClassifier,
     "v62": RegimeV62Classifier,
+    "dual-ma-v1": DualMAClassifier,
 }
 
 

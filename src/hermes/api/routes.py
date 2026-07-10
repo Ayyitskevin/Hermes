@@ -542,6 +542,82 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
         return {"facts": facts, "debate": debate}
 
 
+
+    # ── C-tier expansions ────────────────────────────────────────────────
+    @r.get("/failover")
+    def failover_probe() -> dict:
+        """C1: drill the provider failover chain without writing market data."""
+        from ..data.failover import FailoverProvider
+        from ..data.registry import build_provider
+        prov = build_provider(config)
+        if isinstance(prov, FailoverProvider):
+            return prov.probe()
+        # Single provider still reports itself.
+        return {
+            "chain": [config.data.provider],
+            "active": config.data.provider,
+            "providers": [{"name": config.data.provider,
+                           "state": prov.state().value, "role": "primary"}],
+            "honesty": {
+                "claim": "No failover list configured — single provider only.",
+                "caveat": "Set data.failover = [\"databento\"] (etc.) to enable chain.",
+            },
+        }
+
+    @r.get("/regime/multi-tf")
+    def regime_multi_tf() -> dict:
+        """C2: same classifier across configured timeframes (cached bars)."""
+        from ..regime.multi_tf import multi_timeframe_read
+        return multi_timeframe_read(config)
+
+    @r.get("/pairs")
+    def pairs_route(limit: int = 40) -> dict:
+        """C3: pair-trade candidate screen — correlation + spread z."""
+        from ..pairs.screener import build_pair_screen
+        s = build_pair_screen(config, limit=max(1, min(limit, 100)))
+        return {
+            "generated_at": s.ts,
+            "lookback": s.lookback,
+            "rows": [
+                {
+                    "a": row.a, "b": row.b, "status": row.status,
+                    "verdict": row.verdict,
+                    "correlation": row.correlation, "spread_z": row.spread_z,
+                    "note": row.note, "source": row.source, "as_of": row.as_of,
+                }
+                for row in s.rows
+            ],
+            "honesty": {
+                "claim": s.claim, "methodology": s.methodology, "caveat": s.caveat,
+            },
+        }
+
+    @r.get("/options/posture/{symbol}")
+    def options_posture_route(symbol: str) -> dict:
+        """C3: options posture worksheet (no chain, no orders)."""
+        from ..options.posture import build_options_posture
+        return build_options_posture(config, symbol)
+
+    @r.post("/book/import-fills")
+    def book_import_fills(limit: int = 20) -> dict:
+        """C7: draft journal proposals from paper FILL activities (never commits)."""
+        if not config.broker_ro.enabled:
+            raise HTTPException(422, "broker_ro.enabled is false")
+        from ..broker_ro.alpaca_paper import AlpacaPaperRO, BrokerROUnavailable
+        try:
+            drafts = AlpacaPaperRO(config).propose_from_fills(config, limit=limit)
+        except BrokerROUnavailable as exc:
+            raise HTTPException(503, str(exc)) from exc
+        return {
+            "drafts": drafts,
+            "count": len(drafts),
+            "honesty": {
+                "claim": "Fills → journal PROPOSALS only; human must commit.",
+                "caveat": "Default 2% stop is a scaffold. No orders are placed.",
+            },
+        }
+
+
     # ── Premarket briefing (A5) ──────────────────────────────────────────
     @r.get("/briefing")
     def briefing_route() -> dict:

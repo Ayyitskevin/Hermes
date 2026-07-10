@@ -778,3 +778,21 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: rgba(139, 
 .kv .cell { background: var(--plate-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
 .kv .cell .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
 .kv .cell .v { font-family: var(--mono); font-weight: 700; font-size: 15px; margin-top: 3px; }
+
+
+/* C6 mobile polish — single-user PWA friendliness, not a native app */
+@media (max-width: 720px) {
+  .chrome { flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem 0.6rem; }
+  .nav { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .nav a { white-space: nowrap; font-size: 0.78rem; padding: 0.35rem 0.5rem; }
+  .riskrail { font-size: 0.9rem; }
+  .plate { border-radius: 14px; padding: 0.85rem; }
+  .form-grid { grid-template-columns: 1fr !important; }
+  .search-pill input { max-width: 5.5rem; }
+  .model-wrap { order: 3; }
+}
+@supports (padding: max(0px)) {
+  body { padding-left: max(0px, env(safe-area-inset-left));
+         padding-right: max(0px, env(safe-area-inset-right));
+         padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+}
