@@ -15,13 +15,19 @@ import scorecard from "./views/scorecard.js";
 import stress from "./views/stress.js";
 import sector from "./views/sector.js";
 import ledger from "./views/ledger.js";
+import briefing from "./views/briefing.js";
+import parity from "./views/parity.js";
+import campaign from "./views/campaign.js";
+import monthly from "./views/monthly.js";
 import { placeholder } from "./views/placeholder.js";
 
 buildShell();
 
+register("/briefing", briefing);
 register("/desk", desk);
 register("/journal", journal);
 register("/weekly", weekly);
+register("/monthly", monthly);
 register("/terminal", terminal);
 register("/size", size);
 register("/regime-lab", regimeLab);
@@ -30,6 +36,8 @@ register("/scorecard", scorecard);
 register("/stress", stress);
 register("/sector", sector);
 register("/ledger", ledger);
+register("/parity", parity);
+register("/campaign", campaign);
 
 // Every designed surface is now live against a real endpoint — no placeholders left.
 register("*", placeholder("Not found", null));

@@ -10,8 +10,8 @@ decides. Steps, each observable:
   3. run the full risk sweep — risk outranks signal, so a breach leads the report
   4. derive the posture from risk state first, regime second
   5. compose the morning report (every number carries source + as-of)
-  6. optionally add a local-LLM narrative paragraph (skipped visibly if
-     Ollama is down — the report never silently loses a section)
+  6. optionally add an AI narrative via the local-first AIRouter (cloud only
+     when allowed; both down → section says so — never silently missing)
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 
 from .. import db
-from ..ai.ollama import OllamaClient, OllamaUnavailable
+from ..ai.router import AIRouter
 from ..config import HermesConfig
 from ..data import store
 from ..data.models import iso, utcnow
@@ -125,18 +125,20 @@ def daily_check(config: HermesConfig, provider: MarketDataProvider) -> str:
     body = compose_report(config, reading, risk_state, posture,
                           f"{sync_detail}; {snap_detail}")
 
-    # 6 — local narrative, optional and visibly so
+    # 6 — narrative via AIRouter (local-first; cloud only when allow_cloud)
     narrative_source = "none"
-    try:
-        client = OllamaClient(config)
-        narrative = client.narrate_daily_check(body)
-        body += f"\n\n## Narrative (local model)\n{narrative}"
-        narrative_source = f"ollama:{config.ai.ollama_model}"
-    except OllamaUnavailable as exc:
+    res = AIRouter(config).complete("narrate_daily_check", facts_md=body)
+    if res.status == "ok" and res.text:
+        body += f"\n\n## Narrative ({res.backend or 'model'})\n{res.text}"
+        narrative_source = f"{res.backend}:{res.model}" if res.backend else "ok"
+        if res.note:
+            body += f"\n\n*{res.note}*"
+    else:
         body += (
-            "\n\n## Narrative (local model)\n"
-            f"*Unavailable — {exc}. The numbers above are complete without it.*"
+            "\n\n## Narrative\n"
+            f"*Unavailable — {res.note}. The numbers above are complete without it.*"
         )
+        narrative_source = "unavailable"
 
     conn = db.connect()
     conn.execute(

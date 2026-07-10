@@ -200,13 +200,79 @@ def close_entry(
     )
     conn.commit()
 
-    return {
+    result = {
         "id": entry_id,
         "realized_return_pct": round(realized, 3),
         "benchmark_return_pct": round(bench, 3) if bench is not None else None,
         "alpha_pct": round(alpha, 3) if alpha is not None else None,
         "thesis_played_out": thesis_played_out,
         "equity_index": round(new_value, 4),
+        "reflection_md": None,
+        "reflection_source": None,
+        "reflection_status": "skipped",
+    }
+
+    # Trade-memory reflection (roadmap #4) — local-first; never blocks close.
+    reflection = _reflect_on_close(
+        config, dict(row), result, resolution_note=resolution_note.strip(),
+    )
+    if reflection:
+        result.update(reflection)
+        conn.execute(
+            """UPDATE journal_entries SET reflection_md=?, reflection_source=?,
+               reflection_status=? WHERE id=?""",
+            (result.get("reflection_md"), result.get("reflection_source"),
+             result.get("reflection_status"), entry_id),
+        )
+        conn.commit()
+    return result
+
+
+def _reflect_on_close(
+    config: HermesConfig, row: dict, resolved: dict, *, resolution_note: str,
+) -> dict:
+    """Pattern B Reflector: one paragraph over the resolved facts only."""
+    from ..ai.router import AIRouter
+
+    try:
+        signal = json.loads(row.get("signal_json") or "{}") or {}
+    except (TypeError, json.JSONDecodeError):
+        signal = {}
+    facts = "\n".join([
+        f"Symbol: {row['symbol']} {row['side']}",
+        f"Thesis: {row['thesis']}",
+        f"Regime at entry: {signal.get('label') or '∅ missing'}"
+        f" (classifier {signal.get('classifier_version') or '∅'})",
+        f"Realized return %: {resolved['realized_return_pct']}",
+        "Benchmark return %: "
+        + (
+            str(resolved["benchmark_return_pct"])
+            if resolved["benchmark_return_pct"] is not None
+            else "∅ missing"
+        ),
+        "Alpha %: "
+        + (
+            str(resolved["alpha_pct"])
+            if resolved["alpha_pct"] is not None
+            else "∅ missing"
+        ),
+        f"Thesis played out: {resolved['thesis_played_out']}",
+        f"Resolution note: {resolution_note}",
+        f"Planned risk %: {row.get('planned_risk_pct')}",
+        f"Size % equity: {row.get('size_pct_equity')}",
+    ])
+
+    res = AIRouter(config).complete("reflect_trade", facts_md=facts)
+    if res.status == "ok" and res.text:
+        return {
+            "reflection_md": res.text.strip(),
+            "reflection_source": f"{res.backend}:{res.model}" if res.backend else "ok",
+            "reflection_status": "ok",
+        }
+    return {
+        "reflection_md": None,
+        "reflection_source": res.note,
+        "reflection_status": "unavailable",
     }
 
 

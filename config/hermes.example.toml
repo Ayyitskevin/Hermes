@@ -87,8 +87,19 @@ backup = "0 2 mon-sun"       # nightly DB snapshot (every day, incl. weekends)
 [backup]
 # Nightly snapshots of data/hermes.db (SQLite online backup — safe while
 # running). Restore: stop the service, copy a snapshot over data/hermes.db.
+# Drill without overwrite: `hermes restore-drill` (or GET /api/ops/restore-drill).
 retention = 14               # snapshots to keep; older are pruned
 subdir = "backups"           # snapshot directory, relative to the data dir
+
+# Paper broker READ-ONLY position sync (Phase 6). Off by default.
+# When enabled, Hermes may GET positions from the paper trading host via the
+# sealed src/hermes/broker_ro/ package only — never orders. Positions are
+# converted to % of equity immediately; dollar balances are never stored.
+# Requires APCA_API_KEY_ID / APCA_API_SECRET_KEY in .env. Run: hermes book-sync
+# or POST /api/book/sync. The boundary guard must stay green.
+[broker_ro]
+enabled = false
+feed_risk = true             # merge RO cache into risk.evaluate when enabled
 
 [server]
 host = "127.0.0.1"

@@ -14,6 +14,7 @@ from hermes import db
 from hermes.config import (
     AiConfig,
     BackupConfig,
+    BrokerROConfig,
     DataConfig,
     HermesConfig,
     JournalConfig,
@@ -39,8 +40,13 @@ def _sector_config(tmp_path) -> HermesConfig:
         market=MarketConfig(benchmark="SPY", watchlist=["SPY", "XLK", "XLU"]),
         data=DataConfig(provider="sample"), regime=RegimeConfig(), risk=RiskConfig(),
         journal=JournalConfig(), ai=AiConfig(ollama_url="http://127.0.0.1:1"),
-        schedule=ScheduleConfig(), backup=BackupConfig(), server=ServerConfig(),
-        secrets=Secrets(), data_dir=tmp_path / "data", log_dir=tmp_path / "logs",
+        schedule=ScheduleConfig(),
+        backup=BackupConfig(),
+        broker_ro=BrokerROConfig(),
+        server=ServerConfig(),
+        secrets=Secrets(),
+        data_dir=tmp_path / "data",
+        log_dir=tmp_path / "logs",
         config_path=None,
     )
 

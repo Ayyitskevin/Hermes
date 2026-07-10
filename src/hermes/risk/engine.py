@@ -85,11 +85,39 @@ def size_position(
     )
 
 
-def open_positions() -> list[dict]:
+def open_positions(config: HermesConfig | None = None) -> list[dict]:
+    """Open book for risk: journal open entries, optionally merged with the
+    broker read-only paper cache when broker_ro.feed_risk is enabled.
+
+    Broker rows carry size_pct_equity only (no planned stops → planned_risk 0).
+    Journal remains the source of thesis-aware risk; RO fills gaps for names
+    held at the broker but not yet journaled.
+    """
     rows = db.connect().execute(
         "SELECT * FROM journal_entries WHERE status='open' ORDER BY opened_at"
     ).fetchall()
-    return [dict(r) for r in rows]
+    journal_pos = [dict(r) for r in rows]
+    for p in journal_pos:
+        p.setdefault("book_source", "journal")
+
+    if config is None or not getattr(config, "broker_ro", None) or not config.broker_ro.feed_risk:
+        return journal_pos
+    if not config.broker_ro.enabled:
+        return journal_pos
+
+    from ..broker_ro.alpaca_paper import cached_book_positions
+
+    broker = cached_book_positions()
+    if not broker:
+        return journal_pos
+
+    journal_syms = {p["symbol"].upper() for p in journal_pos}
+    # Prefer journal row when both know the symbol (thesis + planned risk).
+    merged = list(journal_pos)
+    for b in broker:
+        if b["symbol"].upper() not in journal_syms:
+            merged.append(b)
+    return merged
 
 
 def current_equity_index() -> tuple[float, float]:
@@ -119,7 +147,7 @@ def evaluate(config: HermesConfig) -> RiskState:
     """Run every risk check over current open positions. Persists any new
     warn/breach as a risk_event so the state is durable, not just displayed."""
     r = config.risk
-    positions = open_positions()
+    positions = open_positions(config)
     checks: list[RiskCheck] = []
 
     # 1 — Open risk budget

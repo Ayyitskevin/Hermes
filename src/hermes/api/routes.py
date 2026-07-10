@@ -251,6 +251,13 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                     "source": row.source,
                     "as_of": iso(row.as_of) if row.as_of else None,
                     "staleness": row.staleness,
+                    "compression": None if row.compression is None else {
+                        "flag": row.compression.flag,
+                        "range_20_pct": row.compression.range_20_pct,
+                        "range_60_pct": row.compression.range_60_pct,
+                        "vol_ratio": row.compression.vol_ratio,
+                        "note": row.compression.note,
+                    },
                 }
                 for row in s.rows
             ],
@@ -533,6 +540,205 @@ def build_router(config: HermesConfig, provider: MarketDataProvider) -> APIRoute
                   if res.status == "ok" else
                   {"status": "unavailable", "text": None, "note": res.note})
         return {"facts": facts, "debate": debate}
+
+
+    # ── Premarket briefing (A5) ──────────────────────────────────────────
+    @r.get("/briefing")
+    def briefing_route() -> dict:
+        """One-screen premarket composition of already-computed surfaces."""
+        from ..briefing.morning import build_briefing
+        return build_briefing(config, provider)
+
+    # ── Parity ritual (A3 / P1) ──────────────────────────────────────────
+    class ParityBody(BaseModel):
+        session_date: str = Field(min_length=8, max_length=12)
+        chart_label: str = Field(min_length=3, max_length=32)
+        symbol: str = ""
+        notes: str | None = None
+
+    @r.post("/parity")
+    def parity_record(body: ParityBody) -> dict:
+        from ..parity import ritual as parity
+        try:
+            return parity.record_check(**body.model_dump())
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @r.get("/parity")
+    def parity_summary() -> dict:
+        from ..parity import ritual as parity
+        return parity.summary()
+
+    # ── Monthly performance (B2) ─────────────────────────────────────────
+    @r.get("/reports/monthly")
+    def monthly_report(months: int = 6) -> dict:
+        from ..portfolio import monthly as monthly_review
+        return monthly_review.build_monthly(config, months=max(1, min(months, 24)))
+
+    # ── Campaign status (B3) ─────────────────────────────────────────────
+    @r.get("/campaign")
+    def campaign_get() -> dict:
+        from ..campaign import status as camp
+        s = camp.get_status()
+        s["honesty"] = camp.HONESTY
+        return s
+
+    class CampaignBody(BaseModel):
+        status: str
+        verdict: str | None = None
+        evidence: str | None = None
+        updated_by: str = "operator"
+
+    @r.post("/campaign")
+    def campaign_set(body: CampaignBody) -> dict:
+        from ..campaign import status as camp
+        try:
+            s = camp.set_status(
+                body.status, verdict=body.verdict, evidence=body.evidence,
+                updated_by=body.updated_by,
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        s["honesty"] = camp.HONESTY
+        return s
+
+    # ── Doctor / gates (A1 / B5) ─────────────────────────────────────────
+    @r.get("/doctor")
+    def doctor_route() -> dict:
+        from ..ops.doctor import run_doctor
+        return run_doctor(config, provider)
+
+    @r.get("/ops/restore-drill")
+    def restore_drill_route(name: str | None = None) -> dict:
+        from ..ops.doctor import restore_drill
+        snap = None
+        if name:
+            snap = config.data_dir / config.backup.subdir / name
+        return restore_drill(config, snap)
+
+    # ── Broker read-only book (B1) ───────────────────────────────────────
+    @r.get("/book")
+    def book_route() -> dict:
+        """Open book: journal positions + optional RO paper cache (% only)."""
+        from ..broker_ro.alpaca_paper import cached_book_positions
+        positions = risk.open_positions(config)
+        return {
+            "positions": [
+                {
+                    "symbol": p.get("symbol"),
+                    "side": p.get("side"),
+                    "size_pct_equity": p.get("size_pct_equity"),
+                    "planned_risk_pct": p.get("planned_risk_pct"),
+                    "book_source": p.get("book_source", "journal"),
+                    "avg_entry_price": p.get("avg_entry_price") or p.get("entry_price"),
+                    "current_price": p.get("current_price"),
+                    "unrealized_pct": p.get("unrealized_pct"),
+                    "source": p.get("source") or p.get("book_source"),
+                    "as_of": p.get("as_of") or p.get("opened_at") or p.get("fetched_at"),
+                }
+                for p in positions
+            ],
+            "broker_ro": {
+                "enabled": config.broker_ro.enabled,
+                "feed_risk": config.broker_ro.feed_risk,
+                "cached": cached_book_positions(),
+            },
+            "honesty": {
+                "claim": "Open book as % of equity from journal and optional paper RO cache.",
+                "caveat": "RO planned_risk is 0 without stops. No dollar balances are stored.",
+            },
+        }
+
+    @r.post("/book/sync")
+    def book_sync() -> dict:
+        """Pull paper positions via sealed GET-only client → % cache."""
+        if not config.broker_ro.enabled:
+            raise HTTPException(
+                422, "broker_ro.enabled is false — set it in hermes.toml to sync",
+            )
+        from ..broker_ro.alpaca_paper import AlpacaPaperRO, BrokerROUnavailable
+        try:
+            detail = AlpacaPaperRO(config).sync_to_cache()
+        except BrokerROUnavailable as exc:
+            raise HTTPException(503, str(exc)) from exc
+        return {"ok": True, "detail": detail}
+
+    # ── Structured debate + journal attach (B6) ──────────────────────────
+    @r.get("/debate/{symbol}/structured")
+    def debate_structured_route(symbol: str, prefer: str | None = None) -> dict:
+        """Four-section debate (bull / bear / trader draft / risk) over computed facts."""
+        rep = instrument.build_instrument(config, symbol)
+        if rep.status != "ok":
+            return {"symbol": rep.symbol, "status": "missing", "note": rep.note,
+                    "facts": None, "debate": None}
+        facts = instrument.facts_from_report(rep)
+        res = ai.complete("debate_structured", facts_md=facts, prefer=prefer)
+        debate = ({"status": "ok", "sections": _split_debate_structured(res.text),
+                   "text": res.text, "backend": res.backend, "model": res.model,
+                   "note": res.note}
+                  if res.status == "ok" else
+                  {"status": "unavailable", "text": None, "note": res.note})
+        return {"symbol": rep.symbol, "status": "ok", "note": "", "facts": facts,
+                "debate": debate}
+
+    def _split_debate_structured(text: str):
+        if not text:
+            return None
+        import re as _re
+        marks = list(_re.finditer(
+            r"(?im)^\s*(BULL CASE|BEAR CASE|TRADER DRAFT|RISK CRITIQUE)\s*:?\s*$", text))
+        if len(marks) < 2:
+            return _split_debate(text)
+        keys = {"BULL CASE": "bull", "BEAR CASE": "bear",
+                "TRADER DRAFT": "trader", "RISK CRITIQUE": "risk"}
+        out = {}
+        for i, m in enumerate(marks):
+            end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+            out[keys[m.group(1).upper()]] = text[m.end():end].strip()
+        return out or None
+
+    class DebateAttachBody(BaseModel):
+        symbol: str
+        side: str = Field(pattern="^(long|short)$")
+        entry_price: float = Field(gt=0)
+        stop_price: float = Field(gt=0)
+        thesis: str = Field(min_length=10)
+        sector: str | None = None
+        setup_tag: str | None = None
+        target_price: float | None = None
+        prefer: str | None = None
+
+    @r.post("/debate/attach-proposal")
+    def debate_attach_proposal(body: DebateAttachBody) -> dict:
+        """Run structured debate over instrument facts, then propose a journal
+        entry with the debate snapshot folded into the thesis context.
+        Still propose-only — human must commit. Never an order."""
+        rep = instrument.build_instrument(config, body.symbol)
+        facts = instrument.facts_from_report(rep) if rep.status == "ok" else (
+            f"symbol={body.symbol} (instrument missing: {rep.note})"
+        )
+        res = ai.complete("debate_structured", facts_md=facts, prefer=body.prefer)
+        debate_text = res.text if res.status == "ok" else f"[debate unavailable: {res.note}]"
+        enriched_thesis = (
+            f"{body.thesis.strip()}\n\n---\nDesk debate snapshot (decision-support only):\n"
+            f"{debate_text}"
+        )
+        try:
+            proposal = journal.propose_entry(
+                config,
+                symbol=body.symbol, side=body.side,
+                entry_price=body.entry_price, stop_price=body.stop_price,
+                thesis=enriched_thesis, sector=body.sector,
+                setup_tag=body.setup_tag, target_price=body.target_price,
+            )
+        except (journal.JournalError, ValueError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        proposal["debate"] = {
+            "status": res.status, "text": res.text, "note": res.note,
+            "backend": res.backend, "model": res.model,
+        }
+        return proposal
+
 
     # ── Validation ledger ─────────────────────────────────────────────────
     @r.get("/ledger")

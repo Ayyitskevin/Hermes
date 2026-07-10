@@ -6,11 +6,9 @@ anything order-shaped and fails the build if it appears. It is deliberately
 paranoid — a false positive costs a minute; a false negative costs the
 project its premise.
 
-Hardened after the Phase 3 audit: repo-wide coverage (not just src/ and
-web/), case-insensitive matching, non-Alpaca order shapes, an outbound-host
-allowlist for source code, and a write-surface lock on the concrete
-providers (the classes that actually hold credentials), not just the
-Protocol.
+Phase-6 evolution (method-aware RO): the paper trading host may appear ONLY
+inside ``src/hermes/broker_ro/``, and only as GET. Live / broker-API hosts
+remain fully forbidden. Order-shaped paths remain forbidden everywhere.
 """
 
 from __future__ import annotations
@@ -20,16 +18,19 @@ from pathlib import Path
 
 REPO = Path(__file__).parent.parent
 THIS_FILE = Path(__file__).resolve()
+BROKER_RO_DIR = (REPO / "src" / "hermes" / "broker_ro").resolve()
 
-# Broker trading hosts (write-capable APIs). The data host is allowed.
-FORBIDDEN_HOSTS = [
+# Live / multi-tenant write-capable hosts — never allowed anywhere.
+FORBIDDEN_HOSTS_ABSOLUTE = [
     "api.alpaca.markets",
-    "paper-api.alpaca.markets",
     "broker-api.alpaca.markets",
 ]
 
+# Paper trading host: allowed ONLY inside broker_ro/ (read-only package).
+PAPER_HOST = "paper-api.alpaca.markets"
+
 # Order-shaped endpoints/symbols across common broker APIs (Alpaca, Binance,
-# Kraken, generic). Matched case-insensitively.
+# Kraken, generic). Matched case-insensitively. Repo-wide, including broker_ro.
 FORBIDDEN_PATTERNS = [
     r"/v2/orders",
     r"/api/v3/order\b",     # Binance
@@ -44,17 +45,20 @@ FORBIDDEN_PATTERNS = [
     r"/orders\b",
 ]
 
-# Hosts src/ code may talk to. Anything else appearing in a URL fails.
+# Hosts src/ code may talk to. Paper host is further restricted by path.
 ALLOWED_SRC_HOSTS = {
     "data.alpaca.markets",   # market data (read-only usage, GET only)
     "hist.databento.com",    # historical bars fallback
     "127.0.0.1",             # local Ollama default
     "localhost",
-    # AI text-generation host for the cloud path (ai/claude.py). A reviewed
-    # decision, not a drive-by: this is an inference host, NOT a broker host —
-    # the AI layer is data-in/prose-out and never emits an order. The no-write
-    # boundary and every FORBIDDEN_* pattern above are unchanged.
-    "api.anthropic.com",     # Anthropic Messages API (POST /v1/messages, GET /v1/models)
+    "api.anthropic.com",     # Anthropic Messages API (inference, not broker)
+    # Paper trading host — ONLY inside broker_ro/ (enforced below).
+    PAPER_HOST,
+}
+
+# Public methods the sealed RO client may expose (write-surface lock).
+BROKER_RO_ALLOWED = {
+    "fetch_positions_pct", "available", "source_name", "sync_to_cache",
 }
 
 EXCLUDED_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache",
@@ -80,14 +84,43 @@ def iter_repo_text_files():
             continue
 
 
-def test_no_trading_hosts_anywhere():
+def _in_broker_ro(path: Path) -> bool:
+    try:
+        path.resolve().relative_to(BROKER_RO_DIR)
+        return True
+    except ValueError:
+        return False
+
+
+def test_no_absolute_forbidden_trading_hosts():
+    """Live/broker-API hosts are banned everywhere.
+
+    Uses a host-boundary check so ``paper-api.alpaca.markets`` (sealed RO) does
+    not false-positive on the substring ``api.alpaca.markets``.
+    """
     hits = []
     for path, text in iter_repo_text_files():
         lowered = text.lower()
-        for host in FORBIDDEN_HOSTS:
-            if host in lowered:
+        for host in FORBIDDEN_HOSTS_ABSOLUTE:
+            # Do not match inside a longer hostname (paper-api.…).
+            if re.search(rf"(?<![a-z0-9-]){re.escape(host)}", lowered):
                 hits.append(f"{path}: {host}")
     assert not hits, f"Broker trading host found: {hits}"
+
+
+def test_paper_host_only_inside_broker_ro():
+    """paper-api may appear only in the sealed RO package (or this guard)."""
+    hits = []
+    for path, text in iter_repo_text_files():
+        if PAPER_HOST not in text.lower():
+            continue
+        if _in_broker_ro(path):
+            continue
+        # Docs/skills may discuss the Phase-6 precondition by name — only
+        # source under src/ outside broker_ro is a hard fail.
+        if "src" in path.parts and path.suffix == ".py":
+            hits.append(str(path))
+    assert not hits, f"Paper trading host outside broker_ro/: {hits}"
 
 
 def test_no_order_shaped_code_anywhere():
@@ -111,16 +144,67 @@ def test_src_urls_are_allowlisted():
             host = m.group(1).lower()
             if host not in ALLOWED_SRC_HOSTS:
                 hits.append(f"{path}: {host}")
+            # Paper host only inside broker_ro/
+            if host == PAPER_HOST and not _in_broker_ro(path):
+                hits.append(f"{path}: paper host outside broker_ro")
     assert not hits, f"URL to non-allowlisted host in src/: {hits}"
 
 
-def test_alpaca_module_uses_data_host_only():
+def test_alpaca_data_module_uses_data_host_only():
     text = (REPO / "src" / "hermes" / "data" / "alpaca.py").read_text(encoding="utf-8")
     hosts = {m.group(1).lower()
              for m in re.finditer(r"(?i)https?://([a-z0-9.\-]+)", text)}
     assert hosts == {"data.alpaca.markets"}, (
         f"alpaca.py may only reference the data host, found: {hosts}"
     )
+
+
+def test_broker_ro_is_get_only_and_surface_locked():
+    """Sealed RO client: only GET against paper host; public surface locked."""
+    mod = REPO / "src" / "hermes" / "broker_ro" / "alpaca_paper.py"
+    text = mod.read_text(encoding="utf-8")
+    # Must not issue write verbs against the paper host.
+    for verb in ("httpx.post", "httpx.put", "httpx.patch", "httpx.delete",
+                 "requests.post", "requests.put", "requests.delete"):
+        assert verb not in text, f"broker_ro uses write verb {verb}"
+    # Must use httpx.get for transport.
+    assert "httpx.get" in text
+
+    from pathlib import Path as _P
+
+    from hermes.broker_ro.alpaca_paper import ALLOWED_METHODS, AlpacaPaperRO
+    from hermes.config import (
+        AiConfig,
+        BackupConfig,
+        BrokerROConfig,
+        DataConfig,
+        HermesConfig,
+        JournalConfig,
+        MarketConfig,
+        RegimeConfig,
+        RiskConfig,
+        ScheduleConfig,
+        Secrets,
+        ServerConfig,
+    )
+
+    cfg = HermesConfig(
+        market=MarketConfig(), data=DataConfig(), regime=RegimeConfig(),
+        risk=RiskConfig(), journal=JournalConfig(), ai=AiConfig(),
+        schedule=ScheduleConfig(), backup=BackupConfig(),
+        broker_ro=BrokerROConfig(enabled=True),
+        server=ServerConfig(),
+        secrets=Secrets(), data_dir=_P("/tmp"), log_dir=_P("/tmp"), config_path=None,
+    )
+    client = AlpacaPaperRO(cfg)
+    public = {
+        m for m in dir(client)
+        if not m.startswith("_") and callable(getattr(client, m))
+    }
+    public.discard("name")
+    extra = public - ALLOWED_METHODS - BROKER_RO_ALLOWED
+    assert not extra, f"broker_ro grew unexpected surface: {extra}"
+    assert ALLOWED_METHODS == BROKER_RO_ALLOWED
 
 
 def test_provider_write_surface_locked():
@@ -130,6 +214,7 @@ def test_provider_write_surface_locked():
     from hermes.config import (
         AiConfig,
         BackupConfig,
+        BrokerROConfig,
         DataConfig,
         HermesConfig,
         JournalConfig,
@@ -151,7 +236,9 @@ def test_provider_write_surface_locked():
     cfg = HermesConfig(
         market=MarketConfig(), data=DataConfig(), regime=RegimeConfig(),
         risk=RiskConfig(), journal=JournalConfig(), ai=AiConfig(),
-        schedule=ScheduleConfig(), backup=BackupConfig(), server=ServerConfig(),
+        schedule=ScheduleConfig(), backup=BackupConfig(),
+        broker_ro=BrokerROConfig(),
+        server=ServerConfig(),
         secrets=Secrets(), data_dir=_P("/tmp"), log_dir=_P("/tmp"), config_path=None,
     )
     allowed = {"fetch_bars", "fetch_snapshot", "state", "name"}

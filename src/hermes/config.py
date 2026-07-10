@@ -91,6 +91,17 @@ class BackupConfig:
 
 
 @dataclass(frozen=True)
+class BrokerROConfig:
+    """Paper broker READ-ONLY sync. Off by default. When enabled, Hermes may
+    GET positions from the paper trading host (sealed in broker_ro/) and
+    convert them to % of equity. Never places orders. Requires APCA keys."""
+
+    enabled: bool = False
+    # When true, risk.evaluate merges RO book with open journal positions.
+    feed_risk: bool = True
+
+
+@dataclass(frozen=True)
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8642
@@ -116,6 +127,7 @@ class HermesConfig:
     ai: AiConfig
     schedule: ScheduleConfig
     backup: BackupConfig
+    broker_ro: BrokerROConfig
     server: ServerConfig
     secrets: Secrets
     data_dir: Path
@@ -155,6 +167,7 @@ def load_config(root: Path | None = None) -> HermesConfig:
         ai=_section(raw, "ai", AiConfig),
         schedule=_section(raw, "schedule", ScheduleConfig),
         backup=_section(raw, "backup", BackupConfig),
+        broker_ro=_section(raw, "broker_ro", BrokerROConfig),
         server=server,
         secrets=Secrets(
             alpaca_key_id=os.environ.get("APCA_API_KEY_ID", ""),

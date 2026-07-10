@@ -160,6 +160,38 @@ class OllamaClient:
             user=facts_md,
         )
 
+    def reflect_trade(self, facts_md: str) -> str:
+        """One-paragraph reflection after a trade resolves — Pattern B Reflector.
+        Restates only the resolved facts; never invents edge or next trades."""
+        return self._chat(
+            system=(
+                "You are a trading journal reflector. A trade just resolved. Using "
+                "ONLY the facts provided (thesis, regime at entry, realized %, "
+                "benchmark %, alpha, thesis verdict, resolution note), write ONE "
+                "paragraph (max 120 words) on what the trader can learn. Quote the "
+                "numbers given; invent none. If the sample context is thin, say so. "
+                "Never recommend the next trade; never tell them to buy or sell."
+            ),
+            user=facts_md,
+        )
+
+    def debate_structured(self, facts_md: str) -> str:
+        """Deeper multi-section debate: bull, bear, trader draft, risk — still
+        tension not directive."""
+        return self._chat(
+            system=(
+                "You run a four-section desk debate over computed facts only. "
+                "Produce exactly these headings on their own lines: "
+                "BULL CASE, BEAR CASE, TRADER DRAFT, RISK CRITIQUE. "
+                "BULL and BEAR restate evidence for and against. TRADER DRAFT is a "
+                "hypothetical plan shape (levels already in the facts only) written "
+                "as context for a human, never as an order. RISK CRITIQUE attacks "
+                "sizing, correlation, and regime fit. End in the tension between "
+                "views — never a recommendation to buy or sell. Invent no numbers."
+            ),
+            user=facts_md,
+        )
+
     def available(self) -> bool:
         try:
             resp = httpx.get(f"{self.url}/api/tags", timeout=3.0)

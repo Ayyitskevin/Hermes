@@ -84,3 +84,21 @@ applies to everyone). Evidence over silence (job_runs/MISSED; "silence is
 not evidence"). Small n labeled anecdote everywhere. When docs and code
 disagree, fix the docs. The owner brings trading judgment and the merge
 button; you bring code and the review loop.
+
+
+## 2026-07-10 — A/B desk improvements (Grok)
+
+Landed on branch `grok/a-b-desk-improvements` (see commit):
+
+- **A2** trade-memory reflection on journal close (`reflect_trade` via AIRouter)
+- **A3** chart↔dashboard parity ritual (`/api/parity`, UI #/parity, P1 streak)
+- **A4** daily-check narrative via AIRouter (local-first)
+- **A5** premarket briefing (`/api/briefing`, UI #/briefing, `hermes briefing`)
+- **A1/B5** doctor gates + restore-drill CLI/API (`hermes doctor`, `restore-drill`)
+- **B2** monthly performance (`/api/reports/monthly`, UI #/monthly)
+- **B3** campaign status plate (`/api/campaign`, UI #/campaign)
+- **B4** screener compression (VCP-ish) flags on rows
+- **B6** structured debate + attach-to-proposal (`/api/debate/{sym}/structured`, POST `/api/debate/attach-proposal`)
+- **B1** boundary guard evolved (method-aware); sealed `broker_ro/` paper GET → % cache; risk merge optional
+
+Habit gates P2/P3 remain the owner's to close. Pre-existing v62 synthetic-tape test failures unchanged.

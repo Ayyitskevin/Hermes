@@ -30,7 +30,9 @@ Verify with positive evidence, not absence of errors:
 ```bash
 systemctl status hermes                     # running?
 curl -s localhost:8642/api/health | python3 -m json.tool
-/opt/hermes/.venv/bin/hermes doctor         # config, db, provider, ollama
+/opt/hermes/.venv/bin/hermes doctor         # config, db, provider, gates
+/opt/hermes/.venv/bin/hermes restore-drill  # verify backup without overwrite
+/opt/hermes/.venv/bin/hermes briefing       # premarket one-screen markdown
 ```
 
 `/api/health` reports db writability (a real write-lock probe — a read-only

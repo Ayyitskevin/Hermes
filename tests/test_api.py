@@ -41,7 +41,9 @@ def test_daily_check_end_to_end(client):
     assert d["posture"]["posture"] in ("allow", "restrict", "cash-priority")
     assert d["report"] is not None
     # narrative section exists and is explicit about the local model being down
-    assert "Narrative (local model)" in d["report"]["body_md"]
+    # narrative section exists; with Ollama down the router degrades visibly
+    assert "## Narrative" in d["report"]["body_md"]
+    assert "Unavailable" in d["report"]["body_md"]
     # every watchlist row carries provenance
     for w in d["watchlist"]:
         assert w["source"] == "sample"

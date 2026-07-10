@@ -8,17 +8,21 @@ import { onDashboard, refreshDashboard } from "./store.js";
 import { currentPath } from "./router.js";
 
 const NAV = [
-  { key: "desk", label: "Desk", route: "/desk", digit: "1", live: true },
-  { key: "terminal", label: "Terminal", route: "/terminal", digit: "2" },
-  { key: "pnl", label: "P&L", route: "/pnl", digit: "3" },
+  { key: "briefing", label: "Briefing", route: "/briefing", digit: "1", live: true },
+  { key: "desk", label: "Desk", route: "/desk", digit: "2", live: true },
+  { key: "terminal", label: "Terminal", route: "/terminal", digit: "3" },
   { key: "journal", label: "Journal", route: "/journal", digit: "4", live: true },
-  { key: "size", label: "Size", route: "/size", digit: "5" },
-  { key: "sector", label: "Sector Drill", route: "/sector", digit: "6" },
+  { key: "pnl", label: "P&L", route: "/pnl", digit: "5" },
+  { key: "parity", label: "Parity", route: "/parity", digit: "6" },
   { key: "weekly", label: "Weekly", route: "/weekly", digit: "7", live: true },
-  { key: "stress", label: "Stress", route: "/stress", digit: "8" },
-  { key: "regime-lab", label: "Regime Lab", route: "/regime-lab", digit: "9" },
+  { key: "monthly", label: "Monthly", route: "/monthly", digit: "8" },
+  { key: "campaign", label: "Campaign", route: "/campaign", digit: "9" },
   { key: "ledger", label: "Validation", route: "/ledger", digit: "0" },
   { key: "scorecard", label: "Scorecard", route: "/scorecard", digit: "" },
+  { key: "size", label: "Size", route: "/size", digit: "" },
+  { key: "sector", label: "Sector", route: "/sector", digit: "" },
+  { key: "stress", label: "Stress", route: "/stress", digit: "" },
+  { key: "regime-lab", label: "Regime Lab", route: "/regime-lab", digit: "" },
 ];
 
 const $ = (s, r = document) => r.querySelector(s);

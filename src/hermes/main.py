@@ -5,7 +5,10 @@ Run modes:
     hermes daily-check      run the daily market check once, now (manual override)
     hermes sync             sync bars once, now
     hermes backup           snapshot the database once, now (prunes to retention)
-    hermes doctor           startup checks + positive-evidence health, then exit
+    hermes doctor           startup checks + gate progress, then exit
+    hermes restore-drill    verify a backup is restorable (never overwrites live DB)
+    hermes book-sync        paper RO positions → % cache (requires broker_ro.enabled)
+    hermes briefing         print the premarket one-screen briefing markdown
 """
 
 from __future__ import annotations
@@ -97,19 +100,37 @@ def cli() -> None:
             "backup", lambda: backup.backup_db(config), trigger="manual")
         print(result["detail"])
     elif command == "doctor":
-        from .ai.ollama import OllamaClient
-        conn = db.connect()
-        bars = conn.execute("SELECT COUNT(*) FROM bars").fetchone()[0]
-        print(f"hermes v{__version__}")
-        print(f"config: {config.config_path or '(defaults — no hermes.toml found)'}")
-        print(f"db: {config.data_dir / 'hermes.db'} ({bars} bars cached)")
-        print(f"provider: {provider.name} state={provider.state().value}")
-        print(f"ollama: {'reachable' if OllamaClient(config).available() else 'UNREACHABLE'} "
-              f"at {config.ai.ollama_url}")
-        print(f"classifier: {config.regime.classifier}")
+        from .ops.doctor import format_doctor_text, run_doctor
+        print(format_doctor_text(run_doctor(config, provider)))
+    elif command == "restore-drill":
+        from pathlib import Path as _P
+
+        from .ops.doctor import restore_drill
+        snap = _P(sys.argv[2]) if len(sys.argv) > 2 else None
+        result = restore_drill(config, snap)
+        if not result.get("ok"):
+            print(f"restore-drill FAILED: {result.get('error')}")
+            sys.exit(1)
+        print(f"snapshot: {result['snapshot']} ({result['size_bytes']} bytes)")
+        print(f"counts: {result['counts']}")
+        print(result["restore_instructions"])
+    elif command == "book-sync":
+        if not config.broker_ro.enabled:
+            print("broker_ro.enabled is false — enable in hermes.toml first")
+            sys.exit(2)
+        from .broker_ro.alpaca_paper import AlpacaPaperRO, BrokerROUnavailable
+        try:
+            print(AlpacaPaperRO(config).sync_to_cache())
+        except BrokerROUnavailable as exc:
+            print(f"book-sync unavailable: {exc}")
+            sys.exit(1)
+    elif command == "briefing":
+        from .briefing.morning import build_briefing
+        print(build_briefing(config, provider)["body_md"])
     else:
         print(f"Unknown command {command!r}. "
-              "Commands: serve, daily-check, sync, backup, doctor")
+              "Commands: serve, daily-check, sync, backup, doctor, "
+              "restore-drill, book-sync, briefing")
         sys.exit(2)
 
 

@@ -108,6 +108,21 @@ class Criterion:
 
 
 @dataclass(frozen=True)
+class Compression:
+    """Price/volume contraction flags — VCP-*ish*, not a Minervini certified VCP.
+
+    Computed from cached daily bars only. A true VCP needs multi-stage base
+    geometry the human still judges on the chart; this is a contraction hint.
+    """
+
+    flag: str                   # 'TIGHT' | 'CONTRACTING' | 'WIDE' | '∅'
+    range_20_pct: float | None  # (high-low)/close over last 20 bars, %
+    range_60_pct: float | None
+    vol_ratio: float | None     # avg vol 10 / avg vol 50; <1 = quieter
+    note: str
+
+
+@dataclass(frozen=True)
 class ScreenRow:
     symbol: str
     status: str                 # 'ok' | 'missing'
@@ -130,6 +145,7 @@ class ScreenRow:
     source: str | None
     as_of: datetime | None
     staleness: str              # 'live' | 'stale' | 'dead' | 'missing'
+    compression: Compression | None = None
 
 
 @dataclass(frozen=True)
@@ -192,6 +208,47 @@ def _verdict(score: int) -> str:
     return "NO"
 
 
+def _compression(sym_bars: list[Bar]) -> Compression:
+    """Contraction hint from price range + volume — not a certified VCP."""
+    if len(sym_bars) < 60:
+        return Compression(
+            flag="∅", range_20_pct=None, range_60_pct=None, vol_ratio=None,
+            note=f"{len(sym_bars)} bars; need 60 for compression read",
+        )
+    def _range_pct(window: list[Bar]) -> float:
+        hi = max(b.high for b in window)
+        lo = min(b.low for b in window)
+        mid = window[-1].close or 1.0
+        return (hi - lo) / mid * 100.0 if mid else 0.0
+
+    r20 = _range_pct(sym_bars[-20:])
+    r60 = _range_pct(sym_bars[-60:])
+    vols = [float(b.volume or 0) for b in sym_bars]
+    v10 = sum(vols[-10:]) / 10.0 if any(vols[-10:]) else None
+    v50 = sum(vols[-50:]) / 50.0 if any(vols[-50:]) else None
+    vol_ratio = round(v10 / v50, 2) if v10 is not None and v50 and v50 > 0 else None
+
+    contracting = r20 < r60 * 0.65
+    tight = r20 <= 12.0
+    quiet = vol_ratio is not None and vol_ratio < 0.85
+    if tight and contracting and (quiet or vol_ratio is None):
+        flag = "TIGHT"
+        note = "20d range tight vs 60d — contraction hint (not a certified VCP)"
+    elif contracting:
+        flag = "CONTRACTING"
+        note = "20d range < 65% of 60d range — possible multi-week coil"
+    else:
+        flag = "WIDE"
+        note = "range not contracting — no VCP-ish flag"
+    return Compression(
+        flag=flag,
+        range_20_pct=round(r20, 1),
+        range_60_pct=round(r60, 1),
+        vol_ratio=vol_ratio,
+        note=note,
+    )
+
+
 def _row(
     symbol: str, sym_bars: list[Bar], bench_bars: list[Bar],
     bull_regime: bool, regime_display: str, stale_after_minutes: int,
@@ -212,6 +269,7 @@ def _row(
             mansfield=None, pct_above_low=None, pct_below_high=None,
             bars=len(closes), regime_note="", note=note,
             source=source, as_of=as_of, staleness=staleness,
+            compression=None,
         )
 
     if len(closes) < MIN_BARS:
@@ -256,6 +314,7 @@ def _row(
         pct_below_high=round((close / high_52w - 1.0) * 100.0, 1),
         bars=len(closes), regime_note=regime_note, note="",
         source=source, as_of=as_of, staleness=staleness,
+        compression=_compression(sym_bars),
     )
 
 

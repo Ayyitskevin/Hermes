@@ -8,6 +8,7 @@ from hermes import db, oplog
 from hermes.config import (
     AiConfig,
     BackupConfig,
+    BrokerROConfig,
     DataConfig,
     HermesConfig,
     JournalConfig,
@@ -35,6 +36,7 @@ def config(tmp_path) -> HermesConfig:
         ai=AiConfig(ollama_url="http://127.0.0.1:1", ollama_model="test"),
         schedule=ScheduleConfig(),
         backup=BackupConfig(),
+        broker_ro=BrokerROConfig(),
         server=ServerConfig(),
         secrets=Secrets(),
         data_dir=tmp_path / "data",

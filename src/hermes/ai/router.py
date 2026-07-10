@@ -31,7 +31,11 @@ from .ollama import OllamaClient, OllamaUnavailable
 # Tasks that MAY reach for the cloud automatically when allow_cloud is true.
 # Everything else uses cloud only on an explicit operator request (prefer="cloud")
 # or as a visible fallback when local is down.
-CLOUD_OPT_IN_TASKS = frozenset({"debate", "coach", "desk_read", "ask"})
+# narrate_daily_check stays local-first (cloud only as fallback when local is
+# down and allow_cloud is true) — it is the morning routine, not a premium task.
+CLOUD_OPT_IN_TASKS = frozenset({
+    "debate", "debate_structured", "coach", "desk_read", "ask", "reflect_trade",
+})
 
 # Per-1M-token USD list prices, for the approximate session-usage meter only.
 # Deliberately conservative (list, not intro). Missing models fall back to the

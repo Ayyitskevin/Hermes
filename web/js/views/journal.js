@@ -222,7 +222,13 @@ function renderClosed(outlet, entries) {
       <td class="num">${e.benchmark_return_pct === null ? "—" : fmtPct(e.benchmark_return_pct)}</td>
       <td class="num ${signCls(e.alpha_pct)}">${e.alpha_pct === null ? "—" : fmtPct(e.alpha_pct)}</td>
       <td>${chip(e.thesis_played_out === "yes" ? "good" : e.thesis_played_out === "partial" ? "warn" : "serious", `thesis: ${e.thesis_played_out}`)}</td>
-      <td class="micro">${esc(e.resolution_note ?? "")}</td>
+      <td class="micro">${esc(e.resolution_note ?? "")}
+        ${e.reflection_md
+          ? `<details><summary>reflection</summary><p>${esc(e.reflection_md)}</p>
+             <p class="micro">${esc(e.reflection_status || "")} · ${esc(e.reflection_source || "")}</p></details>`
+          : (e.reflection_status === "unavailable"
+            ? `<div class="micro">reflection unavailable</div>` : "")}
+      </td>
     </tr>`).join("")
     : `<tr><td colspan="8" class="micro">no resolved trades yet</td></tr>`;
 }
