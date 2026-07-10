@@ -171,7 +171,11 @@ class RegimeV62Classifier:
             if len(rets) == LOOKBACK:
                 sd = _pstdev(rets)
                 if sd is not None:
-                    vol[i] = sd * math.sqrt(LOOKBACK)
+                    # Near-zero vol (pure constant-return window) makes z undefined.
+                    # Floor at a tiny epsilon so pure trends still classify — also
+                    # removes a Python 3.11 vs 3.12 float-noise divergence where
+                    # 3.11 yielded ~1e-18 and 3.12 yielded exact 0.0.
+                    vol[i] = max(sd, 1e-12) * math.sqrt(LOOKBACK)
 
         ema = _ema_series(closes, EMA_LEN)
 
