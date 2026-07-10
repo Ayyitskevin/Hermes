@@ -48,10 +48,21 @@ user-supplied infrastructure or a separately approved business model.
 
 ## Current status
 
-The repository contains the paid-app foundation, not a submission-ready product:
+The repository contains an execution-first iOS vertical slice, not a
+submission-ready product:
 
-- Vite, TypeScript, Capacitor 8, and an iPhone-only iOS project.
-- Original journal-first navigation and three-step onboarding.
+- Vite, TypeScript, Capacitor 8, and an iPhone-only CocoaPods iOS project.
+- Original journal-first navigation with an empty private journal by default;
+  the fictional demo is an explicit, isolated choice.
+- A versioned STRICT SQLite schema for immutable import provenance, execution
+  versions, current heads, FIFO projections, fees, receipts, and rollbacks.
+- SQLCipher-backed native storage with a random passphrase held by the iOS
+  Keychain through the pinned Capacitor SQLite plugin.
+- An on-device RFC 4180 CSV flow with inference/remapping, exact source text,
+  row-level validation, stale-preview protection, atomic commit, deduplication,
+  and receipt rollback.
+- Exact decimal-string normalization for partial fills, long/short reversals,
+  fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades.
 - Headline P&L, R, win rate, profit factor, expectancy, and setup reports derived
   from those trade records.
@@ -60,7 +71,11 @@ The repository contains the paid-app foundation, not a submission-ready product:
 - CI for locked dependencies, types, unit tests, browser flows, production build,
   native sync, and the legacy Python safety suite.
 
-Durable SQLite storage, manual entry, and CSV import are the next vertical slice.
+Linux tests exercise the real schema/repository through SQL.js. Native
+encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
+and device backup behavior still require the Mac/device gate. Manual entry,
+annotations, attachments, export/restore/delete-all, and deeper reports remain
+Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 
@@ -79,7 +94,8 @@ npm run ios:sync
 
 The TypeScript bundle and native container can be generated on Linux. Xcode,
 Simulator, physical-device, signing, TestFlight, and App Store verification
-require macOS.
+require macOS. The first Mac setup must run `pod install` in `mobile/ios/App`
+and commit the resulting lockfile, workspace, and reviewed project changes.
 
 ## Architecture
 
@@ -89,12 +105,14 @@ Capacitor iOS shell
     typed application services
       pure TypeScript journal and analytics core
         encrypted local SQLite repositories
-        file import/export adapters
+        local CSV import/provenance adapters
         Keychain adapter for future user-owned credentials
 ```
 
-The production Capacitor configuration has no remote `server.url`, and the demo
-content security policy blocks network connections.
+The production Capacitor configuration has no remote `server.url`, and the
+content security policy blocks network connections. Browser development uses
+an explicitly labeled in-memory session store; native iOS uses encrypted SQLite.
+See [the local ledger contract](docs/mobile/LOCAL_LEDGER.md).
 
 ## Legacy desktop prototype
 

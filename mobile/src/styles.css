@@ -47,9 +47,9 @@ body {
 }
 
 .modal-open { overflow: hidden; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { color: inherit; }
-button:focus-visible, input:focus-visible, a:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;
 }
@@ -151,6 +151,7 @@ p { line-height: 1.55; }
 }
 
 .result-card > span { color: #cbc8d3; font-size: .88rem; }
+.empty-result-card > strong { font-family: "Archivo", system-ui, sans-serif; font-size: clamp(2rem, 10vw, 3.9rem); letter-spacing: -.055em; }
 .positive { color: var(--positive); }
 .negative { color: var(--negative); }
 .metric-grid, .two-up, .quick-actions {
@@ -350,6 +351,17 @@ p { line-height: 1.55; }
 .receipt-metrics strong { font: 700 1.5rem/1 "B612 Mono", monospace; }
 .receipt-metrics span { color: var(--muted); font-size: .72rem; }
 .privacy-card { border-color: rgb(92 225 230 / 20%); }
+.import-tool { display: grid; gap: .85rem; }
+.import-tool > p { margin: 0; color: var(--muted); }
+.helper-text { margin: 0; color: var(--muted); font-size: .76rem; }
+.import-preview-card { margin-top: .25rem; padding-top: 1rem; border-top: 1px solid var(--line); display: grid; gap: 1rem; }
+.mapping-details { border: 1px solid var(--line); border-radius: .75rem; padding: .75rem; }
+.mapping-details summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: #cdbfff; font-weight: 700; }
+.mapping-details .field-grid { margin-top: .75rem; }
+.issue-list { margin: 0; padding-left: 1.2rem; color: var(--muted); display: grid; gap: .45rem; font-size: .78rem; }
+.issue-list strong { font-family: "B612 Mono", monospace; font-size: .68rem; text-transform: uppercase; }
+.import-history-row { display: grid; gap: .6rem; }
+.import-history-row p { margin: 0; color: var(--muted); font-size: .8rem; }
 
 form { display: grid; gap: 1rem; }
 .segmented {
@@ -369,7 +381,7 @@ form { display: grid; gap: 1rem; }
 }
 
 label { display: grid; gap: .35rem; color: var(--muted); font-size: .78rem; }
-input {
+input, select {
   width: 100%;
   min-height: 48px;
   padding: .65rem .7rem;
@@ -378,6 +390,17 @@ input {
   background-color: #080a0f;
   color: var(--text);
   font-size: 1rem;
+}
+
+input[type="file"] { padding: .5rem; }
+input[type="file"]::file-selector-button {
+  min-height: 36px;
+  margin-right: .65rem;
+  border: 0;
+  border-radius: .5rem;
+  padding: .4rem .65rem;
+  background: var(--surface-raised);
+  color: var(--text);
 }
 
 .primary-button, .secondary-button, .text-button {
