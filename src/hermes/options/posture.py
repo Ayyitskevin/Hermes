@@ -48,10 +48,17 @@ def build_options_posture(config: HermesConfig, symbol: str) -> dict:
     elif reading and reading.label in (RegimeLabel.BEAR_TREND, RegimeLabel.STRESS):
         factors.append({
             "key": "regime", "ok": False,
-            "detail": f"{reading.label.value} — defined-risk / hedge thinking may matter more than naked long",
+            "detail": (
+                f"{reading.label.value} — defined-risk / hedge thinking "
+                "may matter more than naked long"
+            ),
         })
     else:
-        factors.append({"key": "regime", "ok": None, "detail": "regime chop/missing — no directional lean"})
+        factors.append({
+            "key": "regime",
+            "ok": None,
+            "detail": "regime chop/missing — no directional lean",
+        })
 
     if risk_state.level == "breach":
         factors.append({
@@ -69,7 +76,10 @@ def build_options_posture(config: HermesConfig, symbol: str) -> dict:
     if vol20 is not None and vol20 > 0.35:
         factors.append({
             "key": "vol", "ok": True,
-            "detail": f"realized vol ~{vol20:.0%} — premium/hedge conversations are live (still no chain)",
+            "detail": (
+                f"realized vol ~{vol20:.0%} — premium/hedge conversations "
+                "are live (still no chain)"
+            ),
         })
         score += 1
     elif vol20 is not None:
