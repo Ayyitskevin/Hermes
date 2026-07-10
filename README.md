@@ -39,6 +39,30 @@ The rest of the ambition — portfolio reviews, screeners, multi-agent debate
 mode — is a named, ordered roadmap in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), deliberately not in V1.
 
+## Premium mobile app (in development)
+
+Hermes is being rebuilt for iPhone first as a **$9.99 one-time paid app** and
+privacy-first alternative to the core TradeZella journal workflow, with Android
+parity after the iOS release. It is intentionally local-first: no subscription,
+account, hosted inference bill, or developer-funded market-data service. The
+current native foundation includes an offline journal/performance workspace,
+Today/Trades/Journal/Insights/More navigation, risk-first onboarding,
+and a tested fixed-fractional position-sizing port.
+
+```bash
+cd mobile
+npm ci
+npm test
+npm run build
+npm run test:e2e
+npm run ios:sync
+```
+
+The TypeScript bundle and native iOS container can be generated on Linux,
+but signing, simulator/device checks, archiving, and App Store submission
+require macOS with Xcode. Product scope, launch gates, and the Android follow-on
+are tracked in [docs/mobile/IOS_ROADMAP.md](docs/mobile/IOS_ROADMAP.md).
+
 ## Quickstart — zero keys, two minutes
 
 Requires **Python 3.11+**. Runs out of the box on a bundled deterministic
@@ -128,6 +152,8 @@ the short side is an unvalidated experiment, and every figure is % of equity.
 | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | Every skill traced to a named methodology — and what each does not prove |
 | [docs/REGIME_V62_PORT.md](docs/REGIME_V62_PORT.md) | The contract for porting the owner's Regime Label v6.2 classifier |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | Running it for real |
+| [docs/mobile/IOS_ROADMAP.md](docs/mobile/IOS_ROADMAP.md) | Paid-app contract, local-first architecture, iOS phases, launch gates, and Android parity |
+| [docs/mobile/MAC_HANDOFF.md](docs/mobile/MAC_HANDOFF.md) | Exact macOS/Xcode build, signing, device-test, and App Store handoff |
 
 ## Development
 

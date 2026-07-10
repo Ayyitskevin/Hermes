@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "oracle": "CPython 3.11 · src/hermes/risk/engine.py:size_position",
+  "cases": [
+    {
+      "id": "long-five-percent-stop",
+      "input": {
+        "entryPrice": 100,
+        "stopPrice": 95,
+        "side": "long",
+        "maxRiskPerTradePct": 1,
+        "maxPositionSizePct": 20
+      },
+      "expected": {
+        "sizePctEquity": 20,
+        "plannedRiskPct": 1,
+        "stopDistancePct": 5,
+        "cappedBy": null
+      }
+    },
+    {
+      "id": "tight-stop-cap",
+      "input": {
+        "entryPrice": 100,
+        "stopPrice": 99,
+        "side": "long",
+        "maxRiskPerTradePct": 1,
+        "maxPositionSizePct": 20
+      },
+      "expected": {
+        "sizePctEquity": 20,
+        "plannedRiskPct": 0.2,
+        "stopDistancePct": 1,
+        "cappedBy": "max_position_size_pct"
+      }
+    },
+    {
+      "id": "short-five-percent-stop",
+      "input": {
+        "entryPrice": 100,
+        "stopPrice": 105,
+        "side": "short",
+        "maxRiskPerTradePct": 1,
+        "maxPositionSizePct": 20
+      },
+      "expected": {
+        "sizePctEquity": 20,
+        "plannedRiskPct": 1,
+        "stopDistancePct": 5,
+        "cappedBy": null
+      }
+    },
+    {
+      "id": "half-even-size-boundary",
+      "input": {
+        "entryPrice": 1,
+        "stopPrice": 0.84,
+        "side": "long",
+        "maxRiskPerTradePct": 0.1,
+        "maxPositionSizePct": 1
+      },
+      "expected": {
+        "sizePctEquity": 0.62,
+        "plannedRiskPct": 0.1,
+        "stopDistancePct": 16,
+        "cappedBy": null
+      }
+    },
+    {
+      "id": "binary-float-planned-risk-boundary",
+      "input": {
+        "entryPrice": 1.04,
+        "stopPrice": 0.93,
+        "side": "long",
+        "maxRiskPerTradePct": 0.2,
+        "maxPositionSizePct": 1.3
+      },
+      "expected": {
+        "sizePctEquity": 1.3,
+        "plannedRiskPct": 0.137,
+        "stopDistancePct": 10.58,
+        "cappedBy": "max_position_size_pct"
+      }
+    }
+  ]
+}
