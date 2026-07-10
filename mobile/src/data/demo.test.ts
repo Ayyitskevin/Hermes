@@ -21,7 +21,7 @@ describe("offline demo journal", () => {
     expect(workspace.performance.winRatePct).toBe(50);
     expect(workspace.performance.profitFactor).toBeCloseTo(1.97, 2);
     expect(workspace.performance.averageR).toBeCloseTo(0.39, 2);
-    expect(workspace.importSummary.trades).toBe(workspace.trades.length);
+    expect(workspace.importSummary.executions).toBe(workspace.trades.length);
   });
 
   it("reconciles executions, the cumulative curve, and published playbooks", async () => {

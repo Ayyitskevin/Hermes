@@ -35,8 +35,9 @@ under the provisional identifier until that gate is cleared.
 - **4/10** if marketed as literal parity with every hosted TradeZella service for
   $9.99; real-time integrations, licensed data, hosted sync, and recurring AI
   have continuing costs.
-- **3/10 current readiness**: the neutral native/offline foundation is real, but
-  durable records and the import loop are not implemented yet.
+- **4/10 current readiness**: the execution ledger and generic CSV loop now run
+  end to end with tested rollback, but the annotation/export/release surfaces
+  and native Mac/device evidence are still incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -113,14 +114,15 @@ not duplicate performance, and a failed batch cannot leave a partial journal.
 
 ## Delivery phases
 
-### Phase 0 — neutral paid-app foundation (current draft)
+### Phase 0 — neutral paid-app foundation (delivered in the current draft)
 
 Delivered:
 
-- Vite/TypeScript/Capacitor 8 workspace and Swift Package Manager iPhone target.
+- Vite/TypeScript/Capacitor 8 workspace and CocoaPods iPhone target.
 - Original Hermes Journal identity, with personal photography naming removed.
 - Dashboard, Trades, Journal, Reports, and More navigation.
-- Three-step journal onboarding and persistent demo provenance.
+- Three-step journal onboarding with the empty private journal as the primary
+  choice and persistent, explicit fictional-demo provenance.
 - Eight coherent fictional trades with P&L/R/win-rate/profit-factor/expectancy
   derived from the same records.
 - Working trade search and position-size planning tool.
@@ -130,21 +132,46 @@ Delivered:
 - Linux CI for locked install, TypeScript, unit tests, browser flows, bundle
   build, Capacitor sync, and the legacy Python safety suite.
 
-Not delivered: durable financial records, manual entry, CSV file selection,
-native device/Xcode evidence, final branding, or App Store metadata.
+Not delivered in Phase 0: durable financial records, manual entry, CSV file
+selection, native device/Xcode evidence, final branding, or App Store metadata.
 
 ### Phase 1 — durable import → journal → report slice
 
-- Add numbered SQLite migrations for the execution-first model.
-- Encrypt or otherwise protect local records using a reviewed platform-appropriate
-  design; document device-backup behavior honestly.
-- Build manual trade entry and generic CSV mapping/import entirely on-device.
-- Require preview, row-level errors, deterministic deduplication, atomic commit,
-  import receipt, and rollback.
+Delivered in the current vertical slice:
+
+- Numbered SQLite v1 migration with STRICT tables, foreign keys, checksums,
+  immutable import/execution facts, mutable heads, and generation-scoped derived
+  projections.
+- SQLCipher configuration through pinned `@capacitor-community/sqlite` 8.1.0,
+  with a random secret stored by the plugin in the iOS Keychain.
+- Generic RFC 4180 CSV selection, mapping/remapping, exact raw-row provenance,
+  explicit limits, IANA-zone parsing, DST gap/fold rejection, and exact decimal
+  validation entirely on device.
+- Stale-preview protection, single-workspace currency enforcement, idempotent
+  active duplicate files, same-source changed-payload conflicts, per-account
+  receipt attribution, immutable import-occurrence coverage, atomic commit, and
+  dependency-aware rollback/restoration through void and non-void versions.
+- Deterministic FIFO normalization for partial entries/exits, long/short
+  reversals, proportional fees/rebates, contract multipliers, and
+  currency-separated totals, with stable equal-timestamp ordering and
+  opening-allocation trade identities.
+- Replay-safe migration statements plus native fail-closed checks for missing
+  Keychain secrets, encryption, SQLite/SQLCipher integrity, foreign keys,
+  schema version, and migration receipts.
+- Explicit empty, fictional-demo, and real-workspace UI states; imported
+  execution projections drive the Dashboard, Trades, Reports, calendar, curve,
+  import history, and rollback controls.
+- Real SQL.js schema/repository tests plus browser import/rollback coverage.
+
+Still required in Phase 1:
+
+- Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
+  CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
+  and physical iPhone.
+- Build manual execution entry.
 - Add trade list/detail, executions, account selection, calendar, notes, setup/
   mistake/emotion tags, playbook assignment, and core reports.
 - Add versioned export/restore and Delete All Data, including attachment cleanup.
-- Replace demo-only routes with explicit empty, demo, and real-workspace states.
 
 Exit gate: manual/CSV input → normalized trade → journal metadata → dashboard/
 report → export/restore works in airplane mode, survives kill/relaunch, and
@@ -211,5 +238,6 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-The next implementation slice is Phase 1's schema, local database, manual entry,
-and generic CSV import—not broker connectivity or legacy cockpit extraction.
+The next implementation slice is Phase 1's manual entry plus durable annotations,
+followed by versioned export/restore/delete-all—not broker connectivity or legacy
+cockpit extraction.

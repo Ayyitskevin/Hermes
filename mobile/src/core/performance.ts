@@ -8,42 +8,44 @@ export interface SetupPerformance {
   readonly winRatePct: number;
 }
 
-function closedTrades(trades: readonly TradePreview[]): readonly TradePreview[] {
+function realizedTrades(trades: readonly TradePreview[]): readonly TradePreview[] {
   return trades.filter((trade) => (
-    trade.status === "closed" && trade.resultPnl !== null
+    trade.resultPnl !== null
   ));
 }
 
 export function calculatePerformance(trades: readonly TradePreview[]): PerformanceSnapshot {
-  const closed = closedTrades(trades);
-  const withR = closed.filter((trade) => trade.resultR !== null);
-  const netPnl = closed.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0);
+  const realized = realizedTrades(trades);
+  const withR = realized.filter((trade) => trade.resultR !== null);
+  const netPnl = realized.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0);
   const netR = withR.length === 0
     ? null
     : withR.reduce((sum, trade) => sum + (trade.resultR ?? 0), 0);
-  const wins = closed.filter((trade) => (trade.resultPnl ?? 0) > 0);
+  const wins = realized.filter((trade) => (trade.resultPnl ?? 0) > 0);
   const grossProfit = wins.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0);
-  const grossLoss = Math.abs(closed.reduce(
+  const grossLoss = Math.abs(realized.reduce(
     (sum, trade) => sum + Math.min(trade.resultPnl ?? 0, 0),
     0,
   ));
-  const followed = closed.filter((trade) => trade.followedPlan).length;
+  const reviewed = realized.filter((trade) => trade.followedPlan !== null);
+  const followed = reviewed.filter((trade) => trade.followedPlan === true).length;
 
   return {
     netPnl,
     netR,
-    winRatePct: closed.length === 0 ? 0 : (wins.length / closed.length) * 100,
+    winRatePct: realized.length === 0 ? 0 : (wins.length / realized.length) * 100,
     profitFactor: grossLoss === 0 ? null : grossProfit / grossLoss,
     averageR: netR === null ? null : netR / withR.length,
     rTradeCount: withR.length,
-    ruleAdherencePct: closed.length === 0 ? 0 : (followed / closed.length) * 100,
-    tradeCount: closed.length,
+    ruleAdherencePct: reviewed.length === 0 ? null : (followed / reviewed.length) * 100,
+    ruleReviewCount: reviewed.length,
+    tradeCount: realized.length,
   };
 }
 
 export function summarizeSetups(trades: readonly TradePreview[]): readonly SetupPerformance[] {
   const grouped = new Map<string, TradePreview[]>();
-  for (const trade of closedTrades(trades)) {
+  for (const trade of realizedTrades(trades)) {
     const group = grouped.get(trade.setup) ?? [];
     group.push(trade);
     grouped.set(trade.setup, group);

@@ -1,0 +1,210 @@
+import { Capacitor } from "@capacitor/core";
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  type SQLiteDBConnection,
+  type capSQLiteVersionUpgrade,
+} from "@capacitor-community/sqlite";
+
+import type {
+  JournalDatabaseFactory,
+  SqlDatabase,
+  SqlParameters,
+  SqlRow,
+  SqlRunResult,
+} from "../../application/sql-database";
+
+const DEFAULT_DATABASE_NAME = "hermes-journal";
+
+interface RandomSource {
+  getRandomValues(array: Uint8Array): Uint8Array;
+}
+
+function changes(result: { changes?: { changes?: number; lastId?: number } }): SqlRunResult {
+  return {
+    changes: result.changes?.changes ?? 0,
+    ...(result.changes?.lastId === undefined ? {} : { lastId: result.changes.lastId }),
+  };
+}
+
+export function generateEncryptionPassphrase(
+  random: RandomSource = globalThis.crypto,
+): string {
+  if (!random?.getRandomValues) {
+    throw new Error("Secure randomness is unavailable; the encrypted journal cannot be created.");
+  }
+  const bytes = random.getRandomValues(new Uint8Array(32));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export class CapacitorSqlDatabase implements SqlDatabase {
+  private inTransaction = false;
+  private closed = false;
+
+  constructor(
+    private readonly database: SQLiteDBConnection,
+    private readonly onClose: () => Promise<void>,
+  ) {}
+
+  async execute(statement: string): Promise<SqlRunResult> {
+    this.assertOpen();
+    return changes(await this.database.execute(statement, !this.inTransaction));
+  }
+
+  async run(statement: string, values: SqlParameters = []): Promise<SqlRunResult> {
+    this.assertOpen();
+    return changes(await this.database.run(statement, [...values], !this.inTransaction));
+  }
+
+  async query<Row extends SqlRow>(
+    statement: string,
+    values: SqlParameters = [],
+  ): Promise<readonly Row[]> {
+    this.assertOpen();
+    const result = await this.database.query(statement, [...values]);
+    return (result.values ?? []) as Row[];
+  }
+
+  async transaction<Result>(operation: () => Promise<Result>): Promise<Result> {
+    this.assertOpen();
+    if (this.inTransaction) {
+      throw new Error("Nested journal transactions are not supported.");
+    }
+    await this.database.beginTransaction();
+    this.inTransaction = true;
+    try {
+      const result = await operation();
+      const active = await this.database.isTransactionActive();
+      if (!active.result) throw new Error("The SQLite transaction ended before commit.");
+      await this.database.commitTransaction();
+      return result;
+    } catch (error) {
+      try {
+        if ((await this.database.isTransactionActive()).result) {
+          await this.database.rollbackTransaction();
+        }
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          "The journal transaction failed and SQLite rollback also failed.",
+        );
+      }
+      throw error;
+    } finally {
+      this.inTransaction = false;
+    }
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return;
+    if (this.inTransaction) {
+      throw new Error("Cannot close the journal database during a transaction.");
+    }
+    await this.database.close();
+    await this.onClose();
+    this.closed = true;
+  }
+
+  private assertOpen(): void {
+    if (this.closed) throw new Error("The journal database connection is closed.");
+  }
+}
+
+export interface NativeJournalDatabaseOptions {
+  readonly version: number;
+  readonly upgrades: readonly capSQLiteVersionUpgrade[];
+  readonly databaseName?: string;
+  readonly random?: RandomSource;
+  readonly sqlite?: Pick<SQLiteConnection,
+    | "isInConfigEncryption"
+    | "isSecretStored"
+    | "isDatabase"
+    | "setEncryptionSecret"
+    | "addUpgradeStatement"
+    | "checkConnectionsConsistency"
+    | "isConnection"
+    | "retrieveConnection"
+    | "createConnection"
+    | "isDatabaseEncrypted"
+    | "closeConnection"
+  >;
+  readonly platform?: () => string;
+}
+
+export class NativeJournalDatabaseFactory implements JournalDatabaseFactory {
+  private readonly databaseName: string;
+  private readonly sqlite: NonNullable<NativeJournalDatabaseOptions["sqlite"]>;
+
+  constructor(private readonly options: NativeJournalDatabaseOptions) {
+    this.databaseName = options.databaseName ?? DEFAULT_DATABASE_NAME;
+    this.sqlite = options.sqlite ?? new SQLiteConnection(CapacitorSQLite);
+  }
+
+  async open(): Promise<SqlDatabase> {
+    if ((this.options.platform ?? (() => Capacitor.getPlatform()))() === "web") {
+      throw new Error("Native encrypted SQLite is unavailable in the browser runtime.");
+    }
+    if (!(await this.sqlite.isInConfigEncryption()).result) {
+      throw new Error("Native SQLite encryption is disabled in the Capacitor configuration.");
+    }
+    const secretStored = (await this.sqlite.isSecretStored()).result;
+    if (!secretStored && (await this.sqlite.isDatabase(this.databaseName)).result) {
+      throw new Error(
+        "The encrypted Hermes journal exists but its Keychain secret is unavailable. Recovery is required; the database was not replaced.",
+      );
+    }
+    if (!secretStored) {
+      await this.sqlite.setEncryptionSecret(generateEncryptionPassphrase(this.options.random));
+    }
+
+    await this.sqlite.addUpgradeStatement(this.databaseName, [...this.options.upgrades]);
+    const consistent = (await this.sqlite.checkConnectionsConsistency()).result;
+    const exists = consistent && (await this.sqlite.isConnection(this.databaseName, false)).result;
+    const database = exists
+      ? await this.sqlite.retrieveConnection(this.databaseName, false)
+      : await this.sqlite.createConnection(
+        this.databaseName,
+        true,
+        "secret",
+        this.options.version,
+        false,
+      );
+
+    try {
+      await database.open();
+      await database.execute("PRAGMA foreign_keys = ON;", false);
+      const foreignKeys = await database.query("PRAGMA foreign_keys;");
+      const enabled = Number(foreignKeys.values?.[0]?.foreign_keys ?? 0) === 1;
+      if (!enabled) throw new Error("SQLite foreign-key enforcement could not be enabled.");
+      if (!(await this.sqlite.isDatabaseEncrypted(this.databaseName)).result) {
+        throw new Error("Hermes opened a database that is not encrypted.");
+      }
+      const quickCheck = await database.query("PRAGMA quick_check;");
+      if (String(Object.values(quickCheck.values?.[0] ?? {})[0] ?? "") !== "ok") {
+        throw new Error("The journal database failed SQLite's integrity check.");
+      }
+      const cipherCheck = await database.query("PRAGMA cipher_integrity_check;");
+      if ((cipherCheck.values?.length ?? 0) !== 0) {
+        throw new Error("The encrypted journal failed SQLCipher's integrity check.");
+      }
+      const foreignKeyViolations = await database.query("PRAGMA foreign_key_check;");
+      if ((foreignKeyViolations.values?.length ?? 0) !== 0) {
+        throw new Error("The journal database contains broken foreign-key references.");
+      }
+      return new CapacitorSqlDatabase(
+        database,
+        () => this.sqlite.closeConnection(this.databaseName, false),
+      );
+    } catch (error) {
+      try {
+        if ((await database.isDBOpen()).result) await database.close();
+        if ((await this.sqlite.isConnection(this.databaseName, false)).result) {
+          await this.sqlite.closeConnection(this.databaseName, false);
+        }
+      } catch {
+        // Preserve the initialization failure; the next launch rechecks consistency.
+      }
+      throw error;
+    }
+  }
+}
