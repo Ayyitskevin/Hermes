@@ -51,6 +51,10 @@ verified:
 - Two independent read-only rereviews returned clear after the same-session
   uncertain-commit, v2 interrupted-replay, native-boundary, pricing, scope,
   measurement, and handoff findings were addressed.
+- `git show --no-patch --format='%H %P' 4ac0a5f` records normal merge
+  `4ac0a5f86e98f7a96e7725ffc92f77eb4b4728c6` with reviewed milestone parent
+  `b700ec0fbbed04f808f4f51f5ce8d637edb1f230` and former `origin/main`
+  parent `da7ad61bb61fe5e036c6d6a85ef8217ef295832e`; no history was forced.
 
 assumptions:
 
@@ -69,9 +73,9 @@ assumptions:
 
 open:
 
-- Reconcile the reviewed mobile history with `origin/main` by a normal merge,
-  never a force push; then make `main` the remote default only after the
-  resulting tree is pushed and verified.
+- Before downstream work, verify `origin/main` descends from `4ac0a5f`, the
+  GitHub default is `main`, and both GitHub Actions lanes passed on the shipped
+  descendant. Do not infer any of those facts from this local handoff alone.
 - GitHub's legacy Python lane still needs to verify the frozen Python code.
   Local Ruff/Pytest executables were unavailable; no legacy Python logic changed.
 - Run every native gate in `docs/mobile/MAC_HANDOFF.md`, including v1→v2

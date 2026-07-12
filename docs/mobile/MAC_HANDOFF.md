@@ -5,30 +5,28 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
-## Branch reconciliation gate
+## Branch reconciliation record
 
-> **Hold — reconciliation onto `main` has not been completed or verified by
-> this handoff.** On 2026-07-12 the mobile merge history was reachable at
-> `6c7ac03`, while `origin/main` was still at `da7ad61`. A maintainer must
-> explicitly reconcile the intended mobile changes onto `main`, review the
-> resulting tree, and record the reconciled commit before using the native
-> acceptance procedure. Do not infer reconciliation from a merged-PR title or
-> run acceptance from a stale feature branch.
+The divergent histories were reconciled without force on 2026-07-12 by merge
+`4ac0a5f`: first parent `b700ec0` is the reviewed blueprint/manual-capture
+milestone and second parent `da7ad61` is the formerly unique `origin/main`
+merge. No branch was deleted and neither history was rewritten.
 
-Only after that reconciliation gate is recorded, update the checkout from the
-canonical branch and confirm that the reviewed mobile tree is present:
+Before native acceptance, update the checkout from the canonical branch and
+confirm that the shipped `origin/main` descends from the recorded merge:
 
 ```bash
 git fetch origin
 git switch main
 git pull --ff-only origin main
 git log --oneline --decorate -8
+git merge-base --is-ancestor 4ac0a5f origin/main
 git status --short
 ```
 
-Stop if `main` does not contain the reviewed mobile foundation and execution
-ledger or if the working tree contains unexplained changes. This document does
-not perform or attest to the reconciliation.
+Stop if that ancestry check fails, if `main` does not contain the reviewed
+mobile foundation/manual capture, or if the working tree contains unexplained
+changes.
 
 ## Reproduce the native project
 
