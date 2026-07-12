@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { prepareCsvImport } from "../application/prepare-csv-import";
+import {
+  prepareManualExecution,
+  type ManualExecutionInput,
+} from "../application/prepare-manual-execution";
 import { SessionJournalStore } from "./session-journal-store";
 
 const IMPORT_A = "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
@@ -20,7 +24,107 @@ function prepared(rawInput: string, sourceName: string) {
   });
 }
 
+function manual(
+  submissionDigit: string,
+  overrides: Partial<ManualExecutionInput> = {},
+) {
+  return prepareManualExecution({
+    submissionId: submissionDigit.repeat(64),
+    accountName: "Primary brokerage",
+    timeZone: "America/New_York",
+    defaultCurrency: "USD",
+    symbol: "AAPL",
+    assetClass: "stock",
+    side: "BUY",
+    positionEffect: "OPEN",
+    quantity: "1",
+    price: "100",
+    fee: "0",
+    executedAt: "2026-07-01T09:30:00",
+    ...overrides,
+  });
+}
+
 describe("browser session journal ownership", () => {
+  it("keeps manual fills idempotent and outside CSV rollback ownership", async () => {
+    let nowMs = 1_800_000_000_000;
+    const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+    try {
+      const entryCommand = manual("7");
+      const entry = await store.commitManualExecution(entryCommand);
+      const duplicate = await store.commitManualExecution(entryCommand);
+      expect(duplicate).toMatchObject({
+        outcome: "duplicate",
+        executionId: entry.executionId,
+      });
+      expect(await store.loadUnacknowledgedManualExecutions()).toEqual([{
+        submissionId: entryCommand.submissionId,
+        executionId: entry.executionId,
+        symbol: "AAPL",
+        side: "BUY",
+      }]);
+      await store.acknowledgeManualExecution(entryCommand.submissionId);
+      expect(await store.loadUnacknowledgedManualExecutions()).toEqual([]);
+
+      const imported = await store.commitCsvImport(prepared(
+        "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+          + "csv-exit,AAPL,STC,1,110,0,USD,2026-07-01T14:30:00Z",
+        "exit.csv",
+      ));
+      const rolledBack = await store.rollbackImport(
+        imported.receipt.id,
+        "Remove only the imported exit",
+      );
+      expect(rolledBack.executions).toHaveLength(1);
+      expect(rolledBack.executions[0]?.id).toBe(entry.executionId);
+      expect(rolledBack.projection.trades[0]).toMatchObject({
+        status: "OPEN",
+        remainingQuantity: "1",
+      });
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("keeps manual ETF and generic-CSV stock identities separate by asset class", async () => {
+    const store = new SessionJournalStore();
+    try {
+      const manualEtf = await store.commitManualExecution(manual("9", {
+        symbol: "SPY",
+        assetClass: "etf",
+      }));
+      const imported = await store.commitCsvImport(prepared(
+        "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+          + "csv-spy,SPY,BUY,1,500,0,USD,2026-07-01T14:30:00Z",
+        "spy.csv",
+      ));
+      expect(imported.ledger.instruments
+        .filter((instrument) => instrument.symbol === "SPY")
+        .map((instrument) => instrument.assetClass)
+        .sort()).toEqual(["etf", "stock"]);
+      expect(imported.ledger.executions.find((execution) => execution.id === manualEtf.executionId)
+        ?.instrumentId).not.toBe(imported.ledger.executions.find((execution) => (
+        execution.id !== manualEtf.executionId
+      ))?.instrumentId);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("leaves browser state unchanged when a manual close cannot normalize", async () => {
+    const store = new SessionJournalStore();
+    try {
+      const before = await store.load();
+      await expect(store.commitManualExecution(manual("8", {
+        side: "SELL",
+        positionEffect: "CLOSE",
+      }))).rejects.toThrow(/CLOSE execution cannot act on a flat position/);
+      expect(await store.load()).toEqual(before);
+    } finally {
+      await store.close();
+    }
+  });
+
   it("keeps shared fills active while a later overlapping receipt remains active", async () => {
     let nowMs = 1_800_000_000_000;
     const store = new SessionJournalStore({ nowMs: () => nowMs++ });

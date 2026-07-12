@@ -1,7 +1,7 @@
 [project]
 name = "hermes-dashboard"
 version = "0.1.0"
-description = "Hermes — a self-hosted, AI-assisted, decision-support trading dashboard for one regime-following swing trader. Analyzes and recommends; a human places every trade."
+description = "Retained legacy Hermes desktop prototype; the active iPhone-first journal lives in mobile/."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"

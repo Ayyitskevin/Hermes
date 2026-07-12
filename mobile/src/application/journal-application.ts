@@ -4,8 +4,16 @@ import { DEMO_WORKSPACE } from "../data/demo";
 import type {
   CsvImportCommitResult,
   JournalStore,
+  ManualExecutionCommitResult,
   PreparedCsvImport,
+  UnacknowledgedManualExecution,
 } from "./journal-store";
+import {
+  createManualExecutionSubmissionId,
+  prepareManualExecution,
+  type ManualExecutionInput,
+  type PreparedManualExecution,
+} from "./prepare-manual-execution";
 import {
   prepareCsvImport,
   type PrepareCsvImportInput,
@@ -21,6 +29,16 @@ export interface CsvImportSelection {
   readonly timeZone: string;
   readonly defaultCurrency: string;
   readonly mapping?: CsvHeaderMapping;
+}
+
+export class ManualExecutionCommitStatusUncertainError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Hermes could not confirm whether this execution was saved. Keep this sheet open and check the same submission again; do not re-enter it.",
+      { cause },
+    );
+    this.name = "ManualExecutionCommitStatusUncertainError";
+  }
 }
 
 export class JournalApplication {
@@ -55,6 +73,75 @@ export class JournalApplication {
     const result = await this.store.commitCsvImport(prepared);
     this.viewMode = "local";
     return result;
+  }
+
+  createManualSubmissionId(): string {
+    return createManualExecutionSubmissionId();
+  }
+
+  prepareManual(input: ManualExecutionInput): PreparedManualExecution {
+    return prepareManualExecution(input);
+  }
+
+  async commitManual(
+    prepared: PreparedManualExecution,
+  ): Promise<ManualExecutionCommitResult> {
+    const result = await this.store.commitManualExecution(prepared);
+    this.viewMode = "local";
+    return result;
+  }
+
+  async commitManualSafely(
+    prepared: PreparedManualExecution,
+  ): Promise<ManualExecutionCommitResult> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.commitManual(prepared);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    try {
+      const recoverable = await this.loadRecoverableManualExecutions();
+      const recovered = recoverable.find((item) => item.submissionId === prepared.submissionId);
+      if (recovered !== undefined) {
+        const ledger = await this.store.load();
+        this.viewMode = "local";
+        return {
+          outcome: "duplicate",
+          executionId: recovered.executionId,
+          ledger,
+        };
+      }
+    } catch (error) {
+      throw new ManualExecutionCommitStatusUncertainError(error);
+    }
+    throw lastError;
+  }
+
+  async loadAccountNames(): Promise<readonly string[]> {
+    const ledger = await this.store.load();
+    return ledger.accounts
+      .map((account) => account.name)
+      .sort((left, right) => left.localeCompare(right, "en-US"));
+  }
+
+  async loadRecoverableManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
+    const recoverable = await this.store.loadUnacknowledgedManualExecutions();
+    if (recoverable.length === 0) return recoverable;
+    const ledger = await this.store.load();
+    const activeExecutionIds = new Set(ledger.executions.map((execution) => execution.id));
+    for (const item of recoverable) {
+      if (!activeExecutionIds.has(item.executionId)) {
+        throw new Error("A committed manual execution could not be reconciled with the ledger.");
+      }
+    }
+    return recoverable;
+  }
+
+  async acknowledgeManualExecution(submissionId: string): Promise<void> {
+    await this.store.acknowledgeManualExecution(submissionId);
   }
 
   async rollbackImport(receiptId: string, reason: string): Promise<JournalWorkspaceSnapshot> {

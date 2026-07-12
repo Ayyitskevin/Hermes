@@ -8,7 +8,11 @@ import type {
   SqlRunResult,
 } from "../../application/sql-database";
 import { prepareCsvImport } from "../../application/prepare-csv-import";
-import { V1_MIGRATION_STATEMENTS } from "./schema";
+import {
+  prepareManualExecution,
+  type ManualExecutionInput,
+} from "../../application/prepare-manual-execution";
+import { MOBILE_SCHEMA_MIGRATIONS } from "./schema";
 import {
   SqliteJournalStore,
   type JournalStoreRuntime,
@@ -106,10 +110,14 @@ async function createHarness(runtime: JournalStoreRuntime = deterministicRuntime
   const database = new SqlJsDatabase(new SQL.Database());
   await database.execute("PRAGMA foreign_keys = ON");
   await database.transaction(async () => {
-    for (const statement of V1_MIGRATION_STATEMENTS) {
-      await database.execute(statement);
+    for (const migration of MOBILE_SCHEMA_MIGRATIONS) {
+      for (const statement of migration.statements) {
+        await database.execute(statement);
+      }
     }
-    await database.execute("PRAGMA user_version = 1");
+    const current = MOBILE_SCHEMA_MIGRATIONS.at(-1);
+    if (current === undefined) throw new Error("Test schema has no migrations.");
+    await database.execute(`PRAGMA user_version = ${current.toVersion}`);
   });
   return {
     database,
@@ -124,6 +132,27 @@ function preparedCsv(rawInput = ROUND_TRIP_CSV) {
     accountName: "Main brokerage",
     timeZone: "America/New_York",
     defaultCurrency: "USD",
+  });
+}
+
+function preparedManual(
+  submissionDigit: string,
+  overrides: Partial<ManualExecutionInput> = {},
+) {
+  return prepareManualExecution({
+    submissionId: submissionDigit.repeat(64),
+    accountName: "Main brokerage",
+    timeZone: "America/New_York",
+    defaultCurrency: "USD",
+    symbol: "AAPL",
+    assetClass: "stock",
+    side: "BUY",
+    positionEffect: "OPEN",
+    quantity: "2",
+    price: "100",
+    fee: "0.10",
+    executedAt: "2026-07-01T09:30:00",
+    ...overrides,
   });
 }
 
@@ -171,6 +200,175 @@ describe("SqliteJournalStore", () => {
         moneyTotals: [],
       });
       await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("commits manual fills through immutable sources and exact projections without import receipts", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const entry = await store.commitManualExecution(preparedManual("1"));
+      const exit = await store.commitManualExecution(preparedManual("2", {
+        side: "SELL",
+        positionEffect: "CLOSE",
+        price: "110",
+        executedAt: "2026-07-01T10:30:00",
+      }));
+
+      expect(entry.outcome).toBe("committed");
+      expect(exit.ledger.imports).toEqual([]);
+      expect(exit.ledger.executions).toHaveLength(2);
+      expect(exit.ledger.projection.trades[0]).toMatchObject({
+        direction: "LONG",
+        status: "CLOSED",
+        enteredQuantity: "2",
+        exitedQuantity: "2",
+        moneyTotals: [{
+          currency: "USD",
+          grossPnl: "20",
+          feeCost: "0.2",
+          netPnl: "19.8",
+        }],
+      });
+      expect(await count(database, "execution_sources")).toBe(2);
+      expect(await scalar(
+        database,
+        "SELECT COUNT(*) FROM execution_sources WHERE source_kind = 'manual'",
+      )).toBe(2);
+      expect(await count(database, "import_batches")).toBe(0);
+      expect(await count(database, "import_receipts")).toBe(0);
+      expect(await count(database, "projection_rebuild_runs")).toBe(2);
+      expect(await expectHealthyDatabase(database)).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("replays the same manual submission idempotently without rebuilding", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const command = preparedManual("3");
+      const first = await store.commitManualExecution(command);
+      const duplicate = await store.commitManualExecution(command);
+
+      expect(duplicate).toMatchObject({
+        outcome: "duplicate",
+        executionId: first.executionId,
+      });
+      expect(await count(database, "executions")).toBe(1);
+      expect(await count(database, "execution_versions")).toBe(1);
+      expect(await count(database, "projection_rebuild_runs")).toBe(1);
+      expect(await store.loadUnacknowledgedManualExecutions()).toEqual([{
+        submissionId: command.submissionId,
+        executionId: first.executionId,
+        symbol: "AAPL",
+        side: "BUY",
+      }]);
+
+      const recreatedStore = new SqliteJournalStore(database, deterministicRuntime());
+      const recovered = await recreatedStore.loadUnacknowledgedManualExecutions();
+      expect(recovered).toHaveLength(1);
+      const replayAfterResponseLoss = await recreatedStore.commitManualExecution(command);
+      expect(replayAfterResponseLoss).toMatchObject({
+        outcome: "duplicate",
+        executionId: first.executionId,
+      });
+      expect(await count(database, "executions")).toBe(1);
+      await recreatedStore.acknowledgeManualExecution(command.submissionId);
+      expect(await recreatedStore.loadUnacknowledgedManualExecutions()).toEqual([]);
+      await expect(database.run(
+        "UPDATE manual_execution_submissions SET acknowledged_at_ms = NULL WHERE submission_id = ?",
+        [command.submissionId],
+      )).rejects.toThrow(/state cannot regress/);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("keeps manual ETF and generic-CSV stock identities separate by asset class", async () => {
+    const { store } = await createHarness();
+    try {
+      const manualEtf = await store.commitManualExecution(preparedManual("7", {
+        symbol: "SPY",
+        assetClass: "etf",
+      }));
+      const imported = await store.commitCsvImport(preparedCsv(
+        "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+          + "csv-spy,SPY,BUY,1,500,0,USD,2026-07-01T14:30:00Z",
+      ));
+      expect(imported.ledger.instruments
+        .filter((instrument) => instrument.symbol === "SPY")
+        .map((instrument) => instrument.assetClass)
+        .sort()).toEqual(["etf", "stock"]);
+      expect(imported.ledger.executions.find((execution) => execution.id === manualEtf.executionId)
+        ?.instrumentId).not.toBe(imported.ledger.executions.find((execution) => (
+        execution.id !== manualEtf.executionId
+      ))?.instrumentId);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("atomically rejects changed or invalid manual submissions", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const committed = preparedManual("4");
+      await store.commitManualExecution(committed);
+      const before = {
+        executions: await count(database, "executions"),
+        versions: await count(database, "execution_versions"),
+        runs: await count(database, "projection_rebuild_runs"),
+      };
+
+      await expect(store.commitManualExecution(preparedManual("4", {
+        price: "101",
+      }))).rejects.toThrow(/already staged with different/);
+      expect({
+        executions: await count(database, "executions"),
+        versions: await count(database, "execution_versions"),
+        runs: await count(database, "projection_rebuild_runs"),
+      }).toEqual(before);
+    } finally {
+      await store.close();
+    }
+
+    const invalidHarness = await createHarness();
+    try {
+      await expect(invalidHarness.store.commitManualExecution(preparedManual("5", {
+        side: "SELL",
+        positionEffect: "CLOSE",
+      }))).rejects.toThrow(/CLOSE execution cannot act on a flat position/);
+      expect(await count(invalidHarness.database, "workspaces")).toBe(0);
+      expect(await count(invalidHarness.database, "executions")).toBe(0);
+      expect(await count(invalidHarness.database, "projection_rebuild_runs")).toBe(0);
+    } finally {
+      await invalidHarness.store.close();
+    }
+  });
+
+  it("keeps manual facts outside CSV receipt rollback coverage", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const manual = await store.commitManualExecution(preparedManual("6"));
+      const csv = await store.commitCsvImport(preparedCsv(
+        "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+        + "csv-exit,AAPL,STC,2,110,0.10,USD,2026-07-01T14:30:00Z",
+      ));
+      const rolledBack = await store.rollbackImport(csv.receipt.id, "Remove only the CSV exit");
+
+      expect(rolledBack.executions.map((execution) => execution.id)).toEqual([
+        manual.executionId,
+      ]);
+      expect(rolledBack.projection.trades[0]).toMatchObject({
+        status: "OPEN",
+        remainingQuantity: "2",
+      });
+      expect(await scalar(
+        database,
+        `SELECT COUNT(*) FROM import_execution_occurrences
+          WHERE execution_id = '${manual.executionId}'`,
+      )).toBe(0);
     } finally {
       await store.close();
     }

@@ -7,6 +7,7 @@ import type {
   LedgerExecution,
   TradeNormalizationResult,
 } from "../core/ledger";
+import type { PreparedManualExecution } from "./prepare-manual-execution";
 
 export interface JournalWorkspaceRecord {
   readonly id: string;
@@ -71,6 +72,31 @@ export interface CsvImportCommitResult {
   readonly ledger: JournalLedgerSnapshot;
 }
 
+export interface ManualExecutionCommitResult {
+  readonly outcome: "committed" | "duplicate";
+  readonly executionId: string;
+  readonly ledger: JournalLedgerSnapshot;
+}
+
+export interface UnacknowledgedManualExecution {
+  readonly submissionId: string;
+  readonly executionId: string;
+  readonly symbol: string;
+  readonly side: "BUY" | "SELL";
+}
+
+export interface ManualExecutionConflict {
+  readonly code: "submission_changed" | "execution_changed";
+  readonly message: string;
+}
+
+export class JournalManualExecutionError extends Error {
+  constructor(readonly conflict: ManualExecutionConflict) {
+    super(conflict.message);
+    this.name = "JournalManualExecutionError";
+  }
+}
+
 export interface CsvImportConflict {
   readonly code: "preview_changed" | "execution_changed" | "duplicate_execution";
   readonly message: string;
@@ -87,6 +113,9 @@ export class JournalImportError extends Error {
 export interface JournalStore {
   load(): Promise<JournalLedgerSnapshot>;
   commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult>;
+  commitManualExecution(command: PreparedManualExecution): Promise<ManualExecutionCommitResult>;
+  loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]>;
+  acknowledgeManualExecution(submissionId: string): Promise<void>;
   rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot>;
   close(): Promise<void>;
 }

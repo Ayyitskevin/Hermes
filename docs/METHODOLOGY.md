@@ -1,5 +1,11 @@
 # Methodology traceability
 
+> **Legacy desktop reference — not the active mobile methodology.** This ledger
+> documents the frozen strategy cockpit and owner-specific operating rules. Use
+> the [mobile product blueprint](mobile/PRODUCT_BLUEPRINT.md),
+> [iOS roadmap](mobile/IOS_ROADMAP.md), and
+> [local-ledger contract](mobile/LOCAL_LEDGER.md) for current product rules.
+
 The rule: every skill in Hermes maps to a real, named methodology or to the
 owner's own validated rules — and says so on screen. If a piece of logic
 isn't traceable, it must say that too. This file is the ledger. The same

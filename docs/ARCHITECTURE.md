@@ -1,5 +1,11 @@
 # Hermes — Architecture
 
+> **Legacy desktop reference — not the active mobile architecture.** This
+> document describes the frozen Python/FastAPI cockpit in `src/hermes/`, `web/`,
+> and `deploy/`. Use the [mobile product blueprint](mobile/PRODUCT_BLUEPRINT.md),
+> [iOS roadmap](mobile/IOS_ROADMAP.md), and
+> [local-ledger contract](mobile/LOCAL_LEDGER.md) for current product work.
+
 *The Phase 1 proposal, as built. Read together with [DESIGN.md](DESIGN.md) —
 the technical plan and the visual plan were reviewed as one.*
 
@@ -11,8 +17,10 @@ It analyzes and recommends; a human places every trade.
 
 **The hard boundary, stated once and enforced everywhere:** there is no
 order-placement code, no broker write access, and no path by which Hermes
-could place or modify a live order. The only Alpaca host in the codebase is
-the data host (`data.alpaca.markets`). CI runs a guard test
+could place or modify a live order. The frozen prototype uses the Alpaca data
+host (`data.alpaca.markets`) and also permits the paper host only inside the
+sealed GET-only `src/hermes/broker_ro/` adapter. Live and broker-API hosts
+remain forbidden. CI runs a guard test
 (`tests/test_no_order_paths.py`) that fails the build if a trading endpoint,
 trading base URL, or order-shaped API ever appears.
 

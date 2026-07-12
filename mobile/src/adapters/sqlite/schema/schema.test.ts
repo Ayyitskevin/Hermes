@@ -8,9 +8,15 @@ import {
   V1_MIGRATION_NAME,
   V1_MIGRATION_STATEMENTS,
   V1_MIGRATION_VERSION,
+  V2_MIGRATION_BODY,
+  V2_MIGRATION_CHECKSUM_SHA256,
+  V2_MIGRATION_NAME,
+  V2_MIGRATION_STATEMENTS,
+  V2_MIGRATION_VERSION,
   createCapacitorSchemaUpgrades,
   sha256Hex,
   v1MigrationChecksumInput,
+  v2MigrationChecksumInput,
 } from "./index";
 
 const REQUIRED_TABLES = [
@@ -28,6 +34,7 @@ const REQUIRED_TABLES = [
   "import_rollbacks",
   "import_source_rows",
   "instruments",
+  "manual_execution_submissions",
   "projection_active_state",
   "projection_rebuild_runs",
   "schema_migrations",
@@ -53,6 +60,7 @@ const REQUIRED_INDEXES = [
   "instruments_non_option_identity_idx",
   "instruments_option_identity_idx",
   "instruments_workspace_symbol_idx",
+  "manual_execution_submissions_unacknowledged_idx",
   "projection_rebuild_runs_workspace_status_idx",
   "trade_execution_allocations_version_idx",
   "trade_lot_matches_entry_idx",
@@ -73,9 +81,28 @@ async function createMigratedDatabase(): Promise<Database> {
   db.run("PRAGMA foreign_keys = ON");
   db.run("BEGIN IMMEDIATE");
   try {
-    for (const statement of V1_MIGRATION_STATEMENTS) {
-      db.run(statement);
+    for (const migration of MOBILE_SCHEMA_MIGRATIONS) {
+      for (const statement of migration.statements) db.run(statement);
     }
+    const current = MOBILE_SCHEMA_MIGRATIONS.at(-1);
+    if (current === undefined) throw new Error("Test schema has no migrations.");
+    db.run(`PRAGMA user_version = ${current.toVersion}`);
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    db.close();
+    throw error;
+  }
+  return db;
+}
+
+async function createV1Database(): Promise<Database> {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+  db.run("PRAGMA foreign_keys = ON");
+  db.run("BEGIN IMMEDIATE");
+  try {
+    for (const statement of V1_MIGRATION_STATEMENTS) db.run(statement);
     db.run("PRAGMA user_version = 1");
     db.run("COMMIT");
   } catch (error) {
@@ -91,7 +118,7 @@ describe("mobile SQLite migration contract", () => {
     expect(sha256Hex("")).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     expect(sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 
-    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1]);
+    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1, 2]);
     expect(MOBILE_SCHEMA_MIGRATIONS[0]).toMatchObject({
       toVersion: V1_MIGRATION_VERSION,
       name: V1_MIGRATION_NAME,
@@ -101,10 +128,22 @@ describe("mobile SQLite migration contract", () => {
     expect(V1_MIGRATION_CHECKSUM_SHA256).toBe(
         "37905c631232529779ebaa6178ddd7b4c102f8f93b099898712bbe539ea92326",
     );
+    expect(MOBILE_SCHEMA_MIGRATIONS[1]).toMatchObject({
+      toVersion: V2_MIGRATION_VERSION,
+      name: V2_MIGRATION_NAME,
+      checksumSha256: V2_MIGRATION_CHECKSUM_SHA256,
+      checksumInput: v2MigrationChecksumInput(),
+    });
+    expect(V2_MIGRATION_CHECKSUM_SHA256).toBe(
+      "0ca43faada6b2d1087c4a699232061a78ffdae395131edb3980663e50497cbd9",
+    );
 
     const firstCopy = createCapacitorSchemaUpgrades();
     const secondCopy = createCapacitorSchemaUpgrades();
-    expect(firstCopy).toEqual([{ toVersion: 1, statements: [...V1_MIGRATION_STATEMENTS] }]);
+    expect(firstCopy).toEqual([
+      { toVersion: 1, statements: [...V1_MIGRATION_STATEMENTS] },
+      { toVersion: 2, statements: [...V2_MIGRATION_STATEMENTS] },
+    ]);
     expect(secondCopy).toEqual(firstCopy);
     expect(secondCopy).not.toBe(firstCopy);
     expect(secondCopy[0]?.statements).not.toBe(firstCopy[0]?.statements);
@@ -146,7 +185,7 @@ describe("mobile SQLite migration contract", () => {
   });
 
   it("declares the required strict tables, constraints, indexes, and immutable ledgers", () => {
-    const bodySql = V1_MIGRATION_BODY.join("\n");
+    const bodySql = [...V1_MIGRATION_BODY, ...V2_MIGRATION_BODY].join("\n");
 
     for (const tableName of REQUIRED_TABLES) {
       expect(bodySql).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS ${tableName} \\([\\s\\S]+?\\) STRICT`, "i"));
@@ -196,11 +235,11 @@ describe("mobile SQLite migration contract", () => {
     expect(bodySql).not.toMatch(/UNIQUE \(workspace_id, input_sha256, parser_id, parser_version, mapping_sha256\)/);
   });
 
-  it("executes the complete v1 migration with foreign keys and integrity checks enabled", async () => {
+  it("executes the complete migration chain with foreign keys and integrity checks enabled", async () => {
     const db = await createMigratedDatabase();
     try {
       expect(queryColumn(db, "PRAGMA foreign_keys")).toEqual([1]);
-      expect(queryColumn(db, "PRAGMA user_version")).toEqual([1]);
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([2]);
       expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
       expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
 
@@ -229,9 +268,13 @@ describe("mobile SQLite migration contract", () => {
         expect(indexes).toContain(indexName);
       }
 
-      expect(queryColumn(db, "SELECT version FROM schema_migrations")).toEqual([1]);
-      expect(queryColumn(db, "SELECT checksum_sha256 FROM schema_migrations")).toEqual([
+      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version")).toEqual([1, 2]);
+      expect(queryColumn(
+        db,
+        "SELECT checksum_sha256 FROM schema_migrations ORDER BY version",
+      )).toEqual([
         V1_MIGRATION_CHECKSUM_SHA256,
+        V2_MIGRATION_CHECKSUM_SHA256,
       ]);
 
       db.run("INSERT INTO currencies VALUES ('USD', 2, 'US Dollar')");
@@ -313,8 +356,90 @@ describe("mobile SQLite migration contract", () => {
     }
   });
 
+  it("upgrades an existing v1 ledger to v2 without replacing existing state", async () => {
+    const db = await createV1Database();
+    try {
+      db.run("INSERT INTO currencies VALUES ('USD', 2, 'US Dollar')");
+      db.run(
+        "INSERT INTO workspaces VALUES ('workspace-1', 'Journal', 'USD', 'UTC', 1, 1, NULL)",
+      );
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V2_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("PRAGMA user_version = 2");
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([2]);
+      expect(queryColumn(db, "SELECT name FROM workspaces")).toEqual(["Journal"]);
+      expect(queryColumn(
+        db,
+        "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'manual_execution_submissions'",
+      )).toEqual(["manual_execution_submissions"]);
+      expect(queryColumn(db, "PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("replays v2 safely when its statements committed before user_version advanced", async () => {
+    const db = await createV1Database();
+    try {
+      const hash = "a".repeat(64);
+      db.run("INSERT INTO currencies VALUES ('USD', 2, 'US Dollar')");
+      db.run(
+        "INSERT INTO workspaces VALUES ('workspace-1', 'Journal', 'USD', 'UTC', 1, 1, NULL)",
+      );
+      db.run(
+        "INSERT INTO accounts (id, workspace_id, name, account_kind, base_currency_code, created_at_ms) VALUES ('account-1', 'workspace-1', 'Primary', 'brokerage', 'USD', 1)",
+      );
+      db.run(
+        "INSERT INTO instruments (id, workspace_id, symbol, asset_class, quote_currency_code, multiplier_text, created_at_ms) VALUES ('instrument-1', 'workspace-1', 'AAPL', 'stock', 'USD', '1', 1)",
+      );
+      db.run(
+        "INSERT INTO executions (id, workspace_id, account_id, instrument_id, ledger_sequence, identity_sha256, created_at_ms) VALUES ('execution-1', 'workspace-1', 'account-1', 'instrument-1', 1, ?, 1)",
+        [hash],
+      );
+      db.run(
+        "INSERT INTO execution_versions (id, execution_id, workspace_id, version_number, side, position_effect, quantity_text, price_text, quote_currency_code, executed_at_us, is_void, version_sha256, recorded_at_ms) VALUES ('version-1', 'execution-1', 'workspace-1', 1, 'buy', 'open', '1', '100', 'USD', 1, 0, ?, 1)",
+        ["b".repeat(64)],
+      );
+      db.run(
+        "INSERT INTO execution_heads VALUES ('execution-1', 'workspace-1', 'version-1', 1)",
+      );
+      db.run(
+        "INSERT INTO execution_sources (id, execution_version_id, workspace_id, source_kind, stable_source_key, source_payload_sha256, recorded_at_ms) VALUES ('source-1', 'version-1', 'workspace-1', 'manual', 'manual:v1:existing', ?, 1)",
+        ["c".repeat(64)],
+      );
+
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V2_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("COMMIT");
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([1]);
+      expect(queryColumn(
+        db,
+        "SELECT count(*) FROM schema_migrations WHERE version = 2",
+      )).toEqual([1]);
+
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V2_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("PRAGMA user_version = 2");
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([2]);
+      expect(queryColumn(db, "SELECT count(*) FROM executions")).toEqual([1]);
+      expect(queryColumn(
+        db,
+        "SELECT count(*) FROM schema_migrations WHERE version = 2",
+      )).toEqual([1]);
+      expect(queryColumn(db, "PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("replays safely when statements committed before user_version advanced", async () => {
-    const db = await createMigratedDatabase();
+    const db = await createV1Database();
     try {
       db.run("PRAGMA user_version = 0");
       db.run("BEGIN IMMEDIATE");

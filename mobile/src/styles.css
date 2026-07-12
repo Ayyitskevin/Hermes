@@ -362,6 +362,14 @@ p { line-height: 1.55; }
 .issue-list strong { font-family: "B612 Mono", monospace; font-size: .68rem; text-transform: uppercase; }
 .import-history-row { display: grid; gap: .6rem; }
 .import-history-row p { margin: 0; color: var(--muted); font-size: .8rem; }
+.manual-capture-card { display: grid; gap: .75rem; border-color: rgb(155 124 255 / 25%); }
+.manual-capture-card > p { margin: 0; color: var(--muted); }
+.manual-entry-sheet { display: grid; gap: 1rem; }
+.manual-entry-sheet > p { margin: 0; }
+.manual-entry-review { display: grid; gap: 1rem; }
+.manual-entry-review .execution-grid { grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr)); }
+.manual-entry-review dd { overflow-wrap: anywhere; }
+input[readonly] { color: #b9b5c2; background: #0d1016; }
 
 form { display: grid; gap: 1rem; }
 .segmented {

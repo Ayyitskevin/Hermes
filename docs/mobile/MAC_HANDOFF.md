@@ -5,10 +5,34 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
+## Branch reconciliation gate
+
+> **Hold — reconciliation onto `main` has not been completed or verified by
+> this handoff.** On 2026-07-12 the mobile merge history was reachable at
+> `6c7ac03`, while `origin/main` was still at `da7ad61`. A maintainer must
+> explicitly reconcile the intended mobile changes onto `main`, review the
+> resulting tree, and record the reconciled commit before using the native
+> acceptance procedure. Do not infer reconciliation from a merged-PR title or
+> run acceptance from a stale feature branch.
+
+Only after that reconciliation gate is recorded, update the checkout from the
+canonical branch and confirm that the reviewed mobile tree is present:
+
+```bash
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git log --oneline --decorate -8
+git status --short
+```
+
+Stop if `main` does not contain the reviewed mobile foundation and execution
+ledger or if the working tree contains unexplained changes. This document does
+not perform or attest to the reconciliation.
+
 ## Reproduce the native project
 
 ```bash
-git switch codex/ios-paid-app-foundation
 cd mobile
 npm ci
 npx playwright install chromium
@@ -60,11 +84,28 @@ and an App Store disclosure.
 - Import a two-fill CSV, confirm the preview/mapping/receipt, force quit, relaunch,
   and reconcile the closed-trade P&L including both fees.
 - Re-import the same file and confirm no duplicate execution or performance.
+- In a fresh journal, manually enter an opening and closing fill with fees.
+  Confirm the review step shows the canonical values, the result reconciles,
+  no import receipt is manufactured, and force quit/relaunch preserves both
+  immutable manual sources and their projection.
+- Retry the same manual submission during an interrupted/double-tap scenario and
+  confirm only one execution and one projection generation are created. Enter a
+  genuinely identical second fill separately and confirm it is retained.
+- Simulate a committed SQLite transaction whose bridge response never reaches
+  the WebView, terminate the app, and relaunch. Confirm startup reports the
+  already-saved fill, acknowledges its encrypted v2 command record only after
+  reading the active ledger, and never creates a second execution.
+- Exercise a daylight-saving gap and repeated clock hour. The gap must fail;
+  the repeated hour must require the explicit UTC-offset field and save the
+  intended instant.
 - Reuse the same external execution ID with a changed symbol or price and
   confirm the entire batch is rejected without partial state. A generic no-ID
   export cannot prove that a changed row is a correction.
 - Roll back the receipt; confirm projections disappear while the source rows,
   receipt, and rollback audit remain.
+- Combine a manual opening fill with an imported closing fill, roll back the
+  import receipt, and confirm the manual fill remains active and outside import
+  occurrence ownership.
 - Import that exact file again; confirm a new committed receipt restores the
   executions while the first receipt remains visibly rolled back.
 - Import overlapping files A(shared fill) and B(shared fill + new fill). Roll
@@ -99,8 +140,9 @@ and every skipped check. A clean console alone is not evidence.
 1. Enroll in the Apple Developer Program and accept the Paid Apps Agreement.
 2. Complete banking and tax setup.
 3. Clear the final product name, bundle identifier, trademark risk, and domain.
-4. Create the app record and set the upfront price to the $9.99 tier. Do not add
-   a subscription or an in-app lifetime unlock.
+4. Only after explicit owner approval, create the app record and set the
+   approved upfront tier. The current $9.99 figure is an unapproved hypothesis.
+   Do not add a subscription or an in-app lifetime unlock.
 5. Add support/privacy URLs, an in-app privacy link, privacy nutrition labels,
    age rating, category, screenshots, description, keywords, and review notes.
 6. Verify the archive and every bundled SDK before claiming `Data Not Collected`.
@@ -125,8 +167,9 @@ and every skipped check. A clean console alone is not evidence.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry, annotations, attachments, export, restore, and delete-all remain
-  incomplete Phase 1 work.
+- Manual entry is Linux-verified but still needs the native persistence,
+  response-loss, migration, and lifecycle checks above. Annotations,
+  attachments, export, restore, and delete-all remain incomplete Phase 1 work.
 - `Podfile.lock`, `App.xcworkspace`, and final CocoaPods-generated build phases
   are Mac gates and are not yet present/reviewed.
 - Direct broker/market-data connectivity is outside the launch path until rights,

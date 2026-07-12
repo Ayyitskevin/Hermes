@@ -5,10 +5,19 @@ import type {
   JournalLedgerSnapshot,
   JournalStore,
   JournalWorkspaceRecord,
+  ManualExecutionCommitResult,
   PreparedCsvImport,
   CsvImportCommitResult,
+  UnacknowledgedManualExecution,
 } from "../../application/journal-store";
-import { JournalImportError } from "../../application/journal-store";
+import {
+  JournalImportError,
+  JournalManualExecutionError,
+} from "../../application/journal-store";
+import {
+  type PreparedManualExecution,
+  verifyPreparedManualExecution,
+} from "../../application/prepare-manual-execution";
 import { verifyPreparedCsvImport } from "../../application/prepare-csv-import";
 import type { SqlDatabase, SqlRow } from "../../application/sql-database";
 import { currencyMinorUnit } from "../../core/currency";
@@ -292,7 +301,7 @@ export class SqliteJournalStore implements JournalStore {
       let nextExecutionSequence = await this.nextExecutionSequenceStart();
       const fallbackOccurrences = new Map<string, number>();
       for (const row of preview.rows) {
-        const instrumentId = await this.ensureInstrument(row.symbol, currency, nowMs);
+        const instrumentId = await this.ensureInstrument(row.symbol, currency, "stock", nowMs);
         const sourceRowId = sourceIdByRow.get(row.source.logicalRow);
         if (sourceRowId === undefined) throw new Error("A preview row lost its immutable source record.");
         const fallbackIdentity = canonicalJson({
@@ -534,6 +543,287 @@ export class SqliteJournalStore implements JournalStore {
     return { outcome: transactionResult.outcome, receipt, ledger };
   }
 
+  async commitManualExecution(
+    command: PreparedManualExecution,
+  ): Promise<ManualExecutionCommitResult> {
+    this.assertOpen();
+    await this.verifySchema();
+    const verified = verifyPreparedManualExecution(command);
+    const transactionResult = await this.database.transaction(async () => {
+      const nowMs = this.runtime.nowMs();
+      await this.ensureWorkspace(
+        verified,
+        verified.defaultCurrency,
+        verified.minorUnit,
+        nowMs,
+        "manual",
+      );
+      const accountId = await this.ensureAccount(
+        verified.accountName,
+        verified.defaultCurrency,
+        nowMs,
+      );
+      const instrumentId = await this.ensureInstrument(
+        verified.symbol,
+        verified.defaultCurrency,
+        verified.assetClass,
+        nowMs,
+      );
+      const commandJson = canonicalJson(verified);
+      const submissionRows = await this.database.query<SqlRow>(
+        `SELECT revision_sha256, command_json, state, execution_id
+           FROM manual_execution_submissions
+          WHERE submission_id = ? AND workspace_id = ?
+          LIMIT 1`,
+        [verified.submissionId, WORKSPACE_ID],
+      );
+      const submission = submissionRows[0];
+      let submissionState: "pending" | "committed";
+      if (submission === undefined) {
+        await this.database.run(
+          `INSERT INTO manual_execution_submissions (
+            submission_id, workspace_id, revision_sha256, command_json,
+            state, created_at_ms
+          ) VALUES (?, ?, ?, ?, 'pending', ?)`,
+          [
+            verified.submissionId,
+            WORKSPACE_ID,
+            verified.revision,
+            commandJson,
+            nowMs,
+          ],
+        );
+        submissionState = "pending";
+      } else {
+        if (
+          requireText(submission, "revision_sha256") !== verified.revision
+          || requireText(submission, "command_json") !== commandJson
+        ) {
+          throw new JournalManualExecutionError({
+            code: "submission_changed",
+            message: "This manual submission was already staged with different reviewed values.",
+          });
+        }
+        const state = requireText(submission, "state");
+        if (state !== "pending" && state !== "committed") {
+          throw new Error("The manual execution submission has an invalid state.");
+        }
+        submissionState = state;
+      }
+      const stableSourceKey = `manual:v1:${verified.submissionId}`;
+      const identityHash = sha256Hex(canonicalJson({
+        workspaceId: WORKSPACE_ID,
+        sourceKind: "manual",
+        stableSourceKey,
+      }));
+      const payloadHash = sha256Hex(canonicalJson({
+        accountId,
+        instrumentId,
+        symbol: verified.symbol,
+        assetClass: verified.assetClass,
+        side: verified.side,
+        positionEffect: verified.positionEffect,
+        quantity: verified.quantity,
+        price: verified.price,
+        fee: verified.fee,
+        currency: verified.defaultCurrency,
+        occurredAtUs: verified.occurredAtUs,
+      }));
+      const existing = await this.database.query<SqlRow>(
+        `SELECT execution.id AS execution_id, version.is_void,
+                source.source_payload_sha256
+           FROM executions AS execution
+           JOIN execution_heads AS head ON head.execution_id = execution.id
+           JOIN execution_versions AS version ON version.id = head.execution_version_id
+           JOIN execution_sources AS source
+             ON source.execution_version_id = version.id
+            AND source.source_kind = 'manual'
+          WHERE execution.workspace_id = ? AND execution.identity_sha256 = ?
+          LIMIT 1`,
+        [WORKSPACE_ID, identityHash],
+      );
+      if (existing[0] !== undefined) {
+        const executionId = requireText(existing[0], "execution_id");
+        if (requireText(existing[0], "source_payload_sha256") !== payloadHash) {
+          throw new JournalManualExecutionError({
+            code: "execution_changed",
+            message: "This manual submission was already saved with different execution values.",
+          });
+        }
+        if (requireSafeInteger(existing[0], "is_void") !== 0) {
+          throw new JournalManualExecutionError({
+            code: "execution_changed",
+            message: "This manual submission was superseded and cannot be replayed.",
+          });
+        }
+        if (submissionState === "pending") {
+          await this.database.run(
+            `UPDATE manual_execution_submissions
+                SET state = 'committed', execution_id = ?, committed_at_ms = ?
+              WHERE submission_id = ? AND workspace_id = ? AND state = 'pending'`,
+            [executionId, nowMs, verified.submissionId, WORKSPACE_ID],
+          );
+        }
+        return { outcome: "duplicate" as const, executionId };
+      }
+
+      const executionId = this.runtime.newId("execution");
+      const versionId = this.runtime.newId("execution-version");
+      const ledgerSequence = await this.nextExecutionSequenceStart();
+      await this.database.run(
+        `INSERT INTO executions (
+          id, workspace_id, account_id, instrument_id, ledger_sequence,
+          identity_sha256, created_at_ms
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          executionId,
+          WORKSPACE_ID,
+          accountId,
+          instrumentId,
+          ledgerSequence,
+          identityHash,
+          nowMs,
+        ],
+      );
+      const versionHash = sha256Hex(canonicalJson({
+        payloadHash,
+        versionNumber: 1,
+        ledgerSequence,
+        sourceKind: "manual",
+        isVoid: false,
+      }));
+      await this.database.run(
+        `INSERT INTO execution_versions (
+          id, execution_id, workspace_id, version_number, side, position_effect,
+          quantity_text, price_text, quote_currency_code, executed_at_us,
+          is_void, version_sha256, recorded_at_ms
+        ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+        [
+          versionId,
+          executionId,
+          WORKSPACE_ID,
+          verified.side.toLocaleLowerCase("en-US"),
+          verified.positionEffect.toLocaleLowerCase("en-US"),
+          verified.quantity,
+          verified.price,
+          verified.defaultCurrency,
+          verified.occurredAtUs,
+          versionHash,
+          nowMs,
+        ],
+      );
+      if (verified.feeMinor !== "0") {
+        await this.database.run(
+          `INSERT INTO execution_fee_components (
+            execution_version_id, workspace_id, component_ordinal, category,
+            currency_code, cost_minor
+          ) VALUES (?, ?, 0, 'commission', ?, ?)`,
+          [versionId, WORKSPACE_ID, verified.defaultCurrency, verified.feeMinor],
+        );
+      }
+      await this.database.run(
+        `INSERT INTO execution_sources (
+          id, execution_version_id, workspace_id, source_kind,
+          stable_source_key, source_payload_sha256, recorded_at_ms
+        ) VALUES (?, ?, ?, 'manual', ?, ?, ?)`,
+        [
+          this.runtime.newId("execution-source"),
+          versionId,
+          WORKSPACE_ID,
+          stableSourceKey,
+          payloadHash,
+          nowMs,
+        ],
+      );
+      await this.database.run(
+        `INSERT INTO execution_heads (
+          execution_id, workspace_id, execution_version_id, changed_at_ms
+        ) VALUES (?, ?, ?, ?)`,
+        [executionId, WORKSPACE_ID, versionId, nowMs],
+      );
+
+      const loaded = await this.loadActiveExecutions();
+      const projection = normalizeTrades(loaded.executions);
+      await this.persistProjection(
+        projection,
+        loaded.versionIdByExecutionId,
+        "edit",
+        nowMs,
+      );
+      await this.database.run(
+        `UPDATE manual_execution_submissions
+            SET state = 'committed', execution_id = ?, committed_at_ms = ?
+          WHERE submission_id = ? AND workspace_id = ? AND state = 'pending'`,
+        [executionId, nowMs, verified.submissionId, WORKSPACE_ID],
+      );
+      return { outcome: "committed" as const, executionId };
+    });
+    return { ...transactionResult, ledger: await this.loadWithinConnection() };
+  }
+
+  async loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
+    this.assertOpen();
+    await this.verifySchema();
+    const rows = await this.database.query<SqlRow>(
+      `SELECT submission.submission_id, submission.execution_id,
+              instrument.symbol, version.side
+         FROM manual_execution_submissions AS submission
+         JOIN executions AS execution
+           ON execution.id = submission.execution_id
+          AND execution.workspace_id = submission.workspace_id
+         JOIN instruments AS instrument ON instrument.id = execution.instrument_id
+         JOIN execution_heads AS head ON head.execution_id = execution.id
+         JOIN execution_versions AS version ON version.id = head.execution_version_id
+        WHERE submission.workspace_id = ?
+          AND submission.state = 'committed'
+          AND submission.acknowledged_at_ms IS NULL
+          AND version.is_void = 0
+        ORDER BY submission.created_at_ms, submission.submission_id`,
+      [WORKSPACE_ID],
+    );
+    return rows.map((row) => {
+      const side = requireText(row, "side");
+      if (side !== "buy" && side !== "sell") {
+        throw new Error("SQLite returned an invalid manual execution side.");
+      }
+      return {
+        submissionId: requireText(row, "submission_id"),
+        executionId: requireText(row, "execution_id"),
+        symbol: requireText(row, "symbol"),
+        side: side === "buy" ? "BUY" : "SELL",
+      };
+    });
+  }
+
+  async acknowledgeManualExecution(submissionId: string): Promise<void> {
+    this.assertOpen();
+    await this.verifySchema();
+    const observedNowMs = this.runtime.nowMs();
+    const result = await this.database.run(
+      `UPDATE manual_execution_submissions
+          SET acknowledged_at_ms = CASE
+            WHEN committed_at_ms > ? THEN committed_at_ms
+            ELSE ?
+          END
+        WHERE submission_id = ?
+          AND workspace_id = ?
+          AND state = 'committed'
+          AND acknowledged_at_ms IS NULL`,
+      [observedNowMs, observedNowMs, submissionId, WORKSPACE_ID],
+    );
+    if (result.changes === 0) {
+      const rows = await this.database.query<SqlRow>(
+        `SELECT acknowledged_at_ms
+           FROM manual_execution_submissions
+          WHERE submission_id = ? AND workspace_id = ? AND state = 'committed'`,
+        [submissionId, WORKSPACE_ID],
+      );
+      if (rows[0] === undefined || rows[0].acknowledged_at_ms === null) {
+        throw new Error("The manual execution confirmation is missing.");
+      }
+    }
+  }
+
   async rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot> {
     this.assertOpen();
     await this.verifySchema();
@@ -729,10 +1019,11 @@ export class SqliteJournalStore implements JournalStore {
   }
 
   private async ensureWorkspace(
-    command: PreparedCsvImport,
+    command: { readonly timeZone: string },
     currency: string,
     minorUnit: number,
     nowMs: number,
+    source: "import" | "manual" = "import",
   ): Promise<void> {
     await this.database.run(
       `INSERT INTO currencies (code, minor_unit_exponent, display_name)
@@ -756,6 +1047,12 @@ export class SqliteJournalStore implements JournalStore {
       requireText(rows[0], "default_currency_code") !== currency
       || requireText(rows[0], "time_zone_id") !== command.timeZone
     ) {
+      if (source === "manual") {
+        throw new JournalManualExecutionError({
+          code: "submission_changed",
+          message: "This execution must use the journal's existing currency and time zone.",
+        });
+      }
       throw new JournalImportError({
         code: "preview_changed",
         message: "This import must use the journal's existing currency and time zone.",
@@ -784,13 +1081,18 @@ export class SqliteJournalStore implements JournalStore {
     return id;
   }
 
-  private async ensureInstrument(symbol: string, currency: string, nowMs: number): Promise<string> {
+  private async ensureInstrument(
+    symbol: string,
+    currency: string,
+    assetClass: "stock" | "etf",
+    nowMs: number,
+  ): Promise<string> {
     const rows = await this.database.query<SqlRow>(
       `SELECT id, quote_currency_code, multiplier_text
          FROM instruments
-        WHERE workspace_id = ? AND symbol = ? AND asset_class = 'stock'
+        WHERE workspace_id = ? AND symbol = ? AND asset_class = ?
         LIMIT 1`,
-      [WORKSPACE_ID, symbol],
+      [WORKSPACE_ID, symbol, assetClass],
     );
     if (rows[0] !== undefined) {
       if (
@@ -806,8 +1108,8 @@ export class SqliteJournalStore implements JournalStore {
       `INSERT INTO instruments (
         id, workspace_id, symbol, asset_class, quote_currency_code,
         multiplier_text, created_at_ms
-      ) VALUES (?, ?, ?, 'stock', ?, '1', ?)`,
-      [id, WORKSPACE_ID, symbol, currency, nowMs],
+      ) VALUES (?, ?, ?, ?, ?, '1', ?)`,
+      [id, WORKSPACE_ID, symbol, assetClass, currency, nowMs],
     );
     return id;
   }
@@ -885,7 +1187,7 @@ export class SqliteJournalStore implements JournalStore {
   private async persistProjection(
     projection: TradeNormalizationResult,
     versionIdByExecutionId: ReadonlyMap<string, string>,
-    reason: "import" | "rollback",
+    reason: "import" | "edit" | "rollback",
     nowMs: number,
   ): Promise<string> {
     const inputHeads = projection.executions

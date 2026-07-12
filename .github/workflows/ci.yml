@@ -8,9 +8,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Legacy Python safety gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,7 +32,9 @@ jobs:
         run: pytest -v
 
   mobile:
+    name: Mobile Linux gate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: mobile
@@ -41,6 +49,8 @@ jobs:
         run: npm ci
       - name: Type check
         run: npm run typecheck
+      - name: Enforce the mobile no-network and no-order boundary
+        run: npm run test:boundary
       - name: Unit tests
         run: npm test
       - name: Install mobile browser
@@ -49,3 +59,8 @@ jobs:
         run: npm run test:e2e
       - name: Verify the iOS project can receive the bundle
         run: npm run ios:sync
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+      - name: Verify native sync produced no tracked drift
+        working-directory: .
+        run: git diff --exit-code --

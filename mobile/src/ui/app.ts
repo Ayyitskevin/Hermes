@@ -1,15 +1,15 @@
 import { JournalApplication } from "../application/journal-application";
-import type { PreparedCsvImport } from "../application/journal-store";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
-import {
-  DEFAULT_CSV_LIMITS,
-  type CsvHeaderMapping,
-  type CsvImportField,
-} from "../core/csv";
 import { escapeHtml } from "../core/html";
 import { summarizeSetups } from "../core/performance";
 import { sizePosition, type PositionSide } from "../core/sizing";
 import type { JournalWorkspaceSnapshot, TabId, TradePreview } from "../core/types";
+import { bindImportForm, importTool } from "./import-tool";
+import {
+  bindManualExecutionActions,
+  manualCaptureCard,
+  manualExecutionAction,
+} from "./manual-execution-sheet";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -23,17 +23,6 @@ const TABS: ReadonlyArray<{ id: TabId; label: string; glyph: string }> = [
   { id: "journal", label: "Journal", glyph: "✎" },
   { id: "reports", label: "Reports", glyph: "↗" },
   { id: "more", label: "More", glyph: "•••" },
-];
-
-const CSV_FIELDS: ReadonlyArray<{ readonly id: CsvImportField; readonly label: string }> = [
-  { id: "executionId", label: "Execution ID (optional)" },
-  { id: "symbol", label: "Symbol" },
-  { id: "side", label: "Side" },
-  { id: "quantity", label: "Quantity" },
-  { id: "price", label: "Price" },
-  { id: "fee", label: "Fee (optional)" },
-  { id: "currency", label: "Currency (optional)" },
-  { id: "executedAt", label: "Executed at" },
 ];
 
 function signedCurrency(value: number | null, currency: string): string {
@@ -147,28 +136,6 @@ function compactTradeRow(trade: TradePreview, currency: string): string {
   </article>`;
 }
 
-function importTool(snapshot: JournalWorkspaceSnapshot): string {
-  const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const accountValue = "";
-  return `<article class="card import-tool" aria-labelledby="import-tool-title">
-    <p class="card-label">GENERIC BROKER CSV</p>
-    <h2 id="import-tool-title">Import executions</h2>
-    <p>Hermes previews and validates the file before one atomic on-device commit. Required columns: symbol, side, quantity, price, and execution time.</p>
-    <form id="csv-import-form" novalidate>
-      <div class="field-grid">
-        <label>Account name<input id="import-account" name="account" type="text" maxlength="256" value="${escapeHtml(accountValue)}" placeholder="e.g. Brokerage" autocomplete="off" required /></label>
-        <label>Time zone<input id="import-time-zone" name="timeZone" type="text" maxlength="100" value="${escapeHtml(snapshot.provenance === "empty" ? defaultTimeZone : snapshot.timeZone)}" autocomplete="off" required /></label>
-        <label>Workspace currency<input id="import-currency" name="currency" type="text" maxlength="3" value="${escapeHtml(snapshot.currencyCode)}" autocapitalize="characters" required /></label>
-        <label>CSV file<input id="import-file" name="file" type="file" accept=".csv,text/csv,text/plain" required /></label>
-      </div>
-      <p class="helper-text">Timestamps without an offset use the selected IANA time zone. The first journal version intentionally prevents mixed-currency aggregation.</p>
-      <button class="primary-button" type="submit">Preview CSV</button>
-      <p id="import-status" class="result-count" role="status" aria-live="polite"></p>
-      <div id="import-preview"></div>
-    </form>
-  </article>`;
-}
-
 function emptyDashboardView(snapshot: JournalWorkspaceSnapshot): string {
   return `<section class="screen-stack" aria-labelledby="dashboard-title">
     <div class="screen-heading">
@@ -178,8 +145,9 @@ function emptyDashboardView(snapshot: JournalWorkspaceSnapshot): string {
     <article class="result-card empty-result-card">
       <p class="card-label">YOUR DATA, YOUR DEVICE</p>
       <strong>Import. Review. Improve.</strong>
-      <span>No subscription, broker credentials, order placement, or Hermes cloud account.</span>
+      <span>No required subscription, broker credentials, order placement, or Hermes cloud account.</span>
     </article>
+    ${manualCaptureCard()}
     ${importTool(snapshot)}
     <article class="card">
       <p class="card-label">WANT TO LOOK AROUND FIRST?</p>
@@ -227,6 +195,7 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
       <p>${snapshot.provenance === "demo" && performance.ruleAdherencePct !== null ? `${performance.ruleAdherencePct.toFixed(0)}% plan adherence in this fictional journal.` : "Classify setups and add journal notes to make this review more useful."}</p>
     </article>
     <div class="quick-actions" aria-label="Dashboard shortcuts">
+      ${snapshot.provenance === "demo" ? "" : manualExecutionAction("Add execution")}
       <button class="secondary-button" type="button" data-route="trades">Review trades</button>
       <button class="secondary-button" type="button" data-route="journal">Open journal</button>
     </div>
@@ -258,10 +227,11 @@ function tradeCard(trade: TradePreview, currency: string): string {
 function tradesView(snapshot: JournalWorkspaceSnapshot): string {
   return `<section class="screen-stack" aria-labelledby="trades-title">
     <div class="screen-heading"><div><p class="eyebrow">${snapshot.trades.length} ${snapshot.provenance === "demo" ? "FICTIONAL" : "EXECUTION-DERIVED"} ${snapshot.trades.length === 1 ? "RECORD" : "RECORDS"}</p><h1 id="trades-title">Trades</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
+    ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
     <label class="search-field"><span class="sr-only">Search trades</span><input id="trade-search" type="search" placeholder="Search symbol, setup, or tag" autocomplete="off" /></label>
     <p class="result-count" id="trade-count" role="status">Showing ${countNoun(snapshot.trades.length, "trade")}</p>
     <div class="journal-list">${[...snapshot.trades].reverse().map((trade) => tradeCard(trade, snapshot.currencyCode)).join("")}</div>
-    <article class="empty-state" id="trade-empty" ${snapshot.trades.length === 0 ? "" : "hidden"}><h2>${snapshot.trades.length === 0 ? "No trades yet" : "No trades match"}</h2><p>${snapshot.trades.length === 0 ? "Import executions from the More tab to build your journal." : "Try another symbol, setup, side, or tag."}</p></article>
+    <article class="empty-state" id="trade-empty" ${snapshot.trades.length === 0 ? "" : "hidden"}><h2>${snapshot.trades.length === 0 ? "No trades yet" : "No trades match"}</h2><p>${snapshot.trades.length === 0 ? "Add an execution or import a CSV to build your journal." : "Try another symbol, setup, side, or tag."}</p></article>
   </section>`;
 }
 
@@ -343,21 +313,27 @@ function sizingTool(): string {
   </article>`;
 }
 
+function latestImportReceipt(snapshot: JournalWorkspaceSnapshot): string {
+  if (snapshot.importHistory.length === 0) return "";
+  return `<article class="card import-receipt">
+    <p class="card-label">${snapshot.importSummary.rolledBack ? "LATEST RECEIPT · ROLLED BACK" : "LATEST IMPORT RECEIPT"}</p>
+    <h2>${escapeHtml(snapshot.importSummary.sourceLabel)}</h2>
+    <p>${escapeHtml(snapshot.importSummary.importedAtLabel)} · ${escapeHtml(snapshot.importSummary.accountLabel)}</p>
+    <div class="receipt-metrics">
+      <div><strong>${snapshot.importSummary.executions}</strong><span>${snapshot.importSummary.executions === 1 ? "execution" : "executions"}</span></div>
+      <div><strong>${snapshot.importSummary.rejectedRows}</strong><span>rejected</span></div>
+      <div><strong>${snapshot.importSummary.skippedRows}</strong><span>skipped</span></div>
+    </div>
+  </article>`;
+}
+
 function moreView(snapshot: JournalWorkspaceSnapshot): string {
   const activeHistory = snapshot.importHistory.filter((receipt) => !receipt.rolledBack);
   return `<section class="screen-stack" aria-labelledby="more-title">
     <div class="screen-heading"><div><p class="eyebrow">DATA + TOOLS</p><h1 id="more-title">More</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
-    ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Importing a CSV switches back to your private journal; demo records are never written to the ledger.</p></article>` : importTool(snapshot)}
-    <article class="card import-receipt">
-      <p class="card-label">${snapshot.importSummary.rolledBack ? "LATEST RECEIPT · ROLLED BACK" : "LATEST IMPORT RECEIPT"}</p>
-      <h2>${escapeHtml(snapshot.importSummary.sourceLabel)}</h2>
-      <p>${escapeHtml(snapshot.importSummary.importedAtLabel)} · ${escapeHtml(snapshot.importSummary.accountLabel)}</p>
-      <div class="receipt-metrics">
-        <div><strong>${snapshot.importSummary.executions}</strong><span>${snapshot.importSummary.executions === 1 ? "execution" : "executions"}</span></div>
-        <div><strong>${snapshot.importSummary.rejectedRows}</strong><span>rejected</span></div>
-        <div><strong>${snapshot.importSummary.skippedRows}</strong><span>skipped</span></div>
-      </div>
-    </article>
+    ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Manual entry and CSV import stay in your private journal; demo records are never written to the ledger.</p></article>` : manualCaptureCard()}
+    ${snapshot.provenance === "demo" ? "" : importTool(snapshot)}
+    ${latestImportReceipt(snapshot)}
     ${snapshot.importHistory.length === 0 ? "" : `<section aria-labelledby="import-history-title">
       <div class="section-title"><h2 id="import-history-title">Import history</h2><span>${snapshot.importHistory.length} receipts</span></div>
       <div class="journal-list">${snapshot.importHistory.map((receipt) => `<article class="card import-history-row">
@@ -367,7 +343,7 @@ function moreView(snapshot: JournalWorkspaceSnapshot): string {
       </article>`).join("")}</div>
     </section>`}
     ${sizingTool()}
-    <article class="card privacy-card"><p class="card-label">PRODUCT BOUNDARY</p><h2>Journal and retrospective analytics</h2><p>Hermes stores execution facts locally, derives trades deterministically, and never places or modifies a brokerage order.${snapshot.importHistory.length === 0 ? " Import a CSV to create the first immutable receipt." : activeHistory.length === 0 ? " Every recorded import is rolled back; re-import the intended file with its account selected explicitly." : " Every active import can be rolled back from its receipt."}</p></article>
+    <article class="card privacy-card"><p class="card-label">PRODUCT BOUNDARY</p><h2>Review, never trade</h2><p>Hermes stores execution facts locally, derives trades deterministically, and never places or modifies a brokerage order.${snapshot.importHistory.length === 0 ? " Manual fills remain independent facts; CSV imports also create reversible receipts." : activeHistory.length === 0 ? " Every recorded import is rolled back; manual facts remain independent." : " Every active import can be rolled back from its receipt."}</p></article>
   </section>`;
 }
 
@@ -498,163 +474,6 @@ function bindTradeSearch(root: HTMLElement, total: number): void {
   });
 }
 
-function mappingFromControls(container: HTMLElement): CsvHeaderMapping {
-  const read = (field: CsvImportField): number | null => {
-    const value = container.querySelector<HTMLSelectElement>(`[data-csv-field="${field}"]`)?.value ?? "";
-    return value === "" ? null : Number(value);
-  };
-  return {
-    executionId: read("executionId"),
-    symbol: read("symbol"),
-    side: read("side"),
-    quantity: read("quantity"),
-    price: read("price"),
-    fee: read("fee"),
-    currency: read("currency"),
-    executedAt: read("executedAt"),
-  };
-}
-
-function preparedPreviewTemplate(prepared: PreparedCsvImport): string {
-  const preview = prepared.preview;
-  const mapping = preview.mapping;
-  const headers = preview.header?.cells.map((cell) => cell.value) ?? [];
-  const issueRows = preview.issues.slice(0, 8).map((issue) => `<li class="${issue.severity === "error" ? "negative" : ""}">
-    <strong>${escapeHtml(issue.code.replaceAll("_", " "))}</strong> ${escapeHtml(issue.message)}
-  </li>`).join("");
-  const remainingIssueCount = Math.max(preview.issues.length - 8, 0);
-  const sampleRows = preview.rows.slice(0, 5).map((row) => `<div class="report-row" role="row">
-    <strong role="cell">${escapeHtml(row.symbol)}</strong>
-    <span role="cell">${escapeHtml(row.side.toUpperCase())}</span>
-    <span role="cell">${escapeHtml(row.quantity)}</span>
-    <span role="cell">${escapeHtml(row.price)}</span>
-  </div>`).join("");
-  const selects = CSV_FIELDS.map((field) => `<label>${escapeHtml(field.label)}<select data-csv-field="${field.id}">
-    <option value="">Not mapped</option>
-    ${headers.map((header, index) => `<option value="${index}" ${mapping?.[field.id] === index ? "selected" : ""}>${escapeHtml(header || `Column ${index + 1}`)}</option>`).join("")}
-  </select></label>`).join("");
-  return `<section class="import-preview-card" aria-labelledby="preview-title">
-    <div class="section-title"><div><p class="card-label">VALIDATION PREVIEW</p><h3 id="preview-title">${preview.status === "ready" ? "Ready to import" : "Needs attention"}</h3></div><span>${preview.validRows} valid · ${preview.rejectedRows} rejected · ${preview.skippedRows} skipped</span></div>
-    ${headers.length === 0 ? "" : `<details class="mapping-details" ${preview.status === "invalid" ? "open" : ""}><summary>Review column mapping</summary><div class="field-grid">${selects}</div></details>`}
-    ${issueRows.length === 0 ? "" : `<ul class="issue-list">${issueRows}${remainingIssueCount === 0 ? "" : `<li>And ${remainingIssueCount} more issues. Correct the source file or mapping and preview again.</li>`}</ul>`}
-    ${sampleRows.length === 0 ? "" : `<div class="report-table" role="table" aria-label="Execution preview"><div class="report-row report-header" role="row"><span role="columnheader">Symbol</span><span role="columnheader">Side</span><span role="columnheader">Qty</span><span role="columnheader">Price</span></div>${sampleRows}</div>`}
-    ${preview.status === "ready" ? `<button class="primary-button" id="commit-import" type="button">Import ${countNoun(preview.validRows, "execution")}</button>` : ""}
-  </section>`;
-}
-
-function bindImportForm(
-  root: HTMLElement,
-  application: JournalApplication,
-  refresh: (announcement: string) => Promise<void>,
-): void {
-  const form = root.querySelector<HTMLFormElement>("#csv-import-form");
-  const fileInput = root.querySelector<HTMLInputElement>("#import-file");
-  const previewContainer = root.querySelector<HTMLElement>("#import-preview");
-  const status = root.querySelector<HTMLElement>("#import-status");
-  if (!form || !fileInput || !previewContainer || !status) return;
-
-  let rawInput: string | null = null;
-  let sourceName: string | null = null;
-  let prepared: PreparedCsvImport | null = null;
-
-  const selection = (mapping?: CsvHeaderMapping) => ({
-    rawInput: rawInput ?? "",
-    sourceName: sourceName ?? "broker.csv",
-    accountName: root.querySelector<HTMLInputElement>("#import-account")?.value.trim() ?? "",
-    timeZone: root.querySelector<HTMLInputElement>("#import-time-zone")?.value.trim() ?? "",
-    defaultCurrency: root.querySelector<HTMLInputElement>("#import-currency")?.value.trim().toUpperCase() ?? "",
-    ...(mapping === undefined ? {} : { mapping }),
-  });
-
-  const renderPrepared = (next: PreparedCsvImport, focusField?: CsvImportField): void => {
-    prepared = next;
-    previewContainer.innerHTML = preparedPreviewTemplate(next);
-    previewContainer.querySelectorAll<HTMLSelectElement>("[data-csv-field]").forEach((select) => {
-      select.addEventListener("change", () => {
-        try {
-          const changedField = select.dataset.csvField as CsvImportField | undefined;
-          renderPrepared(
-            application.prepareCsv(selection(mappingFromControls(previewContainer))),
-            changedField,
-          );
-          status.textContent = "Column mapping updated.";
-        } catch (error) {
-          status.textContent = error instanceof Error ? error.message : "Could not update the mapping.";
-        }
-      });
-    });
-    const commitButton = previewContainer.querySelector<HTMLButtonElement>("#commit-import");
-    commitButton?.addEventListener("click", async (event) => {
-      const button = event.currentTarget;
-      if (!(button instanceof HTMLButtonElement) || prepared === null) return;
-      button.disabled = true;
-      status.textContent = "Writing one atomic journal transaction…";
-      try {
-        const result = await application.commitCsv(prepared);
-        const alreadyPresent = result.receipt.acceptedRows - result.receipt.executionCount;
-        const announcement = result.outcome === "duplicate"
-          ? "This exact CSV was already imported; no records were duplicated."
-          : `${countNoun(result.receipt.acceptedRows, "execution")} accepted with a reversible receipt${alreadyPresent === 0 ? "." : `; ${countNoun(alreadyPresent, "execution")} already existed.`}`;
-        status.textContent = announcement;
-        await refresh(announcement);
-        root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
-      } catch (error) {
-        button.disabled = false;
-        status.textContent = error instanceof Error ? error.message : "The import was rolled back after an unexpected error.";
-      }
-    });
-    if (focusField !== undefined) {
-      if (next.preview.status === "ready") commitButton?.focus();
-      else previewContainer.querySelector<HTMLSelectElement>(`[data-csv-field="${focusField}"]`)?.focus();
-    }
-  };
-
-  const invalidateOptions = (): void => {
-    if (prepared === null) return;
-    prepared = null;
-    previewContainer.innerHTML = "";
-    status.textContent = "Import options changed. Preview the CSV again before committing.";
-  };
-  for (const id of ["#import-account", "#import-time-zone", "#import-currency"]) {
-    root.querySelector<HTMLInputElement>(id)?.addEventListener("input", invalidateOptions);
-  }
-
-  fileInput.addEventListener("change", () => {
-    prepared = null;
-    rawInput = null;
-    sourceName = null;
-    previewContainer.innerHTML = "";
-    const file = fileInput.files?.[0];
-    status.textContent = file === undefined ? "Choose a CSV file." : `${file.name} selected. Preview it before import.`;
-  });
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const file = fileInput.files?.[0];
-    if (file === undefined) {
-      status.textContent = "Choose a CSV file first.";
-      return;
-    }
-    if (file.size > DEFAULT_CSV_LIMITS.maxBytes) {
-      status.textContent = `CSV is ${file.size} bytes; the limit is ${DEFAULT_CSV_LIMITS.maxBytes} bytes.`;
-      previewContainer.innerHTML = "";
-      return;
-    }
-    status.textContent = "Reading and validating locally…";
-    try {
-      rawInput = await file.text();
-      sourceName = file.name.trim() || "broker.csv";
-      renderPrepared(application.prepareCsv(selection()));
-      status.textContent = prepared?.preview.status === "ready"
-        ? "Preview is ready. Confirm the mapping and execution count."
-        : "Resolve the preview errors before import.";
-    } catch (error) {
-      previewContainer.innerHTML = "";
-      status.textContent = error instanceof Error ? error.message : "Could not preview this CSV.";
-    }
-  });
-}
-
 function bindRollbacks(
   root: HTMLElement,
   application: JournalApplication,
@@ -727,6 +546,7 @@ function bindOnboarding(
 }
 
 export async function startApp({ root, application, onboarding }: AppDependencies): Promise<void> {
+  const recoveredManualExecutions = await application.loadRecoverableManualExecutions();
   let snapshot = await application.loadWorkspace();
   root.innerHTML = shellTemplate();
   const screen = root.querySelector<HTMLElement>("#screen");
@@ -806,6 +626,17 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       render(currentTab, false);
       if (announcer) announcer.textContent = announcement;
     });
+    bindManualExecutionActions(
+      root,
+      application,
+      snapshot,
+      setBackgroundInert,
+      async (announcement) => {
+        snapshot = await application.loadWorkspace();
+        render(currentTab, false);
+        if (announcer) announcer.textContent = announcement;
+      },
+    );
     bindRollbacks(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
@@ -859,4 +690,20 @@ export async function startApp({ root, application, onboarding }: AppDependencie
 
   render("dashboard", false);
   bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
+  if (recoveredManualExecutions.length > 0) {
+    const recoveredCount = recoveredManualExecutions.length;
+    if (announcer) {
+      announcer.textContent = `${recoveredCount} ${recoveredCount === 1 ? "execution was" : "executions were"} already saved before Hermes restarted; no duplicate was created.`;
+    }
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    try {
+      for (const item of recoveredManualExecutions) {
+        await application.acknowledgeManualExecution(item.submissionId);
+      }
+    } catch {
+      if (announcer) {
+        announcer.textContent = "The recovered execution is visible, but its confirmation remains pending and will be retried next launch.";
+      }
+    }
+  }
 }

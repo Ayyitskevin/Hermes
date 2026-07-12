@@ -1,13 +1,17 @@
 # Hermes Journal
 
 Hermes Journal is an iPhone-first trading journal for traders who want serious
-review and analytics without another subscription. The commercial target is a
-one-time **$9.99 App Store purchase**, followed by Android parity after the iOS
-product is stable.
+review and analytics without another required subscription. The proposed
+commercial model is a one-time paid Core, with **$9.99 as an unapproved launch
+price hypothesis**, followed by Android parity after the iOS product is stable.
+A separately priced hosted Connect service is only a future, evidence-gated
+option; the local Core must remain complete without it. Pricing and every App
+Store action require explicit owner approval.
 
 The working promise is:
 
-> A private trade journal that shows what is working—for one upfront purchase.
+> A private trade journal that shows what is working—without a required
+> subscription.
 
 TradeZella is a capability benchmark, not a design template. Hermes Journal
 uses an original interface, product identity, copy, and implementation. It is
@@ -30,21 +34,27 @@ The five destinations are **Dashboard, Trades, Journal, Reports, and More**.
 Risk sizing remains an optional planning tool; regime signals, posture states,
 and owner-specific trading rules do not define the mobile experience.
 
-## Commercial boundary
+## Proposed commercial boundary
 
-The paid app includes the complete local product—there is no subscription or
-second lifetime-unlock purchase. A sustainable $9.99 release can include:
+If approved, one paid app includes the complete local product—there is no Core
+subscription or second lifetime-unlock purchase. The proposed Core scope is:
 
 - Manual trade entry and generic broker CSV import.
-- Accounts, executions, partial exits, fees, currency P&L, percent return, and R.
+- Accounts, executions, partial exits, fees, and currency-separated P&L.
 - Searchable trades, calendar, daily/trade notes, tags, screenshots, and playbooks.
-- Win rate, profit factor, expectancy, drawdown, streak, setup, mistake, and tag reports.
+- Win rate, profit factor, drawdown, streak, setup, mistake, and tag reports.
 - On-device storage plus versioned export, restore, and delete-all-data controls.
 - Deterministic planning tools that do not require a hosted service.
 
 Unlimited hosted sync, licensed market history, real-time broker infrastructure,
 and recurring AI credits are not promised inside the flat price. Those require
 user-supplied infrastructure or a separately approved business model.
+Percent return, R-multiples, and R expectancy are not launch claims until Slice
+B persists a versioned percent/risk basis and reconciles the formulas to fixtures.
+
+See [the product and technical blueprint](docs/mobile/PRODUCT_BLUEPRINT.md) for
+the target audience, differentiation, stack decision, delivery slices, product
+metrics, and the gates for any optional hosted service.
 
 ## Current status
 
@@ -54,18 +64,23 @@ submission-ready product:
 - Vite, TypeScript, Capacitor 8, and an iPhone-only CocoaPods iOS project.
 - Original journal-first navigation with an empty private journal by default;
   the fictional demo is an explicit, isolated choice.
-- A versioned STRICT SQLite schema for immutable import provenance, execution
-  versions, current heads, FIFO projections, fees, receipts, and rollbacks.
+- Versioned STRICT SQLite migrations for immutable import provenance, execution
+  versions, current heads, FIFO projections, fees, receipts, rollbacks, and
+  durable manual-submission reconciliation.
 - SQLCipher-backed native storage with a random passphrase held by the iOS
   Keychain through the pinned Capacitor SQLite plugin.
 - An on-device RFC 4180 CSV flow with inference/remapping, exact source text,
   row-level validation, stale-preview protection, atomic commit, deduplication,
   and receipt rollback.
+- A two-step manual execution flow with exact decimal validation, IANA/offset
+  timestamps, encrypted durable submission reconciliation, immutable
+  manual-source facts, and the same atomic deterministic projection path as CSV.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades.
-- Headline P&L, R, win rate, profit factor, expectancy, and setup reports derived
-  from those trade records.
+- Headline currency P&L, win rate, and profit factor derived from real ledger
+  records. The fictional demo also exercises R/expectancy presentation; real
+  records intentionally show R as unavailable until Slice B stores a risk basis.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,
@@ -73,7 +88,7 @@ submission-ready product:
 
 Linux tests exercise the real schema/repository through SQL.js. Native
 encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
-and device backup behavior still require the Mac/device gate. Manual entry,
+and device backup behavior still require the Mac/device gate. Durable
 annotations, attachments, export/restore/delete-all, and deeper reports remain
 Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
@@ -106,7 +121,7 @@ Capacitor iOS shell
       pure TypeScript journal and analytics core
         encrypted local SQLite repositories
         local CSV import/provenance adapters
-        Keychain adapter for future user-owned credentials
+        Keychain-held random database secret
 ```
 
 The production Capacitor configuration has no remote `server.url`, and the
@@ -135,10 +150,11 @@ The legacy verification lane remains available while extraction is in progress:
 
 ## Product safety
 
-Hermes Journal is retrospective journaling and analytics software. It does not
-connect to brokerage write APIs, place orders, modify orders, or promise trading
-outcomes. Imported values and calculations must remain inspectable and
-exportable, and users remain responsible for verifying their records.
+Hermes Journal provides journaling, analytics, and user-directed deterministic
+calculators. It does not provide investment advice, connect to brokerage write
+APIs, place or modify orders, or promise trading outcomes. Imported values and
+calculations must remain inspectable and exportable, and users remain
+responsible for verifying their records.
 
 ## License
 

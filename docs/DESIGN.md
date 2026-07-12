@@ -1,5 +1,10 @@
 # Hermes — Design
 
+> **Legacy desktop reference — not the active mobile design.** The Station
+> direction below documents the frozen `web/` cockpit. Use the
+> [mobile product blueprint](mobile/PRODUCT_BLUEPRINT.md) and
+> [iOS roadmap](mobile/IOS_ROADMAP.md) for the current iPhone-first experience.
+
 *The visual half of the Phase 1 proposal. Produced in two passes, as
 required: three independent design directions were drafted and each was
 adversarially critiqued for genericness before this synthesis. What was

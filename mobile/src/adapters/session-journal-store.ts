@@ -6,9 +6,18 @@ import type {
   JournalLedgerSnapshot,
   JournalStore,
   JournalWorkspaceRecord,
+  ManualExecutionCommitResult,
   PreparedCsvImport,
+  UnacknowledgedManualExecution,
 } from "../application/journal-store";
-import { JournalImportError } from "../application/journal-store";
+import {
+  JournalImportError,
+  JournalManualExecutionError,
+} from "../application/journal-store";
+import {
+  type PreparedManualExecution,
+  verifyPreparedManualExecution,
+} from "../application/prepare-manual-execution";
 import { verifyPreparedCsvImport } from "../application/prepare-csv-import";
 import { currencyMinorUnit } from "../core/currency";
 import type { LedgerExecution } from "../core/ledger";
@@ -19,6 +28,10 @@ interface SessionExecution extends LedgerExecution {
   readonly sourceIdentity: string;
   readonly payloadHash: string;
   readonly receiptIds: readonly string[];
+}
+
+interface SessionManualSubmission extends UnacknowledgedManualExecution {
+  acknowledged: boolean;
 }
 
 export interface SessionJournalRuntime {
@@ -57,6 +70,7 @@ export class SessionJournalStore implements JournalStore {
   private inactiveExecutions = new Map<string, SessionExecution>();
   private receipts: JournalImportReceipt[] = [];
   private readonly receiptByRevision = new Map<string, string>();
+  private readonly manualSubmissions = new Map<string, SessionManualSubmission>();
   private nextExecutionSequence = 1;
   private nextReceiptOrdinal = 0;
   private closed = false;
@@ -141,7 +155,9 @@ export class SessionJournalStore implements JournalStore {
     const fallbackOccurrences = new Map<string, number>();
 
     for (const row of verified.preview.rows) {
-      let instrument = nextInstruments.find((candidate) => candidate.symbol === row.symbol);
+      let instrument = nextInstruments.find((candidate) => (
+        candidate.symbol === row.symbol && candidate.assetClass === "stock"
+      ));
       if (instrument === undefined) {
         instrument = {
           id: `session-instrument:${sha256Hex(row.symbol)}`,
@@ -265,6 +281,161 @@ export class SessionJournalStore implements JournalStore {
     this.receipts = [receipt, ...this.receipts];
     this.receiptByRevision.set(command.revision, receipt.id);
     return { outcome: "committed", receipt, ledger: await this.load() };
+  }
+
+  async commitManualExecution(
+    command: PreparedManualExecution,
+  ): Promise<ManualExecutionCommitResult> {
+    this.assertOpen();
+    const verified = verifyPreparedManualExecution(command);
+    const nextWorkspace = this.workspace ?? {
+      id: "session-workspace",
+      name: "My Journal",
+      defaultCurrency: verified.defaultCurrency,
+      timeZone: verified.timeZone,
+    };
+    if (
+      nextWorkspace.defaultCurrency !== verified.defaultCurrency
+      || nextWorkspace.timeZone !== verified.timeZone
+    ) {
+      throw new JournalManualExecutionError({
+        code: "submission_changed",
+        message: "This execution must use the journal's existing currency and time zone.",
+      });
+    }
+
+    const nextAccounts = [...this.accounts];
+    let account = nextAccounts.find((candidate) => candidate.name === verified.accountName);
+    if (account === undefined) {
+      account = {
+        id: `session-account:${sha256Hex(verified.accountName)}`,
+        name: verified.accountName,
+        baseCurrency: verified.defaultCurrency,
+      };
+      nextAccounts.push(account);
+    } else if (account.baseCurrency !== verified.defaultCurrency) {
+      throw new JournalManualExecutionError({
+        code: "submission_changed",
+        message: "The selected account uses a different journal currency.",
+      });
+    }
+
+    const nextInstruments = [...this.instruments];
+    let instrument = nextInstruments.find((candidate) => (
+      candidate.symbol === verified.symbol && candidate.assetClass === verified.assetClass
+    ));
+    if (instrument === undefined) {
+      instrument = {
+        id: `session-instrument:${sha256Hex(`${verified.assetClass}:${verified.symbol}`)}`,
+        symbol: verified.symbol,
+        assetClass: verified.assetClass,
+        quoteCurrency: verified.defaultCurrency,
+        multiplier: "1",
+      };
+      nextInstruments.push(instrument);
+    } else if (
+      instrument.quoteCurrency !== verified.defaultCurrency
+      || instrument.multiplier !== "1"
+    ) {
+      throw new JournalManualExecutionError({
+        code: "submission_changed",
+        message: `Instrument ${verified.symbol} conflicts with its existing ledger metadata.`,
+      });
+    }
+
+    const sourceIdentity = `manual:v1:${verified.submissionId}`;
+    const payloadHash = sha256Hex(JSON.stringify({
+      accountId: account.id,
+      instrumentId: instrument.id,
+      symbol: verified.symbol,
+      assetClass: verified.assetClass,
+      side: verified.side,
+      positionEffect: verified.positionEffect,
+      quantity: verified.quantity,
+      price: verified.price,
+      fee: verified.fee,
+      currency: verified.defaultCurrency,
+      occurredAtUs: verified.occurredAtUs,
+    }));
+    const existing = this.executions.find((execution) => (
+      execution.sourceIdentity === sourceIdentity
+    )) ?? this.inactiveExecutions.get(sourceIdentity);
+    if (existing !== undefined) {
+      if (existing.payloadHash !== payloadHash) {
+        throw new JournalManualExecutionError({
+          code: "execution_changed",
+          message: "This manual submission was already saved with different execution values.",
+        });
+      }
+      if (this.inactiveExecutions.has(sourceIdentity)) {
+        throw new JournalManualExecutionError({
+          code: "execution_changed",
+          message: "This manual submission was superseded and cannot be replayed.",
+        });
+      }
+      return { outcome: "duplicate", executionId: existing.id, ledger: await this.load() };
+    }
+
+    const nextExecutions = [...this.executions, {
+      id: `session-execution:${sha256Hex(sourceIdentity)}`,
+      accountId: account.id,
+      instrumentId: instrument.id,
+      occurredAtUs: verified.occurredAtUs,
+      ledgerSequence: String(this.nextExecutionSequence),
+      side: verified.side,
+      positionEffect: verified.positionEffect,
+      quantity: verified.quantity,
+      price: verified.price,
+      quoteCurrency: verified.defaultCurrency,
+      multiplier: "1",
+      fees: verified.feeMinor === "0" ? [] : [{
+        category: "COMMISSION" as const,
+        currency: verified.defaultCurrency,
+        costMinor: verified.feeMinor,
+        minorUnit: verified.minorUnit,
+      }],
+      sourceIdentity,
+      payloadHash,
+      receiptIds: [],
+    }];
+    normalizeTrades(nextExecutions);
+    this.workspace = nextWorkspace;
+    this.accounts = nextAccounts;
+    this.instruments = nextInstruments;
+    this.executions = nextExecutions;
+    this.nextExecutionSequence += 1;
+    const executionId = nextExecutions.at(-1)?.id;
+    if (executionId === undefined) {
+      throw new Error("The committed session execution could not be identified.");
+    }
+    this.manualSubmissions.set(verified.submissionId, {
+      submissionId: verified.submissionId,
+      executionId,
+      symbol: verified.symbol,
+      side: verified.side,
+      acknowledged: false,
+    });
+    return {
+      outcome: "committed",
+      executionId,
+      ledger: await this.load(),
+    };
+  }
+
+  async loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
+    this.assertOpen();
+    return [...this.manualSubmissions.values()]
+      .filter((submission) => !submission.acknowledged)
+      .map(({ acknowledged: _acknowledged, ...submission }) => submission);
+  }
+
+  async acknowledgeManualExecution(submissionId: string): Promise<void> {
+    this.assertOpen();
+    const submission = this.manualSubmissions.get(submissionId);
+    if (submission === undefined) {
+      throw new Error("The manual execution confirmation is missing.");
+    }
+    this.manualSubmissions.set(submissionId, { ...submission, acknowledged: true });
   }
 
   async rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot> {

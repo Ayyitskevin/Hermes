@@ -1,13 +1,14 @@
 # Hermes Journal local ledger contract
 
-Status: implemented vertical slice · 2026-07-09
+Status: implemented CSV + manual execution vertical slice · 2026-07-12
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
 
 ## Invariants
 
-1. Imported executions are facts. `executions`, `execution_versions`, sources,
+1. Imported and manually entered executions are facts. `executions`,
+   `execution_versions`, sources,
    source rows, issues, receipts, and rollbacks are append-only.
 2. Corrections and rollbacks add a version and move `execution_heads`; they do
    not rewrite or delete history.
@@ -25,6 +26,11 @@ legacy desktop journal schema is not part of this contract.
 8. Batch facts, active heads, a complete derived generation, and the receipt
    commit in one SQLite transaction. Any validation, conflict, normalization,
    projection, or receipt failure rolls the entire batch back.
+9. A manual execution uses the same immutable execution/version/head and
+   projection path without manufacturing an import batch or receipt. Its
+   cryptographic submission ID plus encrypted v2 command record makes retries
+   and lost native responses idempotent while retaining two independently
+   entered fills that happen to have identical values.
 
 ## Import sequence
 
@@ -61,6 +67,38 @@ the commit; Hermes does not silently import only the convenient subset of a
 financial file. Capability validation also rejects pre-1970 timestamps,
 sub-microsecond values, unsupported currencies, and fee precision/ranges that
 the SQLite schema cannot persist, so “Ready to import” matches commit capability.
+
+## Manual execution sequence
+
+```text
+one-thumb form
+  → exact decimal, account, symbol, asset-class, side/effect validation
+  → IANA local time or explicit UTC-offset validation
+  → review digest over every canonical field + random submission ID
+  → immediate revalidation at the store boundary
+  → BEGIN transaction
+      workspace + account + instrument identity checks
+      encrypted pending command + reviewed revision
+      replay/payload conflict check
+      immutable execution + version + manual source + active head
+      FIFO normalization
+      complete immutable projection generation + active pointer
+      command state → committed, still unacknowledged
+    COMMIT
+  → reload the execution into the visible ledger
+  → mark the command acknowledged
+```
+
+Manual facts do not create rows in `import_batches`,
+`import_source_rows`, `import_execution_occurrences`, or
+`import_receipts`. CSV receipt rollback therefore cannot claim or void a
+manual execution. The current slice creates facts only; corrections and voiding
+must use later append-only execution versions rather than editing this source
+record in place. If the native transaction commits but the WebView is killed or
+the bridge response is lost, the unacknowledged v2 row survives in the same
+encrypted database. Startup reconciles its execution ID against the active
+ledger and acknowledges it only after the saved result has been read; retrying
+the original submission returns the existing execution without rebuilding.
 
 ## Projection semantics
 
@@ -118,7 +156,7 @@ deduplication still prevents a second copy while the restored receipt is active.
   irreplaceable journal data eligible for normal device backup policy.
 - Encryption, SQLite quick-check, SQLCipher page-HMAC integrity, and foreign-key
   integrity are verified on every native open. The schema `user_version` and
-  migration receipt checksum must match the app before repository reads or writes.
+  migration receipt checksums must match the app before repository reads or writes.
 - The production CSP denies network connections. The importer receives local
   file contents and makes no upload request.
 - Browser builds are a development surface only: financial records live in an
@@ -127,11 +165,11 @@ deduplication still prevents a second copy while the restored receipt is active.
 Native SQLCipher operation, Keychain loss/reinstall behavior, actual device and
 iCloud backup inclusion, restore with its Keychain item, CocoaPods resolution,
 and kill/relaunch migration recovery remain Mac/physical-device gates. The v1
-migration statements are replay-safe for the plugin's statement/user-version
-commit gap, but only an interruption test can prove the native lifecycle. No
-privacy or recovery claim may be strengthened until those behaviors are
-observed. Because SQLCipher is bundled, App Store export-compliance answers also
-require a human determination.
+ledger and v2 command-reconciliation statements are replay-safe for the plugin's
+statement/user-version commit gap, but only an interruption test can prove the
+native lifecycle. No privacy or recovery claim may be strengthened until those
+behaviors are observed. Because SQLCipher is bundled, App Store
+export-compliance answers also require a human determination.
 
 ## Verification evidence
 
@@ -146,7 +184,12 @@ reconciliation, account-attributed history, mapping focus, persistent mutation
 announcements, user-confirmed rollback, and restoration. Regression fixtures
 also cover overlapping receipts, dependent rollback atomicity, stable trade
 subjects, equal-timestamp cross-batch ordering, reversed restore order, causal
-clock rollback, and immutable input-head digests.
+clock rollback, and immutable input-head digests. Manual-entry coverage adds
+tamper detection, offset-to-IANA matching, DST gap/fold handling, fee
+precision/range limits, exact two-fill P&L, encrypted response-loss
+reconciliation, replay idempotency, failed-close atomicity, manual/CSV
+asset-class and receipt ownership separation, save-time dismissal guards,
+two-step browser review, focus restoration, and manual-only receipt truthfulness.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

@@ -1,26 +1,36 @@
 # Hermes Journal iOS product roadmap
 
-Status: active product plan · updated 2026-07-09
+Status: active delivery roadmap · updated 2026-07-12
+
+The authoritative product, audience, stack, pricing, and validation decisions
+live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
+delivery sequence for that contract.
 
 ## Product decision
 
-Hermes Journal is an original, mobile-first trading journal for a broad trading
-audience. It replaces the earlier single-trader cockpit direction. TradeZella is
+Hermes Journal is an original, mobile-first trading journal whose launch cohort
+is adult, phone-first stock and ETF traders. Options, futures, crypto, forex,
+and prop workflows remain discovery segments until their data contracts exist.
+It replaces the earlier single-trader cockpit direction. TradeZella is
 used only to benchmark useful capabilities; Hermes must not copy its protected
 name, copy, graphics, assets, or interface. Hermes is not affiliated with,
 endorsed by, or sponsored by TradeZella.
 
 Working product promise:
 
-> A private trade journal that shows what is working—for one upfront purchase.
+> A private trade journal that shows what is working—without a required
+> subscription.
 
-Commercial contract:
+Proposed commercial hypothesis (requires explicit owner approval):
 
 - iPhone first, Android after iOS behavior and data contracts stabilize.
-- $9.99 upfront App Store price.
-- No subscription and no second lifetime-unlock purchase.
+- $9.99 upfront App Store price hypothesis; do not configure or promise it yet.
+- No Core subscription and no second lifetime-unlock purchase.
 - Core journal records and reports work without an account or network service.
 - The app never places or modifies a brokerage order.
+- A future hosted Connect service requires the blueprint's retention,
+  willingness-to-pay, rights, privacy, security, and unit-economics gates; it
+  can never be required for local Core features.
 
 “Hermes Journal” is a working name. `app.hermesjournal.mobile` is a provisional,
 neutral bundle identifier. Name, trademark, domain, and App Store availability
@@ -32,8 +42,9 @@ under the provisional identifier until that gate is cleared.
 
 - **7/10** micro-product potential as a polished, privacy-oriented alternative
   to the core import → journal → review workflow.
-- **4/10** if marketed as literal parity with every hosted TradeZella service for
-  $9.99; real-time integrations, licensed data, hosted sync, and recurring AI
+- **4/10** if marketed as literal parity with every hosted TradeZella service
+  at the proposed $9.99 price; real-time integrations, licensed data, hosted
+  sync, and recurring AI
   have continuing costs.
 - **4/10 current readiness**: the execution ledger and generic CSV loop now run
   end to end with tested rollback, but the annotation/export/release surfaces
@@ -44,7 +55,8 @@ prices. That gives Hermes a large price wedge, but price alone is not the produc
 fast mobile review, user-owned data, reliable import, and trustworthy analytics
 must carry the value.
 
-At $9.99, approximate developer proceeds are $6.99 under Apple's standard 30%
+At the proposed $9.99 hypothesis, approximate developer proceeds are $6.99
+under Apple's standard 30%
 commission or $8.49 at 15%, before taxes, refunds, and operating costs. The
 [Apple Developer Program](https://developer.apple.com/programs/whats-included/)
 also has an annual membership cost. Recheck commission eligibility and
@@ -55,7 +67,7 @@ before launch; maintenance and support still need a unit-economics gate.
 
 | Layer | Hermes Journal commitment |
 |---|---|
-| $9.99 launch core | Local accounts; executions and partial exits; quantity, price, fees, commissions, currency P&L, percent return and R; manual entry; generic CSV import with preview/deduplication/rollback; trades and calendar; daily/trade notes and screenshots; setup/mistake/emotion tags; playbooks and rules; filters; core performance reports; versioned export/restore/delete-all-data; position sizing |
+| Proposed one-time paid Core | Local accounts; stock/ETF executions and partial exits; quantity, price, fees, commissions, currency P&L; versioned percent/risk bases before percent return or R is shown; manual entry; generic stock CSV import with preview/deduplication/rollback; trades and calendar; daily/trade notes and screenshots; setup/mistake/emotion tags; playbooks and rules; filters; core performance reports; versioned export/restore/delete-all-data; position sizing |
 | Local post-launch depth | Prioritized broker CSV parser packs; options/futures contracts; MAE/MFE and exit efficiency when data supports them; journal templates; richer comparison reports; PDF/share summaries; user-supplied price-file analysis; optional local or bring-your-own-key assistance |
 | Not included without a new approved model | Developer-funded real-time sync across hundreds of brokers; hosted multi-device storage; licensed tick/Level II history; turnkey cloud replay/backtesting; recurring AI credits; mentor communities; prop-firm monitoring; high-touch managed support |
 
@@ -67,10 +79,13 @@ decision.
 
 Five destinations:
 
-1. **Dashboard** — net P&L/R, core metrics, curve, calendar, process review, recent trades.
+1. **Dashboard** — net P&L, versioned-risk-backed R, core metrics, curve,
+   calendar, process review, recent trades.
 2. **Trades** — search, filters, list/calendar views, trade detail, executions, notes, tags, screenshots.
 3. **Journal** — daily notes, trade reviews, templates, emotions/mistakes, playbooks, rules.
-4. **Reports** — expectancy, profit factor, drawdown, streaks, and breakdowns by setup, tag, symbol, direction, day, and time.
+4. **Reports** — currency expectancy, profit factor, drawdown, streaks, and
+   breakdowns by setup, tag, symbol, direction, day, and time; R expectancy
+   requires compatible stored risk bases.
 5. **More** — imports, accounts, tags/playbooks, planning tools, backup/export, settings, privacy, help, and legal.
 
 Add/manual-import actions are task controls, not navigation tabs. They appear
@@ -139,7 +154,8 @@ selection, native device/Xcode evidence, final branding, or App Store metadata.
 
 Delivered in the current vertical slice:
 
-- Numbered SQLite v1 migration with STRICT tables, foreign keys, checksums,
+- Numbered SQLite v1 ledger and v2 durable-manual-submission migrations with
+  STRICT tables, foreign keys, checksums,
   immutable import/execution facts, mutable heads, and generation-scoped derived
   projections.
 - SQLCipher configuration through pinned `@capacitor-community/sqlite` 8.1.0,
@@ -161,16 +177,28 @@ Delivered in the current vertical slice:
 - Explicit empty, fictional-demo, and real-workspace UI states; imported
   execution projections drive the Dashboard, Trades, Reports, calendar, curve,
   import history, and rollback controls.
-- Real SQL.js schema/repository tests plus browser import/rollback coverage.
+- Two-step manual execution capture with exact string decimals, stock/ETF and
+  account identity, side/position effect, IANA time plus optional explicit UTC
+  offset, tamper-evident review, replay-safe submission identity, immutable
+  `manual` source facts, atomic projection rebuild, and an encrypted
+  unacknowledged-command record that reconciles a lost response on relaunch.
+- Manual-only journals remain distinct from import receipts, while CSV receipt
+  rollback cannot deactivate independently entered manual facts.
+- Real SQL.js schema/repository tests plus browser import/rollback coverage. The
+  final 2026-07-12 Linux gate passed 194 Vitest tests and 11 Playwright journeys.
 
 Still required in Phase 1:
 
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
-- Build manual execution entry.
-- Add trade list/detail, executions, account selection, calendar, notes, setup/
-  mistake/emotion tags, playbook assignment, and core reports.
+- Deepen the delivered basic Trades list/search, Dashboard calendar, and
+  headline Reports cards with trade detail, execution inspection, filtering,
+  calendar drill-down, account selection, notes, setup/mistake/emotion tags,
+  playbook assignment, and reconciled report drill-down.
+- Add a generic-CSV asset-class contract before claiming ETF/options/futures/
+  crypto file coverage; the current generic CSV adapter intentionally records
+  rows as stock.
 - Add versioned export/restore and Delete All Data, including attachment cleanup.
 
 Exit gate: manual/CSV input → normalized trade → journal metadata → dashboard/
@@ -198,8 +226,9 @@ exports and deletes correctly, and failures remain visible and recoverable.
 - Confirm final name/bundle ID, signing, privacy manifest, SDK behavior, and archive.
 - Publish support/privacy URLs and complete privacy nutrition labels, age rating,
   category, screenshots, description, keywords, review notes, and disclaimer.
-- Configure a $9.99 paid app under the Paid Apps Agreement; do not create a
-  subscription or in-app lifetime unlock.
+- After explicit owner approval, configure the selected paid-app tier under the
+  Paid Apps Agreement. The current $9.99 figure is only a hypothesis; do not
+  create a subscription or in-app lifetime unlock.
 - Distribute through TestFlight before human-reviewed submission.
 
 Exit gate: signed archive, device matrix, TestFlight evidence, final privacy/
@@ -238,6 +267,6 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-The next implementation slice is Phase 1's manual entry plus durable annotations,
-followed by versioned export/restore/delete-all—not broker connectivity or legacy
-cockpit extraction.
+The next implementation slice is Phase 1's durable annotations keyed to stable
+trade subjects, followed by versioned export/restore/delete-all—not broker
+connectivity or legacy cockpit extraction.

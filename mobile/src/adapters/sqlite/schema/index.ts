@@ -7,6 +7,13 @@ import {
   V1_MIGRATION_VERSION,
   v1MigrationChecksumInput,
 } from "./v1";
+import {
+  V2_MIGRATION_CHECKSUM_SHA256,
+  V2_MIGRATION_NAME,
+  V2_MIGRATION_STATEMENTS,
+  V2_MIGRATION_VERSION,
+  v2MigrationChecksumInput,
+} from "./v2";
 
 export interface MobileSchemaMigration {
   readonly toVersion: number;
@@ -23,6 +30,13 @@ export const MOBILE_SCHEMA_MIGRATIONS: readonly MobileSchemaMigration[] = Object
     checksumSha256: V1_MIGRATION_CHECKSUM_SHA256,
     checksumInput: v1MigrationChecksumInput(),
     statements: V1_MIGRATION_STATEMENTS,
+  }),
+  Object.freeze({
+    toVersion: V2_MIGRATION_VERSION,
+    name: V2_MIGRATION_NAME,
+    checksumSha256: V2_MIGRATION_CHECKSUM_SHA256,
+    checksumInput: v2MigrationChecksumInput(),
+    statements: V2_MIGRATION_STATEMENTS,
   }),
 ]);
 
@@ -46,4 +60,12 @@ export {
   V1_MIGRATION_VERSION,
   v1MigrationChecksumInput,
 } from "./v1";
+export {
+  V2_MIGRATION_BODY,
+  V2_MIGRATION_CHECKSUM_SHA256,
+  V2_MIGRATION_NAME,
+  V2_MIGRATION_STATEMENTS,
+  V2_MIGRATION_VERSION,
+  v2MigrationChecksumInput,
+} from "./v2";
 export { sha256Hex } from "./checksum";

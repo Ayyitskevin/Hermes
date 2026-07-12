@@ -13,6 +13,7 @@
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:boundary": "vitest run src/core/mobile-boundary.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "ios:add": "npm run build && cap add ios --packagemanager CocoaPods",

@@ -1,5 +1,10 @@
 # Operations
 
+> **Legacy desktop runbook — not mobile deployment guidance.** The systemd and
+> Python procedures below apply only to the frozen desktop prototype. The active
+> iOS product is built from `mobile/`; use the
+> [Mac/Xcode handoff](mobile/MAC_HANDOFF.md) for native acceptance.
+
 Hermes runs as a real service, not a script you remember to restart.
 
 ## Deploy (systemd)
