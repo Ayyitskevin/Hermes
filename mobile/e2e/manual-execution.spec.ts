@@ -155,6 +155,7 @@ test("manual entry binds an explicit fold offset to the selected IANA zone", asy
   await page.locator("#manual-symbol").fill("AAPL");
   await page.locator("#manual-quantity").fill("1");
   await page.locator("#manual-price").fill("100");
+  await page.locator("#manual-time-zone").fill("America/New_York");
   await page.locator("#manual-executed-at").fill("2026-11-01T01:30");
   await page.locator("#manual-utc-offset").fill("-04:00");
   await page.getByRole("button", { name: "Review execution" }).click();
