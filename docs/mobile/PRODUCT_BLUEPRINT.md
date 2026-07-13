@@ -1,6 +1,6 @@
 # Hermes Journal product and technical blueprint
 
-Status: authoritative mobile product blueprint · 2026-07-12
+Status: authoritative mobile product blueprint · 2026-07-13
 
 ## Executive decision
 
@@ -250,6 +250,9 @@ relaunch on native storage, and trace it to a manual source fact.
 
 ### Slice B — the 60-second review
 
+Status: implemented and Linux-verified; native v2→v3 migration, encrypted
+relaunch, and device accessibility remain part of the Mac/device release gate.
+
 - Trade detail with execution inspection.
 - Durable note plus setup, mistake, emotion, and rule-adherence fields.
 - Configurable tags and playbook/rule assignment.
@@ -401,19 +404,21 @@ Connect discovery gates:
 
 ## Current evidence and immediate next step
 
-At blueprint adoption, the reviewed mobile history contains the iOS foundation
-and execution-ledger slices. The 2026-07-12 central Linux gate completed a
-locked install with zero reported vulnerabilities, TypeScript, the dedicated
-two-check mobile/native boundary gate, 194 Vitest tests across 20 files, 11
-Playwright journeys, production build, Capacitor iOS sync, tracked-native-drift
-check, and whitespace check. CocoaPods and Xcode were unavailable and remain
-explicit Mac/device release holds.
+The reviewed mobile history now contains the iOS foundation, execution-ledger,
+manual-capture, and 60-second-review slices. The 2026-07-13 Linux Slice B gate
+completed a locked install with zero reported vulnerabilities, TypeScript, the
+  dedicated two-check mobile/native boundary gate, 248 Vitest tests across 24
+files, 19 Playwright journeys, the production build, Capacitor iOS sync, and
+tracked-native-drift and whitespace checks. Schema v3 is checksum-pinned and
+replay-tested from v2. Exact fee-aware R and percent-return fixtures cover
+positive, negative, zero, repeating, partial, short, missing, incompatible, and
+unsupported cases. CocoaPods, Xcode, native SQLCipher/Keychain lifecycle, and
+physical-device accessibility remain explicit Mac/device release holds.
 
-The next owned implementation is **Slice B: the 60-second review**. Manual
-execution capture writes through the immutable v1 ledger and encrypted v2
-submission-reconciliation table. Durable annotations and risk-basis versions
-therefore begin with the next numbered migration so financial facts, command
-recovery, and user-authored reviews keep distinct migration and test surfaces.
+The next owned implementation is **Slice C: user-owned data**. Its versioned
+export manifest must include the immutable ledger, current and historical
+review versions, reusable vocabulary, formula definitions, and stable subject
+identity before Delete All Data or restore can be considered coherent.
 
 ## Competitive and platform references
 

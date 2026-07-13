@@ -2,6 +2,7 @@ import { canonicalizeDecimal } from "../core/decimal";
 import type { CurrencyMoneyTotal, TradeAllocation, TradeProjection } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
 import { calculatePerformance } from "../core/performance";
+import { deriveTradeMetricsV1 } from "../core/trade-metrics";
 import {
   absoluteSignedDecimal,
   addSignedDecimals,
@@ -23,6 +24,7 @@ import type {
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
+  JournalTradeReviewRecord,
 } from "./journal-store";
 
 const EMPTY_IMPORT_SUMMARY: ImportSummary = Object.freeze({
@@ -50,6 +52,21 @@ export const EMPTY_WORKSPACE: JournalWorkspaceSnapshot = Object.freeze({
   equityCurve: Object.freeze([0]),
   calendar: Object.freeze([]),
   trades: Object.freeze([]),
+  reviewProgress: Object.freeze({
+    pendingTrades: 0,
+    draftTrades: 0,
+    completedTrades: 0,
+    streakSessions: 0,
+    reviewedSessions: 0,
+    tradingSessions: 0,
+  }),
+  reviewOptions: Object.freeze({
+    setups: Object.freeze([]),
+    mistakes: Object.freeze([]),
+    emotions: Object.freeze([]),
+    tags: Object.freeze([]),
+    playbooks: Object.freeze([]),
+  }),
   dailyJournal: Object.freeze([]),
   playbooks: Object.freeze([]),
 });
@@ -68,6 +85,7 @@ interface ZonedDay {
 interface MappedTrade {
   readonly preview: TradePreview;
   readonly resultPnlExact: string | null;
+  readonly resultRExact: string | null;
 }
 
 interface LedgerPnlEvent {
@@ -167,15 +185,22 @@ function exactPerformance(
   ));
   const reviewed = realized.filter((trade) => trade.preview.followedPlan !== null);
   const followed = reviewed.filter((trade) => trade.preview.followedPlan === true);
+  const exactRValues = realized
+    .map((trade) => trade.resultRExact)
+    .filter((value): value is string => value !== null);
+  const netRExact = exactRValues.length === 0 ? null : sumSignedDecimals(exactRValues);
+  const averageRExact = netRExact === null
+    ? null
+    : divideSignedDecimals(netRExact, String(exactRValues.length));
   return {
     netPnl: displayNumber(workspaceNetPnlExact, "workspace net P&L"),
-    netR: null,
+    netR: netRExact === null ? null : displayNumber(netRExact, "workspace net R"),
     winRatePct: realized.length === 0 ? 0 : (wins.length / realized.length) * 100,
     profitFactor: compareSignedDecimals(grossLoss, "0") === 0
       ? null
       : displayNumber(divideSignedDecimals(grossProfit, grossLoss), "workspace profit factor"),
-    averageR: null,
-    rTradeCount: 0,
+    averageR: averageRExact === null ? null : displayNumber(averageRExact, "workspace average R"),
+    rTradeCount: exactRValues.length,
     ruleAdherencePct: reviewed.length === 0 ? null : (followed.length / reviewed.length) * 100,
     ruleReviewCount: reviewed.length,
     tradeCount: realized.length,
@@ -243,8 +268,17 @@ function compatibleInstrument(
   return instrument;
 }
 
+function followedPlanForReview(review: JournalTradeReviewRecord | null): boolean | null {
+  if (review === null) return null;
+  if (review.rules.some((rule) => rule.outcome === "broken")) return false;
+  return review.rules.some((rule) => rule.outcome === "followed") ? true : null;
+}
+
 function mapTrade(
   trade: TradeProjection,
+  tradeSubjectId: string,
+  review: JournalTradeReviewRecord | null,
+  allocations: readonly TradeAllocation[],
   accounts: ReadonlyMap<string, JournalAccountRecord>,
   instruments: ReadonlyMap<string, JournalInstrumentRecord>,
   timeZone: string,
@@ -258,6 +292,19 @@ function mapTrade(
   const resultPnl = resultPnlExact === null
     ? null
     : displayNumber(resultPnlExact, `trade ${trade.id} net P&L`);
+  const isPartial = resultPnlExact !== null && trade.status === "OPEN";
+  const metrics = deriveTradeMetricsV1({
+    assetClass: instrument.assetClass,
+    netRealizedPnl: resultPnlExact === null
+      ? null
+      : { amount: resultPnlExact, currency: trade.quoteCurrency },
+    initialRisk: review?.initialRisk ?? null,
+    fullEntryNotional: {
+      amount: trade.entryNotional,
+      currency: trade.quoteCurrency,
+    },
+    isPartial,
+  });
   const averageExit = exitedQuantity === 0
     ? null
     : exactAverage(
@@ -266,9 +313,53 @@ function mapTrade(
       trade.multiplier,
       `trade ${trade.id} exit`,
     );
+  const reviewRecordedAtUs = review === null
+    ? null
+    : parseTimestampUs(review.recordedAtUs, "trade review time");
+  const reviewSessionDates = new Set<string>();
+  const executionPreviews = allocations
+    .filter((allocation) => allocation.tradeId === trade.id)
+    .sort((left, right) => (
+      BigInt(left.occurredAtUs) < BigInt(right.occurredAtUs) ? -1
+        : BigInt(left.occurredAtUs) > BigInt(right.occurredAtUs) ? 1
+          : left.fragmentIndex - right.fragmentIndex
+            || stableCompare(left.id, right.id)
+    ))
+    .map((allocation) => {
+      const occurred = zonedDay(
+        allocation.occurredAtUs,
+        timeZone,
+        `allocation ${allocation.id} time`,
+      );
+      const allocationOccurredAtUs = parseTimestampUs(
+        allocation.occurredAtUs,
+        "review allocation time",
+      );
+      if (
+        reviewRecordedAtUs !== null
+        && allocationOccurredAtUs <= reviewRecordedAtUs
+      ) {
+        reviewSessionDates.add(occurred.isoDate);
+      }
+      const fee = sumSignedDecimals(allocation.fees.map((component) => (
+        minorUnitsDecimal(component.costMinor, component.minorUnit)
+      )));
+      return {
+        allocationId: allocation.id,
+        executionId: allocation.executionId,
+        effect: allocation.effect === "ENTRY" ? "entry" as const : "exit" as const,
+        side: allocation.side === "BUY" ? "buy" as const : "sell" as const,
+        occurredAt: `${occurred.dateLabel}, ${occurred.year} · ${occurred.timeLabel}`,
+        quantity: allocation.quantity,
+        price: allocation.price,
+        fee,
+        currency: trade.quoteCurrency,
+      };
+    });
   return {
     preview: {
-      id: trade.id,
+      id: tradeSubjectId,
+      tradeSubjectId,
       symbol: instrument.symbol,
       assetClass: instrument.assetClass,
       side: trade.direction === "LONG" ? "long" : "short",
@@ -282,16 +373,36 @@ function mapTrade(
       ),
       averageExit,
       resultPnl,
-      resultR: null,
-      setup: "Unclassified",
+      resultPnlExact,
+      resultR: metrics.resultR.value === null
+        ? null
+        : displayNumber(metrics.resultR.value, `trade ${trade.id} result R`),
+      percentReturn: metrics.percentReturn.value === null
+        ? null
+        : displayNumber(metrics.percentReturn.value, `trade ${trade.id} percent return`),
+      resultRMetric: metrics.resultR,
+      percentReturnMetric: metrics.percentReturn,
+      setup: review?.setup ?? "Unclassified",
+      mistakes: review?.mistakes ?? [],
+      emotion: review?.emotion ?? null,
       tradedOn: openedDay.isoDate,
+      reviewSessionDates: [...reviewSessionDates].sort(stableCompare),
       sessionLabel: `${openedDay.dateLabel} · ${openedDay.timeLabel}`,
       accountLabel: account.name,
-      note: "No journal note added.",
-      tags: [],
-      followedPlan: null,
+      note: review?.note || "No journal note added.",
+      tags: review?.tags ?? [],
+      followedPlan: followedPlanForReview(review),
+      playbook: review?.playbookName ?? null,
+      rules: review?.rules ?? [],
+      initialRisk: review?.initialRisk ?? null,
+      plannedStop: review?.plannedStop ?? null,
+      reviewStatus: review?.state ?? "pending",
+      reviewId: review?.id ?? null,
+      reviewVersion: review?.version ?? null,
+      executions: executionPreviews,
     },
     resultPnlExact,
+    resultRExact: metrics.resultR.value,
   };
 }
 
@@ -391,6 +502,80 @@ function periodLabel(days: readonly ZonedDay[]): string {
   return `${first.dateLabel}, ${first.year}–${last.dateLabel}, ${last.year}`;
 }
 
+function buildReviewProgress(
+  trades: readonly TradePreview[],
+  executionDays: readonly ZonedDay[],
+): JournalWorkspaceSnapshot["reviewProgress"] {
+  const closed = trades.filter((trade) => trade.status === "closed");
+  const tradingDates = [...new Set(executionDays.map((day) => day.isoDate))]
+    .sort(stableCompare);
+  const reviewedDates = new Set(
+    trades
+      .filter((trade) => trade.reviewStatus !== "pending")
+      .flatMap((trade) => trade.reviewSessionDates),
+  );
+  let streakSessions = 0;
+  for (const date of [...tradingDates].reverse()) {
+    if (!reviewedDates.has(date)) break;
+    streakSessions += 1;
+  }
+  return {
+    pendingTrades: closed.filter((trade) => trade.reviewStatus !== "completed").length,
+    draftTrades: closed.filter((trade) => trade.reviewStatus === "draft").length,
+    completedTrades: closed.filter((trade) => trade.reviewStatus === "completed").length,
+    streakSessions,
+    reviewedSessions: tradingDates.filter((date) => reviewedDates.has(date)).length,
+    tradingSessions: tradingDates.length,
+  };
+}
+
+function buildReviewOptions(
+  ledger: JournalLedgerSnapshot,
+): JournalWorkspaceSnapshot["reviewOptions"] {
+  const terms = (category: "setup" | "mistake" | "emotion" | "tag") => (
+    ledger.reviewTerms
+      .filter((term) => term.category === category)
+      .map((term) => term.name)
+      .sort((left, right) => left.localeCompare(right, "en-US"))
+  );
+  return {
+    setups: terms("setup"),
+    mistakes: terms("mistake"),
+    emotions: terms("emotion"),
+    tags: terms("tag"),
+    playbooks: ledger.playbooks.map((playbook) => ({
+      name: playbook.name,
+      rules: playbook.rules.map((rule) => rule.text),
+    })),
+  };
+}
+
+function buildPlaybookPreviews(
+  trades: readonly TradePreview[],
+  ledger: JournalLedgerSnapshot,
+): JournalWorkspaceSnapshot["playbooks"] {
+  return ledger.playbooks.map((playbook) => {
+    const assigned = trades.filter((trade) => (
+      trade.playbook === playbook.name && trade.reviewStatus === "completed"
+    ));
+    const realized = assigned.filter((trade) => trade.resultPnlExact !== null);
+    const exactR = assigned
+      .map((trade) => trade.resultRMetric.value)
+      .filter((value): value is string => value !== null);
+    const winners = realized.filter((trade) => (
+      compareSignedDecimals(trade.resultPnlExact ?? "0", "0") > 0
+    )).length;
+    const netRExact = exactR.length === 0 ? null : sumSignedDecimals(exactR);
+    return {
+      name: playbook.name,
+      tradeCount: assigned.length,
+      netR: netRExact === null ? null : displayNumber(netRExact, `playbook ${playbook.name} net R`),
+      winRatePct: realized.length === 0 ? 0 : winners / realized.length * 100,
+      rules: playbook.rules.map((rule) => rule.text),
+    };
+  });
+}
+
 function validateReceiptCount(value: number, label: string): number {
   invariant(Number.isSafeInteger(value) && value >= 0, `${label} must be a non-negative safe integer`);
   return value;
@@ -473,6 +658,10 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
       ledger.accounts.length === 0
       && ledger.instruments.length === 0
       && ledger.executions.length === 0
+      && ledger.tradeSubjects.length === 0
+      && ledger.tradeReviews.length === 0
+      && ledger.reviewTerms.length === 0
+      && ledger.playbooks.length === 0
       && ledger.imports.length === 0,
       "ledger facts exist without a workspace",
     );
@@ -501,12 +690,39 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     invariant(money.currency === workspace.defaultCurrency, `workspace money requires FX from ${money.currency}`);
   }
 
-  const mappedTrades = projection.trades.map((trade) => mapTrade(
-    trade,
-    accounts,
-    instruments,
-    workspace.timeZone,
-  ));
+  const subjectByProjectionId = new Map<string, string>();
+  for (const subject of ledger.tradeSubjects) {
+    invariant(
+      !subjectByProjectionId.has(subject.projectionTradeId),
+      `projection trade ${subject.projectionTradeId} has duplicate subject mappings`,
+    );
+    subjectByProjectionId.set(subject.projectionTradeId, subject.tradeSubjectId);
+  }
+  invariant(
+    subjectByProjectionId.size === projection.trades.length,
+    "durable trade-subject mappings do not match the current projection",
+  );
+  const reviewBySubjectId = new Map<string, JournalTradeReviewRecord>();
+  for (const review of ledger.tradeReviews) {
+    invariant(
+      !reviewBySubjectId.has(review.tradeSubjectId),
+      `trade subject ${review.tradeSubjectId} has more than one current review`,
+    );
+    reviewBySubjectId.set(review.tradeSubjectId, review);
+  }
+  const mappedTrades = projection.trades.map((trade) => {
+    const tradeSubjectId = subjectByProjectionId.get(trade.id);
+    invariant(tradeSubjectId !== undefined, `trade ${trade.id} has no durable subject`);
+    return mapTrade(
+      trade,
+      tradeSubjectId,
+      reviewBySubjectId.get(tradeSubjectId) ?? null,
+      projection.allocations,
+      accounts,
+      instruments,
+      workspace.timeZone,
+    );
+  });
   const pnlEvents = buildPnlEvents(projection.allocations, projection.lotMatches);
   const workspaceMoney = projection.moneyTotals.find((money) => (
     money.currency === workspace.defaultCurrency
@@ -562,7 +778,9 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     equityCurve: buildEquityCurve(pnlEvents),
     calendar: buildCalendar(pnlEvents, workspace.timeZone),
     trades: previews,
+    reviewProgress: buildReviewProgress(previews, executionDays),
+    reviewOptions: buildReviewOptions(ledger),
     dailyJournal: [],
-    playbooks: [],
+    playbooks: buildPlaybookPreviews(previews, ledger),
   };
 }

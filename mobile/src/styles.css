@@ -47,9 +47,9 @@ body {
 }
 
 .modal-open { overflow: hidden; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { color: inherit; }
-button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;
 }
@@ -238,6 +238,12 @@ p { line-height: 1.55; }
 
 .review-card > strong { font: 700 1.35rem/1 "B612 Mono", monospace; }
 .review-card > p { grid-column: 1 / -1; margin: 0; }
+.review-progress-card { display: grid; gap: .75rem; border-color: rgb(92 225 230 / 22%); }
+.review-progress-card p { margin: 0; color: var(--muted); }
+.review-progress-card .section-title > strong { color: var(--cyan); }
+.status-chip.review-completed { border-color: rgb(114 220 161 / 45%); color: var(--positive); background: rgb(114 220 161 / 9%); }
+.status-chip.review-draft { border-color: rgb(241 198 109 / 45%); color: var(--warn); background: rgb(241 198 109 / 9%); }
+.status-chip.review-pending { border-color: var(--line); color: var(--muted); background: rgb(255 255 255 / 3%); }
 .trade-list, .journal-list { display: grid; gap: .6rem; }
 .trade-row {
   min-height: 64px;
@@ -310,6 +316,20 @@ p { line-height: 1.55; }
 
 .journal-note-heading > strong { color: var(--cyan); font: 700 1.15rem/1 "B612 Mono", monospace; }
 .journal-note p { margin: 0; }
+.review-queue-list { margin-top: .75rem; }
+.review-queue-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(7rem, auto);
+  align-items: center;
+  gap: .75rem;
+}
+.review-queue-item h3 { margin-top: .45rem; font-size: 1.1rem; }
+.review-queue-item p { margin: .2rem 0 0; color: var(--muted); font-size: .78rem; }
+.review-select { min-width: 44px; min-height: 44px; display: grid; place-items: center; }
+.review-select input { width: 1.2rem; min-height: 1.2rem; accent-color: var(--violet); }
+.batch-review-form { margin-top: .75rem; border-color: rgb(155 124 255 / 28%); }
+.batch-review-form h3, .batch-review-form p { margin: 0; }
+.batch-review-form p { color: var(--muted); }
 .playbook-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -389,7 +409,7 @@ form { display: grid; gap: 1rem; }
 }
 
 label { display: grid; gap: .35rem; color: var(--muted); font-size: .78rem; }
-input, select {
+input, select, textarea {
   width: 100%;
   min-height: 48px;
   padding: .65rem .7rem;
@@ -399,6 +419,8 @@ input, select {
   color: var(--text);
   font-size: 1rem;
 }
+textarea { resize: vertical; line-height: 1.45; }
+button:disabled, input:disabled, select:disabled, textarea:disabled { opacity: .58; cursor: not-allowed; }
 
 input[type="file"] { padding: .5rem; }
 input[type="file"]::file-selector-button {
@@ -495,6 +517,59 @@ input[type="file"]::file-selector-button {
   overscroll-behavior: contain;
 }
 
+.trade-review-sheet {
+  width: min(100%, 48rem);
+  min-width: 0;
+  display: grid;
+  gap: 1.1rem;
+}
+.trade-review-sheet > *,
+.trade-review-sheet form,
+.trade-review-sheet fieldset,
+.trade-review-sheet label,
+.trade-review-sheet input,
+.trade-review-sheet select,
+.trade-review-sheet textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.trade-review-sheet > p { margin: 0; }
+.trade-review-sheet section { display: grid; gap: .7rem; }
+.review-execution-list { display: grid; gap: .5rem; }
+.review-execution-row {
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background: #0b0e14;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .45rem .75rem;
+  align-items: center;
+}
+.review-execution-row > div { display: flex; align-items: center; gap: .5rem; }
+.review-execution-row > .numeric { display: grid; gap: .2rem; }
+.review-execution-row small { grid-column: 1 / -1; color: var(--muted); font: .68rem/1.4 "B612 Mono", monospace; }
+.review-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr)); gap: .6rem; }
+.review-metric {
+  min-width: 0;
+  max-width: 100%;
+  padding: .85rem;
+  border: 1px solid rgb(92 225 230 / 24%);
+  border-radius: .8rem;
+  background: rgb(92 225 230 / 5%);
+  display: grid;
+  gap: .35rem;
+}
+.review-metric.unavailable { border-color: var(--line); background: #0b0e14; }
+.review-metric strong { font: 700 1.25rem/1.2 "B612 Mono", monospace; }
+.review-metric span, .review-metric small { min-width: 0; overflow-wrap: anywhere; color: var(--muted); font: .68rem/1.45 "B612 Mono", monospace; }
+.review-rules { margin: 0; padding: .8rem; border: 1px solid var(--line); border-radius: .8rem; display: grid; gap: .7rem; }
+.review-rules legend { padding-inline: .35rem; color: var(--muted); font-size: .78rem; }
+#review-rule-rows { display: grid; gap: .55rem; }
+.review-rule-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(8.5rem, .55fr) auto; gap: .55rem; align-items: end; }
+.review-rule-row > .icon-button { justify-self: end; }
+.review-note-label { display: grid; gap: .4rem; }
+
 .sheet-handle { width: 2.5rem; height: .25rem; margin: 0 auto 1rem; border-radius: 1rem; background: #494d58; }
 .sheet-heading h2 { font-size: 1.6rem; }
 .settings-block { margin: 1rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; display: grid; gap: .65rem; }
@@ -537,6 +612,16 @@ input[type="file"]::file-selector-button {
   .trade-card-heading, .journal-note-heading, .review-card, .playbook-card { grid-template-columns: 1fr; }
   .journal-metrics { text-align: left; }
   .review-card > p, .playbook-card > p, .playbook-card ul { grid-column: 1; }
+  .review-queue-item { grid-template-columns: auto minmax(0, 1fr); }
+  .review-queue-item > .secondary-button { grid-column: 1 / -1; }
+  .trade-review-sheet .field-grid,
+  .trade-review-sheet .review-metric-grid,
+  .trade-review-sheet .quick-actions { grid-template-columns: minmax(0, 1fr); }
+  .review-rule-row { grid-template-columns: minmax(0, 1fr); }
+  .review-rule-row label:first-child { grid-column: 1; }
+  .review-execution-row { grid-template-columns: 1fr; }
+  .review-execution-row > .numeric { text-align: left; }
+  .review-execution-row small { grid-column: 1; }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {

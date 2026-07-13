@@ -4,25 +4,43 @@ import type {
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
+  JournalPlaybookRecord,
+  JournalReviewTermCategory,
+  JournalReviewTermRecord,
   JournalStore,
+  JournalTradeReviewRecord,
   JournalWorkspaceRecord,
   ManualExecutionCommitResult,
   PreparedCsvImport,
+  PreparedTradeReviewBatch,
+  TradeReviewCommitResult,
   UnacknowledgedManualExecution,
 } from "../application/journal-store";
 import {
   JournalImportError,
   JournalManualExecutionError,
+  JournalTradeReviewError,
 } from "../application/journal-store";
 import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../application/prepare-manual-execution";
 import { verifyPreparedCsvImport } from "../application/prepare-csv-import";
+import {
+  PERCENT_RETURN_METRIC_ID,
+  RESULT_R_METRIC_ID,
+  tradeReviewBatchRevision,
+  type PreparedTradeReview,
+  verifyPreparedTradeReview,
+} from "../application/prepare-trade-review";
 import { currencyMinorUnit } from "../core/currency";
-import type { LedgerExecution } from "../core/ledger";
+import type {
+  LedgerExecution,
+  TradeNormalizationResult,
+} from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
 import { sha256Hex } from "./sqlite/schema";
+import { stableTradeSubjectHash } from "./sqlite/trade-subject";
 
 interface SessionExecution extends LedgerExecution {
   readonly sourceIdentity: string;
@@ -32,6 +50,11 @@ interface SessionExecution extends LedgerExecution {
 
 interface SessionManualSubmission extends UnacknowledgedManualExecution {
   acknowledged: boolean;
+}
+
+interface SessionReviewSubmission {
+  readonly revision: string;
+  readonly reviewId: string;
 }
 
 export interface SessionJournalRuntime {
@@ -62,6 +85,146 @@ function feeMinor(value: string, exponent: number): string {
   return `${whole}${fraction.slice(0, exponent).padEnd(exponent, "0")}`.replace(/^0+(?=[0-9])/, "");
 }
 
+function normalizedName(value: string): string {
+  return value.normalize("NFC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
+}
+
+function stableCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function tradeSubjectsForProjection(
+  projection: TradeNormalizationResult,
+): JournalLedgerSnapshot["tradeSubjects"] {
+  return projection.trades.map((trade) => ({
+    projectionTradeId: trade.id,
+    tradeSubjectId: `session-trade:${stableTradeSubjectHash(trade, projection.allocations)}`,
+  }));
+}
+
+function sessionReviewError(
+  code: "submission_changed" | "review_changed" | "trade_changed",
+  message: string,
+): JournalTradeReviewError {
+  return new JournalTradeReviewError({ code, message });
+}
+
+function ensureReviewTerm(
+  terms: JournalReviewTermRecord[],
+  category: JournalReviewTermCategory,
+  value: string,
+): JournalReviewTermRecord {
+  const key = normalizedName(value);
+  const existing = terms.find((term) => (
+    term.category === category && normalizedName(term.name) === key
+  ));
+  if (existing !== undefined) return existing;
+  const created: JournalReviewTermRecord = Object.freeze({
+    id: `session-review-term:${sha256Hex(JSON.stringify([category, key]))}`,
+    category,
+    name: value,
+  });
+  terms.push(created);
+  return created;
+}
+
+function materializeReviewVocabulary(
+  terms: JournalReviewTermRecord[],
+  playbooks: JournalPlaybookRecord[],
+  review: PreparedTradeReview,
+): Pick<
+  JournalTradeReviewRecord,
+  "setup" | "mistakes" | "emotion" | "tags" | "playbookId" | "playbookName" | "rules"
+> {
+  const setup = review.setup === null
+    ? null
+    : ensureReviewTerm(terms, "setup", review.setup).name;
+  const mistakes = review.mistakes.map((value) => (
+    ensureReviewTerm(terms, "mistake", value).name
+  ));
+  const emotion = review.emotion === null
+    ? null
+    : ensureReviewTerm(terms, "emotion", review.emotion).name;
+  const tags = review.tags.map((value) => ensureReviewTerm(terms, "tag", value).name);
+  if (review.playbook === null) {
+    return {
+      setup,
+      mistakes: Object.freeze(mistakes),
+      emotion,
+      tags: Object.freeze(tags),
+      playbookId: null,
+      playbookName: null,
+      rules: Object.freeze([]),
+    };
+  }
+
+  const playbookKey = normalizedName(review.playbook.name);
+  let playbookIndex = playbooks.findIndex((candidate) => (
+    normalizedName(candidate.name) === playbookKey
+  ));
+  if (playbookIndex < 0) {
+    const playbook: JournalPlaybookRecord = Object.freeze({
+      id: `session-playbook:${sha256Hex(playbookKey)}`,
+      name: review.playbook.name,
+      rules: Object.freeze([]),
+    });
+    playbooks.push(playbook);
+    playbookIndex = playbooks.length - 1;
+  }
+  let playbook = playbooks[playbookIndex];
+  if (playbook === undefined) throw new Error("A session playbook could not be materialized.");
+  const playbookId = playbook.id;
+  const nextRules = [...playbook.rules];
+  const reviewRules = review.playbook.rules.map((rule) => {
+    const ruleKey = normalizedName(rule.name);
+    let storedRule = nextRules.find((candidate) => normalizedName(candidate.text) === ruleKey);
+    if (storedRule === undefined) {
+      storedRule = Object.freeze({
+        id: `session-playbook-rule:${sha256Hex(JSON.stringify([playbookId, ruleKey]))}`,
+        playbookId,
+        text: rule.name,
+      });
+      nextRules.push(storedRule);
+    }
+    return Object.freeze({
+      ruleId: storedRule.id,
+      text: storedRule.text,
+      outcome: rule.outcome,
+    });
+  });
+  if (nextRules.length !== playbook.rules.length) {
+    playbook = Object.freeze({ ...playbook, rules: Object.freeze(nextRules) });
+    playbooks[playbookIndex] = playbook;
+  }
+  return {
+    setup,
+    mistakes: Object.freeze(mistakes),
+    emotion,
+    tags: Object.freeze(tags),
+    playbookId: playbook.id,
+    playbookName: playbook.name,
+    rules: Object.freeze(reviewRules),
+  };
+}
+
+function verifyTradeReviewBatch(command: PreparedTradeReviewBatch): readonly PreparedTradeReview[] {
+  try {
+    if (!Array.isArray(command.reviews) || command.reviews.length === 0) {
+      throw new Error("A trade review batch must contain at least one reviewed command.");
+    }
+    const verified = command.reviews.map((review) => verifyPreparedTradeReview(review));
+    if (tradeReviewBatchRevision(command.batchId, verified) !== command.revision) {
+      throw new Error("Trade review batch values changed after review. Review them again.");
+    }
+    return verified;
+  } catch (error) {
+    throw sessionReviewError(
+      "review_changed",
+      error instanceof Error ? error.message : "The trade review batch is invalid.",
+    );
+  }
+}
+
 export class SessionJournalStore implements JournalStore {
   private workspace: JournalWorkspaceRecord | null = null;
   private accounts: JournalAccountRecord[] = [];
@@ -71,6 +234,13 @@ export class SessionJournalStore implements JournalStore {
   private receipts: JournalImportReceipt[] = [];
   private readonly receiptByRevision = new Map<string, string>();
   private readonly manualSubmissions = new Map<string, SessionManualSubmission>();
+  /** Append-only history; only reviewHeadByTradeSubjectId is projected by load(). */
+  private reviewVersions: JournalTradeReviewRecord[] = [];
+  private reviewHeadByTradeSubjectId = new Map<string, string>();
+  private reviewTerms: JournalReviewTermRecord[] = [];
+  private playbooks: JournalPlaybookRecord[] = [];
+  private reviewSubmissionById = new Map<string, SessionReviewSubmission>();
+  private lastReviewRecordedAtMs = -1;
   private nextExecutionSequence = 1;
   private nextReceiptOrdinal = 0;
   private closed = false;
@@ -80,12 +250,34 @@ export class SessionJournalStore implements JournalStore {
   async load(): Promise<JournalLedgerSnapshot> {
     this.assertOpen();
     const executions: readonly LedgerExecution[] = this.executions;
+    const projection = normalizeTrades(executions);
+    const headIds = new Set(this.reviewHeadByTradeSubjectId.values());
+    const tradeReviews = this.reviewVersions
+      .filter((review) => headIds.has(review.id))
+      .sort((left, right) => (
+        BigInt(left.recordedAtUs) < BigInt(right.recordedAtUs) ? -1
+          : BigInt(left.recordedAtUs) > BigInt(right.recordedAtUs) ? 1
+            : stableCompare(left.id, right.id)
+      ));
     return {
       workspace: this.workspace,
       accounts: [...this.accounts],
       instruments: [...this.instruments],
       executions,
-      projection: normalizeTrades(executions),
+      projection,
+      tradeSubjects: tradeSubjectsForProjection(projection),
+      tradeReviews,
+      reviewTerms: [...this.reviewTerms].sort((left, right) => (
+        stableCompare(left.category, right.category)
+        || stableCompare(normalizedName(left.name), normalizedName(right.name))
+        || stableCompare(left.id, right.id)
+      )),
+      playbooks: [...this.playbooks]
+        .sort((left, right) => (
+          stableCompare(normalizedName(left.name), normalizedName(right.name))
+          || stableCompare(left.id, right.id)
+        ))
+        .map((playbook) => ({ ...playbook, rules: [...playbook.rules] })),
       imports: [...this.receipts],
     };
   }
@@ -418,6 +610,187 @@ export class SessionJournalStore implements JournalStore {
     return {
       outcome: "committed",
       executionId,
+      ledger: await this.load(),
+    };
+  }
+
+  async commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult> {
+    this.assertOpen();
+    const reviews = verifyTradeReviewBatch(command);
+    const projection = normalizeTrades(this.executions);
+    const activeTradeBySubjectId = new Map(
+      tradeSubjectsForProjection(projection).map((subject) => {
+        const trade = projection.trades.find((candidate) => (
+          candidate.id === subject.projectionTradeId
+        ));
+        if (trade === undefined) throw new Error("A session trade subject lost its projection.");
+        return [subject.tradeSubjectId, trade] as const;
+      }),
+    );
+    const batchSubmissionIds = new Set<string>();
+    const batchSubjectIds = new Set<string>();
+    const existingReviewIds = new Map<string, string>();
+    const newReviews: PreparedTradeReview[] = [];
+
+    for (const review of reviews) {
+      if (batchSubmissionIds.has(review.submissionId)) {
+        throw sessionReviewError(
+          "submission_changed",
+          "A trade review submission can appear only once in an atomic batch.",
+        );
+      }
+      batchSubmissionIds.add(review.submissionId);
+      if (batchSubjectIds.has(review.tradeSubjectId)) {
+        throw sessionReviewError(
+          "review_changed",
+          "An atomic batch can create only one new head for each trade.",
+        );
+      }
+      batchSubjectIds.add(review.tradeSubjectId);
+
+      const priorSubmission = this.reviewSubmissionById.get(review.submissionId);
+      if (priorSubmission !== undefined) {
+        if (priorSubmission.revision !== review.revision) {
+          throw sessionReviewError(
+            "submission_changed",
+            "This trade review submission was already saved with different values.",
+          );
+        }
+        existingReviewIds.set(review.submissionId, priorSubmission.reviewId);
+        continue;
+      }
+
+      const activeTrade = activeTradeBySubjectId.get(review.tradeSubjectId);
+      if (activeTrade === undefined) {
+        throw sessionReviewError(
+          "trade_changed",
+          "This trade is no longer part of the active immutable ledger projection.",
+        );
+      }
+      if (
+        review.initialRisk !== null
+        && review.initialRisk.currency !== activeTrade.quoteCurrency
+      ) {
+        throw sessionReviewError(
+          "trade_changed",
+          `Initial risk must use this trade's ${activeTrade.quoteCurrency} P&L currency.`,
+        );
+      }
+
+      const currentHeadId = this.reviewHeadByTradeSubjectId.get(review.tradeSubjectId) ?? null;
+      if (currentHeadId !== review.expectedPreviousReviewId) {
+        throw sessionReviewError(
+          "review_changed",
+          "This trade review changed after it was opened. Reload the latest review before saving.",
+        );
+      }
+      newReviews.push(review);
+    }
+
+    if (existingReviewIds.size > 0 && newReviews.length > 0) {
+      throw sessionReviewError(
+        "submission_changed",
+        "An atomic review batch cannot mix saved and unsaved submissions.",
+      );
+    }
+    if (newReviews.length === 0) {
+      return {
+        outcome: "duplicate",
+        reviewIds: reviews.map((review) => {
+          const id = existingReviewIds.get(review.submissionId);
+          if (id === undefined) throw new Error("A duplicate session review lost its version ID.");
+          return id;
+        }),
+        ledger: await this.load(),
+      };
+    }
+
+    const observedNowMs = this.runtime.nowMs();
+    if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+      throw sessionReviewError(
+        "submission_changed",
+        "The browser session clock is outside the journal range.",
+      );
+    }
+    const firstRecordedAtMs = Math.max(observedNowMs, this.lastReviewRecordedAtMs + 1);
+    if (!Number.isSafeInteger(firstRecordedAtMs + newReviews.length - 1)) {
+      throw sessionReviewError(
+        "submission_changed",
+        "The browser session exhausted the review timestamp range.",
+      );
+    }
+
+    const nextReviewVersions = [...this.reviewVersions];
+    const nextHeads = new Map(this.reviewHeadByTradeSubjectId);
+    const nextTerms = [...this.reviewTerms];
+    const nextPlaybooks = this.playbooks.map((playbook) => ({
+      ...playbook,
+      rules: [...playbook.rules],
+    }));
+    const nextSubmissions = new Map(this.reviewSubmissionById);
+    const createdReviewIdBySubmission = new Map<string, string>();
+
+    newReviews.forEach((review, index) => {
+      const previousReviewId = nextHeads.get(review.tradeSubjectId) ?? null;
+      const previousReview = previousReviewId === null
+        ? null
+        : nextReviewVersions.find((candidate) => candidate.id === previousReviewId) ?? null;
+      if (previousReviewId !== null && previousReview === null) {
+        throw new Error("A session trade-review head lost its immutable version.");
+      }
+      const version = (previousReview?.version ?? 0) + 1;
+      if (!Number.isSafeInteger(version)) {
+        throw sessionReviewError("review_changed", "This trade exhausted its review version range.");
+      }
+      const recordedAtMs = firstRecordedAtMs + index;
+      const recordedAtUs = `${recordedAtMs}000`;
+      const vocabulary = materializeReviewVocabulary(nextTerms, nextPlaybooks, review);
+      const reviewId = `session-review:${sha256Hex(JSON.stringify([
+        review.tradeSubjectId,
+        review.submissionId,
+        review.revision,
+      ]))}`;
+      const created: JournalTradeReviewRecord = Object.freeze({
+        id: reviewId,
+        tradeSubjectId: review.tradeSubjectId,
+        version,
+        state: review.state,
+        revision: review.revision,
+        note: review.note,
+        ...vocabulary,
+        initialRisk: review.initialRisk === null
+          ? null
+          : Object.freeze({ amount: review.initialRisk.amount, currency: review.initialRisk.currency }),
+        plannedStop: review.plannedStop,
+        resultRMetricId: RESULT_R_METRIC_ID,
+        resultRMetricVersion: review.resultRVersion,
+        percentReturnMetricId: PERCENT_RETURN_METRIC_ID,
+        percentReturnMetricVersion: review.percentReturnVersion,
+        recordedAtUs,
+        completedAtUs: review.state === "completed" ? recordedAtUs : null,
+      });
+      nextReviewVersions.push(created);
+      nextHeads.set(review.tradeSubjectId, reviewId);
+      nextSubmissions.set(review.submissionId, {
+        revision: review.revision,
+        reviewId,
+      });
+      createdReviewIdBySubmission.set(review.submissionId, reviewId);
+    });
+
+    this.reviewVersions = nextReviewVersions;
+    this.reviewHeadByTradeSubjectId = nextHeads;
+    this.reviewTerms = nextTerms;
+    this.playbooks = nextPlaybooks;
+    this.reviewSubmissionById = nextSubmissions;
+    this.lastReviewRecordedAtMs = firstRecordedAtMs + newReviews.length - 1;
+    return {
+      outcome: "committed",
+      reviewIds: reviews.map((review) => (
+        existingReviewIds.get(review.submissionId)
+          ?? createdReviewIdBySubmission.get(review.submissionId)
+          ?? (() => { throw new Error("A committed session review lost its version ID."); })()
+      )),
       ledger: await this.load(),
     };
   }

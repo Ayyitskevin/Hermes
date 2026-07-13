@@ -49,8 +49,9 @@ subscription or second lifetime-unlock purchase. The proposed Core scope is:
 Unlimited hosted sync, licensed market history, real-time broker infrastructure,
 and recurring AI credits are not promised inside the flat price. Those require
 user-supplied infrastructure or a separately approved business model.
-Percent return, R-multiples, and R expectancy are not launch claims until Slice
-B persists a versioned percent/risk basis and reconciles the formulas to fixtures.
+Percent return and R-multiples use pinned v1 definitions with exact decimal
+evidence. R remains unavailable until the user confirms a positive initial-risk
+amount in the trade's P&L currency; the position-size tool never supplies it.
 
 See [the product and technical blueprint](docs/mobile/PRODUCT_BLUEPRINT.md) for
 the target audience, differentiation, stack decision, delivery slices, product
@@ -75,12 +76,17 @@ submission-ready product:
 - A two-step manual execution flow with exact decimal validation, IANA/offset
   timestamps, encrypted durable submission reconciliation, immutable
   manual-source facts, and the same atomic deterministic projection path as CSV.
+- Immutable v3 trade-review versions attached to durable trade subjects, with
+  notes, setup/mistake/emotion tags, playbooks, rule outcomes, exact initial
+  risk, optional planned stop, optimistic concurrency, and atomic batch tagging.
+- A mobile trade-detail review sheet with execution inspection, exact R/return
+  evidence, pending/draft/completed queues, and versioned-review session streaks.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades.
-- Headline currency P&L, win rate, and profit factor derived from real ledger
-  records. The fictional demo also exercises R/expectancy presentation; real
-  records intentionally show R as unavailable until Slice B stores a risk basis.
+- Headline currency P&L, win rate, profit factor, versioned percent return, and
+  risk-backed R derived from real ledger records; unavailable denominators fail
+  visibly instead of producing an invented metric.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,
@@ -88,9 +94,8 @@ submission-ready product:
 
 Linux tests exercise the real schema/repository through SQL.js. Native
 encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
-and device backup behavior still require the Mac/device gate. Durable
-annotations, attachments, export/restore/delete-all, and deeper reports remain
-Phase 1 work.
+and device backup behavior still require the Mac/device gate. Attachments,
+export/restore/delete-all, daily notes, and deeper reports remain Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

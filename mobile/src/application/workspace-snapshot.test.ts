@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
-import type { JournalLedgerSnapshot } from "./journal-store";
+import type {
+  JournalLedgerSnapshot,
+  JournalTradeReviewRecord,
+} from "./journal-store";
 import {
   EMPTY_WORKSPACE,
   workspaceSnapshotFromLedger,
@@ -31,7 +34,9 @@ function execution(overrides: Partial<LedgerExecution> = {}): LedgerExecution {
 }
 
 function ledger(overrides: Partial<JournalLedgerSnapshot> = {}): JournalLedgerSnapshot {
-  return {
+  const executions = overrides.executions ?? [];
+  const currentProjection = normalizeTrades(executions);
+  const snapshot: JournalLedgerSnapshot = {
     workspace: {
       id: "workspace-1",
       name: "Trading Journal",
@@ -50,10 +55,58 @@ function ledger(overrides: Partial<JournalLedgerSnapshot> = {}): JournalLedgerSn
       quoteCurrency: "USD",
       multiplier: "1",
     }],
-    executions: [],
+    executions,
     // Deliberately stale in mapping tests: the adapter recomputes from facts.
     projection: normalizeTrades([]),
+    tradeSubjects: currentProjection.trades.map((trade) => ({
+      projectionTradeId: trade.id,
+      tradeSubjectId: `subject:${trade.id}`,
+    })),
+    tradeReviews: [],
+    reviewTerms: [],
+    playbooks: [],
     imports: [],
+    ...overrides,
+  };
+  return {
+    ...snapshot,
+    tradeSubjects: overrides.tradeSubjects ?? snapshot.tradeSubjects,
+    tradeReviews: overrides.tradeReviews ?? snapshot.tradeReviews,
+    reviewTerms: overrides.reviewTerms ?? snapshot.reviewTerms,
+    playbooks: overrides.playbooks ?? snapshot.playbooks,
+  };
+}
+
+function review(
+  tradeSubjectId: string,
+  overrides: Partial<JournalTradeReviewRecord> = {},
+): JournalTradeReviewRecord {
+  return {
+    id: "review-1",
+    tradeSubjectId,
+    version: 1,
+    state: "completed",
+    revision: "a".repeat(64),
+    note: "Waited for confirmation and respected the original plan.",
+    setup: "Breakout",
+    mistakes: ["Late scale-out"],
+    emotion: "Focused",
+    tags: ["A+"],
+    playbookId: "playbook-1",
+    playbookName: "Momentum",
+    rules: [{
+      ruleId: "rule-1",
+      text: "Wait for confirmation",
+      outcome: "followed",
+    }],
+    initialRisk: { amount: "40", currency: "USD" },
+    plannedStop: "96",
+    resultRMetricId: "result-r",
+    resultRMetricVersion: 1,
+    percentReturnMetricId: "percent-return",
+    percentReturnMetricVersion: 1,
+    recordedAtUs: timestampUs("2026-07-02T03:00:00Z"),
+    completedAtUs: timestampUs("2026-07-02T03:00:00Z"),
     ...overrides,
   };
 }
@@ -169,10 +222,22 @@ describe("journal workspace snapshot", () => {
       averageExit: 110,
       resultPnl: 98,
       resultR: null,
+      percentReturn: 9.8,
       tradedOn: "2026-07-01",
       sessionLabel: "Jul 1 · 9:30 PM",
       accountLabel: "Main Brokerage",
     })]);
+    expect(snapshot.trades[0]?.resultRMetric).toMatchObject({
+      value: null,
+      nullReason: "missing_initial_risk",
+      definitionVersion: "result-r-v1",
+    });
+    expect(snapshot.trades[0]?.percentReturnMetric).toMatchObject({
+      value: "9.8",
+      numerator: { amount: "98", currency: "USD" },
+      denominator: { amount: "1000", currency: "USD" },
+      definitionVersion: "percent-return-v1",
+    });
     expect(snapshot.importHistory.map((receipt) => receipt.receiptId))
       .toEqual(["latest-import", "older-import"]);
     expect(snapshot.dailyJournal).toEqual([]);
@@ -199,6 +264,13 @@ describe("journal workspace snapshot", () => {
       averageEntry: 100,
       averageExit: 110,
       resultPnl: 40,
+      resultR: null,
+      percentReturn: 4,
+    });
+    expect(snapshot.trades[0]?.percentReturnMetric).toMatchObject({
+      value: "4",
+      isPartial: true,
+      denominator: { amount: "1000", currency: "USD" },
     });
     expect(snapshot.performance).toMatchObject({ netPnl: 40, tradeCount: 1 });
     expect(snapshot.equityCurve).toEqual([0, 0, 40]);
@@ -206,6 +278,188 @@ describe("journal workspace snapshot", () => {
       expect.objectContaining({ isoDate: "2026-07-01", pnl: 0, tradeCount: 1 }),
       expect.objectContaining({ isoDate: "2026-07-02", pnl: 40, tradeCount: 1 }),
     ]);
+  });
+
+  it("maps completed review metadata, versioned metrics, options, and session progress", () => {
+    const executions = [
+      execution({ id: "review-entry" }),
+      execution({
+        id: "review-exit",
+        occurredAtUs: timestampUs("2026-07-03T14:30:00Z"),
+        side: "SELL" as const,
+        price: "110",
+      }),
+    ];
+    const projection = normalizeTrades(executions);
+    const projectionTradeId = projection.trades[0]?.id;
+    if (projectionTradeId === undefined) throw new Error("Expected one projected trade.");
+    const tradeSubjectId = `subject:${projectionTradeId}`;
+    const snapshot = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [review(tradeSubjectId)],
+      reviewTerms: [
+        { id: "setup-1", category: "setup", name: "Breakout" },
+        { id: "mistake-1", category: "mistake", name: "Late scale-out" },
+        { id: "emotion-1", category: "emotion", name: "Focused" },
+        { id: "tag-1", category: "tag", name: "A+" },
+      ],
+      playbooks: [{
+        id: "playbook-1",
+        name: "Momentum",
+        rules: [{ id: "rule-1", playbookId: "playbook-1", text: "Wait for confirmation" }],
+      }],
+    }));
+
+    expect(snapshot.trades[0]).toMatchObject({
+      id: tradeSubjectId,
+      tradeSubjectId,
+      reviewStatus: "completed",
+      reviewId: "review-1",
+      reviewVersion: 1,
+      setup: "Breakout",
+      mistakes: ["Late scale-out"],
+      emotion: "Focused",
+      tags: ["A+"],
+      playbook: "Momentum",
+      followedPlan: true,
+      initialRisk: { amount: "40", currency: "USD" },
+      plannedStop: "96",
+      resultPnlExact: "100",
+      resultR: 2.5,
+      percentReturn: 10,
+    });
+    expect(snapshot.trades[0]?.resultRMetric).toMatchObject({
+      value: "2.5",
+      numerator: { amount: "100", currency: "USD" },
+      denominator: { amount: "40", currency: "USD" },
+      definitionVersion: "result-r-v1",
+    });
+    expect(snapshot.trades[0]?.executions).toHaveLength(2);
+    expect(snapshot.performance).toMatchObject({
+      netR: 2.5,
+      averageR: 2.5,
+      rTradeCount: 1,
+      ruleAdherencePct: 100,
+    });
+    expect(snapshot.reviewProgress).toEqual({
+      pendingTrades: 0,
+      draftTrades: 0,
+      completedTrades: 1,
+      streakSessions: 0,
+      reviewedSessions: 1,
+      tradingSessions: 2,
+    });
+    expect(snapshot.reviewOptions).toEqual({
+      setups: ["Breakout"],
+      mistakes: ["Late scale-out"],
+      emotions: ["Focused"],
+      tags: ["A+"],
+      playbooks: [{ name: "Momentum", rules: ["Wait for confirmation"] }],
+    });
+    expect(snapshot.playbooks).toEqual([{
+      name: "Momentum",
+      tradeCount: 1,
+      netR: 2.5,
+      winRatePct: 100,
+      rules: ["Wait for confirmation"],
+    }]);
+  });
+
+  it("requires a later review before a future execution session is credited", () => {
+    const entry = execution({ id: "temporal-entry" });
+    const initialProjection = normalizeTrades([entry]);
+    const projectionTradeId = initialProjection.trades[0]?.id;
+    if (projectionTradeId === undefined) throw new Error("Expected one projected trade.");
+    const tradeSubjectId = "subject:" + projectionTradeId;
+    const savedBeforeExit = review(tradeSubjectId);
+
+    const beforeExit = workspaceSnapshotFromLedger(ledger({
+      executions: [entry],
+      tradeReviews: [savedBeforeExit],
+    }));
+    expect(beforeExit.reviewProgress).toMatchObject({
+      streakSessions: 1,
+      reviewedSessions: 1,
+      tradingSessions: 1,
+    });
+
+    const exit = execution({
+      id: "temporal-exit",
+      occurredAtUs: timestampUs("2026-07-03T14:30:00Z"),
+      side: "SELL",
+      price: "110",
+    });
+    const afterExit = workspaceSnapshotFromLedger(ledger({
+      executions: [entry, exit],
+      tradeReviews: [savedBeforeExit],
+    }));
+    expect(afterExit.reviewProgress).toMatchObject({
+      streakSessions: 0,
+      reviewedSessions: 1,
+      tradingSessions: 2,
+    });
+
+    const savedAfterExit = review(tradeSubjectId, {
+      id: "review-2",
+      version: 2,
+      revision: "b".repeat(64),
+      recordedAtUs: timestampUs("2026-07-03T15:00:00Z"),
+      completedAtUs: timestampUs("2026-07-03T15:00:00Z"),
+    });
+    const afterReview = workspaceSnapshotFromLedger(ledger({
+      executions: [entry, exit],
+      tradeReviews: [savedAfterExit],
+    }));
+    expect(afterReview.reviewProgress).toMatchObject({
+      streakSessions: 2,
+      reviewedSessions: 2,
+      tradingSessions: 2,
+    });
+  });
+
+  it("credits a session when at least one trade from that execution date has a saved review", () => {
+    const executions = [
+      execution({ id: "first-entry", quantity: "1" }),
+      execution({
+        id: "first-exit",
+        occurredAtUs: timestampUs("2026-07-02T02:00:00Z"),
+        side: "SELL" as const,
+        quantity: "1",
+        price: "101",
+      }),
+      execution({
+        id: "second-entry",
+        occurredAtUs: timestampUs("2026-07-02T02:15:00Z"),
+        quantity: "1",
+        price: "102",
+      }),
+      execution({
+        id: "second-exit",
+        occurredAtUs: timestampUs("2026-07-02T02:30:00Z"),
+        side: "SELL" as const,
+        quantity: "1",
+        price: "103",
+      }),
+    ];
+    const projection = normalizeTrades(executions);
+    const [firstTrade, secondTrade] = projection.trades;
+    if (firstTrade === undefined || secondTrade === undefined) {
+      throw new Error("Expected two projected trades in one local review session.");
+    }
+    const firstSubject = `subject:${firstTrade.id}`;
+    const snapshot = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [review(firstSubject)],
+    }));
+
+    expect(snapshot.reviewProgress).toEqual({
+      pendingTrades: 1,
+      draftTrades: 0,
+      completedTrades: 1,
+      streakSessions: 1,
+      reviewedSessions: 1,
+      tradingSessions: 1,
+    });
   });
 
   it("keeps earlier realized days stable when a later partial exit arrives", () => {
@@ -374,6 +628,16 @@ describe("journal workspace snapshot", () => {
     expect(() => workspaceSnapshotFromLedger(ledger({
       workspace: null,
       executions: [execution()],
+    }))).toThrow(/facts exist without a workspace/);
+    expect(() => workspaceSnapshotFromLedger(ledger({
+      workspace: null,
+      accounts: [],
+      instruments: [],
+      reviewTerms: [{
+        id: "orphan-term",
+        category: "tag",
+        name: "Orphaned",
+      }],
     }))).toThrow(/facts exist without a workspace/);
   });
 });

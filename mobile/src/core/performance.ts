@@ -1,3 +1,4 @@
+import { divideSignedDecimals, sumSignedDecimals } from "./signed-decimal";
 import type { PerformanceSnapshot, TradePreview } from "./types";
 
 export interface SetupPerformance {
@@ -16,11 +17,14 @@ function realizedTrades(trades: readonly TradePreview[]): readonly TradePreview[
 
 export function calculatePerformance(trades: readonly TradePreview[]): PerformanceSnapshot {
   const realized = realizedTrades(trades);
-  const withR = realized.filter((trade) => trade.resultR !== null);
+  const exactRValues = realized
+    .map((trade) => trade.resultRMetric.value)
+    .filter((value): value is string => value !== null);
   const netPnl = realized.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0);
-  const netR = withR.length === 0
+  const netRExact = exactRValues.length === 0 ? null : sumSignedDecimals(exactRValues);
+  const netR = netRExact === null
     ? null
-    : withR.reduce((sum, trade) => sum + (trade.resultR ?? 0), 0);
+    : Number(netRExact);
   const wins = realized.filter((trade) => (trade.resultPnl ?? 0) > 0);
   const grossProfit = wins.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0);
   const grossLoss = Math.abs(realized.reduce(
@@ -35,8 +39,10 @@ export function calculatePerformance(trades: readonly TradePreview[]): Performan
     netR,
     winRatePct: realized.length === 0 ? 0 : (wins.length / realized.length) * 100,
     profitFactor: grossLoss === 0 ? null : grossProfit / grossLoss,
-    averageR: netR === null ? null : netR / withR.length,
-    rTradeCount: withR.length,
+    averageR: netRExact === null
+      ? null
+      : Number(divideSignedDecimals(netRExact, String(exactRValues.length))),
+    rTradeCount: exactRValues.length,
     ruleAdherencePct: reviewed.length === 0 ? null : (followed / reviewed.length) * 100,
     ruleReviewCount: reviewed.length,
     tradeCount: realized.length,
@@ -46,6 +52,7 @@ export function calculatePerformance(trades: readonly TradePreview[]): Performan
 export function summarizeSetups(trades: readonly TradePreview[]): readonly SetupPerformance[] {
   const grouped = new Map<string, TradePreview[]>();
   for (const trade of realizedTrades(trades)) {
+    if (trade.setup === "Unclassified") continue;
     const group = grouped.get(trade.setup) ?? [];
     group.push(trade);
     grouped.set(trade.setup, group);

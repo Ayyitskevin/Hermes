@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented CSV + manual execution vertical slice · 2026-07-12
+Status: implemented execution + versioned review vertical slice · 2026-07-13
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -31,6 +31,14 @@ legacy desktop journal schema is not part of this contract.
    cryptographic submission ID plus encrypted v2 command record makes retries
    and lost native responses idempotent while retaining two independently
    entered fills that happen to have identical values.
+10. A review is an immutable version attached to a durable trade subject. Only
+    its optimistic current head advances; a review never mutates an execution,
+    projection generation, source row, or import receipt.
+11. Result-R v1 is exact net realized P&L divided by user-confirmed positive
+    initial risk in the same currency. Percent-return v1 for stock/ETF is exact
+    net realized P&L divided by full absolute entry notional, multiplied by 100.
+    Both definitions, 12-digit precision, and half-away-from-zero rounding are
+    persisted; missing or incompatible evidence returns an explicit null reason.
 
 ## Import sequence
 
@@ -100,6 +108,34 @@ encrypted database. Startup reconciles its execution ID against the active
 ledger and acknowledges it only after the saved result has been read; retrying
 the original submission returns the existing execution without rebuilding.
 
+## Trade-review sequence
+
+```text
+active deterministic trade projection
+  → durable subject keyed by immutable opening allocation
+  → note/setup/mistake/emotion/tag/playbook/rule/risk validation
+  → exact normalized command + random submission ID + revision digest
+  → optimistic expected-current-review check
+  → BEGIN transaction
+      reuse or create normalized terms, playbook, and rules
+      append one immutable review version per selected subject
+      snapshot assignments, rule outcomes, risk/stop, and metric versions
+      advance every selected review head by exactly one link
+    COMMIT all reviews or none
+  → rebuild the visible snapshot from execution facts + current review heads
+```
+
+Exact same-submission retries are idempotent when every member is already saved;
+mixed old/new retry batches reject atomically. A changed payload, stale head,
+missing active subject, or risk-currency mismatch also rejects the transaction.
+Vocabulary identity is case-insensitive in revision digests while the first
+canonical display spelling remains stable. Batch tagging prepares a full
+successor version for each selected trade so prior notes, completion state,
+playbook rules, and risk facts cannot be dropped silently. Completed reviews
+cannot be downgraded from the edit sheet. A review session is one workspace-local
+date with an execution; it is credited when at least one trade with an allocation
+that date has a saved draft or completed review.
+
 ## Projection semantics
 
 Executions sort by microsecond timestamp, an immutable workspace-global ledger
@@ -165,10 +201,10 @@ deduplication still prevents a second copy while the restored receipt is active.
 Native SQLCipher operation, Keychain loss/reinstall behavior, actual device and
 iCloud backup inclusion, restore with its Keychain item, CocoaPods resolution,
 and kill/relaunch migration recovery remain Mac/physical-device gates. The v1
-ledger and v2 command-reconciliation statements are replay-safe for the plugin's
-statement/user-version commit gap, but only an interruption test can prove the
-native lifecycle. No privacy or recovery claim may be strengthened until those
-behaviors are observed. Because SQLCipher is bundled, App Store
+ledger, v2 command reconciliation, and v3 review statements are replay-safe for
+the plugin's statement/user-version commit gap, but only an interruption test
+can prove the native lifecycle. No privacy or recovery claim may be strengthened
+until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
 ## Verification evidence
@@ -190,6 +226,11 @@ precision/range limits, exact two-fill P&L, encrypted response-loss
 reconciliation, replay idempotency, failed-close atomicity, manual/CSV
 asset-class and receipt ownership separation, save-time dismissal guards,
 two-step browser review, focus restoration, and manual-only receipt truthfulness.
+Slice B coverage adds v2→v3 upgrade/replay, immutable one-link review heads,
+tamper detection, idempotent retry, stale-head rejection, all-or-nothing batch
+rollback, stable-subject survival, exact metric reconciliation, editable review
+versioning without execution mutation, unsaved-change focus behavior, and the
+pending/draft/completed review queue in a full mobile browser journey.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

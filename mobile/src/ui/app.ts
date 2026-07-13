@@ -10,6 +10,10 @@ import {
   manualCaptureCard,
   manualExecutionAction,
 } from "./manual-execution-sheet";
+import {
+  bindTradeReviewActions,
+  reviewTradeAction,
+} from "./trade-review-sheet";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -47,9 +51,21 @@ function signedR(value: number | null, unavailable = "Open"): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}R`;
 }
 
+function signedPercent(value: number | null, unavailable = "—"): string {
+  if (value === null) return unavailable;
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
 function resultClass(value: number | null): "positive" | "negative" | "" {
   if (value === null || value === 0) return "";
   return value > 0 ? "positive" : "negative";
+}
+
+function hasInterimPartialMetrics(trade: TradePreview): boolean {
+  return trade.status === "open" && (
+    (trade.resultRMetric.isPartial && trade.resultRMetric.value !== null)
+    || (trade.percentReturnMetric.isPartial && trade.percentReturnMetric.value !== null)
+  );
 }
 
 function countNoun(count: number, singular: string, plural = `${singular}s`): string {
@@ -130,9 +146,10 @@ function equityChart(snapshot: JournalWorkspaceSnapshot): string {
 
 function compactTradeRow(trade: TradePreview, currency: string): string {
   const tone = resultClass(trade.resultPnl);
+  const interim = hasInterimPartialMetrics(trade) ? "Interim partial · " : "";
   return `<article class="trade-row">
     <div><strong>${escapeHtml(trade.symbol)}</strong><span>${escapeHtml(trade.setup)} · ${escapeHtml(trade.side)}</span></div>
-    <div class="numeric"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))} · ${escapeHtml(trade.sessionLabel.split(" · ")[0] ?? trade.sessionLabel)}</span></div>
+    <div class="numeric"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(interim)}${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))} · ${escapeHtml(trade.sessionLabel.split(" · ")[0] ?? trade.sessionLabel)}</span></div>
   </article>`;
 }
 
@@ -163,6 +180,12 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
   const performance = snapshot.performance;
   const bestSetup = summarizeSetups(snapshot.trades)[0];
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
+  const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
+  const nextReview = snapshot.trades.find((trade) => (
+    trade.status === "closed" && trade.reviewStatus === "draft"
+  )) ?? snapshot.trades.find((trade) => (
+    trade.status === "closed" && trade.reviewStatus === "pending"
+  ));
   return `<section class="screen-stack" aria-labelledby="dashboard-title">
     <div class="screen-heading">
       <div><p class="eyebrow">${escapeHtml(snapshot.accountLabel)} · ${escapeHtml(snapshot.periodLabel)}</p><h1 id="dashboard-title">Dashboard</h1></div>
@@ -171,7 +194,12 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
     <article class="result-card">
       <p class="card-label">NET P&amp;L</p>
       <strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>
-      <span>${escapeHtml(signedR(performance.netR, "—"))} · ${countNoun(performance.tradeCount, "trade")} with realized P&amp;L${performance.rTradeCount === performance.tradeCount ? "" : ` · R on ${performance.rTradeCount}`}</span>
+      <span>${escapeHtml(signedR(performance.netR, "—"))} · ${countNoun(performance.tradeCount, "trade")} with realized P&amp;L${performance.rTradeCount === performance.tradeCount ? "" : ` · R on ${performance.rTradeCount}`}${hasInterimResults ? " · includes interim partial exits" : ""}</span>
+    </article>
+    <article class="card review-progress-card">
+      <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2>${snapshot.reviewProgress.pendingTrades === 0 ? "Review queue clear" : `${countNoun(snapshot.reviewProgress.pendingTrades, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
+      <p>${snapshot.reviewProgress.completedTrades} completed · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
+      ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade")}
     </article>
     <div class="metric-grid">
       <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>wins versus losses</span></article>
@@ -209,10 +237,11 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
 function tradeCard(trade: TradePreview, currency: string): string {
   const searchable = [trade.symbol, trade.side, trade.setup, trade.accountLabel, ...trade.tags].join(" ").toLowerCase();
   const tone = resultClass(trade.resultPnl);
+  const interim = hasInterimPartialMetrics(trade) ? "Interim partial · " : "";
   return `<article class="card trade-card" data-trade-search="${escapeHtml(searchable)}">
     <div class="trade-card-heading">
-      <div><span class="status-chip">${escapeHtml(trade.side)}</span><h2>${escapeHtml(trade.symbol)}</h2><p>${escapeHtml(trade.setup)} · ${escapeHtml(trade.sessionLabel)}</p></div>
-      <div class="journal-metrics"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))}</span></div>
+      <div><span class="status-chip">${escapeHtml(trade.side)}</span><span class="status-chip">${escapeHtml(trade.status)}</span><span class="status-chip review-${trade.reviewStatus}">${escapeHtml(trade.reviewStatus)}</span><h2>${escapeHtml(trade.symbol)}</h2><p>${escapeHtml(trade.setup)} · ${escapeHtml(trade.sessionLabel)}</p></div>
+      <div class="journal-metrics"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(interim)}${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))} · ${escapeHtml(signedPercent(trade.percentReturn, trade.status === "open" ? "Partial unavailable" : "—"))}</span></div>
     </div>
     <dl class="execution-grid">
       <div><dt>Quantity</dt><dd>${trade.quantity}</dd></div>
@@ -221,6 +250,7 @@ function tradeCard(trade: TradePreview, currency: string): string {
     </dl>
     <p>${escapeHtml(trade.note)}</p>
     <div class="tag-row">${trade.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+    <div class="quick-actions">${reviewTradeAction(trade)}</div>
   </article>`;
 }
 
@@ -236,8 +266,34 @@ function tradesView(snapshot: JournalWorkspaceSnapshot): string {
 }
 
 function journalView(snapshot: JournalWorkspaceSnapshot): string {
+  const queue = snapshot.trades.filter((trade) => (
+    trade.status === "closed" && trade.reviewStatus !== "completed"
+  ));
   return `<section class="screen-stack" aria-labelledby="journal-title">
     <div class="screen-heading"><div><p class="eyebrow">DAILY REVIEWS + PLAYBOOKS</p><h1 id="journal-title">Journal</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
+    <article class="result-card review-queue-summary">
+      <p class="card-label">REVIEW COMPLETION</p>
+      <strong>${snapshot.reviewProgress.completedTrades} completed</strong>
+      <span>${snapshot.reviewProgress.pendingTrades} waiting · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.streakSessions} consecutive reviewed sessions</span>
+    </article>
+    <section aria-labelledby="review-queue-title">
+      <div class="section-title"><h2 id="review-queue-title">Trade review queue</h2><span>${queue.length} waiting</span></div>
+      ${snapshot.provenance === "demo" || queue.length === 0 ? "" : `<form class="card batch-review-form" id="batch-review-form" novalidate>
+        <datalist id="batch-tag-options">${snapshot.reviewOptions.tags.map((tag) => `<option value="${escapeHtml(tag)}"></option>`).join("")}</datalist>
+        <div><p class="card-label">ATOMIC BATCH ACTION</p><h3>Tag selected trades</h3><p>Select queue items below. Hermes saves every tag revision together or saves none.</p></div>
+        <label>Tag<input id="batch-review-tag" type="text" maxlength="120" list="batch-tag-options" placeholder="e.g. Earnings day" required /></label>
+        <p class="form-error" id="batch-review-error" role="alert" tabindex="-1" hidden></p>
+        <button class="secondary-button" type="submit">Apply tag to selected</button>
+      </form>`}
+      <div class="journal-list review-queue-list">
+        ${queue.map((trade) => `<article class="card review-queue-item">
+          ${snapshot.provenance === "demo" ? "" : `<label class="review-select"><input type="checkbox" data-batch-review-subject value="${escapeHtml(trade.tradeSubjectId)}" /><span class="sr-only">Select ${escapeHtml(trade.symbol)}, ${escapeHtml(trade.sessionLabel)}, for batch tagging</span></label>`}
+          <div><span class="status-chip review-${trade.reviewStatus}">${escapeHtml(trade.reviewStatus)}</span><h3>${escapeHtml(trade.symbol)}</h3><p>${escapeHtml(trade.sessionLabel)} · ${escapeHtml(signedCurrency(trade.resultPnl, snapshot.currencyCode))}</p></div>
+          ${reviewTradeAction(trade, trade.reviewStatus === "draft" ? "Continue draft" : "Review")}
+        </article>`).join("")}
+        ${queue.length === 0 ? `<article class="empty-state"><h2>Review queue clear</h2><p>Every closed trade has a completed, versioned reflection.</p></article>` : ""}
+      </div>
+    </section>
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
       <div class="journal-list">
@@ -267,10 +323,11 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
 function reportsView(snapshot: JournalWorkspaceSnapshot): string {
   const setups = summarizeSetups(snapshot.trades);
   const performance = snapshot.performance;
+  const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
   return `<section class="screen-stack" aria-labelledby="reports-title">
     <div class="screen-heading"><div><p class="eyebrow">PERFORMANCE ANALYTICS</p><h1 id="reports-title">Reports</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
     <div class="metric-grid">
-      <article class="card"><p class="card-label">NET P&amp;L</p><strong class="metric ${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong><span>${escapeHtml(signedR(performance.netR, "—"))}</span></article>
+      <article class="card"><p class="card-label">NET P&amp;L</p><strong class="metric ${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong><span>${escapeHtml(signedR(performance.netR, "—"))}${hasInterimResults ? " · includes interim partial exits" : ""}</span></article>
       <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>${countNoun(performance.tradeCount, "trade")} with realized P&amp;L</span></article>
       <article class="card"><p class="card-label">PROFIT FACTOR</p><strong class="metric">${performance.profitFactor?.toFixed(2) ?? "—"}</strong><span>profit relative to loss</span></article>
       <article class="card"><p class="card-label">EXPECTANCY</p><strong class="metric">${escapeHtml(signedR(performance.averageR, "—"))}</strong><span>${performance.rTradeCount} of ${performance.tradeCount} with defined risk</span></article>
@@ -498,6 +555,51 @@ function bindRollbacks(
   });
 }
 
+function bindBatchReviewTagging(
+  root: HTMLElement,
+  application: JournalApplication,
+  refresh: (announcement: string) => Promise<void>,
+): void {
+  const form = root.querySelector<HTMLFormElement>("#batch-review-form");
+  if (form === null) return;
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const selected = Array.from(
+      root.querySelectorAll<HTMLInputElement>("[data-batch-review-subject]:checked"),
+    ).map((input) => input.value);
+    const tag = form.querySelector<HTMLInputElement>("#batch-review-tag")?.value ?? "";
+    const error = form.querySelector<HTMLElement>("#batch-review-error");
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (error === null || submit === null) return;
+    if (selected.length === 0) {
+      error.hidden = false;
+      error.textContent = "Select at least one queued trade.";
+      return;
+    }
+    submit.disabled = true;
+    form.setAttribute("aria-busy", "true");
+    error.hidden = true;
+    try {
+      await application.addTagToTrades(selected, tag);
+    } catch (caught) {
+      submit.disabled = false;
+      form.setAttribute("aria-busy", "false");
+      error.hidden = false;
+      error.textContent = caught instanceof Error ? caught.message : "The batch tag was not saved.";
+      error.focus();
+      return;
+    }
+    try {
+      await refresh(`${tag.trim()} added to ${countNoun(selected.length, "trade")} in one atomic review batch.`);
+    } catch (caught) {
+      submit.disabled = false;
+      form.setAttribute("aria-busy", "false");
+      const detail = caught instanceof Error ? ` ${caught.message}` : "";
+      window.alert(`The batch tag was saved, but the screen could not refresh.${detail}`);
+    }
+  });
+}
+
 function bindOnboarding(
   root: HTMLElement,
   preferences: OnboardingPreferences,
@@ -637,6 +739,22 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         if (announcer) announcer.textContent = announcement;
       },
     );
+    bindTradeReviewActions(
+      root,
+      application,
+      snapshot,
+      setBackgroundInert,
+      async (announcement) => {
+        snapshot = await application.loadWorkspace();
+        render(currentTab, false);
+        if (announcer) announcer.textContent = announcement;
+      },
+    );
+    bindBatchReviewTagging(root, application, async (announcement) => {
+      snapshot = await application.loadWorkspace();
+      render(currentTab, false);
+      if (announcer) announcer.textContent = announcement;
+    });
     bindRollbacks(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);

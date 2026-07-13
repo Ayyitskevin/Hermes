@@ -93,6 +93,10 @@ and an App Store disclosure.
   the WebView, terminate the app, and relaunch. Confirm startup reports the
   already-saved fill, acknowledges its encrypted v2 command record only after
   reading the active ledger, and never creates a second execution.
+- Start once from a retained schema-v2 database and interrupt the v2-to-v3
+  migration at the statement/user-version boundary. Relaunch and confirm the
+  migration receipt replays safely, every execution remains intact, and review
+  reads and writes work only after schema v3 is fully acknowledged.
 - Exercise a daylight-saving gap and repeated clock hour. The gap must fail;
   the repeated hour must require the explicit UTC-offset field and save the
   intended instant.
@@ -121,6 +125,22 @@ and an App Store disclosure.
   journal over existing data.
 - Visit Dashboard, Trades, Journal, Reports, and More with VoiceOver.
 - Search trades by symbol, setup, side, and tag; verify the empty search state.
+- Open a closed trade's review sheet, save both a draft and a completed
+  successor, and verify note, setup, mistakes, emotion, tags, playbook rules,
+  risk, stop, exact R-multiple, exact percentage return, and their formula
+  versions survive force quit/relaunch. Edit it again and confirm a new review
+  version is appended while every execution fact remains unchanged.
+- Batch-tag two trades atomically. Retry the exact submission after a simulated
+  lost response and confirm no duplicate review version is created; combine one
+  already-saved submission with one fresh submission and confirm the mixed
+  batch is rejected without partial state.
+- With VoiceOver and a hardware keyboard, confirm focus remains inside the
+  review sheet through rule removal and returns to its trigger on close.
+  While a save is pending, confirm every editable control is disabled.
+- At 320 CSS pixels and 200% accessibility text, confirm the review sheet has no
+  horizontal overflow. Confirm any metric derived from an open trade is visibly
+  labeled partial, and edited draft inputs do not relabel saved-version metric
+  evidence as newly persisted facts.
 - Verify the Dashboard metric values reconcile with the eight bundled records.
 - Calculate valid long and short plans; verify wrong-side stops show inline errors.
 - Exercise settings/welcome focus containment and focus return.
@@ -165,9 +185,10 @@ and every skipped check. A clean console alone is not evidence.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry is Linux-verified but still needs the native persistence,
-  response-loss, migration, and lifecycle checks above. Annotations,
-  attachments, export, restore, and delete-all remain incomplete Phase 1 work.
+- Manual entry and versioned trade reviews are Linux-verified but still need
+  the native persistence, response-loss, migration, accessibility, and
+  lifecycle checks above. Attachments, export, restore, and delete-all remain
+  incomplete Phase 1 work.
 - `Podfile.lock`, `App.xcworkspace`, and final CocoaPods-generated build phases
   are Mac gates and are not yet present/reviewed.
 - Direct broker/market-data connectivity is outside the launch path until rights,

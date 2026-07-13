@@ -75,7 +75,21 @@ export function negateSignedDecimal(value: string): string {
   return format({ coefficient: -parsed.coefficient, scale: parsed.scale });
 }
 
-/** Returns a rounded canonical ratio without crossing binary floating point. */
+/** Multiplies two canonical signed decimals without crossing binary floating point. */
+export function multiplySignedDecimals(left: string, right: string): string {
+  const parsedLeft = parse(left);
+  const parsedRight = parse(right);
+  return format({
+    coefficient: parsedLeft.coefficient * parsedRight.coefficient,
+    scale: parsedLeft.scale + parsedRight.scale,
+  });
+}
+
+/**
+ * Returns a rounded canonical ratio without crossing binary floating point.
+ * The denominator must be positive. Ties round away from zero so positive and
+ * negative financial results follow the same magnitude rule.
+ */
 export function divideSignedDecimals(
   numerator: string,
   denominator: string,
@@ -83,18 +97,20 @@ export function divideSignedDecimals(
 ): string {
   const left = parse(numerator);
   const right = parse(denominator);
-  if (left.coefficient < 0n || right.coefficient <= 0n) {
-    throw new RangeError("Decimal ratio requires a non-negative numerator and positive denominator.");
+  if (right.coefficient <= 0n) {
+    throw new RangeError("Decimal ratio requires a positive denominator.");
   }
   if (!Number.isSafeInteger(fractionDigits) || fractionDigits < 0 || fractionDigits > 18) {
     throw new RangeError("Decimal ratio precision must be an integer from 0 through 18.");
   }
-  const scaledNumerator = left.coefficient * powerOfTen(right.scale + fractionDigits);
+  const negative = left.coefficient < 0n;
+  const magnitude = negative ? -left.coefficient : left.coefficient;
+  const scaledNumerator = magnitude * powerOfTen(right.scale + fractionDigits);
   const scaledDenominator = right.coefficient * powerOfTen(left.scale);
   let quotient = scaledNumerator / scaledDenominator;
   const remainder = scaledNumerator % scaledDenominator;
   if (remainder * 2n >= scaledDenominator) quotient += 1n;
-  return format({ coefficient: quotient, scale: fractionDigits });
+  return format({ coefficient: negative ? -quotient : quotient, scale: fractionDigits });
 }
 
 export function sumSignedDecimals(values: readonly string[]): string {

@@ -1,11 +1,49 @@
 import { describe, expect, it } from "vitest";
 
 import { calculatePerformance, summarizeSetups } from "./performance";
+import { deriveTradeMetricsV1 } from "./trade-metrics";
 import type { TradePreview } from "./types";
 
-function trade(overrides: Partial<TradePreview> = {}): TradePreview {
+type TradeOverrides = Partial<Omit<
+  TradePreview,
+  | "resultPnl"
+  | "resultPnlExact"
+  | "resultR"
+  | "percentReturn"
+  | "resultRMetric"
+  | "percentReturnMetric"
+  | "initialRisk"
+>> & {
+  readonly resultPnl?: number | null;
+  readonly resultPnlExact?: string | null;
+  readonly initialRisk?: TradePreview["initialRisk"];
+  readonly fullEntryNotional?: string;
+  readonly metricIsPartial?: boolean;
+};
+
+function trade(options: TradeOverrides = {}): TradePreview {
+  const {
+    resultPnl = 100,
+    resultPnlExact = resultPnl === null ? null : String(resultPnl),
+    initialRisk = { amount: "100", currency: "USD" },
+    fullEntryNotional = "100",
+    metricIsPartial = false,
+    ...overrides
+  } = options;
+  const metrics = deriveTradeMetricsV1({
+    assetClass: overrides.assetClass ?? "stock",
+    netRealizedPnl: resultPnlExact === null
+      ? null
+      : { amount: resultPnlExact, currency: "USD" },
+    initialRisk,
+    fullEntryNotional: { amount: fullEntryNotional, currency: "USD" },
+    isPartial: metricIsPartial,
+  });
+
   return {
     id: "trade-1",
+    tradeSubjectId: "subject-1",
+    reviewId: "review-1",
     symbol: "TEST",
     assetClass: "stock",
     side: "long",
@@ -13,15 +51,31 @@ function trade(overrides: Partial<TradePreview> = {}): TradePreview {
     quantity: 1,
     averageEntry: 100,
     averageExit: 101,
-    resultPnl: 100,
-    resultR: 1,
+    resultPnl,
+    resultPnlExact,
+    resultR: metrics.resultR.value === null ? null : Number(metrics.resultR.value),
+    percentReturn: metrics.percentReturn.value === null
+      ? null
+      : Number(metrics.percentReturn.value),
+    resultRMetric: metrics.resultR,
+    percentReturnMetric: metrics.percentReturn,
     setup: "Breakout",
+    mistakes: [],
+    emotion: "Calm",
     tradedOn: "2026-07-01",
+    reviewSessionDates: ["2026-07-01"],
     sessionLabel: "Jul 1",
     accountLabel: "Demo Brokerage",
     note: "Fixture trade",
     tags: [],
     followedPlan: true,
+    playbook: "Breakout",
+    rules: [],
+    initialRisk,
+    plannedStop: "99",
+    reviewStatus: "completed",
+    reviewVersion: 1,
+    executions: [],
     ...overrides,
   };
 }
@@ -30,8 +84,18 @@ describe("journal performance", () => {
   it("derives headline metrics from closed trade records", () => {
     const result = calculatePerformance([
       trade(),
-      trade({ id: "trade-2", resultPnl: -50, resultR: -0.5, followedPlan: false }),
-      trade({ id: "trade-3", status: "open", resultPnl: null, resultR: null }),
+      trade({
+        id: "trade-2",
+        tradeSubjectId: "subject-2",
+        resultPnl: -50,
+        followedPlan: false,
+      }),
+      trade({
+        id: "trade-3",
+        tradeSubjectId: "subject-3",
+        status: "open",
+        resultPnl: null,
+      }),
     ]);
 
     expect(result).toEqual({
@@ -47,12 +111,33 @@ describe("journal performance", () => {
     });
   });
 
+  it("aggregates exact result-R values before crossing into display numbers", () => {
+    const result = calculatePerformance([
+      trade({ resultPnl: 0.1, initialRisk: { amount: "1", currency: "USD" } }),
+      trade({
+        id: "trade-2",
+        tradeSubjectId: "subject-2",
+        resultPnl: 0.2,
+        initialRisk: { amount: "1", currency: "USD" },
+      }),
+    ]);
+
+    expect(result.netR).toBe(0.3);
+    expect(result.averageR).toBe(0.15);
+  });
+
   it("returns a neutral profit factor when no loss exists", () => {
     expect(calculatePerformance([trade()]).profitFactor).toBeNull();
   });
 
-  it("keeps closed cash results when an import cannot derive R", () => {
-    expect(calculatePerformance([trade({ resultR: null })])).toEqual({
+  it("keeps closed cash results when user-confirmed initial risk is missing", () => {
+    const fixture = trade({ initialRisk: null });
+
+    expect(fixture.resultRMetric).toMatchObject({
+      value: null,
+      nullReason: "missing_initial_risk",
+    });
+    expect(calculatePerformance([fixture])).toEqual({
       netPnl: 100,
       netR: null,
       winRatePct: 100,
@@ -65,21 +150,36 @@ describe("journal performance", () => {
     });
   });
 
-  it("keeps unreviewed plan adherence unknown and includes realized partial exits", () => {
-    expect(calculatePerformance([
-      trade({ status: "open", resultPnl: 25, resultR: null, followedPlan: null }),
-    ])).toMatchObject({
+  it("keeps unreviewed plan adherence unknown and includes realized partial metrics", () => {
+    const fixture = trade({
+      status: "open",
+      resultPnl: 25,
+      followedPlan: null,
+      metricIsPartial: true,
+    });
+
+    expect(fixture.resultRMetric).toMatchObject({ value: "0.25", isPartial: true });
+    expect(fixture.percentReturnMetric).toMatchObject({ value: "25", isPartial: true });
+    expect(calculatePerformance([fixture])).toMatchObject({
       netPnl: 25,
+      netR: 0.25,
+      rTradeCount: 1,
       tradeCount: 1,
       ruleAdherencePct: null,
       ruleReviewCount: 0,
     });
   });
 
-  it("ranks setup summaries by net R", () => {
+  it("ranks classified setup summaries by net R and omits Unclassified", () => {
     const summaries = summarizeSetups([
-      trade({ id: "trade-1", setup: "Pullback", resultR: 2, resultPnl: 200 }),
-      trade({ id: "trade-2", setup: "Breakout", resultR: -1, resultPnl: -100 }),
+      trade({ id: "trade-1", setup: "Pullback", resultPnl: 200 }),
+      trade({ id: "trade-2", tradeSubjectId: "subject-2", setup: "Breakout", resultPnl: -100 }),
+      trade({
+        id: "trade-3",
+        tradeSubjectId: "subject-3",
+        setup: "Unclassified",
+        resultPnl: 500,
+      }),
     ]);
 
     expect(summaries.map((summary) => summary.name)).toEqual(["Pullback", "Breakout"]);

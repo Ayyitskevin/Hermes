@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-12
+Status: active delivery roadmap · updated 2026-07-13
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -46,9 +46,9 @@ under the provisional identifier until that gate is cleared.
   at the proposed $9.99 price; real-time integrations, licensed data, hosted
   sync, and recurring AI
   have continuing costs.
-- **4/10 current readiness**: the execution ledger and generic CSV loop now run
-  end to end with tested rollback, but the annotation/export/release surfaces
-  and native Mac/device evidence are still incomplete.
+- **5/10 current readiness**: the execution ledger, generic CSV loop, manual
+  capture, and versioned 60-second review now run end to end, but user-owned
+  export/deletion, deeper reports, and native Mac/device evidence are incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -184,18 +184,26 @@ Delivered in the current vertical slice:
   unacknowledged-command record that reconciles a lost response on relaunch.
 - Manual-only journals remain distinct from import receipts, while CSV receipt
   rollback cannot deactivate independently entered manual facts.
+- SQLite v3 immutable review versions and optimistic heads attached to stable
+  trade subjects, including reusable setup/mistake/emotion/tag vocabulary,
+  playbooks, rule outcomes, user-confirmed risk, and optional planned stops.
+- Exact, versioned result-R and stock/ETF percent-return definitions with pinned
+  rounding, inspectable numerator/denominator evidence, partial-exit labeling,
+  incompatible-input null reasons, and fee/short/repeating-ratio fixtures.
+- Trade-detail execution inspection, durable review edits, pending/draft/
+  completed queues, atomic batch tagging, and session streaks that follow the
+  blueprint's any-execution-date/at-least-one-saved-review definition.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
-  final 2026-07-12 Linux gate passed 194 Vitest tests and 11 Playwright journeys.
+  2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright journeys.
 
 Still required in Phase 1:
 
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
-- Deepen the delivered basic Trades list/search, Dashboard calendar, and
-  headline Reports cards with trade detail, execution inspection, filtering,
-  calendar drill-down, account selection, notes, setup/mistake/emotion tags,
-  playbook assignment, and reconciled report drill-down.
+- Deepen the delivered Trades review detail, Dashboard calendar, and headline
+  Reports cards with filtering, calendar drill-down, account selection, daily
+  notes, vocabulary/playbook management, and reconciled report drill-down.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.

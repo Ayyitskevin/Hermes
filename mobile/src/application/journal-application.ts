@@ -4,10 +4,14 @@ import { DEMO_WORKSPACE } from "../data/demo";
 import type {
   CsvImportCommitResult,
   JournalStore,
+  JournalTradeReviewRecord,
   ManualExecutionCommitResult,
   PreparedCsvImport,
+  PreparedTradeReviewBatch,
+  TradeReviewCommitResult,
   UnacknowledgedManualExecution,
 } from "./journal-store";
+import { JournalTradeReviewError } from "./journal-store";
 import {
   createManualExecutionSubmissionId,
   prepareManualExecution,
@@ -18,6 +22,14 @@ import {
   prepareCsvImport,
   type PrepareCsvImportInput,
 } from "./prepare-csv-import";
+import {
+  createTradeReviewSubmissionId,
+  prepareTradeReview,
+  tradeReviewBatchRevision,
+  type PreparedTradeReview,
+  type TradeReviewInput,
+  verifyPreparedTradeReview,
+} from "./prepare-trade-review";
 import {
   workspaceSnapshotFromLedger,
 } from "./workspace-snapshot";
@@ -38,6 +50,16 @@ export class ManualExecutionCommitStatusUncertainError extends Error {
       { cause },
     );
     this.name = "ManualExecutionCommitStatusUncertainError";
+  }
+}
+
+export class TradeReviewCommitStatusUncertainError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Hermes could not confirm whether this trade review was saved. Reload the journal before editing this trade again.",
+      { cause },
+    );
+    this.name = "TradeReviewCommitStatusUncertainError";
   }
 }
 
@@ -120,6 +142,155 @@ export class JournalApplication {
     throw lastError;
   }
 
+  createReviewSubmissionId(): string {
+    this.assertLocalReviewMode();
+    return createTradeReviewSubmissionId();
+  }
+
+  prepareReview(input: TradeReviewInput): PreparedTradeReview {
+    this.assertLocalReviewMode();
+    return prepareTradeReview(input);
+  }
+
+  prepareReviewBatch(
+    reviews: readonly PreparedTradeReview[],
+    batchId?: string,
+  ): PreparedTradeReviewBatch {
+    this.assertLocalReviewMode();
+    if (!Array.isArray(reviews) || reviews.length === 0) {
+      throw new Error("Select at least one trade review before saving an atomic batch.");
+    }
+    const verifiedReviews = reviews.map((review) => verifyPreparedTradeReview(review));
+    const tradeSubjectIds = new Set<string>();
+    const submissionIds = new Set<string>();
+    for (const review of verifiedReviews) {
+      if (tradeSubjectIds.has(review.tradeSubjectId)) {
+        throw new Error("An atomic batch can revise each trade only once.");
+      }
+      if (submissionIds.has(review.submissionId)) {
+        throw new Error("An atomic batch can use each review submission only once.");
+      }
+      tradeSubjectIds.add(review.tradeSubjectId);
+      submissionIds.add(review.submissionId);
+    }
+    const resolvedBatchId = batchId ?? createTradeReviewSubmissionId();
+    return Object.freeze({
+      batchId: resolvedBatchId,
+      revision: tradeReviewBatchRevision(resolvedBatchId, verifiedReviews),
+      reviews: Object.freeze(verifiedReviews),
+    });
+  }
+
+  async commitReviews(
+    prepared: PreparedTradeReviewBatch,
+  ): Promise<TradeReviewCommitResult> {
+    this.assertLocalReviewMode();
+    const result = await this.store.commitTradeReviews(prepared);
+    this.viewMode = "local";
+    return result;
+  }
+
+  async commitReviewsSafely(
+    prepared: PreparedTradeReviewBatch,
+  ): Promise<TradeReviewCommitResult> {
+    this.assertLocalReviewMode();
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.commitReviews(prepared);
+      } catch (error) {
+        if (error instanceof JournalTradeReviewError) throw error;
+        lastError = error;
+      }
+    }
+
+    try {
+      const ledger = await this.store.load();
+      const reviewBySubjectId = new Map(
+        ledger.tradeReviews.map((review) => [review.tradeSubjectId, review] as const),
+      );
+      const reviewIds = prepared.reviews.map((review) => {
+        const current = reviewBySubjectId.get(review.tradeSubjectId);
+        if (current?.revision !== review.revision) {
+          throw new TradeReviewCommitStatusUncertainError(lastError);
+        }
+        return current.id;
+      });
+      this.viewMode = "local";
+      return {
+        outcome: "duplicate",
+        reviewIds,
+        ledger,
+      };
+    } catch (error) {
+      if (error instanceof TradeReviewCommitStatusUncertainError) throw error;
+      throw new TradeReviewCommitStatusUncertainError(error);
+    }
+  }
+
+  async addTagToTrades(
+    tradeSubjectIds: readonly string[],
+    tag: string,
+  ): Promise<TradeReviewCommitResult> {
+    this.assertLocalReviewMode();
+    if (!Array.isArray(tradeSubjectIds) || tradeSubjectIds.length === 0) {
+      throw new Error("Select at least one active trade before adding a tag.");
+    }
+    if (new Set(tradeSubjectIds).size !== tradeSubjectIds.length) {
+      throw new Error("Each selected trade subject must be unique.");
+    }
+
+    const ledger = await this.store.load();
+    const activeSubjectIds = new Set(
+      ledger.tradeSubjects.map((subject) => subject.tradeSubjectId),
+    );
+    const reviewBySubjectId = new Map<string, JournalTradeReviewRecord>();
+    for (const review of ledger.tradeReviews) {
+      if (reviewBySubjectId.has(review.tradeSubjectId)) {
+        throw new Error("The journal exposed more than one current review for a trade.");
+      }
+      reviewBySubjectId.set(review.tradeSubjectId, review);
+    }
+    for (const tradeSubjectId of tradeSubjectIds) {
+      if (!activeSubjectIds.has(tradeSubjectId)) {
+        throw new JournalTradeReviewError({
+          code: "trade_changed",
+          message: "A selected trade is no longer part of the active immutable ledger projection.",
+        });
+      }
+    }
+
+    const reviews = tradeSubjectIds.map((tradeSubjectId) => {
+      const current = reviewBySubjectId.get(tradeSubjectId) ?? null;
+      if (current?.playbookName === null && current.rules.length > 0) {
+        throw new Error("A current trade review has rules without a playbook snapshot.");
+      }
+      return this.prepareReview({
+        submissionId: this.createReviewSubmissionId(),
+        tradeSubjectId,
+        expectedPreviousReviewId: current?.id ?? null,
+        state: current?.state ?? "draft",
+        note: current?.note ?? "",
+        setup: current?.setup ?? null,
+        mistakes: current?.mistakes ?? [],
+        tags: [...(current?.tags ?? []), tag],
+        emotion: current?.emotion ?? null,
+        playbook: current?.playbookName === null || current === null
+          ? null
+          : {
+              name: current.playbookName,
+              rules: current.rules.map((rule) => ({
+                name: rule.text,
+                outcome: rule.outcome,
+              })),
+            },
+        initialRisk: current?.initialRisk ?? null,
+        plannedStop: current?.plannedStop ?? null,
+      });
+    });
+    return this.commitReviewsSafely(this.prepareReviewBatch(reviews));
+  }
+
   async loadAccountNames(): Promise<readonly string[]> {
     const ledger = await this.store.load();
     return ledger.accounts
@@ -152,5 +323,11 @@ export class JournalApplication {
 
   async close(): Promise<void> {
     await this.store.close();
+  }
+
+  private assertLocalReviewMode(): void {
+    if (this.viewMode !== "local") {
+      throw new Error("Demo journal data is read-only. Start a local journal before saving reviews.");
+    }
   }
 }

@@ -3,22 +3,36 @@ import type {
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
+  JournalPlaybookRecord,
+  JournalReviewRuleOutcome,
+  JournalReviewTermCategory,
+  JournalReviewTermRecord,
   JournalStore,
+  JournalTradeSubjectRecord,
+  JournalTradeReviewRecord,
   JournalWorkspaceRecord,
   ManualExecutionCommitResult,
+  PreparedTradeReviewBatch,
   PreparedCsvImport,
+  TradeReviewCommitResult,
   CsvImportCommitResult,
   UnacknowledgedManualExecution,
 } from "../../application/journal-store";
 import {
   JournalImportError,
   JournalManualExecutionError,
+  JournalTradeReviewError,
 } from "../../application/journal-store";
 import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../../application/prepare-manual-execution";
 import { verifyPreparedCsvImport } from "../../application/prepare-csv-import";
+import {
+  type PreparedTradeReview,
+  tradeReviewBatchRevision,
+  verifyPreparedTradeReview,
+} from "../../application/prepare-trade-review";
 import type { SqlDatabase, SqlRow } from "../../application/sql-database";
 import { currencyMinorUnit } from "../../core/currency";
 import type {
@@ -32,6 +46,7 @@ import {
   MOBILE_SCHEMA_MIGRATIONS,
   sha256Hex,
 } from "./schema";
+import { stableTradeSubjectHash } from "./trade-subject";
 
 const WORKSPACE_ID = "workspace:primary";
 const PARSER_ID = "generic-csv";
@@ -81,6 +96,12 @@ interface LoadedExecutions {
   readonly versionIdByExecutionId: ReadonlyMap<string, string>;
 }
 
+interface LoadedReviewState {
+  readonly tradeReviews: readonly JournalTradeReviewRecord[];
+  readonly reviewTerms: readonly JournalReviewTermRecord[];
+  readonly playbooks: readonly JournalPlaybookRecord[];
+}
+
 function requireText(row: SqlRow, column: string): string {
   const value = row[column];
   if (typeof value !== "string") {
@@ -112,6 +133,31 @@ function canonicalJson(value: unknown): string {
 
 function stableCompare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function normalizedReviewName(value: string): string {
+  return value.toLocaleLowerCase("en-US");
+}
+
+function verifyTradeReviewBatchForCommit(
+  command: PreparedTradeReviewBatch,
+): readonly PreparedTradeReview[] {
+  try {
+    if (!Array.isArray(command.reviews) || command.reviews.length === 0) {
+      throw new Error("A trade-review batch must contain at least one reviewed trade.");
+    }
+    const verified = command.reviews.map((review) => verifyPreparedTradeReview(review));
+    if (tradeReviewBatchRevision(command.batchId, verified) !== command.revision) {
+      throw new Error("Trade-review batch values changed after review. Review them again.");
+    }
+    return verified;
+  } catch (error) {
+    if (error instanceof JournalTradeReviewError) throw error;
+    throw new JournalTradeReviewError({
+      code: "review_changed",
+      message: error instanceof Error ? error.message : "The trade-review batch is invalid.",
+    });
+  }
 }
 
 function isoToEpochMicroseconds(instant: string): string {
@@ -158,6 +204,10 @@ function emptyLedger(): JournalLedgerSnapshot {
     instruments: [],
     executions: [],
     projection: normalizeTrades([]),
+    tradeSubjects: [],
+    tradeReviews: [],
+    reviewTerms: [],
+    playbooks: [],
     imports: [],
   };
 }
@@ -761,6 +811,268 @@ export class SqliteJournalStore implements JournalStore {
     return { ...transactionResult, ledger: await this.loadWithinConnection() };
   }
 
+  async commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult> {
+    this.assertOpen();
+    await this.verifySchema();
+    const verifiedReviews = verifyTradeReviewBatchForCommit(command);
+    const subjectIds = new Set<string>();
+    const submissionIds = new Set<string>();
+    for (const review of verifiedReviews) {
+      if (subjectIds.has(review.tradeSubjectId)) {
+        throw new JournalTradeReviewError({
+          code: "review_changed",
+          message: "A trade-review batch cannot revise the same trade more than once.",
+        });
+      }
+      if (submissionIds.has(review.submissionId)) {
+        throw new JournalTradeReviewError({
+          code: "submission_changed",
+          message: "A trade-review batch cannot reuse one submission ID.",
+        });
+      }
+      subjectIds.add(review.tradeSubjectId);
+      submissionIds.add(review.submissionId);
+    }
+
+    const transactionResult = await this.database.transaction(async () => {
+      const observedNowMs = this.runtime.nowMs();
+      if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+        throw new Error("The journal clock is outside the supported review range.");
+      }
+      const workspaceRows = await this.database.query<SqlRow>(
+        "SELECT id FROM workspaces WHERE id = ? LIMIT 1",
+        [WORKSPACE_ID],
+      );
+      if (workspaceRows[0] === undefined) {
+        throw new JournalTradeReviewError({
+          code: "trade_changed",
+          message: "Import or add an execution before saving a trade review.",
+        });
+      }
+
+      const existingReviewIds = new Map<string, string>();
+      for (const review of verifiedReviews) {
+        const existingRows = await this.database.query<SqlRow>(
+          `SELECT id, trade_subject_id, revision_sha256
+             FROM trade_review_versions
+            WHERE workspace_id = ? AND submission_id = ?
+            LIMIT 1`,
+          [WORKSPACE_ID, review.submissionId],
+        );
+        const existing = existingRows[0];
+        if (existing !== undefined) {
+          if (
+            requireText(existing, "trade_subject_id") !== review.tradeSubjectId
+            || requireText(existing, "revision_sha256") !== review.revision
+          ) {
+            throw new JournalTradeReviewError({
+              code: "submission_changed",
+              message: "This review submission was already saved with different values.",
+            });
+          }
+          existingReviewIds.set(review.submissionId, requireText(existing, "id"));
+        }
+      }
+      if (existingReviewIds.size > 0 && existingReviewIds.size < verifiedReviews.length) {
+        throw new JournalTradeReviewError({
+          code: "submission_changed",
+          message: "An atomic review batch cannot mix saved and unsaved submissions.",
+        });
+      }
+      if (existingReviewIds.size === verifiedReviews.length) {
+        return {
+          outcome: "duplicate" as const,
+          reviewIds: verifiedReviews.map((review) => {
+            const id = existingReviewIds.get(review.submissionId);
+            if (id === undefined) throw new Error("A duplicate review lost its version ID.");
+            return id;
+          }),
+        };
+      }
+
+      const reviewIds: string[] = [];
+      for (const review of verifiedReviews) {
+        const activeSubjectRows = await this.database.query<SqlRow>(
+          `SELECT projection.quote_currency_code
+             FROM projection_active_state AS active
+             JOIN trade_projections AS projection
+               ON projection.workspace_id = active.workspace_id
+              AND projection.rebuild_run_id = active.active_rebuild_run_id
+            WHERE active.workspace_id = ?
+              AND projection.trade_subject_id = ?
+            LIMIT 1`,
+          [WORKSPACE_ID, review.tradeSubjectId],
+        );
+        const activeSubject = activeSubjectRows[0];
+        if (activeSubject === undefined) {
+          throw new JournalTradeReviewError({
+            code: "trade_changed",
+            message: "This trade is no longer part of the current execution ledger.",
+          });
+        }
+        if (
+          review.initialRisk !== null
+          && review.initialRisk.currency !== requireText(activeSubject, "quote_currency_code")
+        ) {
+          throw new JournalTradeReviewError({
+            code: "trade_changed",
+            message: "Initial risk must use the trade's exact P&L currency.",
+          });
+        }
+
+        const headRows = await this.database.query<SqlRow>(
+          `SELECT head.review_version_id, version.version_number, version.recorded_at_ms
+             FROM trade_review_heads AS head
+             JOIN trade_review_versions AS version
+               ON version.id = head.review_version_id
+              AND version.workspace_id = head.workspace_id
+              AND version.trade_subject_id = head.trade_subject_id
+            WHERE head.workspace_id = ? AND head.trade_subject_id = ?
+            LIMIT 1`,
+          [WORKSPACE_ID, review.tradeSubjectId],
+        );
+        const head = headRows[0];
+        const previousReviewId = head === undefined
+          ? null
+          : requireText(head, "review_version_id");
+        if (previousReviewId !== review.expectedPreviousReviewId) {
+          throw new JournalTradeReviewError({
+            code: "review_changed",
+            message: "This trade review changed on another screen. Reload it before saving.",
+          });
+        }
+        const previousVersion = head === undefined
+          ? 0
+          : requireSafeInteger(head, "version_number");
+        const previousRecordedAtMs = head === undefined
+          ? 0
+          : requireSafeInteger(head, "recorded_at_ms");
+        const recordedAtMs = Math.max(observedNowMs, previousRecordedAtMs);
+        const reviewId = this.runtime.newId("trade-review");
+        const playbook = await this.ensureReviewPlaybook(review.playbook, recordedAtMs);
+
+        await this.database.run(
+          `INSERT INTO trade_review_versions (
+            id, workspace_id, trade_subject_id, version_number,
+            supersedes_version_id, submission_id, revision_sha256, state,
+            note_text, playbook_id, initial_risk_amount_text, risk_currency_code,
+            planned_stop_price_text, result_r_metric_id, result_r_metric_version,
+            percent_return_metric_id, percent_return_metric_version,
+            recorded_at_ms, completed_at_ms
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'result-r', ?,
+                    'percent-return', ?, ?, ?)`,
+          [
+            reviewId,
+            WORKSPACE_ID,
+            review.tradeSubjectId,
+            previousVersion + 1,
+            previousReviewId,
+            review.submissionId,
+            review.revision,
+            review.state,
+            review.note,
+            playbook?.id ?? null,
+            review.initialRisk?.amount ?? null,
+            review.initialRisk?.currency ?? null,
+            review.plannedStop,
+            review.resultRVersion,
+            review.percentReturnVersion,
+            recordedAtMs,
+            review.state === "completed" ? recordedAtMs : null,
+          ],
+        );
+
+        const assignments: readonly {
+          readonly category: JournalReviewTermCategory;
+          readonly values: readonly string[];
+        }[] = [
+          { category: "setup", values: review.setup === null ? [] : [review.setup] },
+          { category: "mistake", values: review.mistakes },
+          { category: "emotion", values: review.emotion === null ? [] : [review.emotion] },
+          { category: "tag", values: review.tags },
+        ];
+        for (const assignment of assignments) {
+          for (const [ordinal, value] of assignment.values.entries()) {
+            const termId = await this.ensureReviewTerm(
+              assignment.category,
+              value,
+              recordedAtMs,
+            );
+            await this.database.run(
+              `INSERT INTO trade_review_term_assignments (
+                review_version_id, workspace_id, trade_subject_id,
+                term_id, category, ordinal
+              ) VALUES (?, ?, ?, ?, ?, ?)`,
+              [
+                reviewId,
+                WORKSPACE_ID,
+                review.tradeSubjectId,
+                termId,
+                assignment.category,
+                ordinal,
+              ],
+            );
+          }
+        }
+
+        if (playbook !== null) {
+          for (const [ordinal, rule] of playbook.rules.entries()) {
+            await this.database.run(
+              `INSERT INTO trade_review_rule_results (
+                review_version_id, workspace_id, trade_subject_id,
+                playbook_rule_id, outcome, rule_name_snapshot, ordinal
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                reviewId,
+                WORKSPACE_ID,
+                review.tradeSubjectId,
+                rule.id,
+                rule.outcome,
+                rule.name,
+                ordinal,
+              ],
+            );
+          }
+        }
+
+        if (previousReviewId === null) {
+          await this.database.run(
+            `INSERT INTO trade_review_heads (
+              workspace_id, trade_subject_id, review_version_id, changed_at_ms
+            ) VALUES (?, ?, ?, ?)`,
+            [WORKSPACE_ID, review.tradeSubjectId, reviewId, recordedAtMs],
+          );
+        } else {
+          const update = await this.database.run(
+            `UPDATE trade_review_heads
+                SET review_version_id = ?, changed_at_ms = ?
+              WHERE workspace_id = ? AND trade_subject_id = ?
+                AND review_version_id = ?`,
+            [
+              reviewId,
+              recordedAtMs,
+              WORKSPACE_ID,
+              review.tradeSubjectId,
+              previousReviewId,
+            ],
+          );
+          if (update.changes !== 1) {
+            throw new JournalTradeReviewError({
+              code: "review_changed",
+              message: "This trade review changed while it was being saved.",
+            });
+          }
+        }
+        reviewIds.push(reviewId);
+      }
+      return {
+        outcome: "committed" as const,
+        reviewIds,
+      };
+    });
+    return { ...transactionResult, ledger: await this.loadWithinConnection() };
+  }
+
   async loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
     this.assertOpen();
     await this.verifySchema();
@@ -984,6 +1296,94 @@ export class SqliteJournalStore implements JournalStore {
     return maximum + 1;
   }
 
+  private async ensureReviewTerm(
+    category: JournalReviewTermCategory,
+    name: string,
+    nowMs: number,
+  ): Promise<string> {
+    const normalizedName = normalizedReviewName(name);
+    const rows = await this.database.query<SqlRow>(
+      `SELECT id, name
+         FROM review_terms
+        WHERE workspace_id = ? AND category = ? AND normalized_name = ?
+        LIMIT 1`,
+      [WORKSPACE_ID, category, normalizedName],
+    );
+    if (rows[0] !== undefined) return requireText(rows[0], "id");
+    const id = this.runtime.newId("review-term");
+    await this.database.run(
+      `INSERT INTO review_terms (
+        id, workspace_id, category, name, normalized_name, created_at_ms
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, WORKSPACE_ID, category, name, normalizedName, nowMs],
+    );
+    return id;
+  }
+
+  private async ensureReviewPlaybook(
+    playbook: PreparedTradeReview["playbook"],
+    nowMs: number,
+  ): Promise<{
+    readonly id: string;
+    readonly rules: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly outcome: JournalReviewRuleOutcome;
+    }[];
+  } | null> {
+    if (playbook === null) return null;
+    const normalizedName = normalizedReviewName(playbook.name);
+    const rows = await this.database.query<SqlRow>(
+      `SELECT id FROM playbooks
+        WHERE workspace_id = ? AND normalized_name = ? LIMIT 1`,
+      [WORKSPACE_ID, normalizedName],
+    );
+    let id: string;
+    if (rows[0] === undefined) {
+      id = this.runtime.newId("playbook");
+      await this.database.run(
+        `INSERT INTO playbooks (
+          id, workspace_id, name, normalized_name, created_at_ms
+        ) VALUES (?, ?, ?, ?, ?)`,
+        [id, WORKSPACE_ID, playbook.name, normalizedName, nowMs],
+      );
+    } else {
+      id = requireText(rows[0], "id");
+    }
+    const rules: {
+      id: string;
+      name: string;
+      outcome: JournalReviewRuleOutcome;
+    }[] = [];
+    for (const rule of playbook.rules) {
+      const normalizedRule = normalizedReviewName(rule.name);
+      const existing = await this.database.query<SqlRow>(
+        `SELECT id, rule_text FROM playbook_rules
+          WHERE workspace_id = ? AND playbook_id = ? AND normalized_rule_text = ?
+          LIMIT 1`,
+        [WORKSPACE_ID, id, normalizedRule],
+      );
+      let ruleId: string;
+      let ruleName: string;
+      if (existing[0] === undefined) {
+        ruleId = this.runtime.newId("playbook-rule");
+        ruleName = rule.name;
+        await this.database.run(
+          `INSERT INTO playbook_rules (
+            id, workspace_id, playbook_id, rule_text,
+            normalized_rule_text, created_at_ms
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [ruleId, WORKSPACE_ID, id, rule.name, normalizedRule, nowMs],
+        );
+      } else {
+        ruleId = requireText(existing[0], "id");
+        ruleName = requireText(existing[0], "rule_text");
+      }
+      rules.push({ id: ruleId, name: ruleName, outcome: rule.outcome });
+    }
+    return { id, rules };
+  }
+
   private assertOpen(): void {
     if (this.closed) throw new Error("The journal store is closed.");
   }
@@ -1015,6 +1415,33 @@ export class SqliteJournalStore implements JournalStore {
         throw new Error("The journal database migration checksum does not match this app build.");
       }
     });
+    const metricRows = await this.database.query<SqlRow>(
+      `SELECT metric_id, version, fraction_digits, rounding_mode
+         FROM metric_definitions
+        ORDER BY metric_id, version`,
+    );
+    const metricContract = metricRows.map((row) => ({
+      id: requireText(row, "metric_id"),
+      version: requireSafeInteger(row, "version"),
+      fractionDigits: requireSafeInteger(row, "fraction_digits"),
+      rounding: requireText(row, "rounding_mode"),
+    }));
+    if (canonicalJson(metricContract) !== canonicalJson([
+      {
+        id: "percent-return",
+        version: 1,
+        fractionDigits: 12,
+        rounding: "half_away_from_zero",
+      },
+      {
+        id: "result-r",
+        version: 1,
+        fractionDigits: 12,
+        rounding: "half_away_from_zero",
+      },
+    ])) {
+      throw new Error("The journal metric-definition registry does not match this app build.");
+    }
     this.schemaVerified = true;
   }
 
@@ -1224,15 +1651,7 @@ export class SqliteJournalStore implements JournalStore {
     const subjectIdByTradeId = new Map<string, string>();
     for (const trade of projection.trades) {
       const tradeAllocations = allocationsByTradeId.get(trade.id) ?? [];
-      const openingAllocation = tradeAllocations.find((allocation) => allocation.effect === "ENTRY");
-      if (openingAllocation === undefined) {
-        throw new Error("A derived trade has no immutable opening allocation.");
-      }
-      const stableHash = sha256Hex(canonicalJson({
-        accountId: trade.accountId,
-        instrumentId: trade.instrumentId,
-        openingAllocationId: openingAllocation.id,
-      }));
+      const stableHash = stableTradeSubjectHash(trade, projection.allocations);
       const existing = await this.database.query<SqlRow>(
         "SELECT id FROM trade_subjects WHERE workspace_id = ? AND stable_key_sha256 = ? LIMIT 1",
         [WORKSPACE_ID, stableHash],
@@ -1415,6 +1834,8 @@ export class SqliteJournalStore implements JournalStore {
     });
     const loaded = await this.loadActiveExecutions();
     const projection = normalizeTrades(loaded.executions);
+    const tradeSubjects = await this.loadTradeSubjects(projection);
+    const reviewState = await this.loadReviewState();
     const receiptRows = await this.database.query<SqlRow>(
       `SELECT receipt.id, batch.account_id, account.name AS account_name, batch.source_name,
               CAST(receipt.recorded_at_ms AS TEXT) AS recorded_at_ms_text,
@@ -1453,7 +1874,255 @@ export class SqliteJournalStore implements JournalStore {
       instruments,
       executions: loaded.executions,
       projection,
+      tradeSubjects,
+      tradeReviews: reviewState.tradeReviews,
+      reviewTerms: reviewState.reviewTerms,
+      playbooks: reviewState.playbooks,
       imports,
     };
+  }
+
+  private async loadReviewState(): Promise<LoadedReviewState> {
+    const termRows = await this.database.query<SqlRow>(
+      `SELECT id, category, name
+         FROM review_terms
+        WHERE workspace_id = ?
+        ORDER BY category, normalized_name, id`,
+      [WORKSPACE_ID],
+    );
+    const reviewTerms: JournalReviewTermRecord[] = termRows.map((row) => {
+      const category = requireText(row, "category");
+      if (!["setup", "mistake", "emotion", "tag"].includes(category)) {
+        throw new Error("SQLite returned an invalid review-term category.");
+      }
+      return {
+        id: requireText(row, "id"),
+        category: category as JournalReviewTermCategory,
+        name: requireText(row, "name"),
+      };
+    });
+
+    const playbookRows = await this.database.query<SqlRow>(
+      `SELECT id, name
+         FROM playbooks
+        WHERE workspace_id = ?
+        ORDER BY normalized_name, id`,
+      [WORKSPACE_ID],
+    );
+    const playbookRuleRows = await this.database.query<SqlRow>(
+      `SELECT id, playbook_id, rule_text
+         FROM playbook_rules
+        WHERE workspace_id = ?
+        ORDER BY playbook_id, created_at_ms, id`,
+      [WORKSPACE_ID],
+    );
+    const rulesByPlaybook = new Map<string, JournalPlaybookRecord["rules"][number][]>();
+    for (const row of playbookRuleRows) {
+      const playbookId = requireText(row, "playbook_id");
+      const rules = rulesByPlaybook.get(playbookId) ?? [];
+      rules.push({
+        id: requireText(row, "id"),
+        playbookId,
+        text: requireText(row, "rule_text"),
+      });
+      rulesByPlaybook.set(playbookId, rules);
+    }
+    const playbooks: JournalPlaybookRecord[] = playbookRows.map((row) => {
+      const id = requireText(row, "id");
+      return { id, name: requireText(row, "name"), rules: rulesByPlaybook.get(id) ?? [] };
+    });
+
+    const reviewRows = await this.database.query<SqlRow>(
+      `SELECT version.id, version.trade_subject_id, version.version_number,
+              version.revision_sha256, version.state, version.note_text,
+              version.playbook_id, playbook.name AS playbook_name,
+              version.initial_risk_amount_text, version.risk_currency_code,
+              version.planned_stop_price_text, version.result_r_metric_id,
+              version.result_r_metric_version, version.percent_return_metric_id,
+              version.percent_return_metric_version,
+              CAST(version.recorded_at_ms AS TEXT) AS recorded_at_ms_text,
+              CAST(version.completed_at_ms AS TEXT) AS completed_at_ms_text
+         FROM trade_review_heads AS head
+         JOIN trade_review_versions AS version
+           ON version.id = head.review_version_id
+          AND version.workspace_id = head.workspace_id
+          AND version.trade_subject_id = head.trade_subject_id
+         LEFT JOIN playbooks AS playbook ON playbook.id = version.playbook_id
+        WHERE head.workspace_id = ?
+        ORDER BY version.recorded_at_ms, version.id`,
+      [WORKSPACE_ID],
+    );
+    const currentReviewIds = reviewRows.map((row) => requireText(row, "id"));
+    const assignmentRows = currentReviewIds.length === 0
+      ? []
+      : await this.database.query<SqlRow>(
+        `SELECT assignment.review_version_id, assignment.category, assignment.ordinal,
+                term.name
+           FROM trade_review_term_assignments AS assignment
+           JOIN trade_review_heads AS head
+             ON head.review_version_id = assignment.review_version_id
+            AND head.workspace_id = assignment.workspace_id
+            AND head.trade_subject_id = assignment.trade_subject_id
+           JOIN review_terms AS term ON term.id = assignment.term_id
+          WHERE assignment.workspace_id = ?
+          ORDER BY assignment.review_version_id, assignment.category, assignment.ordinal`,
+        [WORKSPACE_ID],
+      );
+    const termsByReview = new Map<string, {
+      setup: string | null;
+      mistakes: string[];
+      emotion: string | null;
+      tags: string[];
+    }>();
+    for (const row of assignmentRows) {
+      const reviewId = requireText(row, "review_version_id");
+      const category = requireText(row, "category");
+      const value = requireText(row, "name");
+      const terms = termsByReview.get(reviewId) ?? {
+        setup: null,
+        mistakes: [],
+        emotion: null,
+        tags: [],
+      };
+      if (category === "setup") {
+        if (terms.setup !== null) throw new Error("A review has more than one setup.");
+        terms.setup = value;
+      } else if (category === "emotion") {
+        if (terms.emotion !== null) throw new Error("A review has more than one emotion.");
+        terms.emotion = value;
+      } else if (category === "mistake") {
+        terms.mistakes.push(value);
+      } else if (category === "tag") {
+        terms.tags.push(value);
+      } else {
+        throw new Error("SQLite returned an invalid review assignment category.");
+      }
+      termsByReview.set(reviewId, terms);
+    }
+
+    const ruleRows = currentReviewIds.length === 0
+      ? []
+      : await this.database.query<SqlRow>(
+        `SELECT result.review_version_id, result.playbook_rule_id,
+                result.rule_name_snapshot, result.outcome
+           FROM trade_review_rule_results AS result
+           JOIN trade_review_heads AS head
+             ON head.review_version_id = result.review_version_id
+            AND head.workspace_id = result.workspace_id
+            AND head.trade_subject_id = result.trade_subject_id
+          WHERE result.workspace_id = ?
+          ORDER BY result.review_version_id, result.ordinal`,
+        [WORKSPACE_ID],
+      );
+    const rulesByReview = new Map<string, JournalTradeReviewRecord["rules"][number][]>();
+    for (const row of ruleRows) {
+      const outcome = requireText(row, "outcome");
+      if (!["followed", "broken", "not_applicable", "unreviewed"].includes(outcome)) {
+        throw new Error("SQLite returned an invalid rule-review outcome.");
+      }
+      const reviewId = requireText(row, "review_version_id");
+      const rules = rulesByReview.get(reviewId) ?? [];
+      rules.push({
+        ruleId: requireText(row, "playbook_rule_id"),
+        text: requireText(row, "rule_name_snapshot"),
+        outcome: outcome as JournalReviewRuleOutcome,
+      });
+      rulesByReview.set(reviewId, rules);
+    }
+
+    const tradeReviews: JournalTradeReviewRecord[] = reviewRows.map((row) => {
+      const id = requireText(row, "id");
+      const state = requireText(row, "state");
+      if (state !== "draft" && state !== "completed") {
+        throw new Error("SQLite returned an invalid trade-review state.");
+      }
+      const resultRMetricId = requireText(row, "result_r_metric_id");
+      const percentReturnMetricId = requireText(row, "percent_return_metric_id");
+      const resultRMetricVersion = requireSafeInteger(row, "result_r_metric_version");
+      const percentReturnMetricVersion = requireSafeInteger(row, "percent_return_metric_version");
+      if (
+        resultRMetricId !== "result-r"
+        || resultRMetricVersion !== 1
+        || percentReturnMetricId !== "percent-return"
+        || percentReturnMetricVersion !== 1
+      ) {
+        throw new Error("A trade review references an unsupported metric definition.");
+      }
+      const riskAmount = nullableText(row, "initial_risk_amount_text");
+      const riskCurrency = nullableText(row, "risk_currency_code");
+      if ((riskAmount === null) !== (riskCurrency === null)) {
+        throw new Error("A trade review has an incomplete initial-risk basis.");
+      }
+      const terms = termsByReview.get(id) ?? {
+        setup: null,
+        mistakes: [],
+        emotion: null,
+        tags: [],
+      };
+      const completedMs = nullableText(row, "completed_at_ms_text");
+      return {
+        id,
+        tradeSubjectId: requireText(row, "trade_subject_id"),
+        version: requireSafeInteger(row, "version_number"),
+        state,
+        revision: requireText(row, "revision_sha256"),
+        note: requireText(row, "note_text"),
+        setup: terms.setup,
+        mistakes: terms.mistakes,
+        emotion: terms.emotion,
+        tags: terms.tags,
+        playbookId: nullableText(row, "playbook_id"),
+        playbookName: nullableText(row, "playbook_name"),
+        rules: rulesByReview.get(id) ?? [],
+        initialRisk: riskAmount === null || riskCurrency === null
+          ? null
+          : { amount: riskAmount, currency: riskCurrency },
+        plannedStop: nullableText(row, "planned_stop_price_text"),
+        resultRMetricId: "result-r",
+        resultRMetricVersion: 1,
+        percentReturnMetricId: "percent-return",
+        percentReturnMetricVersion: 1,
+        recordedAtUs: `${requireText(row, "recorded_at_ms_text")}000`,
+        completedAtUs: completedMs === null ? null : `${completedMs}000`,
+      };
+    });
+    return { tradeReviews, reviewTerms, playbooks };
+  }
+
+  private async loadTradeSubjects(
+    projection: TradeNormalizationResult,
+  ): Promise<readonly JournalTradeSubjectRecord[]> {
+    const rows = await this.database.query<SqlRow>(
+      `SELECT subject.id AS trade_subject_id, subject.stable_key_sha256
+         FROM projection_active_state AS active
+         JOIN trade_projections AS trade
+           ON trade.rebuild_run_id = active.active_rebuild_run_id
+          AND trade.workspace_id = active.workspace_id
+         JOIN trade_subjects AS subject
+           ON subject.id = trade.trade_subject_id
+          AND subject.workspace_id = trade.workspace_id
+        WHERE active.workspace_id = ?`,
+      [WORKSPACE_ID],
+    );
+    const subjectByHash = new Map<string, string>();
+    for (const row of rows) {
+      const stableHash = requireText(row, "stable_key_sha256");
+      if (subjectByHash.has(stableHash)) {
+        throw new Error("The active projection contains a duplicate stable trade subject.");
+      }
+      subjectByHash.set(stableHash, requireText(row, "trade_subject_id"));
+    }
+    const mapped = projection.trades.map((trade) => {
+      const stableHash = stableTradeSubjectHash(trade, projection.allocations);
+      const tradeSubjectId = subjectByHash.get(stableHash);
+      if (tradeSubjectId === undefined) {
+        throw new Error(`The active projection lost durable subject identity for trade ${trade.id}.`);
+      }
+      return { projectionTradeId: trade.id, tradeSubjectId };
+    });
+    if (mapped.length !== rows.length) {
+      throw new Error("The active projection trade count does not match the deterministic ledger.");
+    }
+    return mapped;
   }
 }

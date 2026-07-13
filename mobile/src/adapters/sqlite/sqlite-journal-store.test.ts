@@ -12,6 +12,12 @@ import {
   prepareManualExecution,
   type ManualExecutionInput,
 } from "../../application/prepare-manual-execution";
+import {
+  type PreparedTradeReview,
+  prepareTradeReview,
+  tradeReviewBatchRevision,
+  type TradeReviewInput,
+} from "../../application/prepare-trade-review";
 import { MOBILE_SCHEMA_MIGRATIONS } from "./schema";
 import {
   SqliteJournalStore,
@@ -156,6 +162,42 @@ function preparedManual(
   });
 }
 
+function preparedReview(
+  tradeSubjectId: string,
+  submissionDigit: string,
+  overrides: Partial<TradeReviewInput> = {},
+): PreparedTradeReview {
+  return prepareTradeReview({
+    submissionId: submissionDigit.repeat(64),
+    tradeSubjectId,
+    expectedPreviousReviewId: null,
+    state: "completed",
+    note: "Waited for confirmation and managed the exit deliberately.",
+    setup: "Opening-range breakout",
+    mistakes: ["Late exit"],
+    tags: ["A+ setup"],
+    emotion: "Focused",
+    playbook: {
+      name: "Momentum",
+      rules: [
+        { name: "Wait for confirmation", outcome: "followed" },
+        { name: "Respect the stop", outcome: "followed" },
+      ],
+    },
+    initialRisk: { amount: "10", currency: "USD" },
+    plannedStop: "95",
+    ...overrides,
+  });
+}
+
+function preparedReviewBatch(batchId: string, reviews: readonly PreparedTradeReview[]) {
+  return {
+    batchId,
+    reviews,
+    revision: tradeReviewBatchRevision(batchId, reviews),
+  };
+}
+
 async function scalar(database: SqlDatabase, statement: string): Promise<number | string | null> {
   const rows = await database.query<SqlRow>(statement);
   const first = rows[0];
@@ -200,6 +242,209 @@ describe("SqliteJournalStore", () => {
         moneyTotals: [],
       });
       await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("persists immutable review versions, exact risk metadata, and retry identity", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const imported = await store.commitCsvImport(preparedCsv());
+      const tradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      if (tradeSubjectId === undefined) throw new Error("Expected one durable trade subject.");
+      const firstCommand = preparedReviewBatch("review-batch-one", [
+        preparedReview(tradeSubjectId, "a"),
+      ]);
+
+      const first = await store.commitTradeReviews(firstCommand);
+      const firstReview = first.ledger.tradeReviews[0];
+      expect(first.outcome).toBe("committed");
+      expect(firstReview).toMatchObject({
+        tradeSubjectId,
+        version: 1,
+        state: "completed",
+        setup: "Opening-range breakout",
+        mistakes: ["Late exit"],
+        emotion: "Focused",
+        tags: ["A+ setup"],
+        playbookName: "Momentum",
+        initialRisk: { amount: "10", currency: "USD" },
+        plannedStop: "95",
+        resultRMetricId: "result-r",
+        resultRMetricVersion: 1,
+        percentReturnMetricId: "percent-return",
+        percentReturnMetricVersion: 1,
+      });
+      expect(firstReview?.rules).toEqual([
+        expect.objectContaining({ text: "Wait for confirmation", outcome: "followed" }),
+        expect.objectContaining({ text: "Respect the stop", outcome: "followed" }),
+      ]);
+
+      const duplicate = await store.commitTradeReviews(firstCommand);
+      expect(duplicate).toMatchObject({
+        outcome: "duplicate",
+        reviewIds: first.reviewIds,
+      });
+      expect(await count(database, "trade_review_versions")).toBe(1);
+
+      const firstReviewId = firstReview?.id;
+      if (firstReviewId === undefined) throw new Error("Expected the first review head.");
+      const edit = preparedReviewBatch("review-batch-two", [
+        preparedReview(tradeSubjectId, "b", {
+          expectedPreviousReviewId: firstReviewId,
+          note: "The plan worked; the final scale-out was still late.",
+          tags: ["Needs work"],
+          playbook: {
+            name: "momentum",
+            rules: [
+              { name: "wait for confirmation", outcome: "followed" },
+              { name: "respect the stop", outcome: "broken" },
+            ],
+          },
+        }),
+      ]);
+      const edited = await store.commitTradeReviews(edit);
+      expect(edited.ledger.tradeReviews).toHaveLength(1);
+      expect(edited.ledger.tradeReviews[0]).toMatchObject({
+        version: 2,
+        note: "The plan worked; the final scale-out was still late.",
+        tags: ["Needs work"],
+      });
+      expect(await count(database, "trade_review_versions")).toBe(2);
+      expect(await count(database, "trade_review_heads")).toBe(1);
+      expect(await database.query(
+        "SELECT version_number, supersedes_version_id FROM trade_review_versions ORDER BY version_number",
+      )).toEqual([
+        { version_number: 1, supersedes_version_id: null },
+        { version_number: 2, supersedes_version_id: firstReviewId },
+      ]);
+      await expect(database.run(
+        "UPDATE trade_review_versions SET note_text = 'mutated' WHERE id = ?",
+        [firstReviewId],
+      )).rejects.toThrow(/immutable/);
+
+      const recreated = new SqliteJournalStore(database, deterministicRuntime());
+      const reloaded = await recreated.load();
+      expect(reloaded.tradeReviews[0]).toMatchObject({
+        id: edited.reviewIds[0],
+        version: 2,
+        playbookName: "Momentum",
+      });
+      const visibleEdit = reloaded.tradeReviews[0];
+      if (visibleEdit === undefined) throw new Error("Expected the reloaded review head.");
+      expect(prepareTradeReview({
+        submissionId: edit.reviews[0]!.submissionId,
+        tradeSubjectId: visibleEdit.tradeSubjectId,
+        expectedPreviousReviewId: edit.reviews[0]!.expectedPreviousReviewId,
+        state: visibleEdit.state,
+        note: visibleEdit.note,
+        setup: visibleEdit.setup,
+        mistakes: visibleEdit.mistakes,
+        tags: visibleEdit.tags,
+        emotion: visibleEdit.emotion,
+        playbook: visibleEdit.playbookName === null ? null : {
+          name: visibleEdit.playbookName,
+          rules: visibleEdit.rules.map((rule) => ({
+            name: rule.text,
+            outcome: rule.outcome,
+          })),
+        },
+        initialRisk: visibleEdit.initialRisk,
+        plannedStop: visibleEdit.plannedStop,
+      }).revision).toBe(visibleEdit.revision);
+
+      const validTamperBase = preparedReview(tradeSubjectId, "c", {
+        expectedPreviousReviewId: visibleEdit.id,
+      });
+      const tampered = {
+        ...validTamperBase,
+        note: "Changed after the immutable review command was prepared.",
+      };
+      await expect(store.commitTradeReviews(preparedReviewBatch(
+        "tampered-review",
+        [tampered],
+      ))).rejects.toMatchObject({ conflict: { code: "review_changed" } });
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("rolls back every review in a batch when a later optimistic head is stale", async () => {
+    const { database, store } = await createHarness();
+    const twoTrades = "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+      + "a-in,AAPL,BTO,1,100,0,USD,2026-07-01T13:30:00Z\r\n"
+      + "a-out,AAPL,STC,1,110,0,USD,2026-07-01T14:30:00Z\r\n"
+      + "m-in,MSFT,BTO,1,400,0,USD,2026-07-01T15:30:00Z\r\n"
+      + "m-out,MSFT,STC,1,410,0,USD,2026-07-01T16:30:00Z";
+    try {
+      const imported = await store.commitCsvImport(preparedCsv(twoTrades));
+      const firstSubject = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      const secondSubject = imported.ledger.tradeSubjects[1]?.tradeSubjectId;
+      if (firstSubject === undefined || secondSubject === undefined) {
+        throw new Error("Expected two durable trade subjects.");
+      }
+      const initialReview = preparedReview(firstSubject, "c");
+      await store.commitTradeReviews(preparedReviewBatch("initial-review", [initialReview]));
+      const versionCount = await count(database, "trade_review_versions");
+      const termCount = await count(database, "review_terms");
+
+      await expect(store.commitTradeReviews(preparedReviewBatch("mixed-retry", [
+        initialReview,
+        preparedReview(secondSubject, "d", { setup: "Pullback" }),
+      ]))).rejects.toMatchObject({ conflict: { code: "submission_changed" } });
+      expect(await count(database, "trade_review_versions")).toBe(versionCount);
+      expect(await count(database, "trade_review_heads")).toBe(1);
+      expect(await count(database, "review_terms")).toBe(termCount);
+
+      const atomicBatch = preparedReviewBatch("atomic-stale-review", [
+        preparedReview(secondSubject, "d", {
+          setup: "Pullback",
+          mistakes: ["Oversized"],
+          tags: ["Batch-only tag"],
+        }),
+        preparedReview(firstSubject, "e", {
+          expectedPreviousReviewId: null,
+          note: "This edit intentionally carries a stale predecessor.",
+        }),
+      ]);
+      await expect(store.commitTradeReviews(atomicBatch)).rejects.toMatchObject({
+        conflict: { code: "review_changed" },
+      });
+      expect(await count(database, "trade_review_versions")).toBe(versionCount);
+      expect(await count(database, "trade_review_heads")).toBe(1);
+      expect(await count(database, "review_terms")).toBe(termCount);
+      expect((await store.load()).tradeReviews).toHaveLength(1);
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("keeps an old review on its opening subject when replacement executions create a new trade", async () => {
+    const { store } = await createHarness();
+    try {
+      const imported = await store.commitCsvImport(preparedCsv());
+      const oldSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      if (oldSubjectId === undefined) throw new Error("Expected an original trade subject.");
+      await store.commitTradeReviews(preparedReviewBatch("review-before-replacement", [
+        preparedReview(oldSubjectId, "f"),
+      ]));
+      await store.rollbackImport(imported.receipt.id, "Replace source executions");
+      const replacement = await store.commitCsvImport(preparedCsv(
+        ROUND_TRIP_CSV.replace("fill-1", "replacement-1").replace("fill-2", "replacement-2"),
+      ));
+      const newSubjectId = replacement.ledger.tradeSubjects[0]?.tradeSubjectId;
+
+      expect(newSubjectId).toBeDefined();
+      expect(newSubjectId).not.toBe(oldSubjectId);
+      expect(replacement.ledger.tradeReviews).toEqual([
+        expect.objectContaining({ tradeSubjectId: oldSubjectId }),
+      ]);
+      expect(replacement.ledger.tradeReviews.some((review) => (
+        review.tradeSubjectId === newSubjectId
+      ))).toBe(false);
     } finally {
       await store.close();
     }
