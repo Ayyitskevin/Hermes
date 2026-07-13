@@ -49,14 +49,14 @@ export const SQLITE_JOURNAL_ARCHIVE_TABLES = Object.freeze([
   "trade_review_heads",
 ] as const);
 
-type SqliteJournalArchiveTableName = typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number];
+export type SqliteJournalArchiveTableName = typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number];
 
 /**
  * Export-v1 column contracts generated from the v1-v3 migrations with
  * PRAGMA table_xinfo. Each digest covers ordered name, declared type,
  * nullability, primary-key position, SQL default, and hidden value.
  */
-const SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256: Readonly<
+export const SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256: Readonly<
   Record<SqliteJournalArchiveTableName, string>
 > = Object.freeze({
   schema_migrations: "fd0f626652721faa3cee1ed299b0fbf1ea18f39c06f1bf326fdb008f0680a6e6",
@@ -168,11 +168,11 @@ function asArchiveJson(value: unknown): JournalArchiveJson {
   return value as JournalArchiveJson;
 }
 
-function tableDigestInput(table: Omit<SqliteArchiveTable, "tableSha256">): JournalArchiveJson {
+export function tableDigestInput(table: Omit<SqliteArchiveTable, "tableSha256">): JournalArchiveJson {
   return asArchiveJson(table);
 }
 
-function portableStateDigestInput(
+export function portableStateDigestInput(
   tables: readonly SqliteArchiveTable[],
 ): JournalArchiveJson {
   return asArchiveJson({

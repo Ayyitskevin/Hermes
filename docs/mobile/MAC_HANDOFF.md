@@ -143,8 +143,8 @@ and an App Store disclosure.
   evidence as newly persisted facts.
 - Build a local journal containing CSV source rows, an independent manual fill,
   a rolled-back receipt, and at least two immutable versions of one trade review.
-  In More, confirm the export card visibly warns that JSON is unencrypted and
-  that restore/Delete All Data are unavailable.
+  In More, confirm export warns that JSON is unencrypted, restore is blocked
+  while the journal is nonempty, and Delete All Data remains unavailable.
 - In airplane mode, activate **Prepare export**. Confirm no destination opens
   during preparation, focus stays on the same control when it becomes
   **Share or save export**, and no Hermes/network request occurs.
@@ -162,6 +162,49 @@ and an App Store disclosure.
 - Export the unchanged journal twice. Confirm state/report digests match while
   export timestamps/archive digests differ. Then mutate one fact and confirm the
   user-state digest changes.
+- Save that current-schema export in Files. On a separate fresh empty data
+  container, remain in airplane mode and confirm More shows a labeled local
+  restore chooser after export; demo mode must expose no restore control.
+- Confirm a file larger than 64 MiB is rejected before it is read. Exercise an
+  approved near-67,108,864-byte fixture while observing peak memory and low
+  storage; record any termination or duplicate in-memory copies.
+- Select the matching native `sqlite-table-set` v1 archive. Confirm preview
+  verifies all 32 tables and 257 ordered columns, shows recomputed workspace,
+  count, and digest claims alongside checksum-verified export time and
+  adapter-validated payload metadata, and leaves the empty journal unchanged
+  after the trial transaction rolls back.
+- Before confirmation, inspect the destination through an approved diagnostic
+  path: only current migration receipts and metric definitions may remain.
+  `foreign_key_check` must be empty and `quick_check` must be `ok`.
+- Cancel preview and confirm the prepared approval is invalidated and focus
+  returns to the file chooser. Change the file during an asynchronous preview
+  and confirm stale results never enable restore.
+- Try a browser `browser-session-state` v1 file, wrong payload version, stale
+  migration set, changed table/column shape, noncanonical/out-of-range integer,
+  row/table/state/report/summary tamper, and an attachment-bearing fixture.
+  Every case must fail visibly without changing the destination; do not log
+  journal contents.
+- Confirm the final checkbox is required, then restore the valid native archive
+  in airplane mode. Force quit/relaunch and reconcile raw provenance, inactive
+  history, review chains/heads, metric definitions, stable subjects, ledger,
+  report digest, and state digest against the source.
+- Export the restored journal again. State/report digests must equal the source
+  even though export time/archive digest may differ. Confirm no archive SQL was
+  executed and no live table-SQL diagnostic was treated as compatibility input.
+- Simulate commit success with a lost bridge response, then retry the exact
+  selected archive. Hermes must return the already-restored outcome without
+  inserting duplicates. Repeat with an injected failure before commit and
+  confirm the destination remains empty and the same preview can be retried.
+- Change the journal after preview and confirm commit refuses it atomically.
+  With any different nonempty journal, More must show the blocked explanation
+  with no chooser or enabled restore action; restore never merges or overwrites.
+- With VoiceOver, Dynamic Type at 200%, a hardware keyboard, and 320 CSS pixels,
+  verify chooser labeling, status/error announcements and focus, confirmation,
+  Cancel, uncertain-status retry guidance, 44-point targets, and no horizontal
+  overflow.
+- Exercise background/foreground, force quit during preview and commit, device
+  restart, destination denial, low storage, and a near-limit archive. Record
+  observed state after every interruption; a clean console is not evidence.
 - Exercise share failure, destination denial, low storage, a near-limit journal,
   background/foreground during preparation, force quit, and relaunch. Every
   uncertain path must stay retryable and must not report a saved file falsely.
@@ -209,12 +252,15 @@ and every skipped check. A clean console alone is not evidence.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry, versioned trade reviews, and export generation are Linux/browser
-  verified but still need the native persistence, response-loss, migration,
+- Manual entry, versioned reviews, export generation, and Slice C-B local
+  restore still need the native persistence, response-loss, migration,
   accessibility, and lifecycle checks above. Native Web Share/Files
-  cancellation, save, reopen, custom MIME behavior, and large-archive memory
-  have not been observed. Attachments, restore, and Delete All Data remain
-  incomplete Phase 1 work.
+  cancellation, save, reopen, custom MIME behavior, restore preview rollback,
+  atomic commit, post-commit reconciliation, interruption retry, and
+  near-64-MiB memory behavior have not been observed.
+- Current matching-runtime archives remain incomplete native backups:
+  attachment catalog v1 is empty and archives containing attachments are
+  rejected. Attachments and Delete All Data remain incomplete Phase 1 work.
 - `Podfile.lock`, `App.xcworkspace`, and final CocoaPods-generated build phases
   are Mac gates and are not yet present/reviewed.
 - Direct broker/market-data connectivity is outside the launch path until rights,

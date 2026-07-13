@@ -10,6 +10,7 @@ import type {
 import type { PreparedManualExecution } from "./prepare-manual-execution";
 import type { PreparedTradeReview } from "./prepare-trade-review";
 import type { JournalExportArtifact } from "./journal-archive";
+import type { PreparedJournalRestore } from "./journal-restore";
 
 export interface JournalWorkspaceRecord {
   readonly id: string;
@@ -157,6 +158,13 @@ export interface TradeReviewCommitResult {
   readonly ledger: JournalLedgerSnapshot;
 }
 
+export interface JournalRestoreCommitResult {
+  readonly outcome: "committed" | "already-restored";
+  readonly ledger: JournalLedgerSnapshot;
+  readonly stateSha256: string;
+  readonly reportSha256: string;
+}
+
 export interface PreparedTradeReviewBatch {
   readonly batchId: string;
   readonly revision: string;
@@ -207,10 +215,31 @@ export class JournalImportError extends Error {
   }
 }
 
+export interface JournalRestoreConflict {
+  readonly code:
+    | "invalid_archive"
+    | "unsupported_payload"
+    | "incompatible_schema"
+    | "invalid_payload"
+    | "preview_changed"
+    | "journal_not_empty"
+    | "verification_failed";
+  readonly message: string;
+}
+
+export class JournalRestoreError extends Error {
+  constructor(readonly conflict: JournalRestoreConflict) {
+    super(conflict.message);
+    this.name = "JournalRestoreError";
+  }
+}
+
 export interface JournalStore {
   load(): Promise<JournalLedgerSnapshot>;
   /** Complete archive boundary; unlike load(), this includes immutable history. */
   exportUserData(): Promise<JournalExportArtifact>;
+  prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore>;
+  commitUserDataRestore(command: PreparedJournalRestore): Promise<JournalRestoreCommitResult>;
   commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult>;
   commitManualExecution(command: PreparedManualExecution): Promise<ManualExecutionCommitResult>;
   commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult>;

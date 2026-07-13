@@ -3,15 +3,18 @@ import { describe, expect, it } from "vitest";
 import { SessionJournalStore } from "../adapters/session-journal-store";
 import { parseJournalArchive } from "./journal-archive";
 import type {
+  JournalRestoreCommitResult,
   ManualExecutionCommitResult,
   PreparedTradeReviewBatch,
   TradeReviewCommitResult,
 } from "./journal-store";
-import { JournalTradeReviewError } from "./journal-store";
+import { JournalRestoreError, JournalTradeReviewError } from "./journal-store";
 import {
   JournalApplication,
+  JournalRestoreCommitStatusUncertainError,
   ManualExecutionCommitStatusUncertainError,
 } from "./journal-application";
+import type { PreparedJournalRestore } from "./journal-restore";
 import {
   type PreparedManualExecution,
   prepareManualExecution,
@@ -432,6 +435,145 @@ describe("JournalApplication user-data export", () => {
       expect(store.exportCalls).toBe(1);
     } finally {
       await application.close();
+    }
+  });
+});
+
+describe("JournalApplication user-data restore", () => {
+  it("reconciles an exact committed restore after the first bridge response is lost", async () => {
+    class LostRestoreResponseStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitUserDataRestore(
+        command: PreparedJournalRestore,
+      ): Promise<JournalRestoreCommitResult> {
+        this.commitCalls += 1;
+        const result = await super.commitUserDataRestore(command);
+        if (this.commitCalls === 1) throw new Error("Native bridge response was lost.");
+        return result;
+      }
+    }
+
+    const source = new SessionJournalStore({ nowMs: () => 1_750_000_000_000 });
+    const destination = new LostRestoreResponseStore({ nowMs: () => 1_750_000_001_000 });
+    const application = new JournalApplication(destination, "browser-session");
+    try {
+      await openTrade(source, "AAPL", "a", 10);
+      const artifact = await source.exportUserData();
+      const prepared = await application.prepareUserDataRestore(artifact.contents);
+
+      expect(prepared.preview.target).toBe("empty");
+      const recovered = await application.commitUserDataRestoreSafely(prepared);
+
+      expect(recovered.outcome).toBe("already-restored");
+      expect(destination.commitCalls).toBe(2);
+      expect(recovered.ledger.executions).toHaveLength(1);
+      expect((await destination.load()).executions).toHaveLength(1);
+    } finally {
+      await application.close();
+      await source.close();
+    }
+  });
+
+  it("does not retry a deterministic restore conflict", async () => {
+    class ConflictStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitUserDataRestore(
+        _command: PreparedJournalRestore,
+      ): Promise<JournalRestoreCommitResult> {
+        this.commitCalls += 1;
+        throw new JournalRestoreError({
+          code: "journal_not_empty",
+          message: "Restore requires an empty journal.",
+        });
+      }
+    }
+
+    const source = new SessionJournalStore();
+    const destination = new ConflictStore();
+    const application = new JournalApplication(destination, "browser-session");
+    try {
+      await openTrade(source, "MSFT", "b", 11);
+      const prepared = await application.prepareUserDataRestore(
+        (await source.exportUserData()).contents,
+      );
+
+      await expect(application.commitUserDataRestoreSafely(prepared))
+        .rejects.toBeInstanceOf(JournalRestoreError);
+      expect(destination.commitCalls).toBe(1);
+    } finally {
+      await application.close();
+      await source.close();
+    }
+  });
+
+  it("never reaches the private restore store while the fictional demo is visible", async () => {
+    class ObservedRestoreStore extends SessionJournalStore {
+      prepareCalls = 0;
+      commitCalls = 0;
+
+      override async prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore> {
+        this.prepareCalls += 1;
+        return super.prepareUserDataRestore(contents);
+      }
+
+      override async commitUserDataRestore(
+        command: PreparedJournalRestore,
+      ): Promise<JournalRestoreCommitResult> {
+        this.commitCalls += 1;
+        return super.commitUserDataRestore(command);
+      }
+    }
+
+    const source = new SessionJournalStore();
+    const destination = new ObservedRestoreStore();
+    const application = new JournalApplication(destination, "browser-session");
+    try {
+      await openTrade(source, "NVDA", "c", 12);
+      const contents = (await source.exportUserData()).contents;
+      const prepared = await application.prepareUserDataRestore(contents);
+      expect(destination.prepareCalls).toBe(1);
+
+      await application.exploreDemo();
+      await expect(application.prepareUserDataRestore(contents)).rejects.toThrow(/local journal/);
+      await expect(application.commitUserDataRestore(prepared)).rejects.toThrow(/local journal/);
+      expect(destination.prepareCalls).toBe(1);
+      expect(destination.commitCalls).toBe(0);
+    } finally {
+      await application.close();
+      await source.close();
+    }
+  });
+
+  it("keeps a repeatedly unqueryable restore status explicit", async () => {
+    class UnavailableRestoreStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitUserDataRestore(
+        _command: PreparedJournalRestore,
+      ): Promise<JournalRestoreCommitResult> {
+        this.commitCalls += 1;
+        throw new Error("Native bridge is unavailable.");
+      }
+    }
+
+    const source = new SessionJournalStore();
+    const destination = new UnavailableRestoreStore();
+    const application = new JournalApplication(destination, "browser-session");
+    try {
+      await openTrade(source, "META", "d", 13);
+      const prepared = await application.prepareUserDataRestore(
+        (await source.exportUserData()).contents,
+      );
+
+      await expect(application.commitUserDataRestoreSafely(prepared))
+        .rejects.toBeInstanceOf(JournalRestoreCommitStatusUncertainError);
+      expect(destination.commitCalls).toBe(2);
+      expect((await destination.load()).executions).toHaveLength(0);
+    } finally {
+      await application.close();
+      await source.close();
     }
   });
 });

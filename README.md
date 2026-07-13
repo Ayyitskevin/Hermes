@@ -27,7 +27,7 @@ manual entry or broker CSV
   → normalized trades and executions
   → notes, tags, screenshots, and playbooks
   → dashboard, calendar, and performance reports
-  → user-controlled export or backup
+  → user-controlled export or empty-journal restore
 ```
 
 The five destinations are **Dashboard, Trades, Journal, Reports, and More**.
@@ -87,6 +87,14 @@ submission-ready product:
   accessibility-designed two-step delivery path: file-capable Web Share when
   supported, otherwise a browser download. The browser export is a labeled
   in-memory development artifact, not a native backup.
+- A local-only, previewed Slice C-B restore for current
+  `hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1;
+  the browser development runtime accepts only `browser-session-state` v1 and
+  is not native recovery evidence. Restore revalidates the selected archive,
+  never merges or overwrites an existing journal, and treats an exact
+  already-restored state as an idempotent retry. The UI rejects files larger
+  than 64 MiB before reading them; the parser independently enforces the same
+  67,108,864-byte UTF-8 limit.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades.
@@ -100,9 +108,13 @@ submission-ready product:
 
 Linux tests exercise the real schema/repository through SQL.js. Native
 encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
-device backup behavior, and export delivery/reopen behavior still require the
-Mac/device gate. Attachments, restore, Delete All Data, daily notes, and deeper
-reports remain Phase 1 work.
+device backup behavior, native export/restore Files handoff, force-quit/
+response-loss recovery, low-storage, and near-limit memory behavior still
+require the Mac/device gate. Slice C-B restores a current-schema archive on its
+matching runtime, but that file is not a complete native backup: attachment
+catalog v1 is empty, archives containing attachments are rejected, and native
+lifecycle behavior remains unverified. Attachments, Delete All Data, daily
+notes, and deeper reports remain Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

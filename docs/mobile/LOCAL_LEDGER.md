@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned review vertical slice · 2026-07-13
+Status: implemented execution + versioned review + Slice C-B local restore · 2026-07-13
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -39,6 +39,9 @@ legacy desktop journal schema is not part of this contract.
     net realized P&L divided by full absolute entry notional, multiplied by 100.
     Both definitions, 12-digit precision, and half-away-from-zero rounding are
     persisted; missing or incompatible evidence returns an explicit null reason.
+12. Restore is payload- and runtime-specific, empty-journal-only, and
+    fail-closed. It never merges or overwrites different state; an exact
+    already-restored state is an idempotent response-loss retry.
 
 ## Import sequence
 
@@ -207,7 +210,7 @@ can prove the native lifecycle. No privacy or recovery claim may be strengthened
 until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
-## User-owned export v1
+## User-owned export and restore v1
 
 - The file envelope is app-owned `hermes-journal-export` format v1. Native
   export reads all app-owned durable tables and the current report input inside one SQLite
@@ -221,30 +224,56 @@ export-compliance answers also require a human determination.
   diagnostic; export v1 does not claim complete constraint, index, or trigger
   pinning. Migration application timestamps stay in provenance but are excluded
   from the portable user-state digest.
-- Browser preview uses a separate `browser-session-state` payload. It captures
-  the complete in-memory development store but is not native-format recovery
-  evidence and disappears when the page reloads.
+- Browser development uses a separate `browser-session-state` v1 payload. It
+  captures the complete in-memory store, can restore only into the browser
+  development runtime, disappears on reload, and is not native recovery
+  evidence.
 - `archiveSha256` detects accidental content corruption over canonical semantic
   JSON; `stateSha256` identifies durable user state and `reportSha256`
   identifies the versioned exact report input. These are unkeyed checksums, not
   signatures, authentication, or encryption. Anyone who edits a file can
   recompute them.
 - The JSON parser rejects duplicate decoded object keys, unsafe numeric values,
-  unknown envelope fields, unsupported archive-format or attachment-catalog
-  versions, nonempty attachment catalogs, oversized structures, out-of-range
-  timestamps, and checksum mismatch. Validated artifact objects are deeply
-  frozen so they cannot diverge from serialized bytes. Payload-kind/version
-  compatibility remains part of the restore gate.
-- Attachment catalog v1 is deliberately empty. The 64 MiB raw archive cap and
-  current Blob/File delivery can multiply memory use; native large-ledger and
-  low-storage behavior remain device gates.
-- The More screen prepares a snapshot first, then uses a second user action for
-  file-capable Web Share when supported or browser download so WebKit transient activation is not lost.
-  The UI states that JSON is plaintext and calls it an archive, not a backup.
-  Demo mode cannot invoke the hidden local export.
-- Restore and Delete All Data are not implemented. Before restore, Hermes must
-  dispatch by payload kind/version, verify every table/row/digest/summary claim,
-  preview the result, and commit only into an empty journal atomically.
+  unknown envelope fields, unsupported archive/attachment versions, nonempty
+  attachment catalogs, oversized structures, out-of-range timestamps, and
+  checksum mismatch. Payload-specific decoders reject unsupported payload
+  versions. The parser independently measures UTF-8 with `TextEncoder` and
+  rejects more than 67,108,864 bytes. Validated artifacts are deeply frozen.
+- Attachment catalog v1 is deliberately empty, and this app build rejects any
+  archive containing attachments. Blob/File delivery and parsing can multiply
+  the 64 MiB input in memory; native near-limit and low-storage behavior remain
+  device gates.
+- Native restore accepts only current-migration `sqlite-table-set` v1. The
+  decoder verifies the envelope checksum, all 32 tables and 257 pinned ordered
+  columns, canonical strict row order, primary-key uniqueness, nullable/type
+  rules, signed SQLite 64-bit integers, row counts, table and portable-state
+  digests, and a recomputed summary. It never executes archive SQL; live
+  `createSqlSha256` values remain diagnostic rather than compatibility input.
+- Preview runs in the real destination transaction. It verifies the migration
+  and metric-definition baseline, refuses different nonempty state, inserts
+  into an empty journal, recomputes portable table equality, report and summary
+  equality, `foreign_key_check`, and `quick_check`, then throws a typed sentinel
+  so the complete trial rolls back before a preview is returned.
+- Commit reparses the selected text, rederives and matches every prepared
+  preview claim, atomically rechecks the destination, restores and verifies
+  inside the transaction, then rereads and verifies the committed state in a
+  fresh transaction. An exact already-restored table set returns
+  `already-restored`; different nonempty state is never merged or overwritten.
+- Browser restore fully verifies a separate immutable candidate before one
+  synchronous state swap. It accepts only `browser-session-state` v1, requires
+  an empty session unless the exact state is already present, and cannot be
+  cited as native restore evidence.
+- More exposes restore below the export card only for the local empty journal.
+  The UI rejects `File.size` above 64 MiB before `File.text()`, invalidates stale
+  previews on file change/cancel, displays adapter-recomputed summary and
+  state/report evidence plus checksum-verified export time and validated
+  payload metadata, requires explicit confirmation, and distinguishes committed,
+  already-restored, uncertain, and failed outcomes. Demo has no restore control;
+  nonempty journals have no chooser or enabled restore action.
+- A current-schema archive is now restorable on its matching runtime, but it is
+  not a complete native backup until attachment round-trip and native
+  Files/lifecycle/interruption/low-storage/near-limit-memory gates pass. Delete
+  All Data remains unavailable.
 
 ## Verification evidence
 
@@ -279,6 +308,16 @@ control. The 2026-07-13 Slice C-A Linux gate passed 271 Vitest tests across 26
 files and 21 Playwright journeys plus the locked install, build, sync, audit,
 native/lock drift, and whitespace gates. Native share-sheet/Files cancellation,
 save, reopen, memory, and VoiceOver behavior remain unverified.
+Slice C-B coverage adds runtime dispatch, strict native table/column/row and
+signed-integer validation, digest/summary tampering, transactional preview
+rollback, stale-preview rejection, exact already-restored retry, different
+nonempty-state refusal, restore failure atomicity, post-commit reconciliation,
+response-loss recovery, browser candidate validation, 64 MiB pre-read UI
+rejection, and demo/nonempty restore isolation. Exact final integration counts
+and publication evidence remain in the active handoff rather than this
+contract. Native Files selection, lifecycle/interruption, low-storage,
+near-limit memory, VoiceOver, and physical-device SQLCipher behavior remain
+unverified.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

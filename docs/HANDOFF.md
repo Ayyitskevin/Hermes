@@ -1,10 +1,10 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice C-A export-only Linux milestone · updated 2026-07-13
+Status: verified Slice C-B restore Linux milestone · updated 2026-07-13
 
-task: Deliver a user-owned, deterministic journal export before restore or
-Delete All Data, without adding trade execution, hosted sync, broker access, or
-a required server.
+task: Deliver local-only previewed restore for current `hermes-journal-export`
+v1 files without merging data or adding Delete All Data, trade execution,
+hosted sync, broker access, or a required server.
 
 stage: codex
 
@@ -36,31 +36,57 @@ produced:
   than saved.
 - Export is absent over the fictional demo and the application boundary refuses
   to export hidden local data while demo mode is visible.
+- `mobile/src/application/journal-restore.ts` binds exact selected text to a
+  recomputed preview revision. Application guards keep preview/commit out of
+  demo mode and retry one uncertain commit before reporting unknown status.
+- `mobile/src/adapters/sqlite/journal-restore.ts` accepts only
+  `sqlite-table-set` v1 from the current migration set. It verifies the outer
+  checksum, all 32 tables and 257 pinned ordered columns, canonical rows and
+  signed 64-bit integers, table/state digests, and a recomputed summary.
+  Archive SQL is never executed; live table-SQL hashes remain diagnostic.
+- Native preview trial-restores into the real destination transaction, checks
+  portable table equality, report and summary equality, foreign keys, and
+  `quick_check`, then deliberately rolls back. Commit reparses and rederives
+  the archive, atomically rechecks that the journal is empty, restores and
+  verifies inside the transaction, then verifies the committed state again.
+  An exact already-restored table set returns an idempotent retry result;
+  different nonempty state is never merged or overwritten.
+- The browser development store accepts only `browser-session-state` v1, builds
+  a separately verified candidate, swaps it atomically only into an empty
+  session, and reconciles an exact already-restored retry. Browser evidence is
+  not native recovery evidence.
+- `mobile/src/ui/user-data-restore.ts` adds a local-only empty-journal preview →
+  confirmation → restore flow. Demo exposes no control; nonempty journals show
+  no chooser/action. The UI rejects `File.size` above 64 MiB before `text()`;
+  the parser independently enforces 67,108,864 UTF-8 bytes.
 - README and mobile product, roadmap, ledger, and Mac handoff documents now
-  distinguish plaintext integrity from authentication/encryption, archive from
-  recoverable backup, browser evidence from native evidence, and Slice C-A from
-  unfinished restore/delete work.
+  describe Slice C-B current-schema restore, matching-runtime compatibility,
+  idempotent exact retry, and the remaining native/attachment/delete holds
+  without calling the current archive a complete native backup.
 
 verified:
 
-- `cd mobile && npm ci` — exit 0; 164 packages installed; 0 vulnerabilities.
+- `cd mobile && npm ci` — exit 0; 164 packages installed; 165 packages
+  audited; 0 vulnerabilities.
 - `cd mobile && npm run typecheck` — exit 0.
-- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
-- `cd mobile && npm test` — exit 0; 26 files, 271 tests passed.
-- `cd mobile && npm run test:e2e` — exit 0; 21 Playwright journeys passed,
-  including offline download/parse/demo isolation and share cancellation with
-  no fallback download.
-- `cd mobile && npm run ios:sync` — exit 0; nested production build transformed
-  46 modules and copied the bundle; Capacitor found only
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests
+  passed.
+- `cd mobile && npm test` — exit 0; 30 files, 320 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; 24 Playwright journeys
+  passed, including offline export → fresh-session restore → digest-equivalent
+  re-export, demo isolation, and 320px/200% text coverage.
+- `cd mobile && npm run ios:sync` — exit 0; production build transformed
+  52 modules and copied the bundle; Capacitor found only
   `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were
   unavailable and explicitly skipped.
 - `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
-- `git diff --exit-code -- mobile/ios mobile/package-lock.json` — exit 0 after
-  sync; no tracked native or lock drift.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` — exit
+  0 after sync; no tracked native or lock drift.
 - `git diff --check` — exit 0.
-- Independent read-only final rereview returned clear after synchronous
-  browser-snapshot, total instrument-ordering, negative-zero integrity, and
-  schema-claim findings were fixed and spot-checked.
+- Independent read-only code audit found one incomplete browser receipt-replay
+  index invariant; the fix now rejects self-consistent tampering and its
+  focused test passed 6/6. The final spot-check cleared that finding.
+  Documentation audit findings were reconciled; no other blocking findings.
 
 assumptions:
 
@@ -75,22 +101,27 @@ assumptions:
 - Linux SQL.js and Chromium evidence do not prove SQLCipher, Keychain,
   CocoaPods, Xcode, physical-device lifecycle, Files/share-sheet behavior,
   backup, signing, TestFlight, or App Store behavior.
+- Restore compatibility is deliberately current-schema and runtime-specific:
+  native accepts only `sqlite-table-set` v1; browser development accepts only
+  `browser-session-state` v1.
+- Attachment catalog v1 is empty. Archives containing attachments are rejected.
 
 open:
 
-- HOLD restore. First add payload-kind/version dispatch, full table/row/summary
-  verification, a user preview, interruption/retry evidence, and an
-  empty-journal-only atomic commit. The current parser deliberately does not
-  treat an archive as restorable.
-- HOLD Delete All Data until restore is proven, then define database, Keychain,
-  attachment, interruption, response-loss, and verification-receipt behavior.
-- Attachment catalog v1 is deliberately empty. Attachment round-trip, native
-  near-64-MiB memory behavior, low-storage behavior, and streaming/temp-file
-  design remain open.
-- Run every native gate in `docs/mobile/MAC_HANDOFF.md`, including
-  share/cancel/save/reopen/custom-MIME behavior, VoiceOver/Dynamic Type,
-  SQLCipher/Keychain, backup/reinstall, migration interruption, force quit, and
-  physical-device lifecycle.
+- HOLD native restore acceptance. Prove Files selection/reopen, airplane-mode
+  preview and commit, interruption/response-loss retry, force quit/relaunch,
+  low storage, near-limit memory, custom MIME behavior, VoiceOver/Dynamic Type,
+  SQLCipher/Keychain, backup/reinstall, and physical-device lifecycle.
+- HOLD Delete All Data until native restore acceptance is positive; then define
+  database, Keychain, attachment, interruption, response-loss, and a
+  verification-receipt contract.
+- Attachment round-trip, native handling of archives near 64 MiB, and any
+  streaming/temp-file design remain open. Current archives with attachments
+  fail closed.
+- Add DOM-level interaction coverage for file change/cancel during a pending
+  preview and uncertain-commit same-command retry. Store/application behavior
+  is covered and the implementation audit found no defect; this remains UI
+  evidence debt.
 - Do not start broker sync, hosted Connect, Android, recurring AI, or App Store
   submission in the next slice.
 

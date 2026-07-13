@@ -15,6 +15,7 @@ import {
   reviewTradeAction,
 } from "./trade-review-sheet";
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
+import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -401,6 +402,7 @@ function moreView(snapshot: JournalWorkspaceSnapshot, persistence: JournalApplic
       </article>`).join("")}</div>
     </section>`}
     ${snapshot.provenance === "demo" ? "" : userDataExportCard(persistence)}
+    ${snapshot.provenance === "demo" ? "" : userDataRestoreCard(snapshot.provenance === "empty", persistence)}
     ${sizingTool()}
     <article class="card privacy-card"><p class="card-label">PRODUCT BOUNDARY</p><h2>Review, never trade</h2><p>Hermes stores execution facts locally, derives trades deterministically, and never places or modifies a brokerage order.${snapshot.importHistory.length === 0 ? " Manual fills remain independent facts; CSV imports also create reversible receipts." : activeHistory.length === 0 ? " Every recorded import is rolled back; manual facts remain independent." : " Every active import can be rolled back from its receipt."}</p></article>
   </section>`;
@@ -430,7 +432,7 @@ function onboardingTemplate(): string {
       </section>
       <section class="onboarding-page" data-page="2" hidden>
         <p class="eyebrow">03 · OWN YOUR DATA</p><h1 tabindex="-1">Private by default.</h1>
-        <p>Your journal is designed to stay on this device. Export is available now; restore and verified deletion remain under atomic recovery work.</p>
+        <p>Your journal is designed to stay on this device. Export and verified empty-journal restore are available; Delete All Data remains under recovery work.</p>
       </section>
     </div>
     <div class="onboarding-footer">
@@ -726,6 +728,11 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     if (tab === "more") {
       bindSizingForm(root);
       bindUserDataExport(root, application);
+      bindUserDataRestore(root, application, async (announcement) => {
+        snapshot = await application.loadWorkspace();
+        render(currentTab, false);
+        if (announcer) announcer.textContent = announcement;
+      });
     }
     if (tab === "trades") bindTradeSearch(root, snapshot.trades.length);
     bindImportForm(root, application, async (announcement) => {

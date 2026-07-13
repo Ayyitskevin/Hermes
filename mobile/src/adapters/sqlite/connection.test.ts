@@ -8,13 +8,22 @@ import {
   type NativeJournalDatabaseOptions,
 } from "./connection";
 
-function fakeConnection() {
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
+function fakeConnection(options: { readonly beforeBegin?: () => Promise<void> } = {}) {
   let active = false;
   const fake = {
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
     run: vi.fn(async () => ({ changes: { changes: 1, lastId: 4 } })),
     query: vi.fn(async () => ({ values: [{ value: "ok" }] })),
     beginTransaction: vi.fn(async () => {
+      await options.beforeBegin?.();
       active = true;
       return { changes: { changes: 0 } };
     }),
@@ -29,7 +38,13 @@ function fakeConnection() {
     isTransactionActive: vi.fn(async () => ({ result: active })),
     close: vi.fn(async () => undefined),
   };
-  return { fake, database: fake as unknown as SQLiteDBConnection };
+  return {
+    fake,
+    database: fake as unknown as SQLiteDBConnection,
+    setActive(value: boolean) {
+      active = value;
+    },
+  };
 }
 
 describe("Capacitor SQLite connection adapter", () => {
@@ -64,6 +79,68 @@ describe("Capacitor SQLite connection adapter", () => {
     expect(fake.rollbackTransaction).not.toHaveBeenCalled();
   });
 
+  it("reserves the transaction synchronously while native begin is pending", async () => {
+    const begin = deferred();
+    const { fake, database } = fakeConnection({ beforeBegin: () => begin.promise });
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+
+    const first = adapter.transaction(async () => "first");
+    expect(fake.beginTransaction).toHaveBeenCalledOnce();
+
+    await expect(adapter.transaction(async () => "second"))
+      .rejects.toThrow("Nested journal transactions are not supported.");
+    expect(fake.beginTransaction).toHaveBeenCalledOnce();
+    await expect(adapter.close())
+      .rejects.toThrow("Cannot close the journal database during a transaction.");
+    expect(fake.close).not.toHaveBeenCalled();
+
+    begin.resolve();
+    await expect(first).resolves.toBe("first");
+    await expect(adapter.transaction(async () => "later")).resolves.toBe("later");
+    expect(fake.beginTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps rejecting reentrant transactions after native begin completes", async () => {
+    const { fake, database } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+
+    await expect(adapter.transaction(async () => {
+      await expect(adapter.transaction(async () => "nested"))
+        .rejects.toThrow("Nested journal transactions are not supported.");
+      return "outer";
+    })).resolves.toBe("outer");
+
+    expect(fake.beginTransaction).toHaveBeenCalledOnce();
+    expect(fake.commitTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("releases the reservation when native begin fails", async () => {
+    const { fake, database } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+    const failure = new Error("injected begin failure");
+    fake.beginTransaction.mockRejectedValueOnce(failure);
+
+    await expect(adapter.transaction(async () => "unreachable")).rejects.toBe(failure);
+    expect(fake.rollbackTransaction).not.toHaveBeenCalled();
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+    expect(fake.beginTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("rolls back when native begin succeeds but its response is lost", async () => {
+    const { fake, database, setActive } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+    const failure = new Error("injected lost begin response");
+    fake.beginTransaction.mockImplementationOnce(async () => {
+      setActive(true);
+      throw failure;
+    });
+
+    await expect(adapter.transaction(async () => "unreachable")).rejects.toBe(failure);
+    expect(fake.rollbackTransaction).toHaveBeenCalledOnce();
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+    expect(fake.beginTransaction).toHaveBeenCalledTimes(2);
+  });
+
   it("rolls back and preserves the original failure", async () => {
     const { fake, database } = fakeConnection();
     const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
@@ -75,6 +152,86 @@ describe("Capacitor SQLite connection adapter", () => {
 
     expect(fake.rollbackTransaction).toHaveBeenCalledOnce();
     expect(fake.commitTransaction).not.toHaveBeenCalled();
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+  });
+
+  it("rolls back a failed commit and releases the reservation", async () => {
+    const { fake, database } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+    const failure = new Error("injected commit failure");
+    fake.commitTransaction.mockRejectedValueOnce(failure);
+
+    await expect(adapter.transaction(async () => "uncertain")).rejects.toBe(failure);
+    expect(fake.rollbackTransaction).toHaveBeenCalledOnce();
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+  });
+
+  it("preserves a lost commit response while remaining usable when commit completed", async () => {
+    const { fake, database, setActive } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+    const failure = new Error("injected lost commit response");
+    fake.commitTransaction.mockImplementationOnce(async () => {
+      setActive(false);
+      throw failure;
+    });
+
+    await expect(adapter.transaction(async () => "unknown")).rejects.toBe(failure);
+    expect(fake.rollbackTransaction).not.toHaveBeenCalled();
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+    expect(fake.commitTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the adapter usable when a lost rollback response still leaves it inactive", async () => {
+    const { fake, database, setActive } = fakeConnection();
+    const adapter = new CapacitorSqlDatabase(database, vi.fn(async () => undefined));
+    const operationFailure = new Error("injected operation failure");
+    const rollbackFailure = new Error("injected lost rollback response");
+    fake.rollbackTransaction.mockImplementationOnce(async () => {
+      setActive(false);
+      throw rollbackFailure;
+    });
+
+    const failure = await adapter.transaction(async () => {
+      throw operationFailure;
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).errors).toEqual([operationFailure, rollbackFailure]);
+    await expect(adapter.transaction(async () => "retry")).resolves.toBe("retry");
+    expect(fake.beginTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("poisons every data operation when the rollback response is lost and SQLite remains active", async () => {
+    const { fake, database } = fakeConnection();
+    const onClose = vi.fn(async () => undefined);
+    const adapter = new CapacitorSqlDatabase(database, onClose);
+    const operationFailure = new Error("injected operation failure");
+    const rollbackFailure = new Error("injected lost rollback response");
+    fake.rollbackTransaction.mockRejectedValueOnce(rollbackFailure);
+
+    const failure = await adapter.transaction(async () => {
+      throw operationFailure;
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).message).toMatch(/uncertain after operation/);
+    expect((failure as AggregateError).errors).toEqual([
+      operationFailure,
+      rollbackFailure,
+      expect.any(Error),
+    ]);
+    await expect(adapter.execute("DELETE FROM ledger")).rejects.toBe(failure);
+    await expect(adapter.run("INSERT INTO ledger DEFAULT VALUES")).rejects.toBe(failure);
+    await expect(adapter.query("SELECT 1")).rejects.toBe(failure);
+    await expect(adapter.transaction(async () => "blocked")).rejects.toBe(failure);
+    expect(fake.execute).not.toHaveBeenCalled();
+    expect(fake.run).not.toHaveBeenCalled();
+    expect(fake.query).not.toHaveBeenCalled();
+    expect(fake.beginTransaction).toHaveBeenCalledOnce();
+
+    await expect(adapter.close()).resolves.toBeUndefined();
+    expect(fake.close).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("does not generate a replacement secret over an existing encrypted journal", async () => {

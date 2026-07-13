@@ -7,7 +7,11 @@ import type {
   SqlRow,
   SqlRunResult,
 } from "../../application/sql-database";
-import { parseJournalArchive } from "../../application/journal-archive";
+import type { JournalLedgerSnapshot } from "../../application/journal-store";
+import {
+  createJournalExportArtifact,
+  parseJournalArchive,
+} from "../../application/journal-archive";
 import { prepareCsvImport } from "../../application/prepare-csv-import";
 import {
   prepareManualExecution,
@@ -97,6 +101,185 @@ class SqlJsDatabase implements SqlDatabase {
 
   private assertOpen(): void {
     if (this.closed) throw new Error("The SQL.js test database is closed.");
+  }
+}
+
+class RestoreFaultDatabase implements SqlDatabase {
+  private failExecutionInsertAt: number | null = null;
+  private executionInsertCount = 0;
+  private failNextQuery = false;
+  private armPostCommitVerificationFailure = false;
+  private loseNextTransactionResponse = false;
+
+  constructor(private readonly delegate: SqlDatabase) {}
+
+  failOnExecutionInsert(number: number): void {
+    this.failExecutionInsertAt = number;
+    this.executionInsertCount = 0;
+  }
+
+  loseNextCommittedResponse(): void {
+    this.loseNextTransactionResponse = true;
+  }
+
+  failNextPostCommitVerification(): void {
+    this.armPostCommitVerificationFailure = true;
+  }
+
+  async execute(statement: string): Promise<SqlRunResult> {
+    return this.delegate.execute(statement);
+  }
+
+  async run(statement: string, values: SqlParameters = []): Promise<SqlRunResult> {
+    if (
+      this.failExecutionInsertAt !== null
+      && statement.startsWith('INSERT INTO "executions"')
+    ) {
+      this.executionInsertCount += 1;
+      if (this.executionInsertCount === this.failExecutionInsertAt) {
+        this.failExecutionInsertAt = null;
+        throw new Error("Injected restore insert failure.");
+      }
+    }
+    return this.delegate.run(statement, values);
+  }
+
+  async query<Row extends SqlRow>(
+    statement: string,
+    values: SqlParameters = [],
+  ): Promise<readonly Row[]> {
+    if (this.failNextQuery) {
+      this.failNextQuery = false;
+      throw new Error("Injected deterministic post-commit verification failure.");
+    }
+    return this.delegate.query<Row>(statement, values);
+  }
+
+  async transaction<Result>(operation: () => Promise<Result>): Promise<Result> {
+    const result = await this.delegate.transaction(operation);
+    if (this.armPostCommitVerificationFailure) {
+      this.armPostCommitVerificationFailure = false;
+      this.failNextQuery = true;
+    }
+    if (this.loseNextTransactionResponse) {
+      this.loseNextTransactionResponse = false;
+      throw new Error("Injected committed response loss.");
+    }
+    return result;
+  }
+
+  async close(): Promise<void> {
+    await this.delegate.close();
+  }
+}
+
+interface StoreOperationGate {
+  readonly started: Promise<void>;
+  readonly released: Promise<void>;
+  isStarted(): boolean;
+  signalStarted(): void;
+  release(): void;
+}
+
+function createStoreOperationGate(): StoreOperationGate {
+  let startedSignaled = false;
+  let resolveStarted = (): void => undefined;
+  let release = (): void => undefined;
+  const started = new Promise<void>((resolve) => {
+    resolveStarted = resolve;
+  });
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    started,
+    released,
+    isStarted: () => startedSignaled,
+    signalStarted() {
+      startedSignaled = true;
+      resolveStarted();
+    },
+    release,
+  };
+}
+
+class BlockingStoreOperationDatabase implements SqlDatabase {
+  private acknowledgementGate: StoreOperationGate | null = null;
+  private closeGate: StoreOperationGate | null = null;
+  private transactionGate: StoreOperationGate | null = null;
+
+  constructor(private readonly delegate: SqlDatabase) {}
+
+  blockNextAcknowledgement(): StoreOperationGate {
+    if (this.acknowledgementGate !== null) {
+      throw new Error("An acknowledgement gate is already active.");
+    }
+    const gate = createStoreOperationGate();
+    this.acknowledgementGate = gate;
+    return gate;
+  }
+
+  blockNextTransaction(): StoreOperationGate {
+    if (this.transactionGate !== null) {
+      throw new Error("A transaction gate is already active.");
+    }
+    const gate = createStoreOperationGate();
+    this.transactionGate = gate;
+    return gate;
+  }
+
+  blockNextClose(): StoreOperationGate {
+    if (this.closeGate !== null) {
+      throw new Error("A close gate is already active.");
+    }
+    const gate = createStoreOperationGate();
+    this.closeGate = gate;
+    return gate;
+  }
+
+  async execute(statement: string): Promise<SqlRunResult> {
+    return this.delegate.execute(statement);
+  }
+
+  async run(statement: string, values: SqlParameters = []): Promise<SqlRunResult> {
+    const gate = this.acknowledgementGate;
+    if (
+      gate !== null
+      && statement.startsWith("UPDATE manual_execution_submissions")
+      && statement.includes("acknowledged_at_ms")
+    ) {
+      this.acknowledgementGate = null;
+      gate.signalStarted();
+      await gate.released;
+    }
+    return this.delegate.run(statement, values);
+  }
+
+  async query<Row extends SqlRow>(
+    statement: string,
+    values: SqlParameters = [],
+  ): Promise<readonly Row[]> {
+    return this.delegate.query<Row>(statement, values);
+  }
+
+  async transaction<Result>(operation: () => Promise<Result>): Promise<Result> {
+    const gate = this.transactionGate;
+    if (gate !== null) {
+      this.transactionGate = null;
+      gate.signalStarted();
+      await gate.released;
+    }
+    return this.delegate.transaction(operation);
+  }
+
+  async close(): Promise<void> {
+    const gate = this.closeGate;
+    if (gate !== null) {
+      this.closeGate = null;
+      gate.signalStarted();
+      await gate.released;
+    }
+    await this.delegate.close();
   }
 }
 
@@ -554,6 +737,416 @@ describe("SqliteJournalStore", () => {
       await expectHealthyDatabase(database);
     } finally {
       await store.close();
+    }
+  });
+
+
+  it("previews by rollback, atomically restores review history, and reconciles retry", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    const staleDestination = await createHarness();
+    const otherSource = await createHarness();
+    try {
+      const imported = await source.store.commitCsvImport(preparedCsv());
+      const tradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      if (tradeSubjectId === undefined) throw new Error("Expected a restorable trade subject.");
+      await source.store.commitManualExecution(preparedManual("6", {
+        symbol: "MSFT",
+        assetClass: "stock",
+        quantity: "1",
+        price: "400",
+        fee: "0",
+        executedAt: "2026-07-02T09:30:00",
+      }));
+      const first = await source.store.commitTradeReviews(preparedReviewBatch(
+        "restore-review-one",
+        [preparedReview(tradeSubjectId, "1")],
+      ));
+      const firstReviewId = first.reviewIds[0];
+      if (firstReviewId === undefined) throw new Error("Expected restore review version one.");
+      const second = await source.store.commitTradeReviews(preparedReviewBatch(
+        "restore-review-two",
+        [preparedReview(tradeSubjectId, "2", {
+          expectedPreviousReviewId: firstReviewId,
+          note: "Second immutable restore version.",
+          tags: ["Needs work"],
+        })],
+      ));
+      const secondReviewId = second.reviewIds[0];
+      if (secondReviewId === undefined) throw new Error("Expected restore review version two.");
+      await source.store.commitTradeReviews(preparedReviewBatch(
+        "restore-review-three",
+        [preparedReview(tradeSubjectId, "3", {
+          expectedPreviousReviewId: secondReviewId,
+          note: "Third immutable restore version.",
+          tags: ["Reviewed"],
+        })],
+      ));
+      await source.database.run(
+        "UPDATE workspaces SET created_at_ms = CAST(? AS INTEGER), updated_at_ms = CAST(? AS INTEGER)",
+        ["9007199254740993", "9007199254740993"],
+      );
+      await source.database.run(
+        `INSERT INTO execution_fee_components (
+           execution_version_id, workspace_id, component_ordinal,
+           category, currency_code, cost_minor
+         )
+         SELECT id, workspace_id, 98, 'other', quote_currency_code, CAST(? AS INTEGER)
+           FROM execution_versions ORDER BY id LIMIT 1`,
+        ["-9223372036854775808"],
+      );
+      await source.database.run(
+        `INSERT INTO execution_fee_components (
+           execution_version_id, workspace_id, component_ordinal,
+           category, currency_code, cost_minor
+         )
+         SELECT id, workspace_id, 99, 'other', quote_currency_code, CAST(? AS INTEGER)
+           FROM execution_versions ORDER BY id LIMIT 1`,
+        ["9223372036854775807"],
+      );
+      const artifact = await source.store.exportUserData();
+
+      const baseline = await destination.store.exportUserData();
+      const migrationRowsBefore = await destination.database.query(
+        "SELECT version, name, checksum_sha256, applied_at_ms FROM schema_migrations ORDER BY version",
+      );
+      const prepared = await destination.store.prepareUserDataRestore(artifact.contents);
+      expect(prepared.preview).toMatchObject({
+        target: "empty",
+        payloadKind: "sqlite-table-set",
+        payloadVersion: 1,
+        stateSha256: artifact.archive.stateSha256,
+        reportSha256: artifact.archive.reportSha256,
+        summary: artifact.archive.summary,
+      });
+
+      await expect(destination.store.commitUserDataRestore({
+        ...prepared,
+        contents: "not the previewed archive",
+      })).rejects.toMatchObject({ conflict: { code: "preview_changed" } });
+
+      const afterPreview = await destination.store.exportUserData();
+      expect(afterPreview.archive.stateSha256).toBe(baseline.archive.stateSha256);
+      expect(afterPreview.archive.reportSha256).toBe(baseline.archive.reportSha256);
+      expect(await count(destination.database, "workspaces")).toBe(0);
+      expect(await count(destination.database, "trade_review_versions")).toBe(0);
+      expect(await destination.database.query(
+        "SELECT version, name, checksum_sha256, applied_at_ms FROM schema_migrations ORDER BY version",
+      )).toEqual(migrationRowsBefore);
+
+      const restored = await destination.store.commitUserDataRestore(prepared);
+      expect(restored).toMatchObject({
+        outcome: "committed",
+        stateSha256: artifact.archive.stateSha256,
+        reportSha256: artifact.archive.reportSha256,
+      });
+      expect(restored.ledger.tradeReviews).toEqual([
+        expect.objectContaining({
+          version: 3,
+          note: "Third immutable restore version.",
+          tags: ["Reviewed"],
+        }),
+      ]);
+      expect(await count(destination.database, "trade_review_versions")).toBe(3);
+      expect(await count(destination.database, "trade_review_heads")).toBe(1);
+      expect(await destination.database.query(
+        `SELECT version_number, supersedes_version_id
+           FROM trade_review_versions ORDER BY version_number`,
+      )).toEqual([
+        { version_number: 1, supersedes_version_id: null },
+        { version_number: 2, supersedes_version_id: firstReviewId },
+        { version_number: 3, supersedes_version_id: secondReviewId },
+      ]);
+      expect(await destination.database.query(
+        "SELECT version, name, checksum_sha256, applied_at_ms FROM schema_migrations ORDER BY version",
+      )).toEqual(migrationRowsBefore);
+      expect(await scalar(
+        destination.database,
+        "SELECT CAST(created_at_ms AS TEXT) FROM workspaces",
+      )).toBe("9007199254740993");
+      expect(await destination.database.query(
+        `SELECT CAST(cost_minor AS TEXT) AS cost_minor_text
+           FROM execution_fee_components
+          WHERE cost_minor IN (CAST(? AS INTEGER), CAST(? AS INTEGER))
+          ORDER BY cost_minor`,
+        ["-9223372036854775808", "9223372036854775807"],
+      )).toEqual([
+        { cost_minor_text: "-9223372036854775808" },
+        { cost_minor_text: "9223372036854775807" },
+      ]);
+
+      const destinationArtifact = await destination.store.exportUserData();
+      expect(destinationArtifact.archive.stateSha256).toBe(artifact.archive.stateSha256);
+      expect(destinationArtifact.archive.reportSha256).toBe(artifact.archive.reportSha256);
+      expect(destinationArtifact.archive.summary).toEqual(artifact.archive.summary);
+      const retry = await destination.store.commitUserDataRestore(prepared);
+      expect(retry.outcome).toBe("already-restored");
+      expect(await count(destination.database, "trade_review_versions")).toBe(3);
+
+      await otherSource.store.commitManualExecution(preparedManual("7", {
+        symbol: "NVDA",
+      }));
+      const differentArtifact = await otherSource.store.exportUserData();
+      await expect(destination.store.prepareUserDataRestore(differentArtifact.contents))
+        .rejects.toMatchObject({ conflict: { code: "journal_not_empty" } });
+
+      const stalePrepared = await staleDestination.store.prepareUserDataRestore(artifact.contents);
+      await staleDestination.store.commitManualExecution(preparedManual("8", {
+        symbol: "META",
+      }));
+      await expect(staleDestination.store.commitUserDataRestore(stalePrepared))
+        .rejects.toMatchObject({ conflict: { code: "journal_not_empty" } });
+      expect((await staleDestination.store.load()).instruments.map((item) => item.symbol))
+        .toEqual(["META"]);
+      await expectHealthyDatabase(destination.database);
+      await expectHealthyDatabase(staleDestination.database);
+    } finally {
+      await source.store.close();
+      await destination.store.close();
+      await staleDestination.store.close();
+      await otherSource.store.close();
+    }
+  });
+  it("rolls back an injected partial replay and reconciles a lost commit response", async () => {
+    const source = await createHarness();
+    const failedHarness = await createHarness();
+    const lostHarness = await createHarness();
+    const failedDatabase = new RestoreFaultDatabase(failedHarness.database);
+    const lostDatabase = new RestoreFaultDatabase(lostHarness.database);
+    const failedStore = new SqliteJournalStore(failedDatabase, deterministicRuntime());
+    const lostStore = new SqliteJournalStore(lostDatabase, deterministicRuntime());
+    try {
+      await source.store.commitCsvImport(preparedCsv());
+      const artifact = await source.store.exportUserData();
+
+      const failedPrepared = await failedStore.prepareUserDataRestore(artifact.contents);
+      failedDatabase.failOnExecutionInsert(2);
+      await expect(failedStore.commitUserDataRestore(failedPrepared))
+        .rejects.toMatchObject({ conflict: { code: "verification_failed" } });
+      expect(await count(failedHarness.database, "workspaces")).toBe(0);
+      expect(await count(failedHarness.database, "executions")).toBe(0);
+      expect(await count(failedHarness.database, "execution_versions")).toBe(0);
+      expect((await failedStore.commitUserDataRestore(failedPrepared)).outcome)
+        .toBe("committed");
+      expect(await count(failedHarness.database, "executions")).toBe(2);
+
+      const lostPrepared = await lostStore.prepareUserDataRestore(artifact.contents);
+      lostDatabase.loseNextCommittedResponse();
+      await expect(lostStore.commitUserDataRestore(lostPrepared))
+        .rejects.toThrow(/committed response loss/i);
+      expect(await count(lostHarness.database, "executions")).toBe(2);
+      const reconciled = await lostStore.commitUserDataRestore(lostPrepared);
+      expect(reconciled.outcome).toBe("already-restored");
+      expect(reconciled.stateSha256).toBe(artifact.archive.stateSha256);
+      expect(reconciled.reportSha256).toBe(artifact.archive.reportSha256);
+      await expectHealthyDatabase(failedHarness.database);
+      await expectHealthyDatabase(lostHarness.database);
+    } finally {
+      await source.store.close();
+      await failedStore.close();
+      await lostStore.close();
+    }
+  });
+
+  it("leaves fresh post-commit failures raw for reconciliation retry", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    const faultDatabase = new RestoreFaultDatabase(destination.database);
+    const store = new SqliteJournalStore(faultDatabase, deterministicRuntime());
+    try {
+      await source.store.commitCsvImport(preparedCsv());
+      const artifact = await source.store.exportUserData();
+      const prepared = await store.prepareUserDataRestore(artifact.contents);
+
+      faultDatabase.failNextPostCommitVerification();
+      await expect(store.commitUserDataRestore(prepared)).rejects.toMatchObject({
+        name: "Error",
+        message: expect.stringMatching(/post-commit verification failure/i),
+      });
+      expect(await count(destination.database, "executions")).toBe(2);
+      expect((await store.commitUserDataRestore(prepared)).outcome).toBe("already-restored");
+      await expectHealthyDatabase(destination.database);
+    } finally {
+      await source.store.close();
+      await store.close();
+    }
+  });
+
+  it("keeps an earlier acknowledgement outside restore preview rollback", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    const database = new BlockingStoreOperationDatabase(destination.database);
+    const store = new SqliteJournalStore(database, deterministicRuntime());
+    let acknowledgementGate: StoreOperationGate | null = null;
+    let restoreGate: StoreOperationGate | null = null;
+    let acknowledgement: Promise<void> | null = null;
+    let preview: Promise<unknown> | null = null;
+    try {
+      await source.store.commitCsvImport(preparedCsv());
+      const artifact = await source.store.exportUserData();
+      const command = preparedManual("8", { symbol: "META" });
+      await store.commitManualExecution(command);
+
+      acknowledgementGate = database.blockNextAcknowledgement();
+      restoreGate = database.blockNextTransaction();
+      acknowledgement = store.acknowledgeManualExecution(command.submissionId);
+      await acknowledgementGate.started;
+      preview = store.prepareUserDataRestore(artifact.contents);
+      await Promise.resolve();
+      expect(restoreGate.isStarted()).toBe(false);
+
+      acknowledgementGate.release();
+      await acknowledgement;
+      acknowledgement = null;
+      await restoreGate.started;
+      restoreGate.release();
+      await expect(preview).rejects.toMatchObject({
+        conflict: { code: "journal_not_empty" },
+      });
+      preview = null;
+      expect(await store.loadUnacknowledgedManualExecutions()).toEqual([]);
+      expect(await scalar(
+        destination.database,
+        "SELECT COUNT(*) FROM manual_execution_submissions WHERE acknowledged_at_ms IS NOT NULL",
+      )).toBe(1);
+    } finally {
+      acknowledgementGate?.release();
+      restoreGate?.release();
+      if (acknowledgement !== null) await acknowledgement.catch(() => undefined);
+      if (preview !== null) await preview.catch(() => undefined);
+      await source.store.close();
+      await store.close();
+    }
+  });
+
+  it("queues regular work behind a restore that reserved the store", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    const database = new BlockingStoreOperationDatabase(destination.database);
+    const store = new SqliteJournalStore(database, deterministicRuntime());
+    await source.store.commitCsvImport(preparedCsv());
+    const artifact = await source.store.exportUserData();
+    const gate = database.blockNextTransaction();
+    const preview = store.prepareUserDataRestore(artifact.contents);
+    let loadSettled = false;
+    let load: Promise<JournalLedgerSnapshot> | null = null;
+    try {
+      await gate.started;
+      load = store.load().finally(() => {
+        loadSettled = true;
+      });
+      await Promise.resolve();
+      expect(loadSettled).toBe(false);
+
+      gate.release();
+      expect((await preview).preview.target).toBe("empty");
+      expect((await load).workspace).toBeNull();
+      load = null;
+    } finally {
+      gate.release();
+      await preview.catch(() => undefined);
+      if (load !== null) await load.catch(() => undefined);
+      await source.store.close();
+      await store.close();
+    }
+  });
+
+  it("queues close behind earlier work and rejects work requested after close", async () => {
+    const destination = await createHarness();
+    const database = new BlockingStoreOperationDatabase(destination.database);
+    const store = new SqliteJournalStore(database, deterministicRuntime());
+    const command = preparedManual("9", { symbol: "MSFT" });
+    await store.commitManualExecution(command);
+    const acknowledgementGate = database.blockNextAcknowledgement();
+    const closeGate = database.blockNextClose();
+    const acknowledgement = store.acknowledgeManualExecution(command.submissionId);
+    await acknowledgementGate.started;
+    const closing = store.close();
+    try {
+      await Promise.resolve();
+      expect(closeGate.isStarted()).toBe(false);
+      await expect(store.load()).rejects.toThrow(/store is closing/i);
+      await expect(store.prepareUserDataRestore("not parsed while closing")).rejects.toMatchObject({
+        name: "Error",
+        message: expect.stringMatching(/store is closing/i),
+      });
+
+      acknowledgementGate.release();
+      await acknowledgement;
+      await closeGate.started;
+      expect(await scalar(
+        destination.database,
+        "SELECT COUNT(*) FROM manual_execution_submissions WHERE acknowledged_at_ms IS NOT NULL",
+      )).toBe(1);
+      closeGate.release();
+      await closing;
+    } finally {
+      acknowledgementGate.release();
+      closeGate.release();
+      await Promise.allSettled([acknowledgement, closing]);
+      await store.close().catch(() => undefined);
+    }
+  });
+
+  it("rolls back source state that the current mobile workspace cannot render", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    try {
+      await source.store.commitManualExecution(preparedManual("4"));
+      await source.database.run(
+        "UPDATE workspaces SET time_zone_id = ?",
+        ["Mars/Olympus"],
+      );
+      const artifact = await source.store.exportUserData();
+
+      await expect(destination.store.prepareUserDataRestore(artifact.contents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "verification_failed",
+            message: expect.stringMatching(/unsupported time zone/i),
+          },
+        });
+      expect(await count(destination.database, "workspaces")).toBe(0);
+      expect(await count(destination.database, "executions")).toBe(0);
+      await expectHealthyDatabase(destination.database);
+    } finally {
+      await source.store.close();
+      await destination.store.close();
+    }
+  });
+
+  it("rejects a self-consistent false report claim and rolls the preview back", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    try {
+      await source.store.commitManualExecution(preparedManual("5"));
+      const artifact = await source.store.exportUserData();
+      const archive = artifact.archive;
+      const falseReport = createJournalExportArtifact({
+        kind: archive.kind,
+        formatVersion: archive.formatVersion,
+        exportedAtUs: archive.exportedAtUs,
+        source: archive.source,
+        payload: archive.payload,
+        attachments: archive.attachments,
+        summary: archive.summary,
+        stateSha256: archive.stateSha256,
+        reportSha256: "f".repeat(64),
+      });
+
+      await expect(destination.store.prepareUserDataRestore(falseReport.contents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "verification_failed",
+            message: expect.stringMatching(/report digest/i),
+          },
+        });
+      expect(await count(destination.database, "workspaces")).toBe(0);
+      expect(await count(destination.database, "executions")).toBe(0);
+      await expectHealthyDatabase(destination.database);
+    } finally {
+      await source.store.close();
+      await destination.store.close();
     }
   });
 

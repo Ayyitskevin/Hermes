@@ -3,6 +3,7 @@ import type { JournalWorkspaceSnapshot } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import type {
   CsvImportCommitResult,
+  JournalRestoreCommitResult,
   JournalStore,
   JournalTradeReviewRecord,
   ManualExecutionCommitResult,
@@ -11,8 +12,9 @@ import type {
   TradeReviewCommitResult,
   UnacknowledgedManualExecution,
 } from "./journal-store";
-import { JournalTradeReviewError } from "./journal-store";
+import { JournalRestoreError, JournalTradeReviewError } from "./journal-store";
 import type { JournalExportArtifact } from "./journal-archive";
+import type { PreparedJournalRestore } from "./journal-restore";
 import {
   createManualExecutionSubmissionId,
   prepareManualExecution,
@@ -64,6 +66,16 @@ export class TradeReviewCommitStatusUncertainError extends Error {
   }
 }
 
+export class JournalRestoreCommitStatusUncertainError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Hermes could not confirm whether the journal restore committed. Keep the selected file and try the same restore again; do not add new journal data.",
+      { cause },
+    );
+    this.name = "JournalRestoreCommitStatusUncertainError";
+  }
+}
+
 export class JournalApplication {
   private viewMode: "local" | "demo" = "local";
 
@@ -82,6 +94,39 @@ export class JournalApplication {
       throw new Error("Return to your local journal before exporting private data.");
     }
     return this.store.exportUserData();
+  }
+
+  async prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore> {
+    if (this.viewMode !== "local") {
+      throw new Error("Return to your local journal before previewing a private restore.");
+    }
+    return this.store.prepareUserDataRestore(contents);
+  }
+
+  async commitUserDataRestore(
+    prepared: PreparedJournalRestore,
+  ): Promise<JournalRestoreCommitResult> {
+    if (this.viewMode !== "local") {
+      throw new Error("Return to your local journal before restoring private data.");
+    }
+    const result = await this.store.commitUserDataRestore(prepared);
+    this.viewMode = "local";
+    return result;
+  }
+
+  async commitUserDataRestoreSafely(
+    prepared: PreparedJournalRestore,
+  ): Promise<JournalRestoreCommitResult> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.commitUserDataRestore(prepared);
+      } catch (error) {
+        if (error instanceof JournalRestoreError) throw error;
+        lastError = error;
+      }
+    }
+    throw new JournalRestoreCommitStatusUncertainError(lastError);
   }
 
   async startJournal(): Promise<JournalWorkspaceSnapshot> {

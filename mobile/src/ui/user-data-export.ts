@@ -90,7 +90,7 @@ export function userDataExportCard(
     <p>Create a point-in-time Hermes archive without sending it to a Hermes server.</p>
     <p class="export-warning"><strong>Unencrypted file.</strong> It can contain account names, executions, raw import provenance, notes, tags, playbooks, and immutable review history. Store and share it like sensitive financial data.</p>
     ${environment}
-    <p class="helper-text">Restore and Delete All Data are not available yet. Until restore passes native recovery testing, this export is an archive—not a recoverable backup.</p>
+    <p class="helper-text">Compatible exports can be restored below only while the local journal is empty. Restore never merges or overwrites. Delete All Data is not available yet, and native recovery testing remains open.</p>
     <button class="secondary-button" id="user-data-export" type="button">Prepare export</button>
     <p class="export-status" id="user-data-export-status" role="status" aria-live="polite" aria-atomic="true">Nothing leaves this device until you choose a destination.</p>
     <p class="form-error" id="user-data-export-error" role="alert" tabindex="-1" hidden></p>

@@ -4,6 +4,7 @@ import type {
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
   JournalPlaybookRecord,
+  JournalRestoreCommitResult,
   JournalReviewRuleOutcome,
   JournalReviewTermCategory,
   JournalReviewTermRecord,
@@ -21,6 +22,7 @@ import type {
 import {
   JournalImportError,
   JournalManualExecutionError,
+  JournalRestoreError,
   JournalTradeReviewError,
 } from "../../application/journal-store";
 import {
@@ -31,9 +33,29 @@ import {
   type JournalExportArtifact,
 } from "../../application/journal-archive";
 import {
+  journalArchiveReportSha256,
+  journalArchiveSummary,
+} from "../../application/journal-archive-derived";
+import { workspaceSnapshotFromLedger } from "../../application/workspace-snapshot";
+import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../../application/prepare-manual-execution";
+import {
+  assertPreparedJournalRestoreRevision,
+  createPreparedJournalRestore,
+  type PreparedJournalRestore,
+} from "../../application/journal-restore";
+import {
+  assertSqliteRestoreDatabaseHealthy,
+  classifySqliteRestoreDestination,
+  restoreSqliteJournalTables,
+  sqlitePortableTablesEqual,
+} from "./journal-restore-database";
+import {
+  decodeSqliteJournalRestoreArchive,
+  type DecodedSqliteJournalRestoreArchive,
+} from "./journal-restore";
 import { verifyPreparedCsvImport } from "../../application/prepare-csv-import";
 import {
   type PreparedTradeReview,
@@ -220,9 +242,94 @@ function emptyLedger(): JournalLedgerSnapshot {
   };
 }
 
+interface VerifiedSqliteRestoreEvidence {
+  readonly ledger: JournalLedgerSnapshot;
+  readonly stateSha256: string;
+  readonly reportSha256: string;
+  readonly summary: DecodedSqliteJournalRestoreArchive["summary"];
+}
+
+class SqliteRestorePreviewRollback extends Error {
+  constructor(readonly evidence: VerifiedSqliteRestoreEvidence) {
+    super("Verified SQLite restore preview rollback.");
+    this.name = "SqliteRestorePreviewRollback";
+  }
+}
+
+function restoreErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "The restore archive could not be verified.";
+}
+
+function decodeNativeRestoreArchive(contents: string): DecodedSqliteJournalRestoreArchive {
+  try {
+    return decodeSqliteJournalRestoreArchive(contents);
+  } catch (error) {
+    if (error instanceof JournalRestoreError) throw error;
+    const message = restoreErrorMessage(error);
+    const code = /supported native SQLite journal payload/i.test(message)
+      ? "unsupported_payload"
+      : /migration|schema|table format|column manifest|pinned table/i.test(message)
+        ? "incompatible_schema"
+        : /valid JSON|not a Hermes|archive checksum|journal export/i.test(message)
+          ? "invalid_archive"
+          : "invalid_payload";
+    throw new JournalRestoreError({ code, message });
+  }
+}
+
+function restoreSummaryJson(
+  summary: DecodedSqliteJournalRestoreArchive["summary"],
+): string {
+  return canonicalJournalArchiveJson(summary as unknown as JournalArchiveJson);
+}
+
+function assertPreparedRestoreIntegrity(prepared: PreparedJournalRestore): void {
+  try {
+    assertPreparedJournalRestoreRevision(prepared);
+  } catch (error) {
+    throw new JournalRestoreError({
+      code: "preview_changed",
+      message: restoreErrorMessage(error),
+    });
+  }
+}
+
+function assertPreparedRestoreMatchesSource(
+  prepared: PreparedJournalRestore,
+  source: DecodedSqliteJournalRestoreArchive,
+): void {
+  assertPreparedRestoreIntegrity(prepared);
+  const preview = prepared.preview;
+  if (
+    preview.archiveSha256 !== source.archiveSha256
+    || preview.stateSha256 !== source.stateSha256
+    || preview.reportSha256 !== source.claimedReportSha256
+    || preview.exportedAtUs !== source.exportedAtUs
+    || preview.payloadKind !== source.payloadKind
+    || preview.payloadVersion !== source.payloadVersion
+    || restoreSummaryJson(preview.summary) !== restoreSummaryJson(source.summary)
+  ) {
+    throw new JournalRestoreError({
+      code: "preview_changed",
+      message: "The restore archive no longer matches its verified preview. Preview it again.",
+    });
+  }
+}
+
+function verificationFailure(error: unknown): JournalRestoreError {
+  if (error instanceof JournalRestoreError) return error;
+  return new JournalRestoreError({
+    code: "verification_failed",
+    message: restoreErrorMessage(error),
+  });
+}
+
 export class SqliteJournalStore implements JournalStore {
   private schemaVerified = false;
   private closed = false;
+  private closePromise: Promise<void> | null = null;
+  private closeRequested = false;
+  private operationTail: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly database: SqlDatabase,
@@ -230,20 +337,26 @@ export class SqliteJournalStore implements JournalStore {
   ) {}
 
   async load(): Promise<JournalLedgerSnapshot> {
-    this.assertOpen();
-    await this.verifySchema();
-    return this.loadWithinConnection();
+    return this.withRegularStoreOperation(async () => {
+      this.assertOpen();
+      await this.verifySchema();
+      return this.loadWithinConnection();
+    });
   }
+
   async exportUserData(): Promise<JournalExportArtifact> {
+    return this.withRegularStoreOperation(
+      () => this.exportUserDataWithinStoreOperation(),
+    );
+  }
+
+  private async exportUserDataWithinStoreOperation(): Promise<JournalExportArtifact> {
     this.assertOpen();
     await this.verifySchema();
     return this.database.transaction(async () => {
       const durable = await readSqliteJournalArchive(this.database);
       const ledger = await this.loadWithinConnection();
-      const reportSha256 = sha256Hex(canonicalJournalArchiveJson({
-        digestVersion: "hermes-report-input-v1",
-        ledger,
-      } as unknown as JournalArchiveJson));
+      const reportSha256 = journalArchiveReportSha256(ledger);
       const observedNowMs = this.runtime.nowMs();
       if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
         throw new Error("The device clock is outside the journal export range.");
@@ -255,29 +368,157 @@ export class SqliteJournalStore implements JournalStore {
         source: durable.source,
         payload: durable.payload,
         attachments: { version: 1, entries: [] },
-        summary: {
-          workspaceName: ledger.workspace?.name ?? null,
-          currency: ledger.workspace?.defaultCurrency ?? null,
-          timeZone: ledger.workspace?.timeZone ?? null,
-          accounts: String(ledger.accounts.length),
-          activeExecutions: String(ledger.executions.length),
+        summary: journalArchiveSummary(ledger, {
           executionVersions: sqliteArchiveTable(durable, "execution_versions").rowCount,
           importReceipts: sqliteArchiveTable(durable, "import_receipts").rowCount,
           rolledBackImports: sqliteArchiveTable(durable, "import_rollbacks").rowCount,
-          currentReviews: String(ledger.tradeReviews.length),
           reviewVersions: sqliteArchiveTable(durable, "trade_review_versions").rowCount,
           reviewTerms: sqliteArchiveTable(durable, "review_terms").rowCount,
           playbooks: sqliteArchiveTable(durable, "playbooks").rowCount,
-          attachments: "0",
-          attachmentBytes: "0",
-        },
+        }),
         stateSha256: durable.stateSha256,
         reportSha256,
       });
     });
   }
 
+  async prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore> {
+    return this.withExclusiveRestore(async () => {
+      await this.verifySchema();
+      const source = decodeNativeRestoreArchive(contents);
+      let target: "empty" | "already-restored";
+      let evidence: VerifiedSqliteRestoreEvidence;
+      try {
+        const verified = await this.database.transaction(async () => {
+          try {
+            const destination = await readSqliteJournalArchive(this.database);
+            const destinationState = classifySqliteRestoreDestination(
+              destination.tables,
+              source.tables,
+            );
+            if (destinationState === "nonempty") {
+              throw new JournalRestoreError({
+                code: "journal_not_empty",
+                message: "Restore is available only for an empty journal and never merges or overwrites data.",
+              });
+            }
+            if (destinationState === "already-restored") {
+              return {
+                target: "already-restored" as const,
+                evidence: await this.verifySqliteRestoreSource(source),
+              };
+            }
+            await restoreSqliteJournalTables(this.database, source);
+            throw new SqliteRestorePreviewRollback(
+              await this.verifySqliteRestoreSource(source),
+            );
+          } catch (error) {
+            if (
+              error instanceof SqliteRestorePreviewRollback
+              || error instanceof JournalRestoreError
+            ) {
+              throw error;
+            }
+            throw verificationFailure(error);
+          }
+        });
+        target = verified.target;
+        evidence = verified.evidence;
+      } catch (error) {
+        if (error instanceof SqliteRestorePreviewRollback) {
+          target = "empty";
+          evidence = error.evidence;
+        } else {
+          throw error;
+        }
+      }
+      return createPreparedJournalRestore(contents, {
+        archiveSha256: source.archiveSha256,
+        stateSha256: evidence.stateSha256,
+        reportSha256: evidence.reportSha256,
+        exportedAtUs: source.exportedAtUs,
+        payloadKind: source.payloadKind,
+        payloadVersion: source.payloadVersion,
+        summary: evidence.summary,
+        target,
+      });
+    });
+  }
+
+  async commitUserDataRestore(
+    prepared: PreparedJournalRestore,
+  ): Promise<JournalRestoreCommitResult> {
+    return this.withExclusiveRestore(async () => {
+      await this.verifySchema();
+      assertPreparedRestoreIntegrity(prepared);
+      const source = decodeNativeRestoreArchive(prepared.contents);
+      assertPreparedRestoreMatchesSource(prepared, source);
+      const committed = await this.database.transaction(async () => {
+        try {
+          const destination = await readSqliteJournalArchive(this.database);
+          const destinationState = classifySqliteRestoreDestination(
+            destination.tables,
+            source.tables,
+          );
+          if (destinationState === "nonempty") {
+            throw new JournalRestoreError({
+              code: "journal_not_empty",
+              message: "The journal changed after preview. Restore never merges or overwrites data.",
+            });
+          }
+          if (destinationState === "already-restored") {
+            return {
+              outcome: "already-restored" as const,
+              evidence: await this.verifySqliteRestoreSource(source),
+            };
+          }
+          if (prepared.preview.target !== "empty") {
+            throw new JournalRestoreError({
+              code: "preview_changed",
+              message: "The destination no longer matches the verified restore preview.",
+            });
+          }
+          await restoreSqliteJournalTables(this.database, source);
+          return {
+            outcome: "committed" as const,
+            evidence: await this.verifySqliteRestoreSource(source),
+          };
+        } catch (error) {
+          if (error instanceof JournalRestoreError) throw error;
+          throw verificationFailure(error);
+        }
+      });
+
+      const freshEvidence = await this.database.transaction(async () => {
+        const destination = await readSqliteJournalArchive(this.database);
+        if (
+          classifySqliteRestoreDestination(destination.tables, source.tables)
+          !== "already-restored"
+        ) {
+          throw new Error(
+            "The committed restore could not be reconciled with the selected archive.",
+          );
+        }
+        return this.verifySqliteRestoreSource(source);
+      });
+      return {
+        outcome: committed.outcome,
+        ledger: freshEvidence.ledger,
+        stateSha256: freshEvidence.stateSha256,
+        reportSha256: freshEvidence.reportSha256,
+      };
+    });
+  }
+
   async commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult> {
+    return this.withRegularStoreOperation(
+      () => this.commitCsvImportWithinStoreOperation(command),
+    );
+  }
+
+  private async commitCsvImportWithinStoreOperation(
+    command: PreparedCsvImport,
+  ): Promise<CsvImportCommitResult> {
     this.assertOpen();
     await this.verifySchema();
     const verified = verifyPreparedCsvImport(command);
@@ -646,6 +887,14 @@ export class SqliteJournalStore implements JournalStore {
   async commitManualExecution(
     command: PreparedManualExecution,
   ): Promise<ManualExecutionCommitResult> {
+    return this.withRegularStoreOperation(
+      () => this.commitManualExecutionWithinStoreOperation(command),
+    );
+  }
+
+  private async commitManualExecutionWithinStoreOperation(
+    command: PreparedManualExecution,
+  ): Promise<ManualExecutionCommitResult> {
     this.assertOpen();
     await this.verifySchema();
     const verified = verifyPreparedManualExecution(command);
@@ -862,6 +1111,14 @@ export class SqliteJournalStore implements JournalStore {
   }
 
   async commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult> {
+    return this.withRegularStoreOperation(
+      () => this.commitTradeReviewsWithinStoreOperation(command),
+    );
+  }
+
+  private async commitTradeReviewsWithinStoreOperation(
+    command: PreparedTradeReviewBatch,
+  ): Promise<TradeReviewCommitResult> {
     this.assertOpen();
     await this.verifySchema();
     const verifiedReviews = verifyTradeReviewBatchForCommit(command);
@@ -1124,6 +1381,14 @@ export class SqliteJournalStore implements JournalStore {
   }
 
   async loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
+    return this.withRegularStoreOperation(
+      () => this.loadUnacknowledgedManualExecutionsWithinStoreOperation(),
+    );
+  }
+
+  private async loadUnacknowledgedManualExecutionsWithinStoreOperation(): Promise<
+    readonly UnacknowledgedManualExecution[]
+  > {
     this.assertOpen();
     await this.verifySchema();
     const rows = await this.database.query<SqlRow>(
@@ -1158,6 +1423,14 @@ export class SqliteJournalStore implements JournalStore {
   }
 
   async acknowledgeManualExecution(submissionId: string): Promise<void> {
+    return this.withRegularStoreOperation(
+      () => this.acknowledgeManualExecutionWithinStoreOperation(submissionId),
+    );
+  }
+
+  private async acknowledgeManualExecutionWithinStoreOperation(
+    submissionId: string,
+  ): Promise<void> {
     this.assertOpen();
     await this.verifySchema();
     const observedNowMs = this.runtime.nowMs();
@@ -1187,6 +1460,15 @@ export class SqliteJournalStore implements JournalStore {
   }
 
   async rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot> {
+    return this.withRegularStoreOperation(
+      () => this.rollbackImportWithinStoreOperation(receiptId, reason),
+    );
+  }
+
+  private async rollbackImportWithinStoreOperation(
+    receiptId: string,
+    reason: string,
+  ): Promise<JournalLedgerSnapshot> {
     this.assertOpen();
     await this.verifySchema();
     const normalizedReason = reason.trim();
@@ -1303,8 +1585,20 @@ export class SqliteJournalStore implements JournalStore {
 
   async close(): Promise<void> {
     if (this.closed) return;
-    await this.database.close();
-    this.closed = true;
+    if (this.closePromise !== null) return this.closePromise;
+    this.closeRequested = true;
+    const closePromise = this.enqueueStoreOperation(async () => {
+      await this.database.close();
+      this.closed = true;
+    });
+    this.closePromise = closePromise;
+    try {
+      await closePromise;
+    } catch (error) {
+      this.closeRequested = false;
+      this.closePromise = null;
+      throw error;
+    }
   }
 
   private async recordImportOccurrence(input: {
@@ -1432,6 +1726,73 @@ export class SqliteJournalStore implements JournalStore {
       rules.push({ id: ruleId, name: ruleName, outcome: rule.outcome });
     }
     return { id, rules };
+  }
+
+  private async verifySqliteRestoreSource(
+    source: DecodedSqliteJournalRestoreArchive,
+  ): Promise<VerifiedSqliteRestoreEvidence> {
+    await assertSqliteRestoreDatabaseHealthy(this.database);
+    const durable = await readSqliteJournalArchive(this.database);
+    if (
+      durable.stateSha256 !== source.stateSha256
+      || !sqlitePortableTablesEqual(durable.tables, source.tables)
+    ) {
+      throw new Error("The staged journal does not exactly match the validated archive tables.");
+    }
+    const ledger = await this.loadWithinConnection();
+    workspaceSnapshotFromLedger(ledger);
+    const reportSha256 = journalArchiveReportSha256(ledger);
+    const summary = journalArchiveSummary(ledger, {
+      executionVersions: sqliteArchiveTable(durable, "execution_versions").rowCount,
+      importReceipts: sqliteArchiveTable(durable, "import_receipts").rowCount,
+      rolledBackImports: sqliteArchiveTable(durable, "import_rollbacks").rowCount,
+      reviewVersions: sqliteArchiveTable(durable, "trade_review_versions").rowCount,
+      reviewTerms: sqliteArchiveTable(durable, "review_terms").rowCount,
+      playbooks: sqliteArchiveTable(durable, "playbooks").rowCount,
+    });
+    if (reportSha256 !== source.claimedReportSha256) {
+      throw new Error("The restored journal report digest does not match the selected archive.");
+    }
+    if (restoreSummaryJson(summary) !== restoreSummaryJson(source.summary)) {
+      throw new Error("The restored journal summary does not match the selected archive.");
+    }
+    return Object.freeze({
+      ledger,
+      stateSha256: durable.stateSha256,
+      reportSha256,
+      summary,
+    });
+  }
+
+  private withExclusiveRestore<Result>(
+    operation: () => Promise<Result>,
+  ): Promise<Result> {
+    if (this.closed) throw new Error("The journal store is closed.");
+    if (this.closeRequested) {
+      throw new Error(
+        "The journal store is closing and cannot start restore verification.",
+      );
+    }
+    return this.enqueueStoreOperation(operation);
+  }
+
+  private withRegularStoreOperation<Result>(
+    operation: () => Promise<Result>,
+  ): Promise<Result> {
+    this.assertOpen();
+    if (this.closeRequested) throw new Error("The journal store is closing.");
+    return this.enqueueStoreOperation(operation);
+  }
+
+  private enqueueStoreOperation<Result>(
+    operation: () => Promise<Result>,
+  ): Promise<Result> {
+    const result = this.operationTail.then(operation);
+    this.operationTail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   private assertOpen(): void {

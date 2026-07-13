@@ -60,7 +60,8 @@ test("local export prepares offline, downloads a self-verifying archive, and nev
   });
   await expect(card.getByText("Unencrypted file.", { exact: false })).toBeVisible();
   await expect(card.getByText("Development preview.", { exact: false })).toBeVisible();
-  await expect(card.getByText("not a recoverable backup", { exact: false })).toBeVisible();
+  await expect(card.getByText("Compatible exports can be restored below", { exact: false }))
+    .toBeVisible();
 
   const action = card.locator("#user-data-export");
   await action.click();

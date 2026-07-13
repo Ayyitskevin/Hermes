@@ -274,18 +274,35 @@ never appear without their inspectable, versioned denominator.
 
 ### Slice C — user-owned data
 
-- Versioned export manifest covering every stored field and attachment.
+- Versioned export manifest covering every currently stored field and a
+  versioned attachment catalog.
 - Previewed, atomic restore with compatibility and corruption checks.
 - Delete All Data with confirmation, attachment cleanup, Keychain/database
   behavior, and a verification receipt.
 
-Slice C-A now delivers the export half of that contract on Linux/browser: an
-app-owned `hermes-journal-export` v1 envelope, a complete transactional
-`sqlite-table-set` for native durable state, an explicitly development-only
-browser-session payload, an empty versioned attachment catalog, deterministic
-ordering, bounded parsing, corruption checks, and plaintext-warning/two-stage
-delivery UI. It is an archive, not a recoverable backup. Restore, attachment
-round-trip, verified deletion, and native Files/share behavior remain open.
+Slice C-B adds local-only, previewed restore for current
+`hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1
+from the current migration set; its decoder verifies the envelope checksum,
+all 32 tables and 257 pinned ordered columns, canonical rows and signed 64-bit
+integers, table/state digests, and a recomputed summary. Archive SQL is never
+executed, and live table-SQL hashes remain diagnostic.
+
+Native preview trial-restores into the real destination transaction,
+recomputes table equality, report and summary equality, foreign keys, and
+`quick_check`, then rolls back deliberately. Commit reparses and rederives the
+archive, atomically rechecks that the destination is empty, verifies inside the
+transaction, and verifies the committed state again. An exact already-restored
+state is an idempotent retry; different nonempty state is never merged or
+overwritten. Browser development accepts only `browser-session-state` v1,
+validates a separate candidate before one atomic swap, and is not native
+recovery evidence.
+
+The UI rejects `File.size` above 64 MiB before reading text; the parser
+independently enforces 67,108,864 UTF-8 bytes. A matching-runtime,
+current-schema file is restorable, but it is not yet a complete native backup:
+attachment catalog v1 is empty, archives containing attachments fail closed,
+and Files, interruption/lifecycle, low-storage, and near-limit memory behavior
+remain native gates. Delete All Data remains unavailable.
 
 Exit: export → delete → restore reproduces the same ledger, annotations,
 attachments, and report digests in airplane mode.
@@ -427,11 +444,13 @@ The 2026-07-13 Slice C-A Linux gate passed a locked install, 271 Vitest tests
 across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
-Slice C-A's versioned export manifest now includes the immutable ledger, current
-and historical review versions, reusable vocabulary, formula definitions, and
-stable subject identity. The next owned implementation is previewed,
-empty-journal-only atomic restore with payload-specific verification, followed
-by verified Delete All Data—not broker connectivity or hosted sync.
+Slice C-B now pairs that export manifest with current-schema, matching-runtime,
+empty-journal-only restore and idempotent exact-retry reconciliation. Final
+Slice C-B integration counts and publication state belong in the active
+`docs/HANDOFF.md`; this blueprint does not duplicate unfinalized evidence.
+The next boundary is native restore acceptance on a Mac/iPhone, followed by
+verified Delete All Data and later attachment round-trip—not broker
+connectivity, hosted sync, Android, recurring AI, or legacy cockpit extraction.
 
 ## Competitive and platform references
 

@@ -47,9 +47,9 @@ under the provisional identifier until that gate is cleared.
   sync, and recurring AI
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
-  capture, versioned 60-second review, and Linux/browser archive export now run
-  end to end, but restore, verified deletion, deeper reports, attachments, and
-  native Mac/device evidence are incomplete.
+  capture, versioned review, export, and matching-runtime local restore are
+  implemented, but native restore acceptance, verified deletion, deeper
+  reports, attachments, and Mac/device evidence remain incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -87,7 +87,7 @@ Five destinations:
 4. **Reports** — currency expectancy, profit factor, drawdown, streaks, and
    breakdowns by setup, tag, symbol, direction, day, and time; R expectancy
    requires compatible stored risk bases.
-5. **More** — imports, accounts, tags/playbooks, planning tools, backup/export, settings, privacy, help, and legal.
+5. **More** — imports, accounts, tags/playbooks, planning tools, export/restore, settings, privacy, help, and legal.
 
 Add/manual-import actions are task controls, not navigation tabs. They appear
 only when their durable workflow exists; the foundation must not ship dead
@@ -194,13 +194,26 @@ Delivered in the current vertical slice:
 - Trade-detail execution inspection, durable review edits, pending/draft/
   completed queues, atomic batch tagging, and session streaks that follow the
   blueprint's any-execution-date/at-least-one-saved-review definition.
-- Slice C-A app-owned export v1: one transactional app-owned SQLite table set
-  that retains raw provenance and immutable history; a separate development-only
-  browser-session payload; deterministic JSON, bounded/duplicate-aware parsing,
-  versioned empty attachment catalog, and corruption digests; plus an
-  accessibility-designed two-stage plaintext-warning surface: file-capable Web
-  Share when supported, otherwise browser download. It never appears over the
-  fictional demo; native share-sheet/Files and VoiceOver behavior remain gates.
+- Slice C-B user-owned data v1: Slice C-A's transactional native table-set and
+  development-only browser export now have matching-runtime local restore.
+  Native accepts only current-migration `sqlite-table-set` v1 and verifies the
+  checksum, 32 tables, 257 ordered columns, canonical rows/signed integers,
+  table/state digests, and recomputed summary without executing archive SQL.
+  Preview trial-restores in the real destination transaction, verifies table,
+  report, summary, foreign-key, and `quick_check` evidence, then rolls back.
+  Commit reparses/rederives, atomically rechecks empty state, verifies inside
+  the transaction and after commit, and reconciles an exact already-restored
+  retry without duplicating data. Different nonempty state is never merged or
+  overwritten.
+- Browser development accepts only `browser-session-state` v1 and is not native
+  recovery evidence. The local UI is absent in demo, blocks nonempty journals,
+  requires a verified preview and explicit confirmation, rejects `File.size`
+  above 64 MiB before reading, and relies on an independent 67,108,864-byte
+  UTF-8 parser limit.
+- The current matching-runtime archive is restorable but is not a complete
+  native backup: attachment catalog v1 is empty, archives with attachments are
+  rejected, and native Files/lifecycle/low-storage/near-limit-memory behavior
+  remains unverified. Delete All Data is unavailable.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -219,10 +232,12 @@ Still required in Phase 1:
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.
-- Add previewed, empty-journal-only atomic restore with payload-specific
-  compatibility/corruption verification, then verified Delete All Data with
-  database, Keychain, attachment, interruption, and response-loss behavior.
-- Prove native export share/cancel/save/reopen behavior on a Mac and iPhone.
+- Prove native export and restore Files/share/cancel/save/reopen behavior on a
+  Mac and iPhone, including empty-state preview rollback, atomic commit, exact
+  response-loss retry, interruption, relaunch, low storage, and near-limit
+  memory behavior.
+- After native restore acceptance, add verified Delete All Data with database,
+  Keychain, attachment, interruption, response-loss, and receipt behavior.
 
 Exit gate: manual/CSV input → normalized trade → journal metadata → dashboard/
 report → export/restore works in airplane mode, survives kill/relaunch, and
@@ -290,7 +305,7 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-Durable annotations and Slice C-A export are implemented. The next implementation
-slice is previewed empty-journal atomic restore, followed by verified Delete All
-Data—not broker connectivity, hosted sync, Android, recurring AI, or legacy
-cockpit extraction.
+Durable annotations and Slice C-B matching-runtime local restore are
+implemented. The next boundary is native restore acceptance, followed by
+verified Delete All Data and later attachment round-trip—not broker
+connectivity, hosted sync, Android, recurring AI, or legacy cockpit extraction.

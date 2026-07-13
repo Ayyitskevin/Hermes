@@ -39,6 +39,8 @@ export function generateEncryptionPassphrase(
 
 export class CapacitorSqlDatabase implements SqlDatabase {
   private inTransaction = false;
+  private transactionReserved = false;
+  private poisoned: AggregateError | null = null;
   private closed = false;
 
   constructor(
@@ -67,37 +69,39 @@ export class CapacitorSqlDatabase implements SqlDatabase {
 
   async transaction<Result>(operation: () => Promise<Result>): Promise<Result> {
     this.assertOpen();
-    if (this.inTransaction) {
+    if (this.transactionReserved || this.inTransaction) {
       throw new Error("Nested journal transactions are not supported.");
     }
-    await this.database.beginTransaction();
-    this.inTransaction = true;
+    this.transactionReserved = true;
+    let phase: "begin" | "operation" | "commit" = "begin";
     try {
+      await this.database.beginTransaction();
+      if (!(await this.transactionIsActive())) {
+        throw new Error("The SQLite transaction did not become active.");
+      }
+      this.inTransaction = true;
+      phase = "operation";
       const result = await operation();
-      const active = await this.database.isTransactionActive();
-      if (!active.result) throw new Error("The SQLite transaction ended before commit.");
+      if (!(await this.transactionIsActive())) {
+        throw new Error("The SQLite transaction ended before commit.");
+      }
+      phase = "commit";
       await this.database.commitTransaction();
+      if (await this.transactionIsActive()) {
+        throw new Error("The SQLite transaction remained active after commit.");
+      }
       return result;
     } catch (error) {
-      try {
-        if ((await this.database.isTransactionActive()).result) {
-          await this.database.rollbackTransaction();
-        }
-      } catch (rollbackError) {
-        throw new AggregateError(
-          [error, rollbackError],
-          "The journal transaction failed and SQLite rollback also failed.",
-        );
-      }
-      throw error;
+      throw await this.reconcileTransactionFailure(error, phase);
     } finally {
       this.inTransaction = false;
+      this.transactionReserved = false;
     }
   }
 
   async close(): Promise<void> {
     if (this.closed) return;
-    if (this.inTransaction) {
+    if (this.transactionReserved || this.inTransaction) {
       throw new Error("Cannot close the journal database during a transaction.");
     }
     await this.database.close();
@@ -107,6 +111,76 @@ export class CapacitorSqlDatabase implements SqlDatabase {
 
   private assertOpen(): void {
     if (this.closed) throw new Error("The journal database connection is closed.");
+    if (this.poisoned !== null) throw this.poisoned;
+  }
+
+  private async transactionIsActive(): Promise<boolean> {
+    const active = (await this.database.isTransactionActive()).result;
+    if (active !== true && active !== false) {
+      throw new Error("SQLite returned an invalid transaction-state response.");
+    }
+    return active;
+  }
+
+  private poisonTransactionState(
+    causes: readonly unknown[],
+    phase: "begin" | "operation" | "commit",
+  ): AggregateError {
+    if (this.poisoned !== null) return this.poisoned;
+    this.poisoned = new AggregateError(
+      causes,
+      `The journal database transaction state is uncertain after ${phase}. Close and reopen the journal before continuing.`,
+    );
+    return this.poisoned;
+  }
+
+  private async reconcileTransactionFailure(
+    error: unknown,
+    phase: "begin" | "operation" | "commit",
+  ): Promise<unknown> {
+    let active: boolean;
+    try {
+      active = await this.transactionIsActive();
+    } catch (stateError) {
+      return this.poisonTransactionState([error, stateError], phase);
+    }
+    if (!active) return error;
+
+    let rollbackFailed = false;
+    let rollbackError: unknown;
+    try {
+      await this.database.rollbackTransaction();
+    } catch (caught) {
+      rollbackFailed = true;
+      rollbackError = caught;
+    }
+
+    try {
+      active = await this.transactionIsActive();
+    } catch (stateError) {
+      return this.poisonTransactionState(
+        rollbackFailed ? [error, rollbackError, stateError] : [error, stateError],
+        phase,
+      );
+    }
+    if (active) {
+      const transactionStillActive = new Error(
+        "SQLite still reports an active transaction after rollback.",
+      );
+      return this.poisonTransactionState(
+        rollbackFailed
+          ? [error, rollbackError, transactionStillActive]
+          : [error, transactionStillActive],
+        phase,
+      );
+    }
+    if (rollbackFailed) {
+      return new AggregateError(
+        [error, rollbackError],
+        "The journal transaction failed and SQLite rollback also reported an error, but inactivity was verified.",
+      );
+    }
+    return error;
   }
 }
 

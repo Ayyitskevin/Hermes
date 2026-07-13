@@ -15,14 +15,15 @@ import type {
   PreparedTradeReviewBatch,
   TradeReviewCommitResult,
   UnacknowledgedManualExecution,
+  JournalRestoreCommitResult,
 } from "../application/journal-store";
 import {
   JournalImportError,
   JournalManualExecutionError,
+  JournalRestoreError,
   JournalTradeReviewError,
 } from "../application/journal-store";
 import {
-  canonicalJournalArchiveJson,
   createJournalExportArtifact,
   JOURNAL_ARCHIVE_KIND,
   type JournalArchiveJson,
@@ -32,6 +33,11 @@ import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../application/prepare-manual-execution";
+import {
+  assertPreparedJournalRestoreRevision,
+  createPreparedJournalRestore,
+  type PreparedJournalRestore,
+} from "../application/journal-restore";
 import { verifyPreparedCsvImport } from "../application/prepare-csv-import";
 import {
   PERCENT_RETURN_METRIC_ID,
@@ -46,10 +52,25 @@ import type {
   TradeNormalizationResult,
 } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
+import {
+  isEmptySessionJournalPayload,
+  sessionJournalLedgerFromPayload,
+  sessionJournalPayloadFromState,
+  sessionJournalPayloadsEqual,
+  sessionJournalReportSha256,
+  sessionJournalStateSha256,
+  sessionJournalSummary,
+  SessionRestoreValidationError,
+  type SessionJournalState,
+  verifySessionJournalRestore,
+} from "./session-journal-restore";
 import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./sqlite/schema";
 import { stableTradeSubjectHash } from "./sqlite/trade-subject";
 
 interface SessionExecution extends LedgerExecution {
+  readonly ledgerSequence: string;
+  readonly positionEffect: "AUTO" | "OPEN" | "CLOSE";
+  readonly fees: readonly NonNullable<LedgerExecution["fees"]>[number][];
   readonly sourceIdentity: string;
   readonly payloadHash: string;
   readonly receiptIds: readonly string[];
@@ -231,6 +252,36 @@ function verifyTradeReviewBatch(command: PreparedTradeReviewBatch): readonly Pre
     );
   }
 }
+function verifiedSessionRestore(contents: string) {
+  try {
+    return verifySessionJournalRestore(contents);
+  } catch (error) {
+    if (error instanceof SessionRestoreValidationError) {
+      throw new JournalRestoreError({ code: error.code, message: error.message });
+    }
+    throw new JournalRestoreError({
+      code: "invalid_payload",
+      message: error instanceof Error ? error.message : "The browser restore payload is invalid.",
+    });
+  }
+}
+
+function preparedSessionRestore(
+  contents: string,
+  candidate: ReturnType<typeof verifySessionJournalRestore>,
+  target: "empty" | "already-restored",
+): PreparedJournalRestore {
+  return createPreparedJournalRestore(contents, {
+    archiveSha256: candidate.archive.archiveSha256,
+    stateSha256: candidate.stateSha256,
+    reportSha256: candidate.reportSha256,
+    exportedAtUs: candidate.archive.exportedAtUs,
+    payloadKind: "browser-session-state",
+    payloadVersion: 1,
+    summary: candidate.summary,
+    target,
+  });
+}
 
 export class SessionJournalStore implements JournalStore {
   private workspace: JournalWorkspaceRecord | null = null;
@@ -239,8 +290,8 @@ export class SessionJournalStore implements JournalStore {
   private executions: SessionExecution[] = [];
   private inactiveExecutions = new Map<string, SessionExecution>();
   private receipts: JournalImportReceipt[] = [];
-  private readonly receiptByRevision = new Map<string, string>();
-  private readonly manualSubmissions = new Map<string, SessionManualSubmission>();
+  private receiptByRevision = new Map<string, string>();
+  private manualSubmissions = new Map<string, SessionManualSubmission>();
   /** Append-only history; only reviewHeadByTradeSubjectId is projected by load(). */
   private reviewVersions: JournalTradeReviewRecord[] = [];
   private reviewHeadByTradeSubjectId = new Map<string, string>();
@@ -253,6 +304,26 @@ export class SessionJournalStore implements JournalStore {
   private closed = false;
 
   constructor(private readonly runtime: SessionJournalRuntime = DEFAULT_RUNTIME) {}
+  private sessionState(): SessionJournalState {
+    return {
+      workspace: this.workspace,
+      accounts: this.accounts,
+      instruments: this.instruments,
+      executions: this.executions,
+      inactiveExecutions: this.inactiveExecutions,
+      receipts: this.receipts,
+      receiptByRevision: this.receiptByRevision,
+      manualSubmissions: this.manualSubmissions,
+      reviewVersions: this.reviewVersions,
+      reviewHeads: this.reviewHeadByTradeSubjectId,
+      reviewTerms: this.reviewTerms,
+      playbooks: this.playbooks,
+      reviewSubmissions: this.reviewSubmissionById,
+      lastReviewRecordedAtMs: this.lastReviewRecordedAtMs,
+      nextExecutionSequence: this.nextExecutionSequence,
+      nextReceiptOrdinal: this.nextReceiptOrdinal,
+    };
+  }
 
   async load(): Promise<JournalLedgerSnapshot> {
     return this.loadSnapshot();
@@ -293,49 +364,15 @@ export class SessionJournalStore implements JournalStore {
     };
   }
   async exportUserData(): Promise<JournalExportArtifact> {
-    const ledger = this.loadSnapshot();
-    const byId = <Value extends { readonly id: string }>(values: readonly Value[]) => (
-      [...values].sort((left, right) => stableCompare(left.id, right.id))
-    );
-    const byKey = <Value>(values: Iterable<readonly [string, Value]>) => (
-      [...values].sort(([left], [right]) => stableCompare(left, right))
-    );
-    const payloadData = {
-      adapter: "browser-session",
-      stateVersion: 1,
-      workspace: this.workspace,
-      accounts: byId(this.accounts),
-      instruments: byId(this.instruments),
-      activeExecutions: byId(this.executions),
-      inactiveExecutions: byKey(this.inactiveExecutions.entries()),
-      receipts: byId(this.receipts),
-      receiptByRevision: byKey(this.receiptByRevision.entries()),
-      manualSubmissions: byKey(this.manualSubmissions.entries()),
-      reviewVersions: byId(this.reviewVersions),
-      reviewHeads: byKey(this.reviewHeadByTradeSubjectId.entries()),
-      reviewTerms: byId(this.reviewTerms),
-      playbooks: byId(this.playbooks).map((playbook) => ({
-        ...playbook,
-        rules: byId(playbook.rules),
-      })),
-      reviewSubmissions: byKey(this.reviewSubmissionById.entries()),
-      counters: {
-        lastReviewRecordedAtMs: String(this.lastReviewRecordedAtMs),
-        nextExecutionSequence: String(this.nextExecutionSequence),
-        nextReceiptOrdinal: String(this.nextReceiptOrdinal),
-      },
-    };
+    const payloadData = sessionJournalPayloadFromState(this.sessionState());
+    const ledger = sessionJournalLedgerFromPayload(payloadData);
     const archiveData = payloadData as unknown as JournalArchiveJson;
-    const stateSha256 = sha256Hex(canonicalJournalArchiveJson(archiveData));
-    const reportSha256 = sha256Hex(canonicalJournalArchiveJson({
-      digestVersion: "hermes-report-input-v1",
-      ledger,
-    } as unknown as JournalArchiveJson));
+    const stateSha256 = sessionJournalStateSha256(payloadData);
+    const reportSha256 = sessionJournalReportSha256(ledger);
     const observedNowMs = this.runtime.nowMs();
     if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
       throw new Error("The browser session clock is outside the journal export range.");
     }
-    const inactiveExecutionCount = this.inactiveExecutions.size;
     return createJournalExportArtifact({
       kind: JOURNAL_ARCHIVE_KIND,
       formatVersion: 1,
@@ -354,27 +391,120 @@ export class SessionJournalStore implements JournalStore {
         data: archiveData,
       },
       attachments: { version: 1, entries: [] },
-      summary: {
-        workspaceName: ledger.workspace?.name ?? null,
-        currency: ledger.workspace?.defaultCurrency ?? null,
-        timeZone: ledger.workspace?.timeZone ?? null,
-        accounts: String(ledger.accounts.length),
-        activeExecutions: String(ledger.executions.length),
-        executionVersions: String(ledger.executions.length + inactiveExecutionCount),
-        importReceipts: String(this.receipts.length),
-        rolledBackImports: String(
-          this.receipts.filter((receipt) => receipt.rolledBackAtUs !== null).length,
-        ),
-        currentReviews: String(ledger.tradeReviews.length),
-        reviewVersions: String(this.reviewVersions.length),
-        reviewTerms: String(this.reviewTerms.length),
-        playbooks: String(this.playbooks.length),
-        attachments: "0",
-        attachmentBytes: "0",
-      },
+      summary: sessionJournalSummary(payloadData, ledger),
       stateSha256,
       reportSha256,
     });
+  }
+  async prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore> {
+    this.assertOpen();
+    const candidate = verifiedSessionRestore(contents);
+    const current = sessionJournalPayloadFromState(this.sessionState());
+    const target = sessionJournalPayloadsEqual(current, candidate.payload)
+      ? "already-restored"
+      : isEmptySessionJournalPayload(current) ? "empty" : null;
+    if (target === null) {
+      throw new JournalRestoreError({
+        code: "journal_not_empty",
+        message: "Restore never merges or overwrites an existing browser journal.",
+      });
+    }
+    return preparedSessionRestore(contents, candidate, target);
+  }
+
+  async commitUserDataRestore(
+    command: PreparedJournalRestore,
+  ): Promise<JournalRestoreCommitResult> {
+    this.assertOpen();
+    try {
+      assertPreparedJournalRestoreRevision(command);
+    } catch (error) {
+      throw new JournalRestoreError({
+        code: "preview_changed",
+        message: error instanceof Error ? error.message : "The restore preview changed.",
+      });
+    }
+
+    const candidate = verifiedSessionRestore(command.contents);
+    const expected = preparedSessionRestore(
+      command.contents,
+      candidate,
+      command.preview.target,
+    );
+    if (expected.revisionSha256 !== command.revisionSha256) {
+      throw new JournalRestoreError({
+        code: "preview_changed",
+        message: "The selected archive no longer matches its verified preview.",
+      });
+    }
+
+    const current = sessionJournalPayloadFromState(this.sessionState());
+    if (sessionJournalPayloadsEqual(current, candidate.payload)) {
+      return {
+        outcome: "already-restored",
+        ledger: candidate.ledger,
+        stateSha256: candidate.stateSha256,
+        reportSha256: candidate.reportSha256,
+      };
+    }
+    if (!isEmptySessionJournalPayload(current)) {
+      throw new JournalRestoreError({
+        code: "journal_not_empty",
+        message: "Restore never merges or overwrites an existing browser journal.",
+      });
+    }
+    if (command.preview.target !== "empty") {
+      throw new JournalRestoreError({
+        code: "preview_changed",
+        message: "The destination changed after restore preview.",
+      });
+    }
+
+    const payload = candidate.payload;
+    const nextWorkspace = payload.workspace;
+    const nextAccounts = [...payload.accounts];
+    const nextInstruments = [...payload.instruments];
+    const nextExecutions = [...payload.activeExecutions];
+    const nextInactiveExecutions = new Map(payload.inactiveExecutions);
+    const nextReceipts = [...payload.receipts];
+    const nextReceiptByRevision = new Map(payload.receiptByRevision);
+    const nextManualSubmissions = new Map(payload.manualSubmissions);
+    const nextReviewVersions = [...payload.reviewVersions];
+    const nextReviewHeads = new Map(payload.reviewHeads);
+    const nextReviewTerms = [...payload.reviewTerms];
+    const nextPlaybooks = payload.playbooks.map((playbook) => ({
+      ...playbook,
+      rules: [...playbook.rules],
+    }));
+    const nextReviewSubmissions = new Map(payload.reviewSubmissions);
+    const nextLastReviewRecordedAtMs = Number(payload.counters.lastReviewRecordedAtMs);
+    const nextExecutionSequence = Number(payload.counters.nextExecutionSequence);
+    const nextReceiptOrdinal = Number(payload.counters.nextReceiptOrdinal);
+
+    // No await or user callback occurs across this complete state replacement.
+    this.workspace = nextWorkspace;
+    this.accounts = nextAccounts;
+    this.instruments = nextInstruments;
+    this.executions = nextExecutions;
+    this.inactiveExecutions = nextInactiveExecutions;
+    this.receipts = nextReceipts;
+    this.receiptByRevision = nextReceiptByRevision;
+    this.manualSubmissions = nextManualSubmissions;
+    this.reviewVersions = nextReviewVersions;
+    this.reviewHeadByTradeSubjectId = nextReviewHeads;
+    this.reviewTerms = nextReviewTerms;
+    this.playbooks = nextPlaybooks;
+    this.reviewSubmissionById = nextReviewSubmissions;
+    this.lastReviewRecordedAtMs = nextLastReviewRecordedAtMs;
+    this.nextExecutionSequence = nextExecutionSequence;
+    this.nextReceiptOrdinal = nextReceiptOrdinal;
+
+    return {
+      outcome: "committed",
+      ledger: candidate.ledger,
+      stateSha256: candidate.stateSha256,
+      reportSha256: candidate.reportSha256,
+    };
   }
 
   async commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult> {
