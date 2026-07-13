@@ -309,8 +309,33 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
+The first bounded Slice D increment is implemented in the current workspace:
+an offline plan-adherence report over the current projection and current saved
+review heads. A completed closed trade with exact realized P&L is classified as
+broken when any current rule is broken, otherwise followed when any current
+rule is followed; open/partial trades, missing exact P&L, incomplete reviews,
+and completed reviews with no classifiable rule are separately reconciled.
+Evidence is ordered by trade date descending then stable trade-subject ID and
+is progressively rendered 25 rows at a time.
+
+The definition is `plan-adherence-report-v1`, checksum
+`0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`.
+Cash uses exact signed-decimal sums. R coverage accepts only replay-matching
+`result-r-v1` evidence with its pinned 12-decimal half-away-from-zero contract;
+incompatible R remains unavailable without removing the cash trade. Group means
+use half-away-from-zero division at 12 decimal places.
+The followed-minus-broken cash comparison uses one final exact division and is
+shown only with at least three included trades in each group. Copy remains
+observational, identifies account/currency/time zone/period, and links every
+contributor to its saved rule evidence. The report is derived-only: no schema or
+archive shape changed, existing current-schema archives retain its inputs, and
+the matching runtime recomputes it after restore.
+
+Still open in Slice D:
+
 - Drawdown, streak, time/day, symbol, direction, setup, mistake, emotion, and
-  rule-adherence reports with drill-down.
+  non-rule report families with reconciled drill-down, plus account selection,
+  filters, and calendar controls.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
@@ -445,12 +470,14 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B now pairs that export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. Final
-Slice C-B integration counts and publication state belong in the active
-`docs/HANDOFF.md`; this blueprint does not duplicate unfinalized evidence.
-The next boundary is native restore acceptance on a Mac/iPhone, followed by
-verified Delete All Data and later attachment round-trip—not broker
-connectivity, hosted sync, Android, recurring AI, or legacy cockpit extraction.
+empty-journal-only restore and idempotent exact-retry reconciliation. The first
+Slice D increment adds the governed, evidence-linked plan-adherence report
+described above without changing stored or exported shapes. Final integration
+counts and publication state belong in the active `docs/HANDOFF.md`; this
+blueprint does not duplicate unfinalized evidence. Native restore acceptance on
+a Mac/iPhone, verified Delete All Data, daily notes, the remaining reports, and
+later attachment round-trip remain open—not broker connectivity, hosted sync,
+Android, recurring AI, or legacy cockpit extraction.
 
 ## Competitive and platform references
 

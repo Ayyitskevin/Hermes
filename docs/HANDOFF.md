@@ -1,6 +1,111 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice C-B restore Linux milestone · updated 2026-07-13
+Status: verified Slice D-A Plan Check Linux milestone · updated 2026-07-13
+
+## Current handoff
+
+task: Deliver the first governed Slice D insight: an offline, evidence-linked
+plan-adherence report derived from current trade projections and current saved
+review heads, without trade execution, advice, schema changes, or a new archive
+shape.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/core/plan-adherence-report.ts` defines
+  `plan-adherence-report-v1`, with mutually exclusive followed/broken cohorts,
+  explicit exclusion precedence and conservation, fixed group/evidence order,
+  exact signed-decimal cash means, compatible-R coverage, win semantics, and a
+  three-trades-per-group observational threshold.
+- Formula checksum
+  `0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`
+  pins group order, positive-only wins, 12-decimal half-away rounding, the
+  one-final-division followed-minus-broken comparison, derived-only migration,
+  and accepted `result-r-v1` evidence. R is accepted only when its metric
+  contract, workspace currency, numerator, stored initial-risk denominator,
+  nonpartial state, and a fresh deterministic replay all agree; incompatible R
+  remains unavailable without removing the trade from cash results.
+- `mobile/src/ui/reports-view.ts` separates the Reports screen from the app
+  monolith and adds Plan Check to Reports and Dashboard. It discloses account,
+  currency, time zone, period, cohort, exclusions, checksum, comparison
+  direction, rounding, threshold, and non-causal limitations, then links each
+  contributor to escaped current rule evidence.
+- Evidence starts at 25 rows per group and appends at most 25 per explicit user
+  action. The live showing count, 48-point control, completion focus, long-rule
+  wrapping, and 320px/200% text behavior are covered.
+- `mobile/src/application/workspace-snapshot.test.ts` proves a later current
+  review head moves a stable trade between report groups without changing
+  executions. The fictional eight-trade demo now reconciles five followed and
+  three broken trades so the ready state remains clearly demo-only.
+- `README.md`, `docs/mobile/PRODUCT_BLUEPRINT.md`, and
+  `docs/mobile/IOS_ROADMAP.md` document the delivered boundary, final checksum,
+  derived restore compatibility, and remaining report/native work.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 32 files, 342 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; 26 Playwright journeys passed,
+  including offline evidence drill-down and a 320px/200% hostile 500-character
+  rule with no clipped Plan Check descendants.
+- `cd mobile && npm run ios:sync` — exit 0; production build transformed 54
+  modules and copied the bundle; Capacitor found only
+  `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were
+  unavailable and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` — exit 0 after
+  sync; no tracked native or lock drift.
+- `git diff --check` — exit 0.
+- Independent read-only adversarial review found and verified fixes for R
+  contract/checksum gaps, denominator replay, group/win semantics, comparison
+  direction and rounding disclosure, and long-rule clipping. Its final
+  conclusion was: no blockers remain.
+
+assumptions:
+
+- The report is a deterministic current-state projection, not a stored
+  historical report snapshot. Existing current-schema archives retain all
+  execution/review/risk inputs and the matching runtime recomputes it; no
+  schema, migration, native bridge, or export envelope changed.
+- Any current broken rule takes precedence over followed rules. Open/partial
+  trades, missing exact realized P&L, incomplete reviews, and completed reviews
+  without a followed/broken outcome are mutually exclusive exclusions.
+- The comparison is descriptive only. Three trades per group is a product
+  display floor, not statistical significance, causality, prediction, or
+  investment advice. Hermes never asks the user to trade more to unlock it.
+- `Hermes Journal` and `app.hermesjournal.mobile` remain provisional. No App
+  Store upload, price, trademark decision, signing, or Connect commitment is
+  approved.
+- Linux Chromium and SQL.js evidence does not prove SQLCipher, Keychain,
+  CocoaPods/Xcode, VoiceOver, physical-device lifecycle, or native Files
+  restore behavior.
+
+open:
+
+- Progressive disclosure is bounded per action but intentionally retains
+  earlier pages; a user can eventually render every contributor. The report is
+  also recomputed once for markup and once for binding. Cache/virtualize only
+  after measured large-journal evidence justifies the added complexity.
+- Add a dedicated pre-export/post-restore Plan Check equality test; current
+  compatibility is compositionally covered by exact archive input restoration
+  plus deterministic current-runtime recomputation.
+- Drawdown, streak, time/day, symbol, direction, setup/tag/mistake/emotion
+  report families, account selection, filters, calendar drill-down, and daily
+  notes remain open.
+- HOLD native restore acceptance, Delete All Data, attachments, and release
+  claims until the existing Mac/iPhone lifecycle, Files, encryption, Keychain,
+  VoiceOver/Dynamic Type, interruption, low-storage, and near-limit-memory
+  gates produce positive evidence.
+- Do not start broker sync, hosted Connect, Android, recurring AI, or App Store
+  submission in the next slice.
+
+## Prior milestone — Slice C-B
 
 task: Deliver local-only previewed restore for current `hermes-journal-export`
 v1 files without merging data or adding Delete All Data, trade execution,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
+import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import type {
   JournalLedgerSnapshot,
   JournalTradeReviewRecord,
@@ -363,6 +364,60 @@ describe("journal workspace snapshot", () => {
       winRatePct: 100,
       rules: ["Wait for confirmation"],
     }]);
+  });
+
+  it("moves only the current review head between plan-adherence evidence groups", () => {
+    const executions = [
+      execution({ id: "report-entry" }),
+      execution({
+        id: "report-exit",
+        occurredAtUs: timestampUs("2026-07-03T14:30:00Z"),
+        side: "SELL",
+        price: "110",
+      }),
+    ];
+    const projectionTradeId = normalizeTrades(executions).trades[0]?.id;
+    if (projectionTradeId === undefined) throw new Error("Expected one projected trade.");
+    const tradeSubjectId = `subject:${projectionTradeId}`;
+    const followedHead = review(tradeSubjectId, {
+      recordedAtUs: timestampUs("2026-07-03T15:00:00Z"),
+      completedAtUs: timestampUs("2026-07-03T15:00:00Z"),
+    });
+    const brokenHead = review(tradeSubjectId, {
+      id: "review-2",
+      version: 2,
+      revision: "b".repeat(64),
+      rules: [{
+        ruleId: "rule-1",
+        text: "Wait for confirmation",
+        outcome: "broken",
+      }],
+      recordedAtUs: timestampUs("2026-07-03T16:00:00Z"),
+      completedAtUs: timestampUs("2026-07-03T16:00:00Z"),
+    });
+
+    const followedSnapshot = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [followedHead],
+    }));
+    const brokenSnapshot = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [brokenHead],
+    }));
+    const followedReport = buildPlanAdherenceReport(followedSnapshot);
+    const brokenReport = buildPlanAdherenceReport(brokenSnapshot);
+
+    expect(brokenSnapshot.trades[0]?.executions)
+      .toEqual(followedSnapshot.trades[0]?.executions);
+    expect(followedReport.groups.map((group) => group.tradeSubjectIds))
+      .toEqual([[tradeSubjectId], []]);
+    expect(brokenReport.groups.map((group) => group.tradeSubjectIds))
+      .toEqual([[], [tradeSubjectId]]);
+    expect(brokenSnapshot.trades[0]).toMatchObject({
+      reviewId: "review-2",
+      reviewVersion: 2,
+      followedPlan: false,
+    });
   });
 
   it("requires a later review before a future execution session is credited", () => {

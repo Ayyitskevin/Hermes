@@ -291,8 +291,9 @@ const DEMO_TRADES: readonly TradePreview[] = Object.freeze([
     emotion: "Hesitant",
     mistakes: [],
     tags: ["Early exit", "Risk reduced"],
-    followedPlan: true,
+    followedPlan: false,
     plannedStop: "577.2",
+    brokenRuleIndex: 0,
   }),
 ]);
 

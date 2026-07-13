@@ -214,6 +214,17 @@ Delivered in the current vertical slice:
   native backup: attachment catalog v1 is empty, archives with attachments are
   rejected, and native Files/lifecycle/low-storage/near-limit-memory behavior
   remains unverified. Delete All Data is unavailable.
+- The first governed insight slice is local and derived-only: Plan Check uses
+  current projections and current completed review heads to reconcile exact
+  followed/broken cash cohorts, accepts only replay-matching `result-r-v1`
+  evidence for R coverage, shows every contributing trade and saved rule,
+  discloses account/currency/time zone/period and exclusions, renders evidence
+  25 rows at a time, and withholds its observational cash comparison until each
+  cohort has at least three trades. Definition
+  `plan-adherence-report-v1` is pinned by SHA-256
+  `0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`;
+  restore recomputes it from existing archive inputs with no schema/archive
+  shape change.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -226,9 +237,9 @@ Still required in Phase 1:
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
-- Deepen the delivered Trades review detail, Dashboard calendar, and headline
-  Reports cards with filtering, calendar drill-down, account selection, daily
-  notes, vocabulary/playbook management, and reconciled report drill-down.
+- Deepen the delivered Trades review detail and Dashboard calendar with
+  filtering, calendar drill-down, account selection, daily notes,
+  vocabulary/playbook management, and the remaining reconciled report families.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.
@@ -305,7 +316,8 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-Durable annotations and Slice C-B matching-runtime local restore are
-implemented. The next boundary is native restore acceptance, followed by
-verified Delete All Data and later attachment round-trip—not broker
-connectivity, hosted sync, Android, recurring AI, or legacy cockpit extraction.
+Durable annotations, Slice C-B matching-runtime local restore, and the governed
+evidence-linked Plan Check increment are implemented. Native restore acceptance,
+verified Delete All Data, daily notes, remaining report families, and later
+attachment round-trip remain—not broker connectivity, hosted sync, Android,
+recurring AI, or legacy cockpit extraction.

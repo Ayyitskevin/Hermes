@@ -101,6 +101,11 @@ submission-ready product:
 - Headline currency P&L, win rate, profit factor, versioned percent return, and
   risk-backed R derived from real ledger records; unavailable denominators fail
   visibly instead of producing an invented metric.
+- An offline plan-adherence report derived from current completed review heads.
+  It reconciles followed/broken cohorts with explicit exclusions, exact cash
+  and R coverage, account/currency/time-zone context, and deterministic evidence
+  drill-down; the observational comparison appears only at three trades per
+  cohort and never claims causation or gives trade advice.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,
@@ -114,7 +119,8 @@ require the Mac/device gate. Slice C-B restores a current-schema archive on its
 matching runtime, but that file is not a complete native backup: attachment
 catalog v1 is empty, archives containing attachments are rejected, and native
 lifecycle behavior remains unverified. Attachments, Delete All Data, daily
-notes, and deeper reports remain Phase 1 work.
+notes, account/filter/calendar controls, and the remaining report families
+remain Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

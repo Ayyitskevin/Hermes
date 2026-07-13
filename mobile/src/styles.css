@@ -36,7 +36,7 @@
 html, body, #app { min-height: 100%; margin: 0; }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   min-height: 100dvh;
   background:
     radial-gradient(circle at 0 0, rgb(100 71 183 / 17%), transparent 34rem),
@@ -163,8 +163,7 @@ p { line-height: 1.55; }
 .metric {
   display: block;
   font: 700 clamp(1.45rem, 6.5vw, 2.2rem)/1 "B612 Mono", monospace;
-  white-space: nowrap;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
 }
 
 .metric + span { display: block; margin-top: .45rem; color: var(--muted); font-size: .77rem; }
@@ -357,6 +356,75 @@ p { line-height: 1.55; }
 
 .report-row > *:not(:first-child) { text-align: right; }
 .report-header { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+
+.plan-check-card { min-width: 0; display: grid; gap: 1rem; border-color: rgb(155 124 255 / 28%); }
+.plan-check-card > p { margin: 0; color: var(--muted); }
+.plan-check-meta {
+  margin: 0;
+  padding: .8rem;
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
+  gap: .7rem;
+}
+.plan-check-meta div { min-width: 0; display: grid; gap: .2rem; }
+.plan-check-meta dt { color: var(--muted); font-size: .68rem; }
+.plan-check-meta dd { margin: 0; font: 700 .74rem/1.4 "B612 Mono", monospace; overflow-wrap: anywhere; }
+.plan-check-groups { min-width: 0; display: grid; gap: .65rem; }
+.plan-check-group { min-width: 0; border: 1px solid var(--line); border-radius: .85rem; background: #0b0e14; overflow: hidden; }
+.plan-check-group summary {
+  min-width: 0;
+  min-height: 44px;
+  padding: .8rem;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
+}
+.plan-check-group summary::marker { color: var(--violet); }
+.plan-check-summary-label { min-width: 0; display: grid; gap: .2rem; }
+.plan-check-summary-label span { color: var(--muted); font-size: .72rem; }
+.plan-check-summary-value { text-align: right; font: 700 .86rem/1.35 "B612 Mono", monospace; }
+.plan-check-group-body { min-width: 0; padding: 0 .8rem .8rem; display: grid; gap: .8rem; }
+.plan-check-metrics {
+  min-width: 0;
+  padding-top: .8rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(7.25rem, 100%), 1fr));
+  gap: .65rem;
+}
+.plan-check-metric { min-width: 0; display: grid; gap: .2rem; }
+.plan-check-metric span { color: var(--muted); font-size: .68rem; }
+.plan-check-metric strong { font: 700 .82rem/1.35 "B612 Mono", monospace; overflow-wrap: anywhere; }
+.plan-check-evidence-list { min-width: 0; display: grid; gap: .55rem; }
+.plan-check-evidence {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  display: grid;
+  gap: .55rem;
+}
+.plan-check-evidence-heading { min-width: 0; display: flex; align-items: start; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.plan-check-evidence-heading div { min-width: 0; display: grid; gap: .2rem; }
+.plan-check-evidence-heading span { color: var(--muted); font-size: .72rem; }
+.plan-check-evidence-heading > strong { font: 700 .8rem/1.35 "B612 Mono", monospace; }
+.plan-check-evidence p { margin: 0; color: var(--muted); font-size: .75rem; }
+.plan-check-showing { margin: 0; color: var(--muted); font-size: .72rem; }
+.plan-check-more { min-height: 48px; width: 100%; }
+.plan-check-disclosure { min-width: 0; border-top: 1px solid var(--line); padding-top: .55rem; }
+.plan-check-disclosure summary { min-height: 44px; cursor: pointer; display: flex; align-items: center; color: #cdbfff; font-weight: 700; }
+.plan-check-disclosure p { margin: .4rem 0 0; color: var(--muted); font-size: .78rem; }
+.dashboard-plan-check { display: grid; gap: .75rem; border-color: rgb(155 124 255 / 28%); }
+.dashboard-plan-check p { margin: 0; color: var(--muted); }
+.dashboard-plan-check .plan-check-dashboard-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.dashboard-plan-check .plan-check-dashboard-values div { min-width: 0; display: grid; gap: .2rem; }
+.dashboard-plan-check .plan-check-dashboard-values span { color: var(--muted); font-size: .7rem; }
+.dashboard-plan-check .plan-check-dashboard-values strong { font: 700 .95rem/1.35 "B612 Mono", monospace; overflow-wrap: anywhere; }
 
 .receipt-metrics {
   margin-top: 1rem;
@@ -708,6 +776,9 @@ input[type="file"]::file-selector-button {
   .review-execution-row { grid-template-columns: 1fr; }
   .review-execution-row > .numeric { text-align: left; }
   .review-execution-row small { grid-column: 1; }
+  .plan-check-group summary { grid-template-columns: minmax(0, 1fr); }
+  .plan-check-summary-value { text-align: left; }
+  .dashboard-plan-check .plan-check-dashboard-values { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {

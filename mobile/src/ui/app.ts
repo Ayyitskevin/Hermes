@@ -1,7 +1,6 @@
 import { JournalApplication } from "../application/journal-application";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
 import { escapeHtml } from "../core/html";
-import { summarizeSetups } from "../core/performance";
 import { sizePosition, type PositionSide } from "../core/sizing";
 import type { JournalWorkspaceSnapshot, TabId, TradePreview } from "../core/types";
 import { bindImportForm, importTool } from "./import-tool";
@@ -14,6 +13,11 @@ import {
   bindTradeReviewActions,
   reviewTradeAction,
 } from "./trade-review-sheet";
+import {
+  bindReportsView,
+  planAdherenceDashboardCard,
+  reportsView,
+} from "./reports-view";
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
 
@@ -180,7 +184,6 @@ function emptyDashboardView(snapshot: JournalWorkspaceSnapshot): string {
 function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
   if (snapshot.provenance === "empty") return emptyDashboardView(snapshot);
   const performance = snapshot.performance;
-  const bestSetup = summarizeSetups(snapshot.trades)[0];
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
   const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
   const nextReview = snapshot.trades.find((trade) => (
@@ -219,11 +222,7 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
         ${snapshot.calendar.map((session) => `<article class="calendar-day ${session.pnl > 0 ? "gain" : session.pnl < 0 ? "loss" : ""}"><span>${escapeHtml(session.dayLabel)}</span><strong>${escapeHtml(session.dateLabel)}</strong><small>${escapeHtml(signedCurrency(session.pnl, snapshot.currencyCode))}</small></article>`).join("")}
       </div>
     </section>
-    <article class="card review-card">
-      <div><p class="card-label">BEST SETUP</p><h2>${escapeHtml(bestSetup?.name ?? "No trades with realized P&L")}</h2></div>
-      <strong class="${resultClass(bestSetup?.netR ?? null)}">${escapeHtml(signedR(bestSetup?.netR ?? null, "—"))}</strong>
-      <p>${snapshot.provenance === "demo" && performance.ruleAdherencePct !== null ? `${performance.ruleAdherencePct.toFixed(0)}% plan adherence in this fictional journal.` : "Classify setups and add journal notes to make this review more useful."}</p>
-    </article>
+    ${planAdherenceDashboardCard(snapshot)}
     <div class="quick-actions" aria-label="Dashboard shortcuts">
       ${snapshot.provenance === "demo" ? "" : manualExecutionAction("Add execution")}
       <button class="secondary-button" type="button" data-route="trades">Review trades</button>
@@ -319,29 +318,6 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
         ${snapshot.playbooks.length === 0 ? `<article class="empty-state"><h2>No playbooks yet</h2><p>Setup classification will turn imported trades into playbook analytics.</p></article>` : ""}
       </div>
     </section>
-  </section>`;
-}
-
-function reportsView(snapshot: JournalWorkspaceSnapshot): string {
-  const setups = summarizeSetups(snapshot.trades);
-  const performance = snapshot.performance;
-  const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
-  return `<section class="screen-stack" aria-labelledby="reports-title">
-    <div class="screen-heading"><div><p class="eyebrow">PERFORMANCE ANALYTICS</p><h1 id="reports-title">Reports</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
-    <div class="metric-grid">
-      <article class="card"><p class="card-label">NET P&amp;L</p><strong class="metric ${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong><span>${escapeHtml(signedR(performance.netR, "—"))}${hasInterimResults ? " · includes interim partial exits" : ""}</span></article>
-      <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>${countNoun(performance.tradeCount, "trade")} with realized P&amp;L</span></article>
-      <article class="card"><p class="card-label">PROFIT FACTOR</p><strong class="metric">${performance.profitFactor?.toFixed(2) ?? "—"}</strong><span>profit relative to loss</span></article>
-      <article class="card"><p class="card-label">EXPECTANCY</p><strong class="metric">${escapeHtml(signedR(performance.averageR, "—"))}</strong><span>${performance.rTradeCount} of ${performance.tradeCount} with defined risk</span></article>
-    </div>
-    <article class="card report-table-card">
-      <div class="section-title"><div><p class="card-label">BY SETUP</p><h2>What is working</h2></div><span>${setups.length} setups</span></div>
-      <div class="report-table" role="table" aria-label="Performance by setup">
-        <div class="report-row report-header" role="row"><span role="columnheader">Setup</span><span role="columnheader">Trades</span><span role="columnheader">Win rate</span><span role="columnheader">Net</span></div>
-        ${setups.map((setup) => `<div class="report-row" role="row"><strong role="cell">${escapeHtml(setup.name)}</strong><span role="cell">${setup.tradeCount}</span><span role="cell">${setup.winRatePct.toFixed(0)}%</span><span role="cell" class="${resultClass(setup.netR)}">${escapeHtml(signedR(setup.netR, "—"))}</span></div>`).join("")}
-      </div>
-    </article>
-    <article class="card chart-card"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2>Cumulative result</h2></div><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong></div>${equityChart(snapshot)}</article>
   </section>`;
 }
 
@@ -725,6 +701,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       screen?.focus({ preventScroll: true });
     }
+    if (tab === "reports") bindReportsView(root, snapshot);
     if (tab === "more") {
       bindSizingForm(root);
       bindUserDataExport(root, application);
