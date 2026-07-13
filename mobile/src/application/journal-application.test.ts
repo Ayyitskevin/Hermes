@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SessionJournalStore } from "../adapters/session-journal-store";
+import { parseJournalArchive } from "./journal-archive";
 import type {
   ManualExecutionCommitResult,
   PreparedTradeReviewBatch,
@@ -383,6 +384,52 @@ describe("JournalApplication trade review workflow", () => {
         review.tradeSubjectId === untouchedSubject
       ))).toBe(false);
       expect(ledger.executions).toEqual(executionsBefore);
+    } finally {
+      await application.close();
+    }
+  });
+});
+
+describe("JournalApplication user-data export", () => {
+  it("delegates a local export and returns a self-verifying archive artifact", async () => {
+    const store = new SessionJournalStore({ nowMs: () => 1_750_000_000_000 });
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      const artifact = await application.exportUserData();
+      const parsed = parseJournalArchive(artifact.contents);
+
+      expect(parsed).toEqual(artifact.archive);
+      expect(parsed).toMatchObject({
+        kind: "hermes-journal-export",
+        formatVersion: 1,
+        payload: { kind: "browser-session-state", version: 1 },
+      });
+      expect(artifact.fileName).toMatch(/^hermes-journal-export-.*\.json$/);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("never exports the hidden local journal while the fictional demo is visible", async () => {
+    class ObservedStore extends SessionJournalStore {
+      exportCalls = 0;
+
+      override async exportUserData() {
+        this.exportCalls += 1;
+        return super.exportUserData();
+      }
+    }
+
+    const store = new ObservedStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await application.exploreDemo();
+      await expect(application.exportUserData()).rejects.toThrow(/local journal/);
+      expect(store.exportCalls).toBe(0);
+
+      await application.startJournal();
+      await application.exportUserData();
+      expect(store.exportCalls).toBe(1);
     } finally {
       await application.close();
     }

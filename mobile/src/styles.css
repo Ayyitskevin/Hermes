@@ -386,6 +386,27 @@ p { line-height: 1.55; }
 .manual-capture-card > p { margin: 0; color: var(--muted); }
 .manual-entry-sheet { display: grid; gap: 1rem; }
 .manual-entry-sheet > p { margin: 0; }
+.user-data-export {
+  border-color: rgb(241 198 109 / 28%);
+  display: grid;
+  gap: .85rem;
+}
+
+.user-data-export > p { margin: 0; }
+.export-warning {
+  padding: .85rem;
+  border: 1px solid rgb(241 198 109 / 35%);
+  border-radius: .75rem;
+  background: rgb(241 198 109 / 7%);
+  color: #d8d2c6;
+  line-height: 1.5;
+}
+.export-warning strong { color: var(--warn); }
+.export-status {
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
 .manual-entry-review { display: grid; gap: 1rem; }
 .manual-entry-review .execution-grid { grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr)); }
 .manual-entry-review dd { overflow-wrap: anywhere; }

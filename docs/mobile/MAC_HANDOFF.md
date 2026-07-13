@@ -141,6 +141,30 @@ and an App Store disclosure.
   horizontal overflow. Confirm any metric derived from an open trade is visibly
   labeled partial, and edited draft inputs do not relabel saved-version metric
   evidence as newly persisted facts.
+- Build a local journal containing CSV source rows, an independent manual fill,
+  a rolled-back receipt, and at least two immutable versions of one trade review.
+  In More, confirm the export card visibly warns that JSON is unencrypted and
+  that restore/Delete All Data are unavailable.
+- In airplane mode, activate **Prepare export**. Confirm no destination opens
+  during preparation, focus stays on the same control when it becomes
+  **Share or save export**, and no Hermes/network request occurs.
+- With VoiceOver, activate the second step. If file-capable Web Share is
+  available, cancel the iOS share sheet and confirm cancellation is announced
+  without fallback. On success, verify the UI says the export was handed to the
+  selected destination; for download fallback, verify it says Download
+  requested—never saved or completed.
+- Confirm the plaintext warning before handoff, then reopen the saved file from
+  Files with an approved diagnostic tool. Confirm the filename, custom JSON
+  media type/fallback behavior, format
+  v1, all schema-v3 table/column signatures, raw CSV/manual provenance,
+  historical/current reviews, formula definitions, stable subjects, empty
+  attachment catalog, and outer checksum. Do not log journal content.
+- Export the unchanged journal twice. Confirm state/report digests match while
+  export timestamps/archive digests differ. Then mutate one fact and confirm the
+  user-state digest changes.
+- Exercise share failure, destination denial, low storage, a near-limit journal,
+  background/foreground during preparation, force quit, and relaunch. Every
+  uncertain path must stay retryable and must not report a saved file falsely.
 - Verify the Dashboard metric values reconcile with the eight bundled records.
 - Calculate valid long and short plans; verify wrong-side stops show inline errors.
 - Exercise settings/welcome focus containment and focus return.
@@ -185,9 +209,11 @@ and every skipped check. A clean console alone is not evidence.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry and versioned trade reviews are Linux-verified but still need
-  the native persistence, response-loss, migration, accessibility, and
-  lifecycle checks above. Attachments, export, restore, and delete-all remain
+- Manual entry, versioned trade reviews, and export generation are Linux/browser
+  verified but still need the native persistence, response-loss, migration,
+  accessibility, and lifecycle checks above. Native Web Share/Files
+  cancellation, save, reopen, custom MIME behavior, and large-archive memory
+  have not been observed. Attachments, restore, and Delete All Data remain
   incomplete Phase 1 work.
 - `Podfile.lock`, `App.xcworkspace`, and final CocoaPods-generated build phases
   are Mac gates and are not yet present/reviewed.

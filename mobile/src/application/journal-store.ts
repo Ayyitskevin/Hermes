@@ -9,6 +9,7 @@ import type {
 } from "../core/ledger";
 import type { PreparedManualExecution } from "./prepare-manual-execution";
 import type { PreparedTradeReview } from "./prepare-trade-review";
+import type { JournalExportArtifact } from "./journal-archive";
 
 export interface JournalWorkspaceRecord {
   readonly id: string;
@@ -208,6 +209,8 @@ export class JournalImportError extends Error {
 
 export interface JournalStore {
   load(): Promise<JournalLedgerSnapshot>;
+  /** Complete archive boundary; unlike load(), this includes immutable history. */
+  exportUserData(): Promise<JournalExportArtifact>;
   commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult>;
   commitManualExecution(command: PreparedManualExecution): Promise<ManualExecutionCommitResult>;
   commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult>;

@@ -81,6 +81,12 @@ submission-ready product:
   risk, optional planned stop, optimistic concurrency, and atomic batch tagging.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
+- A versioned, deterministic plaintext journal export that captures all
+  app-owned SQLite facts and history in one transaction, rejects
+  ambiguous/corrupt envelopes, and offers a browser-tested,
+  accessibility-designed two-step delivery path: file-capable Web Share when
+  supported, otherwise a browser download. The browser export is a labeled
+  in-memory development artifact, not a native backup.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades.
@@ -94,8 +100,9 @@ submission-ready product:
 
 Linux tests exercise the real schema/repository through SQL.js. Native
 encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
-and device backup behavior still require the Mac/device gate. Attachments,
-export/restore/delete-all, daily notes, and deeper reports remain Phase 1 work.
+device backup behavior, and export delivery/reopen behavior still require the
+Mac/device gate. Attachments, restore, Delete All Data, daily notes, and deeper
+reports remain Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

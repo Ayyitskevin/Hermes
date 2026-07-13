@@ -279,6 +279,14 @@ never appear without their inspectable, versioned denominator.
 - Delete All Data with confirmation, attachment cleanup, Keychain/database
   behavior, and a verification receipt.
 
+Slice C-A now delivers the export half of that contract on Linux/browser: an
+app-owned `hermes-journal-export` v1 envelope, a complete transactional
+`sqlite-table-set` for native durable state, an explicitly development-only
+browser-session payload, an empty versioned attachment catalog, deterministic
+ordering, bounded parsing, corruption checks, and plaintext-warning/two-stage
+delivery UI. It is an archive, not a recoverable backup. Restore, attachment
+round-trip, verified deletion, and native Files/share behavior remain open.
+
 Exit: export → delete → restore reproduces the same ledger, annotations,
 attachments, and report digests in airplane mode.
 
@@ -415,10 +423,15 @@ positive, negative, zero, repeating, partial, short, missing, incompatible, and
 unsupported cases. CocoaPods, Xcode, native SQLCipher/Keychain lifecycle, and
 physical-device accessibility remain explicit Mac/device release holds.
 
-The next owned implementation is **Slice C: user-owned data**. Its versioned
-export manifest must include the immutable ledger, current and historical
-review versions, reusable vocabulary, formula definitions, and stable subject
-identity before Delete All Data or restore can be considered coherent.
+The 2026-07-13 Slice C-A Linux gate passed a locked install, 271 Vitest tests
+across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
+sync, dependency audit, native/lock drift check, and whitespace check.
+
+Slice C-A's versioned export manifest now includes the immutable ledger, current
+and historical review versions, reusable vocabulary, formula definitions, and
+stable subject identity. The next owned implementation is previewed,
+empty-journal-only atomic restore with payload-specific verification, followed
+by verified Delete All Data—not broker connectivity or hosted sync.
 
 ## Competitive and platform references
 

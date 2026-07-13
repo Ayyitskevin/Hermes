@@ -14,6 +14,7 @@ import {
   bindTradeReviewActions,
   reviewTradeAction,
 } from "./trade-review-sheet";
+import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -384,7 +385,7 @@ function latestImportReceipt(snapshot: JournalWorkspaceSnapshot): string {
   </article>`;
 }
 
-function moreView(snapshot: JournalWorkspaceSnapshot): string {
+function moreView(snapshot: JournalWorkspaceSnapshot, persistence: JournalApplication["persistence"]): string {
   const activeHistory = snapshot.importHistory.filter((receipt) => !receipt.rolledBack);
   return `<section class="screen-stack" aria-labelledby="more-title">
     <div class="screen-heading"><div><p class="eyebrow">DATA + TOOLS</p><h1 id="more-title">More</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
@@ -399,18 +400,19 @@ function moreView(snapshot: JournalWorkspaceSnapshot): string {
         ${receipt.receiptId !== null && !receipt.rolledBack ? `<button class="text-button" type="button" data-rollback-receipt="${escapeHtml(receipt.receiptId)}">Roll back this import</button>` : ""}
       </article>`).join("")}</div>
     </section>`}
+    ${snapshot.provenance === "demo" ? "" : userDataExportCard(persistence)}
     ${sizingTool()}
     <article class="card privacy-card"><p class="card-label">PRODUCT BOUNDARY</p><h2>Review, never trade</h2><p>Hermes stores execution facts locally, derives trades deterministically, and never places or modifies a brokerage order.${snapshot.importHistory.length === 0 ? " Manual fills remain independent facts; CSV imports also create reversible receipts." : activeHistory.length === 0 ? " Every recorded import is rolled back; manual facts remain independent." : " Every active import can be rolled back from its receipt."}</p></article>
   </section>`;
 }
 
-function viewFor(tab: TabId, snapshot: JournalWorkspaceSnapshot): string {
+function viewFor(tab: TabId, snapshot: JournalWorkspaceSnapshot, persistence: JournalApplication["persistence"]): string {
   switch (tab) {
     case "dashboard": return dashboardView(snapshot);
     case "trades": return tradesView(snapshot);
     case "journal": return journalView(snapshot);
     case "reports": return reportsView(snapshot);
-    case "more": return moreView(snapshot);
+    case "more": return moreView(snapshot, persistence);
   }
 }
 
@@ -428,7 +430,7 @@ function onboardingTemplate(): string {
       </section>
       <section class="onboarding-page" data-page="2" hidden>
         <p class="eyebrow">03 · OWN YOUR DATA</p><h1 tabindex="-1">Private by default.</h1>
-        <p>Your journal is designed to stay on this device. Export and restore controls arrive before release.</p>
+        <p>Your journal is designed to stay on this device. Export is available now; restore and verified deletion remain under atomic recovery work.</p>
       </section>
     </div>
     <div class="onboarding-footer">
@@ -709,7 +711,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   const render = (tab: TabId, announce = true) => {
     currentTab = tab;
     updateChrome();
-    if (screen) screen.innerHTML = viewFor(tab, snapshot);
+    if (screen) screen.innerHTML = viewFor(tab, snapshot, application.persistence);
     root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
       const active = button.dataset.tab === tab;
       button.classList.toggle("active", active);
@@ -721,7 +723,10 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       screen?.focus({ preventScroll: true });
     }
-    if (tab === "more") bindSizingForm(root);
+    if (tab === "more") {
+      bindSizingForm(root);
+      bindUserDataExport(root, application);
+    }
     if (tab === "trades") bindTradeSearch(root, snapshot.trades.length);
     bindImportForm(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();

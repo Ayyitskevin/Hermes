@@ -22,6 +22,13 @@ import {
   JournalTradeReviewError,
 } from "../application/journal-store";
 import {
+  canonicalJournalArchiveJson,
+  createJournalExportArtifact,
+  JOURNAL_ARCHIVE_KIND,
+  type JournalArchiveJson,
+  type JournalExportArtifact,
+} from "../application/journal-archive";
+import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../application/prepare-manual-execution";
@@ -39,7 +46,7 @@ import type {
   TradeNormalizationResult,
 } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
-import { sha256Hex } from "./sqlite/schema";
+import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./sqlite/schema";
 import { stableTradeSubjectHash } from "./sqlite/trade-subject";
 
 interface SessionExecution extends LedgerExecution {
@@ -248,6 +255,10 @@ export class SessionJournalStore implements JournalStore {
   constructor(private readonly runtime: SessionJournalRuntime = DEFAULT_RUNTIME) {}
 
   async load(): Promise<JournalLedgerSnapshot> {
+    return this.loadSnapshot();
+  }
+
+  private loadSnapshot(): JournalLedgerSnapshot {
     this.assertOpen();
     const executions: readonly LedgerExecution[] = this.executions;
     const projection = normalizeTrades(executions);
@@ -280,6 +291,90 @@ export class SessionJournalStore implements JournalStore {
         .map((playbook) => ({ ...playbook, rules: [...playbook.rules] })),
       imports: [...this.receipts],
     };
+  }
+  async exportUserData(): Promise<JournalExportArtifact> {
+    const ledger = this.loadSnapshot();
+    const byId = <Value extends { readonly id: string }>(values: readonly Value[]) => (
+      [...values].sort((left, right) => stableCompare(left.id, right.id))
+    );
+    const byKey = <Value>(values: Iterable<readonly [string, Value]>) => (
+      [...values].sort(([left], [right]) => stableCompare(left, right))
+    );
+    const payloadData = {
+      adapter: "browser-session",
+      stateVersion: 1,
+      workspace: this.workspace,
+      accounts: byId(this.accounts),
+      instruments: byId(this.instruments),
+      activeExecutions: byId(this.executions),
+      inactiveExecutions: byKey(this.inactiveExecutions.entries()),
+      receipts: byId(this.receipts),
+      receiptByRevision: byKey(this.receiptByRevision.entries()),
+      manualSubmissions: byKey(this.manualSubmissions.entries()),
+      reviewVersions: byId(this.reviewVersions),
+      reviewHeads: byKey(this.reviewHeadByTradeSubjectId.entries()),
+      reviewTerms: byId(this.reviewTerms),
+      playbooks: byId(this.playbooks).map((playbook) => ({
+        ...playbook,
+        rules: byId(playbook.rules),
+      })),
+      reviewSubmissions: byKey(this.reviewSubmissionById.entries()),
+      counters: {
+        lastReviewRecordedAtMs: String(this.lastReviewRecordedAtMs),
+        nextExecutionSequence: String(this.nextExecutionSequence),
+        nextReceiptOrdinal: String(this.nextReceiptOrdinal),
+      },
+    };
+    const archiveData = payloadData as unknown as JournalArchiveJson;
+    const stateSha256 = sha256Hex(canonicalJournalArchiveJson(archiveData));
+    const reportSha256 = sha256Hex(canonicalJournalArchiveJson({
+      digestVersion: "hermes-report-input-v1",
+      ledger,
+    } as unknown as JournalArchiveJson));
+    const observedNowMs = this.runtime.nowMs();
+    if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+      throw new Error("The browser session clock is outside the journal export range.");
+    }
+    const inactiveExecutionCount = this.inactiveExecutions.size;
+    return createJournalExportArtifact({
+      kind: JOURNAL_ARCHIVE_KIND,
+      formatVersion: 1,
+      exportedAtUs: String(BigInt(observedNowMs) * 1_000n),
+      source: {
+        schemaUserVersion: MOBILE_SCHEMA_MIGRATIONS.at(-1)?.toVersion ?? 0,
+        migrations: MOBILE_SCHEMA_MIGRATIONS.map((migration) => ({
+          version: migration.toVersion,
+          name: migration.name,
+          checksumSha256: migration.checksumSha256,
+        })),
+      },
+      payload: {
+        kind: "browser-session-state",
+        version: 1,
+        data: archiveData,
+      },
+      attachments: { version: 1, entries: [] },
+      summary: {
+        workspaceName: ledger.workspace?.name ?? null,
+        currency: ledger.workspace?.defaultCurrency ?? null,
+        timeZone: ledger.workspace?.timeZone ?? null,
+        accounts: String(ledger.accounts.length),
+        activeExecutions: String(ledger.executions.length),
+        executionVersions: String(ledger.executions.length + inactiveExecutionCount),
+        importReceipts: String(this.receipts.length),
+        rolledBackImports: String(
+          this.receipts.filter((receipt) => receipt.rolledBackAtUs !== null).length,
+        ),
+        currentReviews: String(ledger.tradeReviews.length),
+        reviewVersions: String(this.reviewVersions.length),
+        reviewTerms: String(this.reviewTerms.length),
+        playbooks: String(this.playbooks.length),
+        attachments: "0",
+        attachmentBytes: "0",
+      },
+      stateSha256,
+      reportSha256,
+    });
   }
 
   async commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult> {

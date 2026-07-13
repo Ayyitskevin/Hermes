@@ -7,6 +7,7 @@ import type {
   SqlRow,
   SqlRunResult,
 } from "../../application/sql-database";
+import { parseJournalArchive } from "../../application/journal-archive";
 import { prepareCsvImport } from "../../application/prepare-csv-import";
 import {
   prepareManualExecution,
@@ -19,6 +20,10 @@ import {
   type TradeReviewInput,
 } from "../../application/prepare-trade-review";
 import { MOBILE_SCHEMA_MIGRATIONS } from "./schema";
+import {
+  SQLITE_JOURNAL_ARCHIVE_TABLES,
+  type SqliteArchiveTable,
+} from "./journal-archive";
 import {
   SqliteJournalStore,
   type JournalStoreRuntime,
@@ -371,6 +376,187 @@ describe("SqliteJournalStore", () => {
     }
   });
 
+  it("exports complete SQLite facts and history beyond the current read model", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const imported = await store.commitCsvImport(preparedCsv());
+      const tradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      if (tradeSubjectId === undefined) throw new Error("Expected one durable trade subject.");
+
+      const manualCommand = preparedManual("9", {
+        symbol: "MSFT",
+        assetClass: "etf",
+        quantity: "1",
+        price: "400",
+        fee: "0",
+        executedAt: "2026-07-02T09:30:00",
+      });
+      const manual = await store.commitManualExecution(manualCommand);
+
+      const first = await store.commitTradeReviews(preparedReviewBatch("export-review-one", [
+        preparedReview(tradeSubjectId, "d"),
+      ]));
+      const firstReviewId = first.reviewIds[0];
+      if (firstReviewId === undefined) throw new Error("Expected the first review version.");
+
+      const second = await store.commitTradeReviews(preparedReviewBatch("export-review-two", [
+        preparedReview(tradeSubjectId, "e", {
+          expectedPreviousReviewId: firstReviewId,
+          note: "The exit followed the plan, but the stop rule needs work.",
+          tags: ["Needs work"],
+          playbook: {
+            name: "momentum",
+            rules: [
+              { name: "wait for confirmation", outcome: "followed" },
+              { name: "respect the stop", outcome: "broken" },
+            ],
+          },
+        }),
+      ]));
+      const secondReviewId = second.reviewIds[0];
+      if (secondReviewId === undefined) throw new Error("Expected the second review version.");
+
+      const visible = await store.load();
+      expect(visible.tradeReviews.map((review) => review.id)).toEqual([secondReviewId]);
+
+      const artifact = await store.exportUserData();
+      const archive = parseJournalArchive(artifact.contents);
+      expect(archive).toEqual(artifact.archive);
+      expect(artifact.mediaType).toBe("application/vnd.hermes.journal+json");
+      expect(archive.payload).toMatchObject({ kind: "sqlite-table-set", version: 1 });
+      expect(archive.stateSha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(archive.reportSha256).toMatch(/^[0-9a-f]{64}$/);
+
+      const data = archive.payload.data as unknown as {
+        readonly tableFormatVersion: number;
+        readonly tables: readonly SqliteArchiveTable[];
+      };
+      expect(data.tableFormatVersion).toBe(1);
+      expect(data.tables.map((table) => table.name)).toEqual(SQLITE_JOURNAL_ARCHIVE_TABLES);
+
+      const tableRows = (name: typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number]) => {
+        const table = data.tables.find((candidate) => candidate.name === name);
+        if (table === undefined) throw new Error("Missing exported SQLite table " + name + ".");
+        return table.rows.map((row) => Object.fromEntries(table.columns.map((column, index) => [
+          column.name,
+          row[index] ?? null,
+        ])));
+      };
+
+      expect(tableRows("import_batches")).toEqual([
+        expect.objectContaining({
+          source_kind: "generic_csv",
+          source_name: "fills.csv",
+          parser_id: "generic-csv",
+          parser_version: "1",
+          mapping_json: expect.stringContaining("\"timeZone\":\"America/New_York\""),
+        }),
+      ]);
+      expect(tableRows("import_source_rows")).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          row_ordinal: "1",
+          source_text: "fill-1,AAPL,BTO,2,100,0.10,USD,2026-07-01T13:30:00Z\r\n",
+        }),
+        expect.objectContaining({
+          row_ordinal: "2",
+          source_text: "fill-2,AAPL,STC,2,110,0.10,USD,2026-07-01T14:30:00Z",
+        }),
+      ]));
+      expect(tableRows("execution_sources").map((row) => row.source_kind).sort()).toEqual([
+        "import",
+        "import",
+        "manual",
+      ]);
+      expect(tableRows("manual_execution_submissions")).toEqual([
+        expect.objectContaining({
+          submission_id: manualCommand.submissionId,
+          state: "committed",
+          execution_id: manual.executionId,
+          command_json: expect.stringContaining("\"symbol\":\"MSFT\""),
+        }),
+      ]);
+
+      expect(tableRows("trade_review_versions")).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: firstReviewId,
+          version_number: "1",
+          supersedes_version_id: null,
+          note_text: "Waited for confirmation and managed the exit deliberately.",
+          result_r_metric_id: "result-r",
+          result_r_metric_version: "1",
+          percent_return_metric_id: "percent-return",
+          percent_return_metric_version: "1",
+        }),
+        expect.objectContaining({
+          id: secondReviewId,
+          version_number: "2",
+          supersedes_version_id: firstReviewId,
+          note_text: "The exit followed the plan, but the stop rule needs work.",
+        }),
+      ]));
+      expect(tableRows("trade_review_heads")).toEqual([
+        expect.objectContaining({ review_version_id: secondReviewId }),
+      ]);
+      expect(tableRows("review_terms").map((row) => row.name).sort()).toEqual([
+        "A+ setup",
+        "Focused",
+        "Late exit",
+        "Needs work",
+        "Opening-range breakout",
+      ]);
+      expect(tableRows("playbooks")).toEqual([
+        expect.objectContaining({ name: "Momentum", normalized_name: "momentum" }),
+      ]);
+      expect(tableRows("playbook_rules").map((row) => row.rule_text).sort()).toEqual([
+        "Respect the stop",
+        "Wait for confirmation",
+      ]);
+      expect(tableRows("trade_review_term_assignments")).toHaveLength(8);
+      expect(tableRows("trade_review_rule_results").map((row) => row.outcome).sort()).toEqual([
+        "broken",
+        "followed",
+        "followed",
+        "followed",
+      ]);
+
+      expect(tableRows("metric_definitions")).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          metric_id: "result-r",
+          version: "1",
+          fraction_digits: "12",
+          rounding_mode: "half_away_from_zero",
+          description: expect.stringContaining("initial risk"),
+        }),
+        expect.objectContaining({
+          metric_id: "percent-return",
+          version: "1",
+          fraction_digits: "12",
+          rounding_mode: "half_away_from_zero",
+          description: expect.stringContaining("entry notional"),
+        }),
+      ]));
+      expect(archive.summary).toEqual({
+        workspaceName: "My Journal",
+        currency: "USD",
+        timeZone: "America/New_York",
+        accounts: "1",
+        activeExecutions: "3",
+        executionVersions: "3",
+        importReceipts: "1",
+        rolledBackImports: "0",
+        currentReviews: "1",
+        reviewVersions: "2",
+        reviewTerms: "5",
+        playbooks: "1",
+        attachments: "0",
+        attachmentBytes: "0",
+      });
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
   it("rolls back every review in a batch when a later optimistic head is stale", async () => {
     const { database, store } = await createHarness();
     const twoTrades = "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
@@ -544,12 +730,16 @@ describe("SqliteJournalStore", () => {
       ));
       expect(imported.ledger.instruments
         .filter((instrument) => instrument.symbol === "SPY")
-        .map((instrument) => instrument.assetClass)
-        .sort()).toEqual(["etf", "stock"]);
+        .map((instrument) => instrument.assetClass))
+        .toEqual(["etf", "stock"]);
       expect(imported.ledger.executions.find((execution) => execution.id === manualEtf.executionId)
         ?.instrumentId).not.toBe(imported.ledger.executions.find((execution) => (
         execution.id !== manualEtf.executionId
       ))?.instrumentId);
+      const firstExport = await store.exportUserData();
+      const secondExport = await store.exportUserData();
+      expect(secondExport.archive.stateSha256).toBe(firstExport.archive.stateSha256);
+      expect(secondExport.archive.reportSha256).toBe(firstExport.archive.reportSha256);
     } finally {
       await store.close();
     }

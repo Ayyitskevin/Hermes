@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { parseJournalArchive } from "../application/journal-archive";
 import {
   JournalTradeReviewError,
   type PreparedTradeReviewBatch,
@@ -356,6 +357,93 @@ describe("browser session trade reviews", () => {
       ))).toBe(false);
     } finally {
       await replacementStore.close();
+    }
+  });
+});
+
+describe("browser session user-data export", () => {
+  it("retains immutable review history and separates state from export-time identity", async () => {
+    let nowMs = 10_000;
+    const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+    try {
+      const tradeSubjectId = await addClosedTrade(store, "AAPL", "1", "2");
+      const first = await store.commitTradeReviews(batch("first-export-review", [
+        review("a", tradeSubjectId),
+      ]));
+      const firstHead = first.ledger.tradeReviews[0];
+      if (firstHead === undefined) throw new Error("Expected the first review head.");
+      const second = await store.commitTradeReviews(batch("second-export-review", [
+        review("b", tradeSubjectId, {
+          expectedPreviousReviewId: firstHead.id,
+          note: "Second immutable reflection retained beside the first.",
+        }),
+      ]));
+
+      const firstArtifact = await store.exportUserData();
+      const secondArtifact = await store.exportUserData();
+      const archive = parseJournalArchive(firstArtifact.contents);
+      const data = archive.payload.data as unknown as {
+        readonly reviewVersions: readonly { readonly id: string; readonly version: number }[];
+        readonly reviewHeads: readonly (readonly [string, string])[];
+      };
+
+      expect(archive.summary).toMatchObject({
+        currentReviews: "1",
+        reviewVersions: "2",
+      });
+      expect(data.reviewVersions).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: first.reviewIds[0], version: 1 }),
+        expect.objectContaining({ id: second.reviewIds[0], version: 2 }),
+      ]));
+      expect(data.reviewVersions).toHaveLength(2);
+      expect(data.reviewHeads).toEqual([[tradeSubjectId, second.reviewIds[0]]]);
+      expect(secondArtifact.archive.stateSha256).toBe(firstArtifact.archive.stateSha256);
+      expect(secondArtifact.archive.reportSha256).toBe(firstArtifact.archive.reportSha256);
+      expect(secondArtifact.archive.exportedAtUs).not.toBe(firstArtifact.archive.exportedAtUs);
+      expect(secondArtifact.archive.archiveSha256).not.toBe(
+        firstArtifact.archive.archiveSha256,
+      );
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("finishes one call-time snapshot before a later mutation can start", async () => {
+    let nowMs = 20_000;
+    const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+    try {
+      const tradeSubjectId = await addClosedTrade(store, "MSFT", "3", "4");
+      const reviewCommand = review("c", tradeSubjectId);
+
+      const exportPromise = store.exportUserData();
+      const mutationPromise = store.commitTradeReviews(batch(
+        "post-export-review",
+        [reviewCommand],
+      ));
+      const [artifact] = await Promise.all([exportPromise, mutationPromise]);
+      const archive = parseJournalArchive(artifact.contents);
+      const data = archive.payload.data as unknown as {
+        readonly reviewVersions: readonly unknown[];
+        readonly reviewHeads: readonly unknown[];
+      };
+
+      expect(archive.summary).toMatchObject({
+        activeExecutions: "2",
+        currentReviews: "0",
+        reviewVersions: "0",
+      });
+      expect(data.reviewVersions).toEqual([]);
+      expect(data.reviewHeads).toEqual([]);
+
+      const afterMutation = await store.exportUserData();
+      expect(afterMutation.archive.summary).toMatchObject({
+        currentReviews: "1",
+        reviewVersions: "1",
+      });
+      expect(afterMutation.archive.stateSha256).not.toBe(artifact.archive.stateSha256);
+      expect(afterMutation.archive.reportSha256).not.toBe(artifact.archive.reportSha256);
+    } finally {
+      await store.close();
     }
   });
 });

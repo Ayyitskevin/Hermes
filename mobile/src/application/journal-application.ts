@@ -12,6 +12,7 @@ import type {
   UnacknowledgedManualExecution,
 } from "./journal-store";
 import { JournalTradeReviewError } from "./journal-store";
+import type { JournalExportArtifact } from "./journal-archive";
 import {
   createManualExecutionSubmissionId,
   prepareManualExecution,
@@ -74,6 +75,13 @@ export class JournalApplication {
   async loadWorkspace(): Promise<JournalWorkspaceSnapshot> {
     if (this.viewMode === "demo") return DEMO_WORKSPACE;
     return workspaceSnapshotFromLedger(await this.store.load());
+  }
+
+  async exportUserData(): Promise<JournalExportArtifact> {
+    if (this.viewMode !== "local") {
+      throw new Error("Return to your local journal before exporting private data.");
+    }
+    return this.store.exportUserData();
   }
 
   async startJournal(): Promise<JournalWorkspaceSnapshot> {

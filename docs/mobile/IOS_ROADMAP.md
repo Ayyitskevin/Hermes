@@ -47,8 +47,9 @@ under the provisional identifier until that gate is cleared.
   sync, and recurring AI
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
-  capture, and versioned 60-second review now run end to end, but user-owned
-  export/deletion, deeper reports, and native Mac/device evidence are incomplete.
+  capture, versioned 60-second review, and Linux/browser archive export now run
+  end to end, but restore, verified deletion, deeper reports, attachments, and
+  native Mac/device evidence are incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -193,8 +194,19 @@ Delivered in the current vertical slice:
 - Trade-detail execution inspection, durable review edits, pending/draft/
   completed queues, atomic batch tagging, and session streaks that follow the
   blueprint's any-execution-date/at-least-one-saved-review definition.
+- Slice C-A app-owned export v1: one transactional app-owned SQLite table set
+  that retains raw provenance and immutable history; a separate development-only
+  browser-session payload; deterministic JSON, bounded/duplicate-aware parsing,
+  versioned empty attachment catalog, and corruption digests; plus an
+  accessibility-designed two-stage plaintext-warning surface: file-capable Web
+  Share when supported, otherwise browser download. It never appears over the
+  fictional demo; native share-sheet/Files and VoiceOver behavior remain gates.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
-  2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright journeys.
+  2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
+  journeys.
+- The 2026-07-13 Slice C-A Linux gate passed a locked install, 271 Vitest tests
+  across 26 files, 21 Playwright journeys, the production build, Capacitor sync,
+  dependency audit, native/lock drift check, and whitespace check.
 
 Still required in Phase 1:
 
@@ -207,7 +219,10 @@ Still required in Phase 1:
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.
-- Add versioned export/restore and Delete All Data, including attachment cleanup.
+- Add previewed, empty-journal-only atomic restore with payload-specific
+  compatibility/corruption verification, then verified Delete All Data with
+  database, Keychain, attachment, interruption, and response-loss behavior.
+- Prove native export share/cancel/save/reopen behavior on a Mac and iPhone.
 
 Exit gate: manual/CSV input → normalized trade → journal metadata → dashboard/
 report → export/restore works in airplane mode, survives kill/relaunch, and
@@ -275,6 +290,7 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-The next implementation slice is Phase 1's durable annotations keyed to stable
-trade subjects, followed by versioned export/restore/delete-all—not broker
-connectivity or legacy cockpit extraction.
+Durable annotations and Slice C-A export are implemented. The next implementation
+slice is previewed empty-journal atomic restore, followed by verified Delete All
+Data—not broker connectivity, hosted sync, Android, recurring AI, or legacy
+cockpit extraction.

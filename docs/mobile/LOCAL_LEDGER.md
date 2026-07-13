@@ -207,6 +207,45 @@ can prove the native lifecycle. No privacy or recovery claim may be strengthened
 until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
+## User-owned export v1
+
+- The file envelope is app-owned `hermes-journal-export` format v1. Native
+  export reads all app-owned durable tables and the current report input inside one SQLite
+  transaction; it never substitutes the lossy current-ledger projection for raw
+  source rows, inactive/history facts, immutable review versions, submission
+  receipts, formula definitions, or stable trade subjects.
+- Native payload v1 is `sqlite-table-set`. Its table and ordered column
+  signatures are pinned to schema v3, SQLite integers are emitted as canonical
+  decimal strings, rows and JSON keys are deterministic, and table-set or
+  ordered-column metadata drift fails closed. Live table-SQL hashes remain
+  diagnostic; export v1 does not claim complete constraint, index, or trigger
+  pinning. Migration application timestamps stay in provenance but are excluded
+  from the portable user-state digest.
+- Browser preview uses a separate `browser-session-state` payload. It captures
+  the complete in-memory development store but is not native-format recovery
+  evidence and disappears when the page reloads.
+- `archiveSha256` detects accidental content corruption over canonical semantic
+  JSON; `stateSha256` identifies durable user state and `reportSha256`
+  identifies the versioned exact report input. These are unkeyed checksums, not
+  signatures, authentication, or encryption. Anyone who edits a file can
+  recompute them.
+- The JSON parser rejects duplicate decoded object keys, unsafe numeric values,
+  unknown envelope fields, unsupported archive-format or attachment-catalog
+  versions, nonempty attachment catalogs, oversized structures, out-of-range
+  timestamps, and checksum mismatch. Validated artifact objects are deeply
+  frozen so they cannot diverge from serialized bytes. Payload-kind/version
+  compatibility remains part of the restore gate.
+- Attachment catalog v1 is deliberately empty. The 64 MiB raw archive cap and
+  current Blob/File delivery can multiply memory use; native large-ledger and
+  low-storage behavior remain device gates.
+- The More screen prepares a snapshot first, then uses a second user action for
+  file-capable Web Share when supported or browser download so WebKit transient activation is not lost.
+  The UI states that JSON is plaintext and calls it an archive, not a backup.
+  Demo mode cannot invoke the hidden local export.
+- Restore and Delete All Data are not implemented. Before restore, Hermes must
+  dispatch by payload kind/version, verify every table/row/digest/summary claim,
+  preview the result, and commit only into an empty journal atomically.
+
 ## Verification evidence
 
 Linux CI executes the full migration in SQL.js and checks STRICT tables,
@@ -231,6 +270,15 @@ tamper detection, idempotent retry, stale-head rejection, all-or-nothing batch
 rollback, stable-subject survival, exact metric reconciliation, editable review
 versioning without execution mutation, unsaved-change focus behavior, and the
 pending/draft/completed review queue in a full mobile browser journey.
+Slice C-A coverage exports all pinned SQLite tables and ordered columns,
+reparses self-verifying artifacts, retains raw CSV/manual provenance and both
+historical/current review versions, and rejects duplicate keys,
+table/column-shape drift, and range errors. It also downloads a plaintext
+browser archive offline before confirming that demo mode exposes no export
+control. The 2026-07-13 Slice C-A Linux gate passed 271 Vitest tests across 26
+files and 21 Playwright journeys plus the locked install, build, sync, audit,
+native/lock drift, and whitespace gates. Native share-sheet/Files cancellation,
+save, reopen, memory, and VoiceOver behavior remain unverified.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

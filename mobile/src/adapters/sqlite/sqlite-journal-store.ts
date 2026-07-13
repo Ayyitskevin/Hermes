@@ -24,6 +24,13 @@ import {
   JournalTradeReviewError,
 } from "../../application/journal-store";
 import {
+  canonicalJournalArchiveJson,
+  createJournalExportArtifact,
+  JOURNAL_ARCHIVE_KIND,
+  type JournalArchiveJson,
+  type JournalExportArtifact,
+} from "../../application/journal-archive";
+import {
   type PreparedManualExecution,
   verifyPreparedManualExecution,
 } from "../../application/prepare-manual-execution";
@@ -42,6 +49,7 @@ import type {
   TradeNormalizationResult,
 } from "../../core/ledger";
 import { normalizeTrades } from "../../core/normalize-trades";
+import { readSqliteJournalArchive, sqliteArchiveTable } from "./journal-archive";
 import {
   MOBILE_SCHEMA_MIGRATIONS,
   sha256Hex,
@@ -225,6 +233,48 @@ export class SqliteJournalStore implements JournalStore {
     this.assertOpen();
     await this.verifySchema();
     return this.loadWithinConnection();
+  }
+  async exportUserData(): Promise<JournalExportArtifact> {
+    this.assertOpen();
+    await this.verifySchema();
+    return this.database.transaction(async () => {
+      const durable = await readSqliteJournalArchive(this.database);
+      const ledger = await this.loadWithinConnection();
+      const reportSha256 = sha256Hex(canonicalJournalArchiveJson({
+        digestVersion: "hermes-report-input-v1",
+        ledger,
+      } as unknown as JournalArchiveJson));
+      const observedNowMs = this.runtime.nowMs();
+      if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+        throw new Error("The device clock is outside the journal export range.");
+      }
+      return createJournalExportArtifact({
+        kind: JOURNAL_ARCHIVE_KIND,
+        formatVersion: 1,
+        exportedAtUs: String(BigInt(observedNowMs) * 1_000n),
+        source: durable.source,
+        payload: durable.payload,
+        attachments: { version: 1, entries: [] },
+        summary: {
+          workspaceName: ledger.workspace?.name ?? null,
+          currency: ledger.workspace?.defaultCurrency ?? null,
+          timeZone: ledger.workspace?.timeZone ?? null,
+          accounts: String(ledger.accounts.length),
+          activeExecutions: String(ledger.executions.length),
+          executionVersions: sqliteArchiveTable(durable, "execution_versions").rowCount,
+          importReceipts: sqliteArchiveTable(durable, "import_receipts").rowCount,
+          rolledBackImports: sqliteArchiveTable(durable, "import_rollbacks").rowCount,
+          currentReviews: String(ledger.tradeReviews.length),
+          reviewVersions: sqliteArchiveTable(durable, "trade_review_versions").rowCount,
+          reviewTerms: sqliteArchiveTable(durable, "review_terms").rowCount,
+          playbooks: sqliteArchiveTable(durable, "playbooks").rowCount,
+          attachments: "0",
+          attachmentBytes: "0",
+        },
+        stateSha256: durable.stateSha256,
+        reportSha256,
+      });
+    });
   }
 
   async commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult> {
@@ -1816,7 +1866,7 @@ export class SqliteJournalStore implements JournalStore {
     }));
     const instrumentRows = await this.database.query<SqlRow>(
       `SELECT id, symbol, asset_class, quote_currency_code, multiplier_text
-         FROM instruments WHERE workspace_id = ? ORDER BY symbol`,
+         FROM instruments WHERE workspace_id = ? ORDER BY symbol, asset_class, id`,
       [workspace.id],
     );
     const instruments: JournalInstrumentRecord[] = instrumentRows.map((row) => {
