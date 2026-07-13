@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseJournalArchive } from "../application/journal-archive";
+import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
 import {
   JournalTradeReviewError,
   type PreparedTradeReviewBatch,
@@ -16,6 +17,7 @@ import {
   type PreparedTradeReview,
   type TradeReviewInput,
 } from "../application/prepare-trade-review";
+import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { SessionJournalStore } from "./session-journal-store";
 
 function manual(
@@ -215,6 +217,48 @@ describe("browser session trade reviews", () => {
         .then(() => { throw new Error("Expected an optimistic-lock conflict."); })
         .catch((error: unknown) => expectConflictCode(error, "review_changed"));
       expect((await store.load()).tradeReviews[0]?.id).toBe(edited.reviewIds[0]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("moves the current review head between setup-performance groups", async () => {
+    const store = new SessionJournalStore({ nowMs: () => 7_000 });
+    try {
+      const tradeSubjectId = await addClosedTrade(store, "AAPL", "1", "2");
+      const first = await store.commitTradeReviews(batch("setup-first", [
+        review("a", tradeSubjectId),
+      ]));
+      const firstHead = first.ledger.tradeReviews[0];
+      if (firstHead === undefined) throw new Error("Expected the first review head.");
+      const before = buildSetupPerformanceReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
+
+      const edited = await store.commitTradeReviews(batch("setup-edited", [
+        review("b", tradeSubjectId, {
+          expectedPreviousReviewId: firstHead.id,
+          setup: "Pullback",
+        }),
+      ]));
+      const after = buildSetupPerformanceReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
+
+      expect(before.groups.map((group) => [group.setup, group.tradeSubjectIds]))
+        .toEqual([["Breakout", [tradeSubjectId]]]);
+      expect(after.groups.map((group) => [group.setup, group.tradeSubjectIds]))
+        .toEqual([["Pullback", [tradeSubjectId]]]);
+      expect(edited.ledger.tradeReviews).toEqual([expect.objectContaining({
+        version: 2,
+        setup: "Pullback",
+      })]);
+      expect(after.groups[0]).toMatchObject({
+        tradeCount: 1,
+        netPnlExact: "10",
+        cashExpectancyExact: "10",
+        tradeSubjectIds: [tradeSubjectId],
+      });
     } finally {
       await store.close();
     }

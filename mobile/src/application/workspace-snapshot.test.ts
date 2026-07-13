@@ -366,6 +366,44 @@ describe("journal workspace snapshot", () => {
     }]);
   });
 
+  it("tracks saved setup text separately from absent classification", () => {
+    const executions = [
+      execution({ id: "classification-entry" }),
+      execution({
+        id: "classification-exit",
+        occurredAtUs: timestampUs("2026-07-03T14:30:00Z"),
+        side: "SELL",
+        price: "110",
+      }),
+    ];
+    const projectionTradeId = normalizeTrades(executions).trades[0]?.id;
+    if (projectionTradeId === undefined) throw new Error("Expected one projected trade.");
+    const tradeSubjectId = `subject:${projectionTradeId}`;
+    const savedLabel = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [review(tradeSubjectId, { setup: "Unclassified" })],
+    }));
+    const absentSetup = workspaceSnapshotFromLedger(ledger({
+      executions,
+      tradeReviews: [review(tradeSubjectId, { setup: null })],
+    }));
+    const absentReview = workspaceSnapshotFromLedger(ledger({ executions }));
+
+    expect(savedLabel.trades[0]).toMatchObject({
+      setup: "Unclassified",
+      hasClassifiedSetup: true,
+    });
+    expect(absentSetup.trades[0]).toMatchObject({
+      setup: "Unclassified",
+      hasClassifiedSetup: false,
+    });
+    expect(absentReview.trades[0]).toMatchObject({
+      setup: "Unclassified",
+      hasClassifiedSetup: false,
+      reviewStatus: "pending",
+    });
+  });
+
   it("moves only the current review head between plan-adherence evidence groups", () => {
     const executions = [
       execution({ id: "report-entry" }),

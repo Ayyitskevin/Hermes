@@ -83,6 +83,7 @@ function trade({
     resultRMetric: metrics.resultR,
     percentReturnMetric: metrics.percentReturn,
     setup: "Breakout",
+    hasClassifiedSetup: true,
     mistakes: [],
     emotion: "Calm",
     tradedOn,

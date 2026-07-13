@@ -383,6 +383,7 @@ function mapTrade(
       resultRMetric: metrics.resultR,
       percentReturnMetric: metrics.percentReturn,
       setup: review?.setup ?? "Unclassified",
+      hasClassifiedSetup: review?.setup !== null && review?.setup !== undefined,
       mistakes: review?.mistakes ?? [],
       emotion: review?.emotion ?? null,
       tradedOn: openedDay.isoDate,

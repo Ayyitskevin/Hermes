@@ -309,9 +309,10 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-The first bounded Slice D increment is implemented in the current workspace:
-an offline plan-adherence report over the current projection and current saved
-review heads. A completed closed trade with exact realized P&L is classified as
+Two bounded Slice D increments are implemented in the current workspace. The
+first is an offline plan-adherence report over the current projection and
+current saved review heads. A completed closed trade with exact realized P&L is
+classified as
 broken when any current rule is broken, otherwise followed when any current
 rule is followed; open/partial trades, missing exact P&L, incomplete reviews,
 and completed reviews with no classifiable rule are separately reconciled.
@@ -331,10 +332,29 @@ contributor to its saved rule evidence. The report is derived-only: no schema or
 archive shape changed, existing current-schema archives retain its inputs, and
 the matching runtime recomputes it after restore.
 
+The second is governed Setup Breakdown. Definition
+`setup-performance-report-v1` is pinned by checksum
+`5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b`.
+Its mutually exclusive cohort excludes open/partial trades, missing exact
+realized P&L, incomplete reviews, then completed reviews without a saved setup;
+every included trade belongs to exactly one exact setup label. The derived
+`hasClassifiedSetup` state preserves null/string classification separately
+from display text, so wording never reclassifies a saved label. Cash totals
+remain decimal strings, cash expectancy and compatible R use 12-decimal
+half-away division, zero is not a win, and R coverage accepts only the same
+strict replay-validated versioned evidence as Plan Check. Groups use stable
+setup-name code-unit order, not performance rank. At most five groups render
+per group page; within each group, evidence uses traded date descending then
+stable subject ID and renders at most 25 contributors per action. Copy
+discloses scope, exclusions, rounding, ordering, and its non-causal,
+non-predictive, non-advisory boundary.
+This report is also derived-only, and a dedicated browser archive test proves
+both governed reports recompute identically after export and restore.
+
 Still open in Slice D:
 
-- Drawdown, streak, time/day, symbol, direction, setup, mistake, emotion, and
-  non-rule report families with reconciled drill-down, plus account selection,
+- Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
+  remaining report families with reconciled drill-down, plus account selection,
   filters, and calendar controls.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
@@ -471,8 +491,9 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B now pairs that export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The first
-Slice D increment adds the governed, evidence-linked plan-adherence report
-described above without changing stored or exported shapes. Final integration
+two Slice D increments add Plan Check and governed Setup Breakdown with
+checksum-pinned cohorts, exact cash/R coverage, and contributor evidence,
+without changing stored or exported shapes. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Native restore acceptance on
 a Mac/iPhone, verified Delete All Data, daily notes, the remaining reports, and

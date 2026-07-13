@@ -143,7 +143,7 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
 }
 
 describe("reports presentation", () => {
-  it("renders the existing report context plus the versioned fictional plan check", () => {
+  it("renders both versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain('<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>');
@@ -173,13 +173,18 @@ describe("reports presentation", () => {
     expect(html).toContain("WIN RATE");
     expect(html).toContain("PROFIT FACTOR");
     expect(html).toContain("AVG R");
-    expect(html).toContain("Setup context");
-    expect(html).toContain("Net R");
+    expect(html).toContain('data-setup-performance');
+    expect(html).toContain('<h2 id="setup-performance-title">Setup breakdown</h2>');
+    expect(html).toContain("setup-performance-report-v1");
+    expect(html).toContain("5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b");
+    expect(html).toContain("stable setup-name code-unit order");
+    expect(html).toContain("not a performance ranking or recommendation");
     expect(html).toContain("JOURNAL CURVE");
     expect(html).not.toContain("data-review-trade=");
 
     for (const trade of DEMO_WORKSPACE.trades) {
       expect(html).toContain(`data-plan-check-trade="${trade.tradeSubjectId}"`);
+      expect(html).toContain(`data-setup-performance-trade="${trade.tradeSubjectId}"`);
     }
   });
 
@@ -331,6 +336,7 @@ describe("reports presentation", () => {
     };
     const root = {
       querySelector(selector: string): unknown {
+        if (selector === "[data-setup-performance]") return null;
         expect(selector).toBe("[data-plan-check]");
         return planCheck;
       },

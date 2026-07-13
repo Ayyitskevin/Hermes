@@ -341,7 +341,6 @@ p { line-height: 1.55; }
 .playbook-card > p, .playbook-card ul { grid-column: 1 / -1; margin: 0; }
 .playbook-card ul { padding-left: 1.2rem; color: var(--muted); line-height: 1.7; }
 
-.report-table-card { display: grid; gap: 1rem; overflow: hidden; }
 .report-table { display: grid; min-width: 0; }
 .report-row {
   min-width: 0;

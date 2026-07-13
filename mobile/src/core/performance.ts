@@ -52,7 +52,7 @@ export function calculatePerformance(trades: readonly TradePreview[]): Performan
 export function summarizeSetups(trades: readonly TradePreview[]): readonly SetupPerformance[] {
   const grouped = new Map<string, TradePreview[]>();
   for (const trade of realizedTrades(trades)) {
-    if (trade.setup === "Unclassified") continue;
+    if (!trade.hasClassifiedSetup) continue;
     const group = grouped.get(trade.setup) ?? [];
     group.push(trade);
     grouped.set(trade.setup, group);

@@ -97,6 +97,7 @@ function demoTrade(input: DemoTradeInput): TradePreview {
     resultRMetric: Object.freeze(metrics.resultR),
     percentReturnMetric: Object.freeze(metrics.percentReturn),
     setup: input.setup,
+    hasClassifiedSetup: true,
     mistakes: Object.freeze([...input.mistakes]),
     emotion: input.emotion,
     tradedOn: input.tradedOn,

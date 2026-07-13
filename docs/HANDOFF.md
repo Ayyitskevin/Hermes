@@ -1,8 +1,113 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice D-A Plan Check Linux milestone · updated 2026-07-13
+Status: verified Slice D-B governed Setup Breakdown Linux milestone · updated 2026-07-13
 
 ## Current handoff
+
+task: Deliver the second governed Slice D insight: a checksum-pinned offline
+Setup Breakdown derived from current projections and current saved review
+heads, with exact cash, strict replay-compatible R, reconciled exclusions, and
+progressively bounded evidence, without trade execution, advice, schema/archive
+changes, or a native-readiness claim.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/core/setup-performance-report.ts` defines
+  `setup-performance-report-v1`, pinned by SHA-256
+  `5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b`.
+  It uses mutually exclusive exclusion precedence, exact setup membership,
+  positive-only wins, exact signed-decimal cash, 12-decimal half-away means,
+  strict replay-compatible R coverage, stable setup-name code-unit order, and
+  traded-date/subject-ID evidence order.
+- Derived `hasClassifiedSetup` state carries null/string classification
+  separately from display text. A saved literal `Unclassified` remains a
+  classified, editable label; null or absent review state remains excluded.
+  Mapper, review-sheet, report, and real session-store revision regressions pin
+  this boundary without changing persistence or export schemas.
+- `mobile/src/core/report-result-r.ts` shares the strict complete-result-R
+  validator between Setup Breakdown and Plan Check. Plan Check behavior and
+  checksum
+  `0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`
+  remain unchanged.
+- Reports replaces the lossy setup table with escaped evidence groups. Initial
+  rendering is capped at five groups and 25 contributors per group; each
+  explicit action adds at most the same bound, live counts remain exact, and
+  focus moves to the first newly revealed group. Demo values reconcile to
+  Breakout/Pullback/Reversal cash expectancy of
+  +56.666666666667/+86.666666666667/-60 USD.
+- Browser export → empty-container restore now proves byte-equivalent derived
+  Plan Check and Setup Breakdown values, cohorts, ordering, and evidence.
+  A real SessionJournalStore test proves a current review edit moves one stable
+  trade from Breakout to Pullback while retaining exact +10 USD evidence.
+- `README.md`, the product blueprint, iOS roadmap, and Mac handoff document
+  the final checksum, code-unit ordering, five/25 pagination, both native
+  report gates, derived restore equality, and remaining release holds.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 34 files, 361 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; 28 Playwright journeys passed,
+  including offline exact evidence and 320px/200% Setup Breakdown reflow.
+- `cd mobile && npm run ios:sync` — exit 0; production build transformed 57
+  modules and copied the bundle; Capacitor found only
+  `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were
+  unavailable and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors after sync.
+- Independent read-only re-audit found no blocker. It recomputed the Setup
+  Breakdown checksum, confirmed unchanged Plan Check checksum semantics,
+  verified structural classification/editability, group/evidence bounds and
+  focus, generic diagnostics, escaping, and aligned product/native copy.
+
+assumptions:
+
+- Setup Breakdown is descriptive journaling evidence, not causal analysis,
+  prediction, financial advice, statistical significance, or a prompt to trade.
+  Hermes still never places, routes, changes, or cancels an order.
+- The report is a deterministic current-state projection. Current-schema
+  archives retain all execution/review/risk inputs and matching runtimes
+  recompute both reports; no stored or exported shape changed.
+- `hasClassifiedSetup` is derived from whether the current saved setup is a
+  string, not from its wording. Display labels are not persistence truth.
+- Linux SQL.js and Chromium evidence does not prove native SQLCipher, Keychain,
+  Files, VoiceOver, lifecycle, signing, TestFlight, App Store, or physical
+  iPhone behavior. `Hermes Journal`, its bundle ID, and price remain
+  provisional and unapproved.
+- Fleet guard-layer screening was not evidenced in this lane; downstream must
+  not infer that it ran.
+
+open:
+
+- HOLD native Plan Check/Setup Breakdown accessibility and restore equality,
+  plus the existing SQLCipher, Keychain, Files, interruption, low-storage,
+  migration, and physical-device gates, until measured on a current Mac/iPhone.
+- Progressive group/evidence actions are bounded, while previously revealed
+  pages intentionally remain in the DOM. Reports also derive once for markup
+  and once for binding; cache or virtualize only after measured journal size
+  justifies added state.
+- Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, deeper
+  setup comparisons, account selection, filters, calendar drill-down, daily
+  notes, attachments, and verified Delete All Data remain open.
+- Do not start broker sync, trade execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, price promises, or public comparative
+  claims from this slice.
+- Pass to Sonnet for final sign-off. The broader autonomous Hermes product goal
+  remains active.
+
+## Prior milestone — Slice D-A
+
+> Historical snapshot; current status and open items are superseded by the
+> active Slice D-B handoff above.
 
 task: Deliver the first governed Slice D insight: an offline, evidence-linked
 plan-adherence report derived from current trade projections and current saved

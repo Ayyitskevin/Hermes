@@ -106,6 +106,12 @@ submission-ready product:
   and R coverage, account/currency/time-zone context, and deterministic evidence
   drill-down; the observational comparison appears only at three trades per
   cohort and never claims causation or gives trade advice.
+- A checksum-pinned offline Setup Breakdown over completed reviewed closed
+  trades. It reconciles exact setup cohorts and exclusions, shows cash
+  expectancy/net/wins plus strict replay-compatible R coverage, uses stable
+  setup-name code-unit order rather than performance rank, and progressively
+  renders pages of five setup groups and 25 contributors per group without
+  claiming causation, prediction, or advice.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,

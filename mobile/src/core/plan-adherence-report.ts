@@ -7,12 +7,9 @@ import {
   sumSignedDecimals,
 } from "./signed-decimal";
 import {
-  RESULT_R_DEFINITION_V1,
-  TRADE_METRIC_FRACTION_DIGITS,
-  TRADE_METRIC_ROUNDING_MODE,
-  deriveResultRV1,
-} from "./trade-metrics";
-import type { ExactMetricMoney } from "./trade-metrics";
+  REPORT_ACCEPTED_COMPLETE_RESULT_R_DEFINITION,
+  acceptedCompleteResultRExact,
+} from "./report-result-r";
 import type {
   JournalWorkspaceSnapshot,
   TradePreview,
@@ -57,20 +54,7 @@ export const PLAN_ADHERENCE_REPORT_DEFINITION = Object.freeze({
     averageR: "round-half-away-from-zero(exact-defined-r-sum/r-trade-count,12)",
     missingR: "exclude-from-r-mean-and-retain-rTradeCount-coverage",
   }),
-  acceptedR: Object.freeze({
-    metric: "result-r",
-    definitionVersion: RESULT_R_DEFINITION_V1,
-    scaleFactor: "1",
-    fractionDigits: TRADE_METRIC_FRACTION_DIGITS,
-    roundingMode: TRADE_METRIC_ROUNDING_MODE,
-    isPartial: false,
-    availability: "value:string;nullReason:null;numerator+denominator+currency:non-null",
-    currency: "workspace=evidence=numerator=denominator",
-    numerator: "evidence.numerator.amount=trade.resultPnlExact",
-    denominator: "evidence.denominator=trade.initialRisk",
-    replay: "deriveResultRV1(numerator,denominator,false).value=evidence.value",
-    rejection: "retain-cash-cohort;resultRExact=null;rTradeCount-omits",
-  }),
+  acceptedR: REPORT_ACCEPTED_COMPLETE_RESULT_R_DEFINITION,
   evidenceOrder: Object.freeze([
     "tradedOn:descending",
     "tradeSubjectId:ascending",
@@ -186,70 +170,6 @@ function freezeRule(rule: TradeRuleReviewPreview): PlanAdherenceRuleEvidence {
   });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function exactMetricMoney(value: unknown): ExactMetricMoney | null {
-  if (
-    !isRecord(value)
-    || typeof value.amount !== "string"
-    || typeof value.currency !== "string"
-    || value.currency.length === 0
-  ) {
-    return null;
-  }
-  return {
-    amount: value.amount,
-    currency: value.currency,
-  };
-}
-
-function acceptedResultRExact(
-  trade: TradePreview,
-  expectedCurrency: string,
-): string | null {
-  const evidence: unknown = trade.resultRMetric;
-  if (!isRecord(evidence)) return null;
-
-  const numerator = exactMetricMoney(evidence.numerator);
-  const denominator = exactMetricMoney(evidence.denominator);
-  if (
-    typeof evidence.value !== "string"
-    || evidence.nullReason !== null
-    || evidence.metric !== "result-r"
-    || evidence.definitionVersion !== RESULT_R_DEFINITION_V1
-    || evidence.scaleFactor !== "1"
-    || evidence.fractionDigits !== TRADE_METRIC_FRACTION_DIGITS
-    || evidence.roundingMode !== TRADE_METRIC_ROUNDING_MODE
-    || evidence.isPartial !== false
-    || evidence.currency !== expectedCurrency
-    || numerator === null
-    || denominator === null
-    || numerator.currency !== expectedCurrency
-    || denominator.currency !== expectedCurrency
-    || numerator.amount !== trade.resultPnlExact
-    || trade.initialRisk === null
-    || denominator.amount !== trade.initialRisk.amount
-    || denominator.currency !== trade.initialRisk.currency
-  ) {
-    return null;
-  }
-
-  try {
-    const replay = deriveResultRV1({
-      netRealizedPnl: numerator,
-      initialRisk: denominator,
-      isPartial: false,
-    });
-    return replay.value !== null && replay.value === evidence.value
-      ? evidence.value
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function evidenceFromTrade(
   trade: TradePreview,
   expectedCurrency: string,
@@ -265,7 +185,7 @@ function evidenceFromTrade(
     tradedOn: trade.tradedOn,
     sessionLabel: trade.sessionLabel,
     resultPnlExact: trade.resultPnlExact,
-    resultRExact: acceptedResultRExact(trade, expectedCurrency),
+    resultRExact: acceptedCompleteResultRExact(trade, expectedCurrency),
     rules: Object.freeze(trade.rules.map(freezeRule)),
   });
 }

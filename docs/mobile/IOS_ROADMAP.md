@@ -225,6 +225,17 @@ Delivered in the current vertical slice:
   `0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`;
   restore recomputes it from existing archive inputs with no schema/archive
   shape change.
+- Governed Setup Breakdown replaces the earlier lossy setup summary. Definition
+  `setup-performance-report-v1` is pinned by SHA-256
+  `5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b`.
+  It groups only completed reviewed closed trades with exact realized P&L and a
+  classified current setup, reconciles all four exclusion buckets, preserves
+  exact cash, admits only strict replay-compatible R, and orders groups by
+  stable setup-name code unit rather than outcome. It renders at most five
+  groups per action and 25 contributors per group per evidence action, focuses
+  the first newly revealed group, and links every included trade to evidence.
+  Existing archives retain all inputs; focused tests prove both governed
+  reports recompute identically after browser export and restore.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -259,8 +270,8 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add prioritized broker-specific CSV adapters behind the generic mapping core.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
-- Add templates, reminders, deeper filters, drawdown/streak/time-of-day/setup/tag
-  reports, and explainable report drill-down.
+- Add templates, reminders, deeper filters, drawdown/streak/time-of-day/tag
+  reports, deeper setup comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
 
@@ -317,7 +328,7 @@ tier-by-tier claim. Reverify before public comparative positioning.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
 Durable annotations, Slice C-B matching-runtime local restore, and the governed
-evidence-linked Plan Check increment are implemented. Native restore acceptance,
-verified Delete All Data, daily notes, remaining report families, and later
-attachment round-trip remain—not broker connectivity, hosted sync, Android,
-recurring AI, or legacy cockpit extraction.
+evidence-linked Plan Check and Setup Breakdown increments are implemented.
+Native restore acceptance, verified Delete All Data, daily notes, remaining
+report families, and later attachment round-trip remain—not broker connectivity,
+hosted sync, Android, recurring AI, or legacy cockpit extraction.

@@ -155,7 +155,7 @@ export function tradeReviewSheetTemplate(
       || trade.reviewVersion < 1;
   const readOnly = demoReadOnly || invalidReviewIdentity;
   const disabled = readOnly ? "disabled" : "";
-  const setup = trade.setup === "Unclassified" ? "" : trade.setup;
+  const setup = trade.hasClassifiedSetup ? trade.setup : "";
   const note = trade.note === "No journal note added." ? "" : trade.note;
   const pnlCurrency = tradePnlCurrency(trade, snapshot);
   const riskCurrency = savedRiskCurrency(trade, snapshot);

@@ -60,6 +60,7 @@ function trade(options: TradeOverrides = {}): TradePreview {
     resultRMetric: metrics.resultR,
     percentReturnMetric: metrics.percentReturn,
     setup: "Breakout",
+    hasClassifiedSetup: true,
     mistakes: [],
     emotion: "Calm",
     tradedOn: "2026-07-01",
@@ -178,6 +179,7 @@ describe("journal performance", () => {
         id: "trade-3",
         tradeSubjectId: "subject-3",
         setup: "Unclassified",
+        hasClassifiedSetup: false,
         resultPnl: 500,
       }),
     ]);

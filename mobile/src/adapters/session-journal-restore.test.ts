@@ -8,8 +8,18 @@ import {
 } from "../application/journal-archive";
 import { JournalRestoreError } from "../application/journal-store";
 import { prepareCsvImport } from "../application/prepare-csv-import";
-import { prepareManualExecution } from "../application/prepare-manual-execution";
+import {
+  prepareManualExecution,
+  type ManualExecutionInput,
+} from "../application/prepare-manual-execution";
+import {
+  prepareTradeReview,
+  tradeReviewBatchRevision,
+} from "../application/prepare-trade-review";
 import type { PreparedJournalRestore } from "../application/journal-restore";
+import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
+import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
+import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import {
   sessionJournalLedgerFromPayload,
   sessionJournalReportSha256,
@@ -19,7 +29,12 @@ import {
 } from "./session-journal-restore";
 import { SessionJournalStore } from "./session-journal-store";
 
-function manual(submissionDigit: string, symbol = "AAPL", fee = "0") {
+function manual(
+  submissionDigit: string,
+  symbol = "AAPL",
+  fee = "0",
+  overrides: Partial<ManualExecutionInput> = {},
+) {
   return prepareManualExecution({
     submissionId: submissionDigit.repeat(64),
     accountName: "Primary brokerage",
@@ -33,6 +48,7 @@ function manual(submissionDigit: string, symbol = "AAPL", fee = "0") {
     price: "100",
     fee,
     executedAt: "2026-07-01T09:30:00",
+    ...overrides,
   });
 }
 
@@ -63,6 +79,57 @@ async function sourceArchive(): Promise<{
   return { store, archive: artifact.archive, contents: artifact.contents };
 }
 
+async function reviewedSourceArchive(): Promise<{
+  readonly store: SessionJournalStore;
+  readonly archive: JournalArchive;
+  readonly contents: string;
+}> {
+  let nowMs = 30_000;
+  const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+  await store.commitManualExecution(manual("d", "NVDA"));
+  await store.commitManualExecution(manual("e", "NVDA", "0", {
+    side: "SELL",
+    positionEffect: "CLOSE",
+    price: "115",
+    executedAt: "2026-07-01T10:30:00",
+  }));
+  const ledger = await store.load();
+  const instrument = ledger.instruments.find((candidate) => candidate.symbol === "NVDA");
+  const trade = ledger.projection.trades.find((candidate) => (
+    candidate.instrumentId === instrument?.id
+  ));
+  const subject = ledger.tradeSubjects.find((candidate) => (
+    candidate.projectionTradeId === trade?.id
+  ));
+  if (subject === undefined) throw new Error("The reviewed restore fixture has no trade subject.");
+
+  const review = prepareTradeReview({
+    submissionId: "f".repeat(64),
+    tradeSubjectId: subject.tradeSubjectId,
+    expectedPreviousReviewId: null,
+    state: "completed",
+    note: "Waited for confirmation and followed the exit plan.",
+    setup: "Breakout",
+    mistakes: [],
+    tags: ["Patient entry"],
+    emotion: "Focused",
+    playbook: {
+      name: "Opening Drive",
+      rules: [{ name: "Wait for volume", outcome: "followed" }],
+    },
+    initialRisk: { amount: "10", currency: "USD" },
+    plannedStop: "90",
+  });
+  const batchId = "restore-report-equality";
+  await store.commitTradeReviews({
+    batchId,
+    reviews: [review],
+    revision: tradeReviewBatchRevision(batchId, [review]),
+  });
+  const artifact = await store.exportUserData();
+  return { store, archive: artifact.archive, contents: artifact.contents };
+}
+
 function rebuild(
   archive: JournalArchive,
   changes: Partial<JournalArchiveUnsigned>,
@@ -85,6 +152,55 @@ async function expectRestoreCode(
 }
 
 describe("browser session user-data restore", () => {
+  it("recomputes identical governed reports after export and restore", async () => {
+    const source = await reviewedSourceArchive();
+    const destination = new SessionJournalStore();
+    try {
+      const beforeSnapshot = workspaceSnapshotFromLedger(await source.store.load());
+      const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
+      const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
+      const prepared = await destination.prepareUserDataRestore(source.contents);
+      await destination.commitUserDataRestore(prepared);
+      const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
+      const afterPlan = buildPlanAdherenceReport(afterSnapshot);
+      const afterSetup = buildSetupPerformanceReport(afterSnapshot);
+
+      expect(afterPlan).toEqual(beforePlan);
+      expect(afterSetup).toEqual(beforeSetup);
+      expect(afterPlan.metadata.includedTradeCount).toBe(1);
+      expect(afterPlan.groups[0]).toMatchObject({
+        classification: "followed",
+        tradeCount: 1,
+        netPnlExact: "15",
+        averageRExact: "1.5",
+      });
+      expect(afterPlan.groups[0].evidence[0]).toMatchObject({
+        symbol: "NVDA",
+        resultPnlExact: "15",
+        resultRExact: "1.5",
+      });
+      expect(afterSetup.metadata.includedTradeCount).toBe(1);
+      expect(afterSetup.groups).toHaveLength(1);
+      expect(afterSetup.groups[0]).toMatchObject({
+        setup: "Breakout",
+        tradeCount: 1,
+        winCount: 1,
+        netPnlExact: "15",
+        cashExpectancyExact: "15",
+        averageRExact: "1.5",
+        rTradeCount: 1,
+      });
+      expect(afterSetup.groups[0]?.evidence[0]).toMatchObject({
+        symbol: "NVDA",
+        resultPnlExact: "15",
+        resultRExact: "1.5",
+      });
+    } finally {
+      await source.store.close();
+      await destination.close();
+    }
+  });
+
   it("restores the complete session payload and makes a lost-response retry idempotent", async () => {
     const source = await sourceArchive();
     let nowMs = 20_000;

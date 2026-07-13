@@ -209,6 +209,33 @@ and an App Store disclosure.
   background/foreground during preparation, force quit, and relaunch. Every
   uncertain path must stay retryable and must not report a saved file falsely.
 - Verify the Dashboard metric values reconcile with the eight bundled records.
+- From Dashboard, open Plan Check and verify
+  `plan-adherence-report-v1`, checksum
+  `0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85`,
+  an 8-of-8 cohort, five followed trades at +106 USD cash expectancy, three
+  broken trades at -73.333333333333 USD cash expectancy, and the
+  +179.333333333333 USD followed-minus-broken observational difference.
+- Open both Plan Check groups with VoiceOver and reconcile their disjoint
+  trades, current saved rule evidence, exact net/win/R coverage, 44-point
+  summaries, exclusion/threshold/rounding copy, and non-causal/non-advisory
+  disclosure.
+- In Reports, verify Setup Breakdown shows
+  `setup-performance-report-v1` and checksum
+  `5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b`,
+  an 8-of-8 cohort, and stable code-unit-ordered
+  Breakout/Pullback/Reversal groups with exact cash expectancy of
+  +56.666666666667/+86.666666666667/-60 USD.
+- Open all three groups with VoiceOver and reconcile their disjoint contributing
+  trades, exact net/win/R values, 44-point summaries, exclusion/rounding copy,
+  and non-ranking/non-advisory disclosure.
+- With a local fixture containing at least six classified setup names and one
+  setup with at least 26 included trades, verify each group action adds at most
+  five groups, each evidence action adds at most 25 contributors, live status
+  stays exact, focus moves to the first newly revealed group, controls remain
+  44 points, and 200% text reflows at 320 CSS pixels without clipping.
+- After native export → empty-container restore, verify both governed reports,
+  their checksums, cohorts, exclusions, group/evidence order, exact values, and
+  contributor identities equal the source.
 - Calculate valid long and short plans; verify wrong-side stops show inline errors.
 - Exercise settings/welcome focus containment and focus return.
 - Verify all tabs at 320–430 CSS-pixel widths, portrait and landscape.
@@ -252,12 +279,13 @@ and every skipped check. A clean console alone is not evidence.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry, versioned reviews, export generation, and Slice C-B local
-  restore still need the native persistence, response-loss, migration,
-  accessibility, and lifecycle checks above. Native Web Share/Files
-  cancellation, save, reopen, custom MIME behavior, restore preview rollback,
-  atomic commit, post-commit reconciliation, interruption retry, and
-  near-64-MiB memory behavior have not been observed.
+- Manual entry, versioned reviews, governed Plan Check and Setup Breakdown,
+  export generation, and Slice C-B local restore still need the native
+  persistence, response-loss, migration, accessibility, and lifecycle checks
+  above. Native Web Share/Files cancellation, save, reopen, custom MIME
+  behavior, restore preview rollback, atomic commit, post-commit
+  reconciliation, interruption retry, and near-64-MiB memory behavior have not
+  been observed.
 - Current matching-runtime archives remain incomplete native backups:
   attachment catalog v1 is empty and archives containing attachments are
   rejected. Attachments and Delete All Data remain incomplete Phase 1 work.

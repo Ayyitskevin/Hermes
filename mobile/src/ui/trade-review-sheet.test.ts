@@ -79,6 +79,30 @@ describe("trade review sheet", () => {
     expect(html).not.toMatch(/place order|execute trade|send order/iu);
   });
 
+  it("keeps saved Unclassified text editable while blanking an absent setup", () => {
+    const savedLabel = {
+      ...trade(),
+      setup: "Unclassified",
+      hasClassifiedSetup: true,
+    } satisfies TradePreview;
+    const absentSetup = {
+      ...savedLabel,
+      hasClassifiedSetup: false,
+    } satisfies TradePreview;
+
+    const savedHtml = tradeReviewSheetTemplate(savedLabel, {
+      ...localWorkspace(),
+      trades: [savedLabel],
+    });
+    const absentHtml = tradeReviewSheetTemplate(absentSetup, {
+      ...localWorkspace(),
+      trades: [absentSetup],
+    });
+
+    expect(savedHtml).toMatch(/id="review-setup"[^>]*value="Unclassified"/u);
+    expect(absentHtml).toMatch(/id="review-setup"[^>]*value=""/u);
+  });
+
   it("makes demo reviews explicitly read-only", () => {
     const html = tradeReviewSheetTemplate(DEMO_WORKSPACE.trades[0]!, DEMO_WORKSPACE);
     expect(html).toContain("fictional demo review is read-only");

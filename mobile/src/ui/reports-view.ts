@@ -5,8 +5,11 @@ import {
   type PlanAdherenceReport,
 } from "../core/plan-adherence-report";
 import { escapeHtml } from "../core/html";
-import { summarizeSetups } from "../core/performance";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
+import {
+  bindSetupPerformanceView,
+  setupPerformanceSection,
+} from "./setup-performance-view";
 
 type PlanAdherenceGroup = PlanAdherenceReport["groups"][number];
 type PlanAdherenceEvidence = PlanAdherenceGroup["evidence"][number];
@@ -227,7 +230,6 @@ export function planAdherenceDashboardCard(snapshot: JournalWorkspaceSnapshot): 
 }
 
 export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
-  const setups = summarizeSetups(snapshot.trades);
   const performance = snapshot.performance;
   const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
   return `<section class="screen-stack" aria-labelledby="reports-title">
@@ -239,13 +241,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
       <article class="card"><p class="card-label">AVG R</p><strong class="metric">${escapeHtml(signedR(performance.averageR, "—"))}</strong><span>${performance.rTradeCount} of ${performance.tradeCount} with defined risk</span></article>
     </div>
     ${planCheckSection(snapshot)}
-    <article class="card report-table-card">
-      <div class="section-title"><div><p class="card-label">BY SETUP</p><h2>Setup context</h2></div><span>${setups.length} setups</span></div>
-      <div class="report-table" role="table" aria-label="Performance by setup">
-        <div class="report-row report-header" role="row"><span role="columnheader">Setup</span><span role="columnheader">Trades</span><span role="columnheader">Win rate</span><span role="columnheader">Net R</span></div>
-        ${setups.map((setup) => `<div class="report-row" role="row"><strong role="cell">${escapeHtml(setup.name)}</strong><span role="cell">${setup.tradeCount}</span><span role="cell">${setup.winRatePct.toFixed(0)}%</span><span role="cell" class="${resultClass(setup.netR)}">${escapeHtml(signedR(setup.netR, "—"))}</span></div>`).join("")}
-      </div>
-    </article>
+    ${setupPerformanceSection(snapshot)}
     <article class="card chart-card"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2>Cumulative result</h2></div><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong></div>${equityChart(snapshot)}</article>
   </section>`;
 }
@@ -254,6 +250,7 @@ export function bindReportsView(
   root: HTMLElement,
   snapshot: JournalWorkspaceSnapshot,
 ): void {
+  bindSetupPerformanceView(root, snapshot);
   const planCheck = root.querySelector<HTMLElement>("[data-plan-check]");
   if (planCheck === null) return;
   const report = buildPlanAdherenceReport(snapshot);

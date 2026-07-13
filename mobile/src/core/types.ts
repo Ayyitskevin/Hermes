@@ -39,6 +39,7 @@ export interface TradePreview {
   readonly resultRMetric: TradeMetricEvidence;
   readonly percentReturnMetric: TradeMetricEvidence;
   readonly setup: string;
+  readonly hasClassifiedSetup: boolean;
   readonly mistakes: readonly string[];
   readonly emotion: string | null;
   readonly tradedOn: string;
