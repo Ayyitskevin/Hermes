@@ -6,6 +6,7 @@ import {
   createJournalExportArtifact,
   type JournalArchiveJson,
 } from "../../application/journal-archive";
+import { prepareDailyJournalEntry } from "../../application/prepare-daily-journal";
 import type {
   SqlDatabase,
   SqlParameters,
@@ -200,6 +201,7 @@ function setRowCell(
 
 let baselineContents = "";
 let populatedContents = "";
+let dailyContents = "";
 
 beforeAll(async () => {
   const SQL = await initSqlJs();
@@ -313,6 +315,64 @@ beforeAll(async () => {
       stateSha256: populated.stateSha256,
       reportSha256: "d".repeat(64),
     }).contents;
+    const daily = prepareDailyJournalEntry({
+      submissionId: "e".repeat(64),
+      isoDate: "2026-07-13",
+      expectedPreviousEntryId: null,
+      state: "completed",
+      title: null,
+      note: "Protected the process.",
+      emotion: "Calm",
+      processScorePct: null,
+      tags: [],
+    });
+    await database.transaction(async () => {
+      await database.run(
+        "INSERT INTO review_terms VALUES (?, ?, 'emotion', 'Calm', 'calm', ?)",
+        ["term-calm", "workspace:primary", 2],
+      );
+      await database.run(
+        `INSERT INTO daily_journal_entry_versions (
+          id, workspace_id, journal_date, version_number, supersedes_version_id,
+          submission_id, revision_sha256, state, title_text, note_text,
+          process_score_pct, recorded_at_ms, completed_at_ms
+        ) VALUES (?, ?, ?, 1, NULL, ?, ?, 'completed', NULL, ?, NULL, 2, 2)`,
+        [
+          "daily-one",
+          "workspace:primary",
+          daily.isoDate,
+          daily.submissionId,
+          daily.revision,
+          daily.note,
+        ],
+      );
+      await database.run(
+        "INSERT INTO daily_journal_entry_term_assignments VALUES (?, ?, ?, ?, 'emotion', 0)",
+        ["daily-one", "workspace:primary", daily.isoDate, "term-calm"],
+      );
+      await database.run(
+        "INSERT INTO daily_journal_entry_heads VALUES (?, ?, ?, ?)",
+        ["workspace:primary", daily.isoDate, "daily-one", 2],
+      );
+    });
+    const withDaily = await database.transaction(() => readSqliteJournalArchive(database));
+    dailyContents = createJournalExportArtifact({
+      kind: "hermes-journal-export",
+      formatVersion: 1,
+      exportedAtUs: "1783960200002000",
+      source: withDaily.source,
+      payload: withDaily.payload,
+      attachments: { version: 1, entries: [] },
+      summary: {
+        workspaceName: "Restored Journal", currency: "USD", timeZone: "America/New_York",
+        accounts: "1", activeExecutions: "1", executionVersions: "1",
+        importReceipts: "0", rolledBackImports: "0", currentReviews: "0",
+        reviewVersions: "0", reviewTerms: "1", playbooks: "0",
+        attachments: "0", attachmentBytes: "0",
+      },
+      stateSha256: withDaily.stateSha256,
+      reportSha256: "e".repeat(64),
+    }).contents;
   } finally {
     await database.close();
   }
@@ -342,7 +402,7 @@ describe("SQLite journal restore payload decoder", () => {
       attachments: "0",
       attachmentBytes: "0",
     });
-    expect(sqliteRestoreArchiveTable(decoded, "schema_migrations").rows).toHaveLength(3);
+    expect(sqliteRestoreArchiveTable(decoded, "schema_migrations").rows).toHaveLength(4);
     expect(Object.isFrozen(decoded)).toBe(true);
     expect(Object.isFrozen(decoded.tables)).toBe(true);
     expect(Object.isFrozen(decoded.tables[0]?.columns)).toBe(true);
@@ -366,6 +426,78 @@ describe("SQLite journal restore payload decoder", () => {
     });
     const fees = sqliteRestoreArchiveTable(decoded, "execution_fee_components");
     expect(fees.rows[0]?.at(-1)).toBe("-9223372036854775808");
+  });
+
+  it("binds native daily-entry content to its revision and requires an authored signal", () => {
+    expect(() => decodeSqliteJournalRestoreArchive(dailyContents)).not.toThrow();
+
+    const changed = mutableArchive(dailyContents);
+    const versions = table(changed, "daily_journal_entry_versions");
+    const version = versions.rows[0];
+    if (version === undefined) throw new Error("Daily restore fixture lost its version.");
+    setRowCell(versions, version, "note_text", "Changed after the durable revision.");
+    recomputeChangedTables(changed, "daily_journal_entry_versions");
+    expect(() => decodeSqliteJournalRestoreArchive(resign(changed)))
+      .toThrow(/revision does not bind/i);
+
+    const empty = mutableArchive(dailyContents);
+    const emptyVersions = table(empty, "daily_journal_entry_versions");
+    const emptyVersion = emptyVersions.rows[0];
+    if (emptyVersion === undefined) throw new Error("Daily restore fixture lost its version.");
+    setRowCell(emptyVersions, emptyVersion, "note_text", "");
+    const assignments = table(empty, "daily_journal_entry_term_assignments");
+    assignments.rows = [];
+    recomputeChangedTables(
+      empty,
+      "daily_journal_entry_versions",
+      "daily_journal_entry_term_assignments",
+    );
+    expect(() => decodeSqliteJournalRestoreArchive(resign(empty)))
+      .toThrow(/authoring contract/i);
+  });
+
+  it("rejects noncanonical or mismatched native review vocabulary", () => {
+    const noncanonical = mutableArchive(dailyContents);
+    const noncanonicalTerms = table(noncanonical, "review_terms");
+    const noncanonicalTerm = noncanonicalTerms.rows[0];
+    if (noncanonicalTerm === undefined) throw new Error("Daily restore fixture lost its term.");
+    setRowCell(noncanonicalTerms, noncanonicalTerm, "name", " Calm");
+    recomputeChangedTables(noncanonical, "review_terms");
+    expect(() => decodeSqliteJournalRestoreArchive(resign(noncanonical)))
+      .toThrow(/review-term names must be canonical/i);
+
+    const mismatched = mutableArchive(dailyContents);
+    const mismatchedTerms = table(mismatched, "review_terms");
+    const mismatchedTerm = mismatchedTerms.rows[0];
+    if (mismatchedTerm === undefined) throw new Error("Daily restore fixture lost its term.");
+    setRowCell(mismatchedTerms, mismatchedTerm, "normalized_name", "not-calm");
+    recomputeChangedTables(mismatched, "review_terms");
+    expect(() => decodeSqliteJournalRestoreArchive(resign(mismatched)))
+      .toThrow(/normalized identity is inconsistent/i);
+  });
+
+  it("rejects a consistently referenced invalid native daily-entry ID", () => {
+    const invalid = mutableArchive(dailyContents);
+    const versions = table(invalid, "daily_journal_entry_versions");
+    const heads = table(invalid, "daily_journal_entry_heads");
+    const assignments = table(invalid, "daily_journal_entry_term_assignments");
+    const version = versions.rows[0];
+    const head = heads.rows[0];
+    const assignment = assignments.rows[0];
+    if (version === undefined || head === undefined || assignment === undefined) {
+      throw new Error("Daily restore fixture lost its linked rows.");
+    }
+    setRowCell(versions, version, "id", " invalid-daily-id");
+    setRowCell(heads, head, "entry_version_id", " invalid-daily-id");
+    setRowCell(assignments, assignment, "entry_version_id", " invalid-daily-id");
+    recomputeChangedTables(
+      invalid,
+      "daily_journal_entry_versions",
+      "daily_journal_entry_heads",
+      "daily_journal_entry_term_assignments",
+    );
+    expect(() => decodeSqliteJournalRestoreArchive(resign(invalid)))
+      .toThrow(/invalid daily-entry ID/i);
   });
 
   it("rejects the browser payload even when its generic envelope checksum is valid", () => {
@@ -411,9 +543,9 @@ describe("SQLite journal restore payload decoder", () => {
   it("requires the exact current migration source and matching migration rows", () => {
     const staleSource = mutableArchive(baselineContents);
     staleSource.source.migrations.pop();
-    staleSource.source.schemaUserVersion = 2;
+    staleSource.source.schemaUserVersion = 3;
     expect(() => decodeSqliteJournalRestoreArchive(resign(staleSource)))
-      .toThrow(/migration source is not supported/i);
+      .toThrow(/schema version|migration source/i);
 
     const rowsChanged = mutableArchive(baselineContents);
     const migrations = table(rowsChanged, "schema_migrations");
@@ -426,7 +558,7 @@ describe("SQLite journal restore payload decoder", () => {
       .toThrow(/migration table does not match its source/i);
   });
 
-  it("requires all 32 trusted tables exactly once and in canonical order", () => {
+  it("requires all 35 trusted tables exactly once and in canonical order", () => {
     const missing = mutableArchive(baselineContents);
     missing.payload.data.tables.pop();
     expect(() => decodeSqliteJournalRestoreArchive(resign(missing)))

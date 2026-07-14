@@ -343,6 +343,164 @@ async function restoreReviewChains(
   }
 }
 
+interface DailyEntryVersionRow {
+  readonly row: readonly (string | null)[];
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly isoDate: string;
+  readonly version: bigint;
+  readonly supersedesId: string | null;
+}
+
+function dailyEntryKey(workspaceId: string, isoDate: string): string {
+  return JSON.stringify([workspaceId, isoDate]);
+}
+
+function decodeDailyEntryVersions(
+  table: SqliteArchiveTable,
+): ReadonlyMap<string, readonly DailyEntryVersionRow[]> {
+  const idIndex = requiredColumnIndex(table, "id");
+  const workspaceIndex = requiredColumnIndex(table, "workspace_id");
+  const dateIndex = requiredColumnIndex(table, "journal_date");
+  const versionIndex = requiredColumnIndex(table, "version_number");
+  const supersedesIndex = requiredColumnIndex(table, "supersedes_version_id");
+  const grouped = new Map<string, DailyEntryVersionRow[]>();
+  for (const row of table.rows) {
+    const workspaceId = requiredText(row, workspaceIndex, "Daily-entry workspace");
+    const isoDate = requiredText(row, dateIndex, "Daily-entry date");
+    const supersedesId = row[supersedesIndex];
+    if (supersedesId !== null && typeof supersedesId !== "string") {
+      throw new Error("Daily-entry predecessor must be text or null.");
+    }
+    const value: DailyEntryVersionRow = {
+      row,
+      id: requiredText(row, idIndex, "Daily-entry id"),
+      workspaceId,
+      isoDate,
+      version: BigInt(requiredText(row, versionIndex, "Daily-entry version")),
+      supersedesId,
+    };
+    const key = dailyEntryKey(workspaceId, isoDate);
+    const values = grouped.get(key) ?? [];
+    values.push(value);
+    grouped.set(key, values);
+  }
+  for (const [key, values] of grouped) {
+    values.sort((left, right) => (
+      left.version < right.version ? -1 : left.version > right.version ? 1 : 0
+    ));
+    values.forEach((value, index) => {
+      if (
+        value.version !== BigInt(index + 1)
+        || value.supersedesId !== (index === 0 ? null : values[index - 1]?.id ?? null)
+      ) {
+        throw new Error("Daily-entry versions do not form one contiguous immutable chain.");
+      }
+    });
+    grouped.set(key, values);
+  }
+  return grouped;
+}
+
+interface DailyEntryHeadRow {
+  readonly row: readonly (string | null)[];
+  readonly workspaceId: string;
+  readonly isoDate: string;
+  readonly entryVersionId: string;
+  readonly changedAtMs: string;
+}
+
+function decodeDailyEntryHeads(
+  table: SqliteArchiveTable,
+): ReadonlyMap<string, DailyEntryHeadRow> {
+  const workspaceIndex = requiredColumnIndex(table, "workspace_id");
+  const dateIndex = requiredColumnIndex(table, "journal_date");
+  const versionIndex = requiredColumnIndex(table, "entry_version_id");
+  const changedIndex = requiredColumnIndex(table, "changed_at_ms");
+  const heads = new Map<string, DailyEntryHeadRow>();
+  for (const row of table.rows) {
+    const value: DailyEntryHeadRow = {
+      row,
+      workspaceId: requiredText(row, workspaceIndex, "Daily-entry-head workspace"),
+      isoDate: requiredText(row, dateIndex, "Daily-entry-head date"),
+      entryVersionId: requiredText(row, versionIndex, "Daily-entry-head version"),
+      changedAtMs: requiredText(row, changedIndex, "Daily-entry-head timestamp"),
+    };
+    const key = dailyEntryKey(value.workspaceId, value.isoDate);
+    if (heads.has(key)) throw new Error("Restore payload contains duplicate daily-entry heads.");
+    heads.set(key, value);
+  }
+  return heads;
+}
+
+async function insertTemporaryDailyEntryHead(
+  database: SqlDatabase,
+  table: SqliteArchiveTable,
+  head: DailyEntryHeadRow,
+  entryVersionId: string,
+): Promise<void> {
+  const versionIndex = requiredColumnIndex(table, "entry_version_id");
+  const temporary = [...head.row];
+  temporary[versionIndex] = entryVersionId;
+  await insertRow(database, table, temporary);
+}
+
+async function advanceDailyEntryHead(
+  database: SqlDatabase,
+  head: DailyEntryHeadRow,
+  entryVersionId: string,
+): Promise<void> {
+  const result = await database.run(
+    `UPDATE "daily_journal_entry_heads"
+        SET "entry_version_id" = ?, "changed_at_ms" = CAST(? AS INTEGER)
+      WHERE "workspace_id" = ? AND "journal_date" = ?`,
+    [entryVersionId, head.changedAtMs, head.workspaceId, head.isoDate],
+  );
+  if (result.changes !== 1) {
+    throw new Error("Restore could not advance one daily-entry head.");
+  }
+}
+
+async function restoreDailyEntryChains(
+  database: SqlDatabase,
+  tables: readonly SqliteArchiveTable[],
+): Promise<void> {
+  const versionTable = sqliteRestoreTable(tables, "daily_journal_entry_versions");
+  const headTable = sqliteRestoreTable(tables, "daily_journal_entry_heads");
+  const versionsByKey = decodeDailyEntryVersions(versionTable);
+  const headsByKey = decodeDailyEntryHeads(headTable);
+  for (const key of headsByKey.keys()) {
+    if (!versionsByKey.has(key)) {
+      throw new Error("Restore payload contains a daily-entry head without history.");
+    }
+  }
+  for (const key of [...versionsByKey.keys()].sort()) {
+    const versions = versionsByKey.get(key);
+    if (versions === undefined || versions.length === 0) continue;
+    const first = versions[0];
+    const head = headsByKey.get(key);
+    if (first === undefined || head === undefined) {
+      throw new Error("A daily-entry history is missing its current head.");
+    }
+    const last = versions.at(-1);
+    if (last === undefined || head.entryVersionId !== last.id) {
+      throw new Error("A daily-entry head does not point to its latest immutable version.");
+    }
+    await insertRow(database, versionTable, first.row);
+    if (versions.length === 1) {
+      await insertRow(database, headTable, head.row);
+      continue;
+    }
+    await insertTemporaryDailyEntryHead(database, headTable, head, first.id);
+    for (let index = 1; index < versions.length; index += 1) {
+      const version = versions[index];
+      if (version === undefined) throw new Error("A daily-entry chain is incomplete.");
+      await insertRow(database, versionTable, version.row);
+      await advanceDailyEntryHead(database, head, version.id);
+    }
+  }
+}
+
 /**
  * Replays only a decoder-produced archive. Keeping the validated envelope in
  * the signature prevents structural table objects from becoming a SQL input.
@@ -356,6 +514,8 @@ export async function restoreSqliteJournalTables(
   await restoreReviewChains(database, tables);
   await insertTableRows(database, tables, "trade_review_term_assignments");
   await insertTableRows(database, tables, "trade_review_rule_results");
+  await restoreDailyEntryChains(database, tables);
+  await insertTableRows(database, tables, "daily_journal_entry_term_assignments");
 }
 
 export async function assertSqliteRestoreDatabaseHealthy(

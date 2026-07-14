@@ -13,6 +13,7 @@ import {
 } from "../core/signed-decimal";
 import type {
   CalendarSession,
+  DailyJournalPreview,
   ImportHistoryPreview,
   ImportSummary,
   JournalWorkspaceSnapshot,
@@ -159,6 +160,75 @@ function zonedDay(timestampUs: string, timeZone: string, label: string): ZonedDa
       minute: "2-digit",
     }).format(date),
   };
+}
+
+function dailyEntryDate(isoDate: string): Date {
+  invariant(
+    /^(?:19[7-9][0-9]|[2-9][0-9]{3})-[0-9]{2}-[0-9]{2}$/.test(isoDate),
+    `daily entry date ${isoDate} is not a supported canonical date`,
+  );
+  const date = new Date(`${isoDate}T12:00:00.000Z`);
+  invariant(
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === isoDate,
+    `daily entry date ${isoDate} is not a valid Gregorian date`,
+  );
+  return date;
+}
+
+function buildDailyJournal(
+  ledger: JournalLedgerSnapshot,
+): readonly DailyJournalPreview[] {
+  const dates = new Set<string>();
+  return [...ledger.dailyEntries]
+    .sort((left, right) => (
+      stableCompare(right.isoDate, left.isoDate)
+      || stableCompare(right.recordedAtUs, left.recordedAtUs)
+      || stableCompare(left.id, right.id)
+    ))
+    .map((entry) => {
+      invariant(!dates.has(entry.isoDate), `daily entry date ${entry.isoDate} has more than one head`);
+      dates.add(entry.isoDate);
+      const date = dailyEntryDate(entry.isoDate);
+      invariant(Number.isSafeInteger(entry.version) && entry.version > 0, `daily entry ${entry.id} has an invalid version`);
+      invariant(/^[0-9a-f]{64}$/.test(entry.revision), `daily entry ${entry.id} has an invalid revision`);
+      invariant(
+        entry.processScorePct === null
+        || (Number.isInteger(entry.processScorePct)
+          && entry.processScorePct >= 0
+          && entry.processScorePct <= 100),
+        `daily entry ${entry.id} has an invalid process score`,
+      );
+      parseTimestampUs(entry.recordedAtUs, `daily entry ${entry.id} time`);
+      invariant(
+        (entry.state === "draft" && entry.completedAtUs === null)
+        || (
+          entry.state === "completed"
+          && entry.completedAtUs !== null
+          && parseTimestampUs(entry.completedAtUs, `daily entry ${entry.id} completion time`)
+            >= parseTimestampUs(entry.recordedAtUs, `daily entry ${entry.id} time`)
+        ),
+        `daily entry ${entry.id} has an inconsistent completion state`,
+      );
+      return {
+        isoDate: entry.isoDate,
+        dateLabel: new Intl.DateTimeFormat("en-US", {
+          timeZone: "UTC",
+          month: "short",
+          day: "numeric",
+        }).format(date),
+        entryVersionId: entry.id,
+        version: entry.version,
+        state: entry.state,
+        revision: entry.revision,
+        title: entry.title,
+        note: entry.note,
+        emotion: entry.emotion,
+        processScorePct: entry.processScorePct,
+        tags: Object.freeze([...entry.tags]),
+        recordedAtUs: entry.recordedAtUs,
+        completedAtUs: entry.completedAtUs,
+      };
+    });
 }
 
 function displayNumber(raw: string, label: string): number {
@@ -703,6 +773,7 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
       && ledger.executions.length === 0
       && ledger.tradeSubjects.length === 0
       && ledger.tradeReviews.length === 0
+      && ledger.dailyEntries.length === 0
       && ledger.reviewTerms.length === 0
       && ledger.playbooks.length === 0
       && ledger.imports.length === 0,
@@ -823,7 +894,7 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     trades: previews,
     reviewProgress: buildReviewProgress(previews, executionDays),
     reviewOptions: buildReviewOptions(ledger),
-    dailyJournal: [],
+    dailyJournal: buildDailyJournal(ledger),
     playbooks: buildPlaybookPreviews(previews, ledger),
   };
 }

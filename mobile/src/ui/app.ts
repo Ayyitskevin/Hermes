@@ -18,6 +18,11 @@ import {
   manualExecutionAction,
 } from "./manual-execution-sheet";
 import {
+  bindDailyJournalActions,
+  dailyJournalAction,
+  workspaceTodayIsoDate,
+} from "./daily-journal-sheet";
+import {
   bindTradeReviewActions,
   reviewTradeAction,
 } from "./trade-review-sheet";
@@ -287,6 +292,25 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
   const queue = snapshot.trades.filter((trade) => (
     trade.status === "closed" && trade.reviewStatus !== "completed"
   ));
+  const today = snapshot.provenance === "local"
+    ? workspaceTodayIsoDate(snapshot.timeZone)
+    : null;
+  const todayEntry = today === null
+    ? null
+    : snapshot.dailyJournal.find((entry) => entry.isoDate === today) ?? null;
+  const dailyAction = snapshot.provenance === "local"
+    ? todayEntry === null
+      ? dailyJournalAction(null, "Write daily reflection")
+      : `<div class="quick-actions daily-journal-intro-actions">
+          ${dailyJournalAction(todayEntry, "Edit today's reflection")}
+          ${dailyJournalAction(null, "Write another date")}
+        </div>`
+    : "";
+  const dailyModeCopy = snapshot.provenance === "demo"
+    ? "Fictional examples are read-only and stay separate from your journal."
+    : snapshot.provenance === "empty"
+      ? "Add an execution or import a CSV first to establish your journal currency and time zone."
+      : "Write on trading or no-trade days. Each explicit save creates immutable version evidence on this device.";
   return `<section class="screen-stack" aria-labelledby="journal-title">
     <div class="screen-heading"><div><p class="eyebrow">DAILY REVIEWS + PLAYBOOKS</p><h1 id="journal-title">Journal</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
     <article class="result-card review-queue-summary">
@@ -314,13 +338,29 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
     </section>
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
+      <article class="card daily-journal-intro">
+        <div><p class="card-label">DAY-LEVEL PROCESS</p><h3>Reflect beyond individual trades</h3><p>${escapeHtml(dailyModeCopy)}</p></div>
+        ${dailyAction}
+      </article>
       <div class="journal-list">
-        ${snapshot.dailyJournal.map((entry) => `<article class="card journal-note">
-          <div class="journal-note-heading"><div><p class="card-label">${escapeHtml(entry.dateLabel)} · ${escapeHtml(entry.emotion)}</p><h2>${escapeHtml(entry.title)}</h2></div><strong>${entry.disciplineScore}%</strong></div>
-          <p>${escapeHtml(entry.note)}</p>
+        ${snapshot.dailyJournal.map((entry) => {
+          const session = snapshot.calendar.find((candidate) => candidate.isoDate === entry.isoDate);
+          const context = session === undefined
+            ? "No executions recorded"
+            : `Trading day · ${countNoun(session.tradeCount, "trade")} · ${countNoun(session.allocationCount, "allocation")}`;
+          const emotion = entry.emotion === null ? "" : `<span>${escapeHtml(entry.emotion)}</span>`;
+          const score = entry.processScorePct === null
+            ? ""
+            : `<strong aria-label="Self-reported process score ${entry.processScorePct} percent">${entry.processScorePct}% process</strong>`;
+          return `<article class="card journal-note">
+          <div class="journal-note-heading"><div><p class="card-label">${escapeHtml(entry.dateLabel)} · ${escapeHtml(context)}</p><h3>${escapeHtml(entry.title ?? "Daily reflection")}</h3></div>${score}</div>
+          <div class="daily-entry-meta"><span class="status-chip review-${entry.state}">${escapeHtml(entry.state)}</span>${emotion}</div>
+          <p class="daily-entry-note">${entry.note.length === 0 ? "No written note." : escapeHtml(entry.note)}</p>
           <div class="tag-row">${entry.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
-        </article>`).join("")}
-        ${snapshot.dailyJournal.length === 0 ? `<article class="empty-state"><h2>Journal notes are next</h2><p>Your execution ledger is ready for the review and playbook layer.</p></article>` : ""}
+          ${snapshot.provenance === "local" ? dailyJournalAction(entry) : ""}
+        </article>`;
+        }).join("")}
+        ${snapshot.dailyJournal.length === 0 ? `<article class="empty-state"><h3>No daily reflections yet</h3><p>${snapshot.provenance === "local" ? "Capture process, emotion, or a lesson for any calendar day." : "Daily reflections appear here once your journal is established."}</p></article>` : ""}
       </div>
     </section>
     <section aria-labelledby="playbooks-title">
@@ -766,6 +806,19 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         if (announcer) announcer.textContent = announcement;
       },
     );
+    if (tab === "journal") {
+      bindDailyJournalActions(
+        root,
+        application,
+        snapshot,
+        setBackgroundInert,
+        async (announcement) => {
+          snapshot = await application.loadWorkspace();
+          render(currentTab, false);
+          if (announcer) announcer.textContent = announcement;
+        },
+      );
+    }
     bindBatchReviewTagging(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);

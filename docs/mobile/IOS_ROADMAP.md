@@ -47,9 +47,10 @@ under the provisional identifier until that gate is cleared.
   sync, and recurring AI
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
-  capture, versioned review, export, and matching-runtime local restore are
-  implemented, but native restore acceptance, verified deletion, deeper
-  reports, attachments, and Mac/device evidence remain incomplete.
+  capture, versioned trade review, Durable Daily Journal v1, export, and
+  matching-runtime local restore are implemented, but native restore
+  acceptance, verified deletion, deeper reports, attachments, and Mac/device
+  evidence remain incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -188,6 +189,11 @@ Delivered in the current vertical slice:
 - SQLite v3 immutable review versions and optimistic heads attached to stable
   trade subjects, including reusable setup/mistake/emotion/tag vocabulary,
   playbooks, rule outcomes, user-confirmed risk, and optional planned stops.
+- SQLite v4 immutable daily-reflection versions and one optimistic head per
+  workspace-local date. Trading and no-trade days support explicit draft or
+  completed saves, optional headline/note/emotion/tags/self-reported process
+  score, idempotent lost-response reconciliation, and read-only demo examples.
+  The date is durable identity; the process score is excluded from analytics.
 - Exact, versioned result-R and stock/ETF percent-return definitions with pinned
   rounding, inspectable numerator/denominator evidence, partial-exit labeling,
   incompatible-input null reasons, and fee/short/repeating-ratio fixtures.
@@ -197,7 +203,7 @@ Delivered in the current vertical slice:
 - Slice C-B user-owned data v1: Slice C-A's transactional native table-set and
   development-only browser export now have matching-runtime local restore.
   Native accepts only current-migration `sqlite-table-set` v1 and verifies the
-  checksum, 32 tables, 257 ordered columns, canonical rows/signed integers,
+  checksum, 35 tables, 280 ordered columns, canonical rows/signed integers,
   table/state digests, and recomputed summary without executing archive SQL.
   Preview trial-restores in the real destination transaction, verifies table,
   report, summary, foreign-key, and `quick_check` evidence, then rolls back.
@@ -205,7 +211,7 @@ Delivered in the current vertical slice:
   the transaction and after commit, and reconciles an exact already-restored
   retry without duplicating data. Different nonempty state is never merged or
   overwritten.
-- Browser development accepts only `browser-session-state` v1 and is not native
+- Browser development accepts only `browser-session-state` v2 and is not native
   recovery evidence. The local UI is absent in demo, blocks nonempty journals,
   requires a verified preview and explicit confirmation, rejects `File.size`
   above 64 MiB before reading, and relies on an independent 67,108,864-byte
@@ -214,6 +220,11 @@ Delivered in the current vertical slice:
   native backup: attachment catalog v1 is empty, archives with attachments are
   rejected, and native Files/lifecycle/low-storage/near-limit-memory behavior
   remains unverified. Delete All Data is unavailable.
+- Compatibility remains exact-runtime during pre-release: this build rejects
+  browser v1 and pre-v4 native table sets. A legacy file must be restored in its
+  exact old runtime, then the live journal opened/migrated and exported again.
+  On-device v3→v4 migration exists but retained-data/interruption proof remains
+  a Mac/iPhone gate.
 - The first governed insight slice is local and derived-only: Plan Check uses
   current projections and current completed review heads to reconcile exact
   followed/broken cash cohorts, accepts only replay-matching `result-r-v1`
@@ -255,7 +266,7 @@ Still required in Phase 1:
   and physical iPhone.
 - Deepen the delivered Trades review detail and Dashboard calendar with account
   selection, reusable trade/date-range filters, broader calendar navigation/
-  scoping, daily notes, vocabulary/playbook management, and the remaining
+  scoping, vocabulary/playbook management, and the remaining
   reconciled report families.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
@@ -333,8 +344,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-Durable annotations, Slice C-B matching-runtime local restore, and the governed
+Durable trade/day annotations, matching-runtime local restore, and the governed
 evidence-linked Plan Check and Setup Breakdown increments are implemented.
-Native restore acceptance, verified Delete All Data, daily notes, remaining
-report families, and later attachment round-trip remain—not broker connectivity,
-hosted sync, Android, recurring AI, or legacy cockpit extraction.
+Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
+restore acceptance, verified Delete All Data, remaining report families, and
+later attachment round-trip remain—not broker connectivity, hosted sync,
+Android, recurring AI, or legacy cockpit extraction.

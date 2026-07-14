@@ -185,7 +185,11 @@ function normalizedLabel(
     fail("invalid_content", `${label} must use visible single-line text.`);
   }
   const normalized = value.normalize("NFC").trim().replace(/\s+/gu, " ");
-  if (normalized.length === 0 || characterCount(normalized) > limit) {
+  if (
+    normalized.length === 0
+    || characterCount(normalized) > limit
+    || characterCount(normalized.toLocaleLowerCase("en-US")) > limit
+  ) {
     fail(
       "invalid_content",
       `${label} must contain 1-${limit} visible characters.`,

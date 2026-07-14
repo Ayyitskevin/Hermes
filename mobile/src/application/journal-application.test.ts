@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SessionJournalStore } from "../adapters/session-journal-store";
 import { parseJournalArchive } from "./journal-archive";
 import type {
+  DailyJournalCommitResult,
   JournalRestoreCommitResult,
   ManualExecutionCommitResult,
   PreparedTradeReviewBatch,
@@ -10,10 +11,13 @@ import type {
 } from "./journal-store";
 import { JournalRestoreError, JournalTradeReviewError } from "./journal-store";
 import {
+  DailyJournalCommitStatusUncertainError,
   JournalApplication,
   JournalRestoreCommitStatusUncertainError,
   ManualExecutionCommitStatusUncertainError,
 } from "./journal-application";
+import type { PreparedDailyJournalEntry } from "./prepare-daily-journal";
+import { prepareDailyJournalEntry } from "./prepare-daily-journal";
 import type { PreparedJournalRestore } from "./journal-restore";
 import {
   type PreparedManualExecution,
@@ -393,6 +397,79 @@ describe("JournalApplication trade review workflow", () => {
   });
 });
 
+describe("JournalApplication daily-journal recovery", () => {
+  function preparedDaily(): PreparedDailyJournalEntry {
+    return prepareDailyJournalEntry({
+      submissionId: "9".repeat(64),
+      isoDate: "2026-07-13",
+      expectedPreviousEntryId: null,
+      state: "completed",
+      title: "Protected the process",
+      note: "Waited for confirmation.",
+      emotion: "Focused",
+      processScorePct: 90,
+      tags: ["Patient"],
+    });
+  }
+
+  it("reconciles a committed daily reflection after both bridge responses are lost", async () => {
+    class LostDailyResponseStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitDailyJournalEntry(
+        command: PreparedDailyJournalEntry,
+      ): Promise<DailyJournalCommitResult> {
+        this.commitCalls += 1;
+        await super.commitDailyJournalEntry(command);
+        throw new Error("Native bridge lost the committed response.");
+      }
+    }
+
+    const store = new LostDailyResponseStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await openTrade(store, "AAPL", "8", 10);
+      const command = preparedDaily();
+      const result = await application.commitDailyJournalSafely(command);
+      expect(result).toMatchObject({
+        outcome: "duplicate",
+        entryVersionId: result.ledger.dailyEntries[0]?.id,
+      });
+      expect(store.commitCalls).toBe(2);
+      expect(result.ledger.dailyEntries).toEqual([
+        expect.objectContaining({ revision: command.revision, version: 1 }),
+      ]);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("keeps an unqueryable daily-reflection save explicitly uncertain", async () => {
+    class UnavailableDailyStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitDailyJournalEntry(
+        _command: PreparedDailyJournalEntry,
+      ): Promise<DailyJournalCommitResult> {
+        this.commitCalls += 1;
+        throw new Error("Native bridge is unavailable.");
+      }
+    }
+
+    const store = new UnavailableDailyStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await openTrade(store, "AAPL", "7", 11);
+      await expect(application.commitDailyJournalSafely(preparedDaily()))
+        .rejects.toBeInstanceOf(DailyJournalCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+      expect((await store.load()).dailyEntries).toEqual([]);
+    } finally {
+      await application.close();
+    }
+  });
+});
+
 describe("JournalApplication user-data export", () => {
   it("delegates a local export and returns a self-verifying archive artifact", async () => {
     const store = new SessionJournalStore({ nowMs: () => 1_750_000_000_000 });
@@ -405,7 +482,7 @@ describe("JournalApplication user-data export", () => {
       expect(parsed).toMatchObject({
         kind: "hermes-journal-export",
         formatVersion: 1,
-        payload: { kind: "browser-session-state", version: 1 },
+        payload: { kind: "browser-session-state", version: 2 },
       });
       expect(artifact.fileName).toMatch(/^hermes-journal-export-.*\.json$/);
     } finally {

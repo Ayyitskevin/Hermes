@@ -1,5 +1,6 @@
 import type {
   JournalAccountRecord,
+  JournalDailyEntryRecord,
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
@@ -13,6 +14,7 @@ import type {
   JournalTradeReviewRecord,
   JournalWorkspaceRecord,
   ManualExecutionCommitResult,
+  DailyJournalCommitResult,
   PreparedTradeReviewBatch,
   PreparedCsvImport,
   TradeReviewCommitResult,
@@ -20,6 +22,7 @@ import type {
   UnacknowledgedManualExecution,
 } from "../../application/journal-store";
 import {
+  JournalDailyEntryError,
   JournalImportError,
   JournalManualExecutionError,
   JournalRestoreError,
@@ -62,6 +65,11 @@ import {
   tradeReviewBatchRevision,
   verifyPreparedTradeReview,
 } from "../../application/prepare-trade-review";
+import {
+  type PreparedDailyJournalEntry,
+  validateDailyJournalIdentifier,
+  verifyPreparedDailyJournalEntry,
+} from "../../application/prepare-daily-journal";
 import type { SqlDatabase, SqlRow } from "../../application/sql-database";
 import { currencyMinorUnit } from "../../core/currency";
 import type {
@@ -130,6 +138,10 @@ interface LoadedReviewState {
   readonly tradeReviews: readonly JournalTradeReviewRecord[];
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
+}
+
+interface LoadedDailyEntryState {
+  readonly dailyEntries: readonly JournalDailyEntryRecord[];
 }
 
 function requireText(row: SqlRow, column: string): string {
@@ -236,6 +248,7 @@ function emptyLedger(): JournalLedgerSnapshot {
     projection: normalizeTrades([]),
     tradeSubjects: [],
     tradeReviews: [],
+    dailyEntries: [],
     reviewTerms: [],
     playbooks: [],
     imports: [],
@@ -1380,6 +1393,193 @@ export class SqliteJournalStore implements JournalStore {
     return { ...transactionResult, ledger: await this.loadWithinConnection() };
   }
 
+  async commitDailyJournalEntry(
+    command: PreparedDailyJournalEntry,
+  ): Promise<DailyJournalCommitResult> {
+    return this.withRegularStoreOperation(
+      () => this.commitDailyJournalEntryWithinStoreOperation(command),
+    );
+  }
+
+  private async commitDailyJournalEntryWithinStoreOperation(
+    command: PreparedDailyJournalEntry,
+  ): Promise<DailyJournalCommitResult> {
+    this.assertOpen();
+    await this.verifySchema();
+    let entry: PreparedDailyJournalEntry;
+    try {
+      entry = verifyPreparedDailyJournalEntry(command);
+    } catch (error) {
+      throw new JournalDailyEntryError({
+        code: "entry_changed",
+        message: error instanceof Error ? error.message : "The daily reflection is invalid.",
+      });
+    }
+
+    const transactionResult = await this.database.transaction(async () => {
+      const observedNowMs = this.runtime.nowMs();
+      if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+        throw new JournalDailyEntryError({
+          code: "submission_changed",
+          message: "The journal clock is outside the supported daily-reflection range.",
+        });
+      }
+      const workspaceRows = await this.database.query<SqlRow>(
+        "SELECT id FROM workspaces WHERE id = ? AND archived_at_ms IS NULL LIMIT 1",
+        [WORKSPACE_ID],
+      );
+      if (workspaceRows[0] === undefined) {
+        throw new JournalDailyEntryError({
+          code: "workspace_changed",
+          message: "Add or import an execution before saving a daily reflection.",
+        });
+      }
+
+      const existingRows = await this.database.query<SqlRow>(
+        `SELECT id, journal_date, revision_sha256
+           FROM daily_journal_entry_versions
+          WHERE workspace_id = ? AND submission_id = ?
+          LIMIT 1`,
+        [WORKSPACE_ID, entry.submissionId],
+      );
+      const existing = existingRows[0];
+      if (existing !== undefined) {
+        if (
+          requireText(existing, "journal_date") !== entry.isoDate
+          || requireText(existing, "revision_sha256") !== entry.revision
+        ) {
+          throw new JournalDailyEntryError({
+            code: "submission_changed",
+            message: "This daily-reflection submission was already saved with different values.",
+          });
+        }
+        return {
+          outcome: "duplicate" as const,
+          entryVersionId: requireText(existing, "id"),
+        };
+      }
+
+      const headRows = await this.database.query<SqlRow>(
+        `SELECT head.entry_version_id, version.version_number,
+                version.recorded_at_ms
+           FROM daily_journal_entry_heads AS head
+           JOIN daily_journal_entry_versions AS version
+             ON version.id = head.entry_version_id
+            AND version.workspace_id = head.workspace_id
+            AND version.journal_date = head.journal_date
+          WHERE head.workspace_id = ? AND head.journal_date = ?
+          LIMIT 1`,
+        [WORKSPACE_ID, entry.isoDate],
+      );
+      const head = headRows[0];
+      const previousEntryId = head === undefined
+        ? null
+        : requireText(head, "entry_version_id");
+      if (previousEntryId !== entry.expectedPreviousEntryId) {
+        throw new JournalDailyEntryError({
+          code: "entry_changed",
+          message: "This daily reflection changed on another screen. Reload it before saving.",
+        });
+      }
+      const previousVersion = head === undefined
+        ? 0
+        : requireSafeInteger(head, "version_number");
+      const previousRecordedAtMs = head === undefined
+        ? 0
+        : requireSafeInteger(head, "recorded_at_ms");
+      const recordedAtMs = Math.max(observedNowMs, previousRecordedAtMs);
+      const entryVersionId = validateDailyJournalIdentifier(
+        this.runtime.newId("daily-journal-entry"),
+        "Generated daily-entry ID",
+      );
+
+      await this.database.run(
+        `INSERT INTO daily_journal_entry_versions (
+          id, workspace_id, journal_date, version_number,
+          supersedes_version_id, submission_id, revision_sha256, state,
+          title_text, note_text, process_score_pct, recorded_at_ms, completed_at_ms
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          entryVersionId,
+          WORKSPACE_ID,
+          entry.isoDate,
+          previousVersion + 1,
+          previousEntryId,
+          entry.submissionId,
+          entry.revision,
+          entry.state,
+          entry.title,
+          entry.note,
+          entry.processScorePct,
+          recordedAtMs,
+          entry.state === "completed" ? recordedAtMs : null,
+        ],
+      );
+
+      const assignments: readonly {
+        readonly category: "emotion" | "tag";
+        readonly values: readonly string[];
+      }[] = [
+        { category: "emotion", values: entry.emotion === null ? [] : [entry.emotion] },
+        { category: "tag", values: entry.tags },
+      ];
+      for (const assignment of assignments) {
+        for (const [ordinal, value] of assignment.values.entries()) {
+          const termId = await this.ensureReviewTerm(
+            assignment.category,
+            value,
+            recordedAtMs,
+          );
+          await this.database.run(
+            `INSERT INTO daily_journal_entry_term_assignments (
+              entry_version_id, workspace_id, journal_date,
+              term_id, category, ordinal
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              entryVersionId,
+              WORKSPACE_ID,
+              entry.isoDate,
+              termId,
+              assignment.category,
+              ordinal,
+            ],
+          );
+        }
+      }
+
+      if (previousEntryId === null) {
+        await this.database.run(
+          `INSERT INTO daily_journal_entry_heads (
+            workspace_id, journal_date, entry_version_id, changed_at_ms
+          ) VALUES (?, ?, ?, ?)`,
+          [WORKSPACE_ID, entry.isoDate, entryVersionId, recordedAtMs],
+        );
+      } else {
+        const update = await this.database.run(
+          `UPDATE daily_journal_entry_heads
+              SET entry_version_id = ?, changed_at_ms = ?
+            WHERE workspace_id = ? AND journal_date = ?
+              AND entry_version_id = ?`,
+          [
+            entryVersionId,
+            recordedAtMs,
+            WORKSPACE_ID,
+            entry.isoDate,
+            previousEntryId,
+          ],
+        );
+        if (update.changes !== 1) {
+          throw new JournalDailyEntryError({
+            code: "entry_changed",
+            message: "This daily reflection changed while it was being saved.",
+          });
+        }
+      }
+      return { outcome: "committed" as const, entryVersionId };
+    });
+    return { ...transactionResult, ledger: await this.loadWithinConnection() };
+  }
+
   async loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]> {
     return this.withRegularStoreOperation(
       () => this.loadUnacknowledgedManualExecutionsWithinStoreOperation(),
@@ -2247,6 +2447,7 @@ export class SqliteJournalStore implements JournalStore {
     const projection = normalizeTrades(loaded.executions);
     const tradeSubjects = await this.loadTradeSubjects(projection);
     const reviewState = await this.loadReviewState();
+    const dailyEntryState = await this.loadDailyEntryState();
     const receiptRows = await this.database.query<SqlRow>(
       `SELECT receipt.id, batch.account_id, account.name AS account_name, batch.source_name,
               CAST(receipt.recorded_at_ms AS TEXT) AS recorded_at_ms_text,
@@ -2287,10 +2488,98 @@ export class SqliteJournalStore implements JournalStore {
       projection,
       tradeSubjects,
       tradeReviews: reviewState.tradeReviews,
+      dailyEntries: dailyEntryState.dailyEntries,
       reviewTerms: reviewState.reviewTerms,
       playbooks: reviewState.playbooks,
       imports,
     };
+  }
+
+  private async loadDailyEntryState(): Promise<LoadedDailyEntryState> {
+    const versionRows = await this.database.query<SqlRow>(
+      `SELECT version.id, version.journal_date, version.version_number,
+              version.revision_sha256, version.state, version.title_text,
+              version.note_text, version.process_score_pct,
+              CAST(version.recorded_at_ms AS TEXT) AS recorded_at_ms_text,
+              CAST(version.completed_at_ms AS TEXT) AS completed_at_ms_text
+         FROM daily_journal_entry_heads AS head
+         JOIN daily_journal_entry_versions AS version
+           ON version.id = head.entry_version_id
+          AND version.workspace_id = head.workspace_id
+          AND version.journal_date = head.journal_date
+        WHERE head.workspace_id = ?
+        ORDER BY version.journal_date DESC, version.id`,
+      [WORKSPACE_ID],
+    );
+    const assignmentRows = versionRows.length === 0
+      ? []
+      : await this.database.query<SqlRow>(
+        `SELECT assignment.entry_version_id, assignment.category,
+                assignment.ordinal, term.name
+           FROM daily_journal_entry_term_assignments AS assignment
+           JOIN daily_journal_entry_heads AS head
+             ON head.entry_version_id = assignment.entry_version_id
+            AND head.workspace_id = assignment.workspace_id
+            AND head.journal_date = assignment.journal_date
+           JOIN review_terms AS term
+             ON term.id = assignment.term_id
+            AND term.workspace_id = assignment.workspace_id
+            AND term.category = assignment.category
+          WHERE assignment.workspace_id = ?
+          ORDER BY assignment.entry_version_id,
+                   assignment.category, assignment.ordinal`,
+        [WORKSPACE_ID],
+      );
+    const termsByEntry = new Map<string, {
+      emotion: string | null;
+      tags: string[];
+    }>();
+    for (const row of assignmentRows) {
+      const entryVersionId = requireText(row, "entry_version_id");
+      const category = requireText(row, "category");
+      const value = requireText(row, "name");
+      const terms = termsByEntry.get(entryVersionId) ?? { emotion: null, tags: [] };
+      if (category === "emotion") {
+        if (terms.emotion !== null) {
+          throw new Error("A daily reflection has more than one emotion.");
+        }
+        terms.emotion = value;
+      } else if (category === "tag") {
+        terms.tags.push(value);
+      } else {
+        throw new Error("SQLite returned an invalid daily-reflection term category.");
+      }
+      termsByEntry.set(entryVersionId, terms);
+    }
+
+    const dailyEntries: JournalDailyEntryRecord[] = versionRows.map((row) => {
+      const id = requireText(row, "id");
+      const state = requireText(row, "state");
+      if (state !== "draft" && state !== "completed") {
+        throw new Error("SQLite returned an invalid daily-reflection state.");
+      }
+      const rawScore = row["process_score_pct"];
+      const processScorePct = rawScore === null || rawScore === undefined
+        ? null
+        : requireSafeInteger(row, "process_score_pct");
+      const completedMs = nullableText(row, "completed_at_ms_text");
+      const terms = termsByEntry.get(id) ?? { emotion: null, tags: [] };
+      return {
+        id,
+        isoDate: requireText(row, "journal_date"),
+        version: requireSafeInteger(row, "version_number"),
+        state,
+        revision: requireText(row, "revision_sha256"),
+        title: nullableText(row, "title_text"),
+        note: requireText(row, "note_text"),
+        emotion: terms.emotion,
+        processScorePct,
+        tags: terms.tags,
+        recordedAtUs: `${requireText(row, "recorded_at_ms_text")}000`,
+        completedAtUs: completedMs === null ? null : `${completedMs}000`,
+      };
+    });
+    return { dailyEntries };
   }
 
   private async loadReviewState(): Promise<LoadedReviewState> {

@@ -1,6 +1,8 @@
 import type {
   CsvImportCommitResult,
+  DailyJournalCommitResult,
   JournalAccountRecord,
+  JournalDailyEntryRecord,
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
@@ -18,6 +20,7 @@ import type {
   JournalRestoreCommitResult,
 } from "../application/journal-store";
 import {
+  JournalDailyEntryError,
   JournalImportError,
   JournalManualExecutionError,
   JournalRestoreError,
@@ -46,6 +49,10 @@ import {
   type PreparedTradeReview,
   verifyPreparedTradeReview,
 } from "../application/prepare-trade-review";
+import {
+  type PreparedDailyJournalEntry,
+  verifyPreparedDailyJournalEntry,
+} from "../application/prepare-daily-journal";
 import { currencyMinorUnit } from "../core/currency";
 import type {
   LedgerExecution,
@@ -135,6 +142,13 @@ function sessionReviewError(
   message: string,
 ): JournalTradeReviewError {
   return new JournalTradeReviewError({ code, message });
+}
+
+function sessionDailyEntryError(
+  code: "submission_changed" | "entry_changed" | "workspace_changed",
+  message: string,
+): JournalDailyEntryError {
+  return new JournalDailyEntryError({ code, message });
 }
 
 function ensureReviewTerm(
@@ -277,7 +291,7 @@ function preparedSessionRestore(
     reportSha256: candidate.reportSha256,
     exportedAtUs: candidate.archive.exportedAtUs,
     payloadKind: "browser-session-state",
-    payloadVersion: 1,
+    payloadVersion: 2,
     summary: candidate.summary,
     target,
   });
@@ -298,7 +312,15 @@ export class SessionJournalStore implements JournalStore {
   private reviewTerms: JournalReviewTermRecord[] = [];
   private playbooks: JournalPlaybookRecord[] = [];
   private reviewSubmissionById = new Map<string, SessionReviewSubmission>();
+  /** Append-only history; only dailyEntryHeadByDate is projected by load(). */
+  private dailyEntryVersions: JournalDailyEntryRecord[] = [];
+  private dailyEntryHeadByDate = new Map<string, string>();
+  private dailyEntrySubmissionById = new Map<string, {
+    readonly revision: string;
+    readonly entryVersionId: string;
+  }>();
   private lastReviewRecordedAtMs = -1;
+  private lastDailyEntryRecordedAtMs = -1;
   private nextExecutionSequence = 1;
   private nextReceiptOrdinal = 0;
   private closed = false;
@@ -319,7 +341,11 @@ export class SessionJournalStore implements JournalStore {
       reviewTerms: this.reviewTerms,
       playbooks: this.playbooks,
       reviewSubmissions: this.reviewSubmissionById,
+      dailyEntryVersions: this.dailyEntryVersions,
+      dailyEntryHeads: this.dailyEntryHeadByDate,
+      dailyEntrySubmissions: this.dailyEntrySubmissionById,
       lastReviewRecordedAtMs: this.lastReviewRecordedAtMs,
+      lastDailyEntryRecordedAtMs: this.lastDailyEntryRecordedAtMs,
       nextExecutionSequence: this.nextExecutionSequence,
       nextReceiptOrdinal: this.nextReceiptOrdinal,
     };
@@ -341,6 +367,13 @@ export class SessionJournalStore implements JournalStore {
           : BigInt(left.recordedAtUs) > BigInt(right.recordedAtUs) ? 1
             : stableCompare(left.id, right.id)
       ));
+    const dailyHeadIds = new Set(this.dailyEntryHeadByDate.values());
+    const dailyEntries = this.dailyEntryVersions
+      .filter((entry) => dailyHeadIds.has(entry.id))
+      .sort((left, right) => (
+        stableCompare(right.isoDate, left.isoDate)
+        || stableCompare(left.id, right.id)
+      ));
     return {
       workspace: this.workspace,
       accounts: [...this.accounts],
@@ -349,6 +382,7 @@ export class SessionJournalStore implements JournalStore {
       projection,
       tradeSubjects: tradeSubjectsForProjection(projection),
       tradeReviews,
+      dailyEntries,
       reviewTerms: [...this.reviewTerms].sort((left, right) => (
         stableCompare(left.category, right.category)
         || stableCompare(normalizedName(left.name), normalizedName(right.name))
@@ -387,7 +421,7 @@ export class SessionJournalStore implements JournalStore {
       },
       payload: {
         kind: "browser-session-state",
-        version: 1,
+        version: 2,
         data: archiveData,
       },
       attachments: { version: 1, entries: [] },
@@ -477,7 +511,13 @@ export class SessionJournalStore implements JournalStore {
       rules: [...playbook.rules],
     }));
     const nextReviewSubmissions = new Map(payload.reviewSubmissions);
+    const nextDailyEntryVersions = [...payload.dailyEntryVersions];
+    const nextDailyEntryHeads = new Map(payload.dailyEntryHeads);
+    const nextDailyEntrySubmissions = new Map(payload.dailyEntrySubmissions);
     const nextLastReviewRecordedAtMs = Number(payload.counters.lastReviewRecordedAtMs);
+    const nextLastDailyEntryRecordedAtMs = Number(
+      payload.counters.lastDailyEntryRecordedAtMs,
+    );
     const nextExecutionSequence = Number(payload.counters.nextExecutionSequence);
     const nextReceiptOrdinal = Number(payload.counters.nextReceiptOrdinal);
 
@@ -495,7 +535,11 @@ export class SessionJournalStore implements JournalStore {
     this.reviewTerms = nextReviewTerms;
     this.playbooks = nextPlaybooks;
     this.reviewSubmissionById = nextReviewSubmissions;
+    this.dailyEntryVersions = nextDailyEntryVersions;
+    this.dailyEntryHeadByDate = nextDailyEntryHeads;
+    this.dailyEntrySubmissionById = nextDailyEntrySubmissions;
     this.lastReviewRecordedAtMs = nextLastReviewRecordedAtMs;
+    this.lastDailyEntryRecordedAtMs = nextLastDailyEntryRecordedAtMs;
     this.nextExecutionSequence = nextExecutionSequence;
     this.nextReceiptOrdinal = nextReceiptOrdinal;
 
@@ -1016,6 +1060,128 @@ export class SessionJournalStore implements JournalStore {
           ?? createdReviewIdBySubmission.get(review.submissionId)
           ?? (() => { throw new Error("A committed session review lost its version ID."); })()
       )),
+      ledger: await this.load(),
+    };
+  }
+
+  async commitDailyJournalEntry(
+    command: PreparedDailyJournalEntry,
+  ): Promise<DailyJournalCommitResult> {
+    this.assertOpen();
+    let entry: PreparedDailyJournalEntry;
+    try {
+      entry = verifyPreparedDailyJournalEntry(command);
+    } catch (error) {
+      throw sessionDailyEntryError(
+        "entry_changed",
+        error instanceof Error ? error.message : "The daily reflection is invalid.",
+      );
+    }
+    if (this.workspace === null) {
+      throw sessionDailyEntryError(
+        "workspace_changed",
+        "Add or import an execution before saving a daily reflection.",
+      );
+    }
+
+    const priorSubmission = this.dailyEntrySubmissionById.get(entry.submissionId);
+    if (priorSubmission !== undefined) {
+      if (priorSubmission.revision !== entry.revision) {
+        throw sessionDailyEntryError(
+          "submission_changed",
+          "This daily-reflection submission was already saved with different values.",
+        );
+      }
+      return {
+        outcome: "duplicate",
+        entryVersionId: priorSubmission.entryVersionId,
+        ledger: await this.load(),
+      };
+    }
+
+    const currentHeadId = this.dailyEntryHeadByDate.get(entry.isoDate) ?? null;
+    if (currentHeadId !== entry.expectedPreviousEntryId) {
+      throw sessionDailyEntryError(
+        "entry_changed",
+        "This daily reflection changed after it was opened. Reload it before saving.",
+      );
+    }
+    const previous = currentHeadId === null
+      ? null
+      : this.dailyEntryVersions.find((candidate) => candidate.id === currentHeadId) ?? null;
+    if (currentHeadId !== null && previous === null) {
+      throw new Error("A session daily-entry head lost its immutable version.");
+    }
+    const version = (previous?.version ?? 0) + 1;
+    if (!Number.isSafeInteger(version)) {
+      throw sessionDailyEntryError(
+        "entry_changed",
+        "This date exhausted its daily-reflection version range.",
+      );
+    }
+
+    const observedNowMs = this.runtime.nowMs();
+    if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+      throw sessionDailyEntryError(
+        "submission_changed",
+        "The browser session clock is outside the daily-journal range.",
+      );
+    }
+    const recordedAtMs = Math.max(
+      observedNowMs,
+      this.lastDailyEntryRecordedAtMs + 1,
+      previous === null ? 0 : Number(BigInt(previous.recordedAtUs) / 1_000n),
+    );
+    if (!Number.isSafeInteger(recordedAtMs)) {
+      throw sessionDailyEntryError(
+        "submission_changed",
+        "The browser session exhausted the daily-journal timestamp range.",
+      );
+    }
+
+    const nextTerms = [...this.reviewTerms];
+    const emotion = entry.emotion === null
+      ? null
+      : ensureReviewTerm(nextTerms, "emotion", entry.emotion).name;
+    const tags = entry.tags.map((tag) => ensureReviewTerm(nextTerms, "tag", tag).name);
+    const recordedAtUs = `${recordedAtMs}000`;
+    const entryVersionId = `session-daily-entry:${sha256Hex(JSON.stringify([
+      entry.isoDate,
+      entry.submissionId,
+      entry.revision,
+    ]))}`;
+    const created: JournalDailyEntryRecord = Object.freeze({
+      id: entryVersionId,
+      isoDate: entry.isoDate,
+      version,
+      state: entry.state,
+      revision: entry.revision,
+      title: entry.title,
+      note: entry.note,
+      emotion,
+      processScorePct: entry.processScorePct,
+      tags: Object.freeze(tags),
+      recordedAtUs,
+      completedAtUs: entry.state === "completed" ? recordedAtUs : null,
+    });
+
+    const nextVersions = [...this.dailyEntryVersions, created];
+    const nextHeads = new Map(this.dailyEntryHeadByDate);
+    nextHeads.set(entry.isoDate, entryVersionId);
+    const nextSubmissions = new Map(this.dailyEntrySubmissionById);
+    nextSubmissions.set(entry.submissionId, {
+      revision: entry.revision,
+      entryVersionId,
+    });
+
+    this.reviewTerms = nextTerms;
+    this.dailyEntryVersions = nextVersions;
+    this.dailyEntryHeadByDate = nextHeads;
+    this.dailyEntrySubmissionById = nextSubmissions;
+    this.lastDailyEntryRecordedAtMs = recordedAtMs;
+    return {
+      outcome: "committed",
+      entryVersionId,
       ledger: await this.load(),
     };
   }

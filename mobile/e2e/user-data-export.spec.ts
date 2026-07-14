@@ -84,7 +84,7 @@ test("local export prepares offline, downloads a self-verifying archive, and nev
     formatVersion: 1,
     payload: {
       kind: "browser-session-state",
-      version: 1,
+      version: 2,
     },
     summary: {
       activeExecutions: "2",

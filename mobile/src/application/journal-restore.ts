@@ -14,7 +14,8 @@ export interface JournalRestorePreview {
   readonly reportSha256: string;
   readonly exportedAtUs: string;
   readonly payloadKind: JournalRestorePayloadKind;
-  readonly payloadVersion: 1;
+  /** Native table archives remain v1; browser state archives are v2. */
+  readonly payloadVersion: 1 | 2;
   /** Recomputed by the payload-specific adapter; never copied from the envelope. */
   readonly summary: JournalArchiveSummary;
   /** Destination state observed during the adapter's verified preview transaction. */
@@ -113,7 +114,10 @@ export function createPreparedJournalRestore(
   if (
     (preview.payloadKind !== "sqlite-table-set"
       && preview.payloadKind !== "browser-session-state")
-    || preview.payloadVersion !== 1
+    || !(
+      (preview.payloadKind === "sqlite-table-set" && preview.payloadVersion === 1)
+      || (preview.payloadKind === "browser-session-state" && preview.payloadVersion === 2)
+    )
     || (preview.target !== "empty" && preview.target !== "already-restored")
   ) {
     throw new Error("Restore preview compatibility fields are invalid.");

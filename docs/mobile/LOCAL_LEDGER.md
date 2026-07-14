@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned review + Slice C-B local restore · 2026-07-13
+Status: implemented execution + versioned trade/day review + local restore · 2026-07-13
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -42,6 +42,11 @@ legacy desktop journal schema is not part of this contract.
 12. Restore is payload- and runtime-specific, empty-journal-only, and
     fail-closed. It never merges or overwrites different state; an exact
     already-restored state is an idempotent response-loss retry.
+13. A daily reflection has exactly one current head per workspace-local
+    Gregorian date. Every explicit draft/completed save appends an immutable
+    version with a content-bound revision and optimistic predecessor; the date
+    never changes. A reflection requires at least one authored signal. Its
+    optional process score is self-reported and excluded from governed reports.
 
 ## Import sequence
 
@@ -139,6 +144,32 @@ cannot be downgraded from the edit sheet. A review session is one workspace-loca
 date with an execution; it is credited when at least one trade with an allocation
 that date has a saved draft or completed review.
 
+## Daily-journal sequence
+
+```text
+established local workspace + workspace-local calendar date
+  → optional headline/note/emotion/process score/tags
+  → normalize bounded Unicode content + require one authored signal
+  → random submission ID + deterministic content revision
+  → optimistic expected-current-entry check
+  → BEGIN transaction
+      reuse or create normalized emotion/tag vocabulary
+      append one immutable daily-entry version
+      snapshot ordered assignments
+      insert or advance the one guarded head for that date
+    COMMIT
+  → rebuild the visible newest-first journal from current heads
+```
+
+Daily reflections may be saved on trading or no-trade dates and never create,
+route, modify, or cancel an order. Create dates are bounded to workspace-local
+today in the current UI; persisted dates remain immutable when editing. Exact
+same-submission retries are idempotent, changed reuse or stale heads fail
+closed, and a lost response is reconciled by date plus the prepared revision.
+Demo entries are fictional and read-only. The daily process score is descriptive
+self-report evidence only; performance, Plan Check, and Setup Breakdown do not
+consume it.
+
 ## Projection semantics
 
 Executions sort by microsecond timestamp, an immutable workspace-global ledger
@@ -204,9 +235,10 @@ deduplication still prevents a second copy while the restored receipt is active.
 Native SQLCipher operation, Keychain loss/reinstall behavior, actual device and
 iCloud backup inclusion, restore with its Keychain item, CocoaPods resolution,
 and kill/relaunch migration recovery remain Mac/physical-device gates. The v1
-ledger, v2 command reconciliation, and v3 review statements are replay-safe for
-the plugin's statement/user-version commit gap, but only an interruption test
-can prove the native lifecycle. No privacy or recovery claim may be strengthened
+ledger, v2 command reconciliation, v3 trade-review statements, and v4
+daily-journal statements are replay-safe for the plugin's statement/user-version
+commit gap, but only interruption tests across v2→v3 and v3→v4 can prove the
+native lifecycle. No privacy or recovery claim may be strengthened
 until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
@@ -218,13 +250,13 @@ export-compliance answers also require a human determination.
   source rows, inactive/history facts, immutable review versions, submission
   receipts, formula definitions, or stable trade subjects.
 - Native payload v1 is `sqlite-table-set`. Its table and ordered column
-  signatures are pinned to schema v3, SQLite integers are emitted as canonical
+  signatures are pinned to schema v4, SQLite integers are emitted as canonical
   decimal strings, rows and JSON keys are deterministic, and table-set or
   ordered-column metadata drift fails closed. Live table-SQL hashes remain
   diagnostic; export v1 does not claim complete constraint, index, or trigger
   pinning. Migration application timestamps stay in provenance but are excluded
   from the portable user-state digest.
-- Browser development uses a separate `browser-session-state` v1 payload. It
+- Browser development uses a separate `browser-session-state` v2 payload. It
   captures the complete in-memory store, can restore only into the browser
   development runtime, disappears on reload, and is not native recovery
   evidence.
@@ -244,7 +276,7 @@ export-compliance answers also require a human determination.
   the 64 MiB input in memory; native near-limit and low-storage behavior remain
   device gates.
 - Native restore accepts only current-migration `sqlite-table-set` v1. The
-  decoder verifies the envelope checksum, all 32 tables and 257 pinned ordered
+  decoder verifies the envelope checksum, all 35 tables and 280 pinned ordered
   columns, canonical strict row order, primary-key uniqueness, nullable/type
   rules, signed SQLite 64-bit integers, row counts, table and portable-state
   digests, and a recomputed summary. It never executes archive SQL; live
@@ -260,9 +292,15 @@ export-compliance answers also require a human determination.
   fresh transaction. An exact already-restored table set returns
   `already-restored`; different nonempty state is never merged or overwritten.
 - Browser restore fully verifies a separate immutable candidate before one
-  synchronous state swap. It accepts only `browser-session-state` v1, requires
+  synchronous state swap. It accepts only `browser-session-state` v2, requires
   an empty session unless the exact state is already present, and cannot be
   cited as native restore evidence.
+- Restore compatibility is intentionally exact-runtime during this pre-release
+  phase. This build rejects browser v1 and pre-v4 native table sets rather than
+  guessing at archive conversion. The recovery path is to restore the file in
+  its exact old runtime, then open/migrate that live journal and export a new
+  current-runtime file. On-device v3→v4 migration is implemented, but retained
+  database and interruption evidence remains a Mac/iPhone gate.
 - More exposes restore below the export card only for the local empty journal.
   The UI rejects `File.size` above 64 MiB before `File.text()`, invalidates stale
   previews on file change/cancel, displays adapter-recomputed summary and
@@ -315,9 +353,14 @@ nonempty-state refusal, restore failure atomicity, post-commit reconciliation,
 response-loss recovery, browser candidate validation, 64 MiB pre-read UI
 rejection, and demo/nonempty restore isolation. Exact final integration counts
 and publication evidence remain in the active handoff rather than this
-contract. Native Files selection, lifecycle/interruption, low-storage,
-near-limit memory, VoiceOver, and physical-device SQLCipher behavior remain
-unverified.
+contract. Daily Journal coverage adds normalized Unicode boundaries, immutable
+dates/version chains, submission idempotency, optimistic conflicts, atomic
+session/SQLite commits, lost-response reconciliation, v3→v4 migration,
+content-bound native/browser restore validation, trading/no-trade display,
+explicit draft/completed saves, demo isolation, focus/busy/error behavior, and
+320px/200% browser reflow. Native Files selection, lifecycle/interruption,
+Daily Journal relaunch and migration, low-storage, near-limit memory, VoiceOver,
+and physical-device SQLCipher behavior remain unverified.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

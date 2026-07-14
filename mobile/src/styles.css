@@ -368,6 +368,18 @@ p { line-height: 1.55; }
 
 .journal-note-heading > strong { color: var(--cyan); font: 700 1.15rem/1 "B612 Mono", monospace; }
 .journal-note p { margin: 0; }
+.daily-journal-intro {
+  margin-top: .75rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .9rem;
+  align-items: center;
+}
+.daily-journal-intro h3, .daily-journal-intro p { margin: 0; }
+.daily-journal-intro p:last-child { margin-top: .4rem; color: var(--muted); }
+.daily-entry-meta { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; color: var(--muted); font-size: .78rem; }
+.daily-entry-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.journal-note > .secondary-button { justify-self: start; }
 .review-queue-list { margin-top: .75rem; }
 .review-queue-item {
   display: grid;
@@ -729,6 +741,25 @@ input[type="file"]::file-selector-button {
   display: grid;
   gap: 1.1rem;
 }
+.daily-journal-sheet {
+  width: min(100%, 42rem);
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+.daily-journal-sheet > *,
+.daily-journal-sheet form,
+.daily-journal-sheet label,
+.daily-journal-sheet input,
+.daily-journal-sheet textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.daily-journal-sheet > p { margin: 0; }
+.daily-journal-sheet form { display: grid; gap: .75rem; }
+.daily-entry-actions { align-items: stretch; }
+.character-count { text-align: right; }
+.limit-exceeded { color: var(--negative); }
 .trade-review-sheet > *,
 .trade-review-sheet form,
 .trade-review-sheet fieldset,
@@ -822,7 +853,10 @@ input[type="file"]::file-selector-button {
   .review-queue-item > .secondary-button { grid-column: 1 / -1; }
   .trade-review-sheet .field-grid,
   .trade-review-sheet .review-metric-grid,
-  .trade-review-sheet .quick-actions { grid-template-columns: minmax(0, 1fr); }
+  .trade-review-sheet .quick-actions,
+  .daily-journal-sheet .field-grid,
+  .daily-journal-sheet .quick-actions,
+  .daily-journal-intro { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row label:first-child { grid-column: 1; }
   .review-execution-row { grid-template-columns: 1fr; }

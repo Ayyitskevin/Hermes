@@ -114,12 +114,20 @@ export interface CalendarSession {
 }
 
 export interface DailyJournalPreview {
+  readonly isoDate: string;
   readonly dateLabel: string;
-  readonly title: string;
+  readonly entryVersionId: string;
+  readonly version: number;
+  readonly state: "draft" | "completed";
+  readonly revision: string;
+  readonly title: string | null;
   readonly note: string;
-  readonly emotion: string;
-  readonly disciplineScore: number;
+  readonly emotion: string | null;
+  /** Optional self-report; never a derived performance or Plan Check metric. */
+  readonly processScorePct: number | null;
   readonly tags: readonly string[];
+  readonly recordedAtUs: string;
+  readonly completedAtUs: string | null;
 }
 
 export interface PlaybookPreview {

@@ -97,6 +97,10 @@ and an App Store disclosure.
   migration at the statement/user-version boundary. Relaunch and confirm the
   migration receipt replays safely, every execution remains intact, and review
   reads and writes work only after schema v3 is fully acknowledged.
+- Repeat from a retained schema-v3 database while interrupting v3-to-v4 at the
+  statement/user-version boundary. Relaunch and confirm all ledger/review facts
+  remain intact, the checksum-pinned receipt replays safely, and Daily Journal
+  reads/writes begin only after schema v4 is fully acknowledged.
 - Exercise a daylight-saving gap and repeated clock hour. The gap must fail;
   the repeated hour must require the explicit UTC-offset field and save the
   intended instant.
@@ -153,6 +157,20 @@ and an App Store disclosure.
   horizontal overflow. Confirm any metric derived from an open trade is visibly
   labeled partial, and edited draft inputs do not relabel saved-version metric
   evidence as newly persisted facts.
+- In Journal, save a draft daily reflection for today, then use **Write another
+  date** to save a no-trade-day reflection. Confirm the create date defaults to
+  the newest unused date, an edited entry's date is immutable, and each explicit
+  draft/completed save appends one version while one current head remains per
+  date. No autosave may occur after accepting discard.
+- Retry an exact Daily Journal submission after a simulated lost bridge response
+  and confirm no duplicate version. Exercise a stale head and changed submission
+  and confirm each fails without partial vocabulary/version/head state. A known
+  committed save followed by refresh failure must remain labeled saved.
+- With VoiceOver, a hardware keyboard, 320 CSS pixels, and 200% Dynamic Type,
+  verify heading focus, reverse/forward focus containment, background inerting,
+  dirty-close confirmation, all-controls-disabled busy state, character-count
+  feedback, 44-point targets, long-token wrapping, and truthful reconcile copy.
+  Demo and empty workspaces must expose no Daily Journal write control.
 - Build a local journal containing CSV source rows, an independent manual fill,
   a rolled-back receipt, and at least two immutable versions of one trade review.
   In More, confirm export warns that JSON is unencrypted, restore is blocked
@@ -168,9 +186,10 @@ and an App Store disclosure.
 - Confirm the plaintext warning before handoff, then reopen the saved file from
   Files with an approved diagnostic tool. Confirm the filename, custom JSON
   media type/fallback behavior, format
-  v1, all schema-v3 table/column signatures, raw CSV/manual provenance,
-  historical/current reviews, formula definitions, stable subjects, empty
-  attachment catalog, and outer checksum. Do not log journal content.
+  v1, all schema-v4 table/column signatures, raw CSV/manual provenance,
+  historical/current trade and daily-review chains, formula definitions, stable
+  subjects, empty attachment catalog, and outer checksum. Do not log journal
+  content.
 - Export the unchanged journal twice. Confirm state/report digests match while
   export timestamps/archive digests differ. Then mutate one fact and confirm the
   user-state digest changes.
@@ -181,7 +200,7 @@ and an App Store disclosure.
   approved near-67,108,864-byte fixture while observing peak memory and low
   storage; record any termination or duplicate in-memory copies.
 - Select the matching native `sqlite-table-set` v1 archive. Confirm preview
-  verifies all 32 tables and 257 ordered columns, shows recomputed workspace,
+  verifies all 35 tables and 280 ordered columns, shows recomputed workspace,
   count, and digest claims alongside checksum-verified export time and
   adapter-validated payload metadata, and leaves the empty journal unchanged
   after the trial transaction rolls back.
@@ -191,15 +210,18 @@ and an App Store disclosure.
 - Cancel preview and confirm the prepared approval is invalidated and focus
   returns to the file chooser. Change the file during an asynchronous preview
   and confirm stale results never enable restore.
-- Try a browser `browser-session-state` v1 file, wrong payload version, stale
+- Try a browser `browser-session-state` v2 file, browser v1 file, wrong payload
+  version, stale
   migration set, changed table/column shape, noncanonical/out-of-range integer,
   row/table/state/report/summary tamper, and an attachment-bearing fixture.
   Every case must fail visibly without changing the destination; do not log
   journal contents.
 - Confirm the final checkbox is required, then restore the valid native archive
   in airplane mode. Force quit/relaunch and reconcile raw provenance, inactive
-  history, review chains/heads, metric definitions, stable subjects, ledger,
-  report digest, and state digest against the source.
+  history, trade-review and Daily Journal chains/heads/ordered vocabulary,
+  metric definitions, stable subjects, ledger, report digest, and state digest
+  against the source. Save another reflection after restore, export again, and
+  restore that file into a second empty container to prove continued writes.
 - Export the restored journal again. State/report digests must equal the source
   even though export time/archive digest may differ. Confirm no archive SQL was
   executed and no live table-SQL diagnostic was treated as compatibility input.

@@ -79,6 +79,11 @@ submission-ready product:
 - Immutable v3 trade-review versions attached to durable trade subjects, with
   notes, setup/mistake/emotion tags, playbooks, rule outcomes, exact initial
   risk, optional planned stop, optimistic concurrency, and atomic batch tagging.
+- Immutable v4 day-level journal versions keyed by workspace-local date. Users
+  can explicitly save a draft or completed reflection on trading and no-trade
+  days, edit only through an optimistic successor version, and optionally add a
+  headline, note, emotion, tags, and a clearly self-reported process score that
+  never enters performance or Plan Check analytics.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -89,7 +94,7 @@ submission-ready product:
   in-memory development artifact, not a native backup.
 - A local-only, previewed Slice C-B restore for current
   `hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1;
-  the browser development runtime accepts only `browser-session-state` v1 and
+  the browser development runtime accepts only `browser-session-state` v2 and
   is not native recovery evidence. Restore revalidates the selected archive,
   never merges or overwrites an existing journal, and treats an exact
   already-restored state as an idempotent retry. The UI rejects files larger
@@ -129,9 +134,14 @@ response-loss recovery, low-storage, and near-limit memory behavior still
 require the Mac/device gate. Slice C-B restores a current-schema archive on its
 matching runtime, but that file is not a complete native backup: attachment
 catalog v1 is empty, archives containing attachments are rejected, and native
-lifecycle behavior remains unverified. Attachments, Delete All Data, daily notes,
-account selection, reusable trade/date-range filters, broader calendar
-navigation, and the remaining report families remain Phase 1 work.
+lifecycle behavior remains unverified. The current build deliberately rejects
+older browser payloads and pre-v4 native table sets; a pre-release legacy file
+must first be restored by its exact old runtime, then opened/migrated and
+exported again with the current build. Attachments, Delete All Data, account
+selection, reusable trade/date-range filters, broader calendar navigation, and
+the remaining report families remain Phase 1 work. Native v3→v4 migration,
+Daily Journal relaunch/export/restore, VoiceOver, and small-screen behavior
+still require Mac/iPhone evidence.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

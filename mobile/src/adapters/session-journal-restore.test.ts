@@ -8,6 +8,7 @@ import {
 } from "../application/journal-archive";
 import { JournalRestoreError } from "../application/journal-store";
 import { prepareCsvImport } from "../application/prepare-csv-import";
+import { prepareDailyJournalEntry } from "../application/prepare-daily-journal";
 import {
   prepareManualExecution,
   type ManualExecutionInput,
@@ -126,6 +127,17 @@ async function reviewedSourceArchive(): Promise<{
     reviews: [review],
     revision: tradeReviewBatchRevision(batchId, [review]),
   });
+  await store.commitDailyJournalEntry(prepareDailyJournalEntry({
+    submissionId: "9".repeat(64),
+    isoDate: "2026-07-02",
+    expectedPreviousEntryId: null,
+    state: "completed",
+    title: "Protected the process",
+    note: "Skipped a weak setup after the reviewed trade.",
+    emotion: "Calm",
+    processScorePct: 94,
+    tags: ["No trade"],
+  }));
   const artifact = await store.exportUserData();
   return { store, archive: artifact.archive, contents: artifact.contents };
 }
@@ -165,6 +177,7 @@ describe("browser session user-data restore", () => {
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
+      expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
 
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
@@ -202,6 +215,155 @@ describe("browser session user-data restore", () => {
     }
   });
 
+  it("rejects re-signed daily revisions and poisoned shared vocabulary", async () => {
+    const source = await reviewedSourceArchive();
+    const destination = new SessionJournalStore();
+    try {
+      const payload = structuredClone(
+        source.archive.payload.data,
+      ) as unknown as SessionJournalPayload;
+      const first = payload.dailyEntryVersions[0];
+      if (first === undefined) throw new Error("Expected a daily entry in the restore fixture.");
+      const changed: SessionJournalPayload = {
+        ...payload,
+        dailyEntryVersions: [{
+          ...first,
+          note: "Changed after the immutable daily revision was recorded.",
+        }],
+      };
+      const changedLedger = sessionJournalLedgerFromPayload(changed);
+      const changedContents = rebuild(source.archive, {
+        payload: {
+          ...source.archive.payload,
+          data: changed as unknown as JournalArchiveJson,
+        },
+        summary: sessionJournalSummary(changed, changedLedger),
+        stateSha256: sessionJournalStateSha256(changed),
+        reportSha256: sessionJournalReportSha256(changedLedger),
+      });
+      await expect(destination.prepareUserDataRestore(changedContents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "invalid_payload",
+            message: expect.stringMatching(/revision does not bind/i),
+          },
+        });
+
+      const missingVocabulary: SessionJournalPayload = {
+        ...payload,
+        reviewTerms: payload.reviewTerms.filter((term) => (
+          term.name !== "Calm" && term.name !== "No trade"
+        )),
+      };
+      const vocabularyLedger = sessionJournalLedgerFromPayload(missingVocabulary);
+      const vocabularyContents = rebuild(source.archive, {
+        payload: {
+          ...source.archive.payload,
+          data: missingVocabulary as unknown as JournalArchiveJson,
+        },
+        summary: sessionJournalSummary(missingVocabulary, vocabularyLedger),
+        stateSha256: sessionJournalStateSha256(missingVocabulary),
+        reportSha256: sessionJournalReportSha256(vocabularyLedger),
+      });
+      await expect(destination.prepareUserDataRestore(vocabularyContents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "invalid_payload",
+            message: expect.stringMatching(/missing shared review vocabulary/i),
+          },
+        });
+
+      const firstTerm = payload.reviewTerms[0];
+      if (firstTerm === undefined) throw new Error("Expected shared review vocabulary.");
+      const poisonedVocabulary: SessionJournalPayload = {
+        ...payload,
+        reviewTerms: payload.reviewTerms.map((term, index) => (
+          index === 0 ? { ...term, name: ` ${firstTerm.name}` } : term
+        )),
+      };
+      const poisonedLedger = sessionJournalLedgerFromPayload(poisonedVocabulary);
+      const poisonedContents = rebuild(source.archive, {
+        payload: {
+          ...source.archive.payload,
+          data: poisonedVocabulary as unknown as JournalArchiveJson,
+        },
+        summary: sessionJournalSummary(poisonedVocabulary, poisonedLedger),
+        stateSha256: sessionJournalStateSha256(poisonedVocabulary),
+        reportSha256: sessionJournalReportSha256(poisonedLedger),
+      });
+      await expect(destination.prepareUserDataRestore(poisonedContents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "invalid_payload",
+            message: expect.stringMatching(/vocabulary term names must be canonical/i),
+          },
+        });
+
+      const firstResult = await source.store.load();
+      const firstHead = firstResult.dailyEntries[0];
+      if (firstHead === undefined) throw new Error("Expected a daily-entry head.");
+      await source.store.commitDailyJournalEntry(prepareDailyJournalEntry({
+        submissionId: "8".repeat(64),
+        isoDate: firstHead.isoDate,
+        expectedPreviousEntryId: firstHead.id,
+        state: "completed",
+        title: null,
+        note: "Second immutable version.",
+        emotion: "Calm",
+        processScorePct: null,
+        tags: ["No trade"],
+      }));
+      const twoVersionArtifact = await source.store.exportUserData();
+      const chronological = structuredClone(
+        twoVersionArtifact.archive.payload.data,
+      ) as unknown as SessionJournalPayload;
+      const orderedVersions = [...chronological.dailyEntryVersions]
+        .sort((left, right) => left.version - right.version);
+      const firstVersion = orderedVersions[0];
+      const secondVersion = orderedVersions[1];
+      if (firstVersion === undefined || secondVersion === undefined) {
+        throw new Error("Expected a two-version daily-entry chain.");
+      }
+      const reversedChronology: SessionJournalPayload = {
+        ...chronological,
+        dailyEntryVersions: chronological.dailyEntryVersions.map((entry) => (
+          entry.id === secondVersion.id
+            ? {
+                ...entry,
+                recordedAtUs: firstVersion.recordedAtUs,
+                completedAtUs: firstVersion.recordedAtUs,
+              }
+            : entry
+        )),
+        counters: {
+          ...chronological.counters,
+          lastDailyEntryRecordedAtMs: String(BigInt(firstVersion.recordedAtUs) / 1_000n),
+        },
+      };
+      const chronologyLedger = sessionJournalLedgerFromPayload(reversedChronology);
+      const chronologyContents = rebuild(twoVersionArtifact.archive, {
+        payload: {
+          ...twoVersionArtifact.archive.payload,
+          data: reversedChronology as unknown as JournalArchiveJson,
+        },
+        summary: sessionJournalSummary(reversedChronology, chronologyLedger),
+        stateSha256: sessionJournalStateSha256(reversedChronology),
+        reportSha256: sessionJournalReportSha256(chronologyLedger),
+      });
+      await expect(destination.prepareUserDataRestore(chronologyContents))
+        .rejects.toMatchObject({
+          conflict: {
+            code: "invalid_payload",
+            message: expect.stringMatching(/versions are not contiguous/i),
+          },
+        });
+      expect((await destination.load()).workspace).toBeNull();
+    } finally {
+      await source.store.close();
+      await destination.close();
+    }
+  });
+
   it("restores the complete session payload and makes a lost-response retry idempotent", async () => {
     const source = await sourceArchive();
     let nowMs = 20_000;
@@ -210,7 +372,7 @@ describe("browser session user-data restore", () => {
       const prepared = await destination.prepareUserDataRestore(source.contents);
       expect(prepared.preview).toMatchObject({
         payloadKind: "browser-session-state",
-        payloadVersion: 1,
+        payloadVersion: 2,
         target: "empty",
         stateSha256: source.archive.stateSha256,
         reportSha256: source.archive.reportSha256,
@@ -368,7 +530,26 @@ describe("browser session user-data restore", () => {
         "unsupported_payload",
       );
 
+      const legacyBrowser = rebuild(source.archive, {
+        payload: { ...source.archive.payload, version: 1 },
+      });
+      await expectRestoreCode(
+        destination.prepareUserDataRestore(legacyBrowser),
+        "unsupported_payload",
+      );
+
       const data = source.archive.payload.data as unknown as Record<string, JournalArchiveJson>;
+      const legacyState = rebuild(source.archive, {
+        payload: {
+          ...source.archive.payload,
+          data: { ...data, stateVersion: 1 },
+        },
+      });
+      await expectRestoreCode(
+        destination.prepareUserDataRestore(legacyState),
+        "invalid_payload",
+      );
+
       const workspace = data.workspace as Record<string, JournalArchiveJson>;
       const deepTamper = rebuild(source.archive, {
         payload: {

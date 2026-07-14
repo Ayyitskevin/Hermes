@@ -11,6 +11,7 @@ import {
 } from "../application/journal-archive";
 import type {
   JournalAccountRecord,
+  JournalDailyEntryRecord,
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
@@ -20,6 +21,7 @@ import type {
   JournalWorkspaceRecord,
   UnacknowledgedManualExecution,
 } from "../application/journal-store";
+import { prepareDailyJournalEntry } from "../application/prepare-daily-journal";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
 import { currencyMinorUnit } from "../core/currency";
 import { canonicalizeDecimal } from "../core/decimal";
@@ -55,6 +57,11 @@ export interface SessionReviewSubmission {
   readonly reviewId: string;
 }
 
+export interface SessionDailyEntrySubmission {
+  readonly revision: string;
+  readonly entryVersionId: string;
+}
+
 export interface SessionJournalState {
   readonly workspace: JournalWorkspaceRecord | null;
   readonly accounts: readonly JournalAccountRecord[];
@@ -69,14 +76,18 @@ export interface SessionJournalState {
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
   readonly reviewSubmissions: ReadonlyMap<string, SessionReviewSubmission>;
+  readonly dailyEntryVersions: readonly JournalDailyEntryRecord[];
+  readonly dailyEntryHeads: ReadonlyMap<string, string>;
+  readonly dailyEntrySubmissions: ReadonlyMap<string, SessionDailyEntrySubmission>;
   readonly lastReviewRecordedAtMs: number;
+  readonly lastDailyEntryRecordedAtMs: number;
   readonly nextExecutionSequence: number;
   readonly nextReceiptOrdinal: number;
 }
 
 export interface SessionJournalPayload {
   readonly adapter: "browser-session";
-  readonly stateVersion: 1;
+  readonly stateVersion: 2;
   readonly workspace: JournalWorkspaceRecord | null;
   readonly accounts: readonly JournalAccountRecord[];
   readonly instruments: readonly JournalInstrumentRecord[];
@@ -90,8 +101,12 @@ export interface SessionJournalPayload {
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
   readonly reviewSubmissions: readonly (readonly [string, SessionReviewSubmission])[];
+  readonly dailyEntryVersions: readonly JournalDailyEntryRecord[];
+  readonly dailyEntryHeads: readonly (readonly [string, string])[];
+  readonly dailyEntrySubmissions: readonly (readonly [string, SessionDailyEntrySubmission])[];
   readonly counters: {
     readonly lastReviewRecordedAtMs: string;
+    readonly lastDailyEntryRecordedAtMs: string;
     readonly nextExecutionSequence: string;
     readonly nextReceiptOrdinal: string;
   };
@@ -132,6 +147,22 @@ function normalizedName(value: string): string {
   return value.normalize("NFC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("en-US");
 }
 
+function canonicalReviewTermName(value: string): string {
+  const canonical = value.normalize("NFC").trim().replace(/\s+/gu, " ");
+  if (
+    canonical.length === 0
+    || value !== canonical
+    || [...canonical].length > 120
+    || [...canonical.toLocaleLowerCase("en-US")].length > 120
+    || /[\u0000-\u001f\u007f-\u009f]/u.test(canonical)
+  ) {
+    throw new Error(
+      "Review vocabulary term names must be canonical single-line text of at most 120 characters.",
+    );
+  }
+  return canonical;
+}
+
 function byId<Value extends { readonly id: string }>(
   values: readonly Value[],
 ): readonly Value[] {
@@ -151,7 +182,7 @@ export function sessionJournalPayloadFromState(
 ): SessionJournalPayload {
   return {
     adapter: "browser-session",
-    stateVersion: 1,
+    stateVersion: 2,
     workspace: state.workspace,
     accounts: byId(state.accounts),
     instruments: byId(state.instruments),
@@ -168,8 +199,12 @@ export function sessionJournalPayloadFromState(
       rules: byId(playbook.rules),
     })),
     reviewSubmissions: byKey(state.reviewSubmissions.entries()),
+    dailyEntryVersions: byId(state.dailyEntryVersions),
+    dailyEntryHeads: byKey(state.dailyEntryHeads.entries()),
+    dailyEntrySubmissions: byKey(state.dailyEntrySubmissions.entries()),
     counters: {
       lastReviewRecordedAtMs: String(state.lastReviewRecordedAtMs),
+      lastDailyEntryRecordedAtMs: String(state.lastDailyEntryRecordedAtMs),
       nextExecutionSequence: String(state.nextExecutionSequence),
       nextReceiptOrdinal: String(state.nextReceiptOrdinal),
     },
@@ -198,6 +233,13 @@ export function sessionJournalLedgerFromPayload(
         : BigInt(left.recordedAtUs) > BigInt(right.recordedAtUs) ? 1
           : stableCompare(left.id, right.id)
     ));
+  const dailyHeadIds = new Set(payload.dailyEntryHeads.map(([, entryId]) => entryId));
+  const dailyEntries = payload.dailyEntryVersions
+    .filter((entry) => dailyHeadIds.has(entry.id))
+    .sort((left, right) => (
+      stableCompare(right.isoDate, left.isoDate)
+      || stableCompare(left.id, right.id)
+    ));
   return {
     workspace: payload.workspace,
     accounts: [...payload.accounts],
@@ -206,6 +248,7 @@ export function sessionJournalLedgerFromPayload(
     projection,
     tradeSubjects: tradeSubjectsForProjection(projection),
     tradeReviews,
+    dailyEntries,
     reviewTerms: [...payload.reviewTerms].sort((left, right) => (
       stableCompare(left.category, right.category)
       || stableCompare(normalizedName(left.name), normalizedName(right.name))
@@ -269,7 +312,11 @@ export function isEmptySessionJournalPayload(payload: SessionJournalPayload): bo
     && payload.reviewTerms.length === 0
     && payload.playbooks.length === 0
     && payload.reviewSubmissions.length === 0
+    && payload.dailyEntryVersions.length === 0
+    && payload.dailyEntryHeads.length === 0
+    && payload.dailyEntrySubmissions.length === 0
     && payload.counters.lastReviewRecordedAtMs === "-1"
+    && payload.counters.lastDailyEntryRecordedAtMs === "-1"
     && payload.counters.nextExecutionSequence === "1"
     && payload.counters.nextReceiptOrdinal === "0";
 }
@@ -343,6 +390,21 @@ const identifier: Validator = (value, label) => {
   boundedString(value, label, 2_048);
   if ((value as string).trim() !== value) throw new Error(label + " must be trimmed.");
 };
+// Fast shape limits use the largest possible UTF-16 representation. The
+// authoring validator below enforces exact NFC/code-point limits.
+const dailyIdentifier: Validator = (value, label) => {
+  boundedString(value, label, 512);
+  const identifierValue = value as string;
+  if (
+    identifierValue.trim() !== identifierValue
+    || [...identifierValue].length > 256
+    || /[\u0000-\u001f\u007f-\u009f]/u.test(identifierValue)
+  ) {
+    throw new Error(label + " must contain 1-256 trimmed visible characters.");
+  }
+};
+const dailyLabel: Validator = (value, label) => boundedString(value, label, 240);
+const dailyNote: Validator = (value, label) => boundedString(value, label, 10_000, true);
 const hash: Validator = (value, label) => {
   boundedString(value, label, 64);
   if (!HASH_PATTERN.test(value as string)) throw new Error(label + " must be a SHA-256 digest.");
@@ -508,10 +570,28 @@ const reviewSubmissionShape = objectShape({
   revision: hash,
   reviewId: identifier,
 });
+const dailyEntryShape = objectShape({
+  id: dailyIdentifier,
+  isoDate: text,
+  version: positiveSafeInteger,
+  state: oneOf("draft", "completed"),
+  revision: hash,
+  title: nullable(dailyLabel),
+  note: dailyNote,
+  emotion: nullable(dailyLabel),
+  processScorePct: nullable(safeCount),
+  tags: arrayOf(dailyLabel),
+  recordedAtUs: canonicalUnsignedInteger,
+  completedAtUs: nullable(canonicalUnsignedInteger),
+});
+const dailyEntrySubmissionShape = objectShape({
+  revision: hash,
+  entryVersionId: dailyIdentifier,
+});
 
 const payloadShape = objectShape({
   adapter: oneOf("browser-session"),
-  stateVersion: oneOf(1),
+  stateVersion: oneOf(2),
   workspace: nullable(workspaceShape),
   accounts: arrayOf(accountShape),
   instruments: arrayOf(instrumentShape),
@@ -525,8 +605,12 @@ const payloadShape = objectShape({
   reviewTerms: arrayOf(reviewTermShape),
   playbooks: arrayOf(playbookShape),
   reviewSubmissions: arrayOf(tupleOf(hash, reviewSubmissionShape)),
+  dailyEntryVersions: arrayOf(dailyEntryShape),
+  dailyEntryHeads: arrayOf(tupleOf(text, dailyIdentifier)),
+  dailyEntrySubmissions: arrayOf(tupleOf(hash, dailyEntrySubmissionShape)),
   counters: objectShape({
     lastReviewRecordedAtMs: canonicalCounter,
+    lastDailyEntryRecordedAtMs: canonicalCounter,
     nextExecutionSequence: canonicalCounter,
     nextReceiptOrdinal: canonicalCounter,
   }),
@@ -554,6 +638,9 @@ function assertPayloadOrder(payload: SessionJournalPayload): void {
   assertStrictOrder(payload.reviewTerms.map((value) => value.id), "Review terms");
   assertStrictOrder(payload.playbooks.map((value) => value.id), "Playbooks");
   assertStrictOrder(payload.reviewSubmissions.map(([key]) => key), "Review submissions");
+  assertStrictOrder(payload.dailyEntryVersions.map((value) => value.id), "Daily entry versions");
+  assertStrictOrder(payload.dailyEntryHeads.map(([key]) => key), "Daily entry heads");
+  assertStrictOrder(payload.dailyEntrySubmissions.map(([key]) => key), "Daily entry submissions");
   payload.playbooks.forEach((playbook) => (
     assertStrictOrder(playbook.rules.map((rule) => rule.id), "Playbook rules")
   ));
@@ -579,6 +666,15 @@ function assertPayloadSemantics(
     new Intl.DateTimeFormat("en-US", { timeZone: payload.workspace.timeZone }).format(new Date(0));
   } catch {
     throw new Error("The browser session workspace time zone is invalid.");
+  }
+
+  const dailyVocabulary = new Set<string>();
+  for (const term of payload.reviewTerms) {
+    const key = `${term.category}\u0000${normalizedName(canonicalReviewTermName(term.name))}`;
+    if (dailyVocabulary.has(key)) {
+      throw new Error("Review vocabulary contains duplicate normalized terms.");
+    }
+    dailyVocabulary.add(key);
   }
 
   const accounts = new Map(payload.accounts.map((account) => [account.id, account]));
@@ -719,17 +815,17 @@ function assertPayloadSemantics(
   }
 
   const reviews = new Map(payload.reviewVersions.map((review) => [review.id, review]));
-  const headSubjects = new Set<string>();
+  const reviewHeadBySubject = new Map<string, string>();
   for (const [tradeSubjectId, reviewId] of payload.reviewHeads) {
     const review = reviews.get(reviewId);
     if (
       review === undefined
       || review.tradeSubjectId !== tradeSubjectId
-      || headSubjects.has(tradeSubjectId)
+      || reviewHeadBySubject.has(tradeSubjectId)
     ) {
       throw new Error("A review head is inconsistent.");
     }
-    headSubjects.add(tradeSubjectId);
+    reviewHeadBySubject.set(tradeSubjectId, reviewId);
   }
   const chains = new Map<string, JournalTradeReviewRecord[]>();
   let maximumReviewMs = -1n;
@@ -748,7 +844,7 @@ function assertPayloadSemantics(
     const milliseconds = recorded / 1_000n;
     if (milliseconds > maximumReviewMs) maximumReviewMs = milliseconds;
   }
-  if (chains.size !== payload.reviewHeads.length) {
+  if (chains.size !== reviewHeadBySubject.size) {
     throw new Error("Review heads do not cover every review chain.");
   }
   for (const [tradeSubjectId, chain] of chains) {
@@ -756,7 +852,7 @@ function assertPayloadSemantics(
     chain.forEach((review, index) => {
       if (review.version !== index + 1) throw new Error("Review versions are not contiguous.");
     });
-    if (payload.reviewHeads.find(([subject]) => subject === tradeSubjectId)?.[1] !== chain.at(-1)?.id) {
+    if (reviewHeadBySubject.get(tradeSubjectId) !== chain.at(-1)?.id) {
       throw new Error("A review head is not the latest immutable version.");
     }
   }
@@ -779,6 +875,149 @@ function assertPayloadSemantics(
   }
   if (submissionsByReview.size !== payload.reviewVersions.length) {
     throw new Error("The review submission index does not cover every review.");
+  }
+
+  const dailyEntries = new Map(payload.dailyEntryVersions.map((entry) => [entry.id, entry]));
+  const dailyChains = new Map<string, JournalDailyEntryRecord[]>();
+  let maximumDailyEntryMs = -1n;
+  for (const entry of payload.dailyEntryVersions) {
+    const parsedDate = new Date(entry.isoDate + "T12:00:00.000Z");
+    if (
+      !/^(?:19[7-9][0-9]|[2-9][0-9]{3})-[0-9]{2}-[0-9]{2}$/.test(entry.isoDate)
+      || !Number.isFinite(parsedDate.getTime())
+      || parsedDate.toISOString().slice(0, 10) !== entry.isoDate
+    ) {
+      throw new Error("A daily entry date is not a supported canonical Gregorian date.");
+    }
+    if (
+      entry.processScorePct !== null
+      && (!Number.isInteger(entry.processScorePct) || entry.processScorePct > 100)
+    ) {
+      throw new Error("A daily entry process score is outside 0-100.");
+    }
+    if (
+      entry.title === null
+      && entry.note.length === 0
+      && entry.emotion === null
+      && entry.processScorePct === null
+      && entry.tags.length === 0
+    ) {
+      throw new Error("A daily entry must retain at least one authored signal.");
+    }
+    const recorded = BigInt(entry.recordedAtUs);
+    if (
+      recorded % 1_000n !== 0n
+      || (entry.state === "completed" && entry.completedAtUs !== entry.recordedAtUs)
+      || (entry.state === "draft" && entry.completedAtUs !== null)
+    ) {
+      throw new Error("A daily entry timestamp or completion state is inconsistent.");
+    }
+    const milliseconds = recorded / 1_000n;
+    if (milliseconds > maximumDailyEntryMs) maximumDailyEntryMs = milliseconds;
+    const chain = dailyChains.get(entry.isoDate) ?? [];
+    chain.push(entry);
+    dailyChains.set(entry.isoDate, chain);
+  }
+  const dailyHeadByDate = new Map<string, string>();
+  for (const [isoDate, entryId] of payload.dailyEntryHeads) {
+    const entry = dailyEntries.get(entryId);
+    if (
+      entry === undefined
+      || entry.isoDate !== isoDate
+      || dailyHeadByDate.has(isoDate)
+    ) {
+      throw new Error("A daily entry head is inconsistent.");
+    }
+    dailyHeadByDate.set(isoDate, entryId);
+  }
+  if (dailyChains.size !== dailyHeadByDate.size) {
+    throw new Error("Daily entry heads do not cover every immutable chain.");
+  }
+  for (const [isoDate, chain] of dailyChains) {
+    chain.sort((left, right) => left.version - right.version);
+    let previousRecordedAtUs = -1n;
+    chain.forEach((entry, index) => {
+      const recordedAtUs = BigInt(entry.recordedAtUs);
+      if (entry.version !== index + 1 || recordedAtUs <= previousRecordedAtUs) {
+        throw new Error("Daily entry versions are not contiguous.");
+      }
+      previousRecordedAtUs = recordedAtUs;
+    });
+    if (
+      dailyHeadByDate.get(isoDate) !== chain.at(-1)?.id
+    ) {
+      throw new Error("A daily entry head is not the latest immutable version.");
+    }
+  }
+  if (BigInt(payload.counters.lastDailyEntryRecordedAtMs) !== maximumDailyEntryMs) {
+    throw new Error("The daily entry timestamp counter is inconsistent.");
+  }
+  const submissionsByDailyEntry = new Set<string>();
+  const submissionIdByDailyEntry = new Map<string, string>();
+  for (const [submissionId, submission] of payload.dailyEntrySubmissions) {
+    const entry = dailyEntries.get(submission.entryVersionId);
+    if (
+      submissionId.length !== 64
+      || entry === undefined
+      || entry.revision !== submission.revision
+      || submissionsByDailyEntry.has(submission.entryVersionId)
+    ) {
+      throw new Error("The daily entry submission index is inconsistent.");
+    }
+    submissionsByDailyEntry.add(submission.entryVersionId);
+    submissionIdByDailyEntry.set(submission.entryVersionId, submissionId);
+  }
+  if (submissionsByDailyEntry.size !== payload.dailyEntryVersions.length) {
+    throw new Error("The daily entry submission index does not cover every version.");
+  }
+  for (const chain of dailyChains.values()) {
+    chain.sort((left, right) => left.version - right.version);
+    let expectedPreviousEntryId: string | null = null;
+    for (const entry of chain) {
+      const submissionId = submissionIdByDailyEntry.get(entry.id);
+      if (submissionId === undefined) {
+        throw new Error("A daily entry is missing its durable submission identity.");
+      }
+      let prepared: ReturnType<typeof prepareDailyJournalEntry>;
+      try {
+        prepared = prepareDailyJournalEntry({
+          submissionId,
+          isoDate: entry.isoDate,
+          expectedPreviousEntryId,
+          state: entry.state,
+          title: entry.title,
+          note: entry.note,
+          emotion: entry.emotion,
+          processScorePct: entry.processScorePct,
+          tags: entry.tags,
+        });
+      } catch (error) {
+        throw new Error("A daily entry does not satisfy the authored-content contract.", {
+          cause: error,
+        });
+      }
+      if (
+        prepared.revision !== entry.revision
+        || prepared.title !== entry.title
+        || prepared.note !== entry.note
+        || prepared.emotion !== entry.emotion
+        || prepared.processScorePct !== entry.processScorePct
+        || prepared.tags.length !== entry.tags.length
+        || prepared.tags.some((tag, index) => tag !== entry.tags[index])
+      ) {
+        throw new Error("A daily entry revision does not bind its exact normalized content.");
+      }
+      if (
+        (prepared.emotion !== null
+          && !dailyVocabulary.has(`emotion\u0000${normalizedName(prepared.emotion)}`))
+        || prepared.tags.some((tag) => (
+          !dailyVocabulary.has(`tag\u0000${normalizedName(tag)}`)
+        ))
+      ) {
+        throw new Error("A daily entry references missing shared review vocabulary.");
+      }
+      expectedPreviousEntryId = entry.id;
+    }
   }
 
   const playbooks = new Map(payload.playbooks.map((playbook) => [playbook.id, playbook]));
@@ -854,10 +1093,10 @@ export function verifySessionJournalRestore(
       { cause: error },
     );
   }
-  if (archive.payload.kind !== "browser-session-state" || archive.payload.version !== 1) {
+  if (archive.payload.kind !== "browser-session-state" || archive.payload.version !== 2) {
     throw new SessionRestoreValidationError(
       "unsupported_payload",
-      "The browser journal restores only browser-session-state version 1 exports.",
+      "The browser journal restores only browser-session-state version 2 exports.",
     );
   }
   try {

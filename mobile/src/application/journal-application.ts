@@ -3,6 +3,7 @@ import type { JournalWorkspaceSnapshot } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import type {
   CsvImportCommitResult,
+  DailyJournalCommitResult,
   JournalRestoreCommitResult,
   JournalStore,
   JournalTradeReviewRecord,
@@ -12,7 +13,11 @@ import type {
   TradeReviewCommitResult,
   UnacknowledgedManualExecution,
 } from "./journal-store";
-import { JournalRestoreError, JournalTradeReviewError } from "./journal-store";
+import {
+  JournalDailyEntryError,
+  JournalRestoreError,
+  JournalTradeReviewError,
+} from "./journal-store";
 import type { JournalExportArtifact } from "./journal-archive";
 import type { PreparedJournalRestore } from "./journal-restore";
 import {
@@ -33,6 +38,12 @@ import {
   type TradeReviewInput,
   verifyPreparedTradeReview,
 } from "./prepare-trade-review";
+import {
+  createDailyJournalSubmissionId,
+  prepareDailyJournalEntry,
+  type DailyJournalEntryInput,
+  type PreparedDailyJournalEntry,
+} from "./prepare-daily-journal";
 import {
   workspaceSnapshotFromLedger,
 } from "./workspace-snapshot";
@@ -63,6 +74,16 @@ export class TradeReviewCommitStatusUncertainError extends Error {
       { cause },
     );
     this.name = "TradeReviewCommitStatusUncertainError";
+  }
+}
+
+export class DailyJournalCommitStatusUncertainError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Hermes could not confirm whether this daily reflection was saved. Reload the journal before editing this date again.",
+      { cause },
+    );
+    this.name = "DailyJournalCommitStatusUncertainError";
   }
 }
 
@@ -278,6 +299,58 @@ export class JournalApplication {
     } catch (error) {
       if (error instanceof TradeReviewCommitStatusUncertainError) throw error;
       throw new TradeReviewCommitStatusUncertainError(error);
+    }
+  }
+
+  createDailyJournalSubmissionId(): string {
+    this.assertLocalReviewMode();
+    return createDailyJournalSubmissionId();
+  }
+
+  prepareDailyJournal(input: DailyJournalEntryInput): PreparedDailyJournalEntry {
+    this.assertLocalReviewMode();
+    return prepareDailyJournalEntry(input);
+  }
+
+  async commitDailyJournal(
+    prepared: PreparedDailyJournalEntry,
+  ): Promise<DailyJournalCommitResult> {
+    this.assertLocalReviewMode();
+    const result = await this.store.commitDailyJournalEntry(prepared);
+    this.viewMode = "local";
+    return result;
+  }
+
+  async commitDailyJournalSafely(
+    prepared: PreparedDailyJournalEntry,
+  ): Promise<DailyJournalCommitResult> {
+    this.assertLocalReviewMode();
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.commitDailyJournal(prepared);
+      } catch (error) {
+        if (error instanceof JournalDailyEntryError) throw error;
+        lastError = error;
+      }
+    }
+    try {
+      const ledger = await this.store.load();
+      const current = ledger.dailyEntries.find((entry) => (
+        entry.isoDate === prepared.isoDate
+      ));
+      if (current?.revision !== prepared.revision) {
+        throw new DailyJournalCommitStatusUncertainError(lastError);
+      }
+      this.viewMode = "local";
+      return {
+        outcome: "duplicate",
+        entryVersionId: current.id,
+        ledger,
+      };
+    } catch (error) {
+      if (error instanceof DailyJournalCommitStatusUncertainError) throw error;
+      throw new DailyJournalCommitStatusUncertainError(error);
     }
   }
 

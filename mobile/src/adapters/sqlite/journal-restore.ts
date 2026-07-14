@@ -18,6 +18,10 @@ import {
   type SqliteArchiveTable,
   type SqliteJournalArchiveTableName,
 } from "./journal-archive";
+import {
+  prepareDailyJournalEntry,
+  validateDailyJournalIdentifier,
+} from "../../application/prepare-daily-journal";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;
@@ -97,6 +101,22 @@ function requireCanonicalSqliteInteger(value: unknown, label: string): string {
     throw new Error(label + " is outside the signed SQLite 64-bit integer range.");
   }
   return text;
+}
+
+function canonicalReviewTermName(value: string): string {
+  const canonical = value.normalize("NFC").trim().replace(/\s+/gu, " ");
+  if (
+    canonical.length === 0
+    || value !== canonical
+    || [...canonical].length > 120
+    || [...canonical.toLocaleLowerCase("en-US")].length > 120
+    || /[\u0000-\u001f\u007f-\u009f]/u.test(canonical)
+  ) {
+    throw new Error(
+      "SQLite restore review-term names must be canonical single-line text of at most 120 characters.",
+    );
+  }
+  return canonical;
 }
 
 function asArchiveJson(value: unknown): JournalArchiveJson {
@@ -539,6 +559,191 @@ function assertReviewVersionChains(
   }
 }
 
+function assertDailyEntryVersionChains(
+  tables: readonly SqliteArchiveTable[],
+): void {
+  const versions = tableByName(tables, "daily_journal_entry_versions");
+  const heads = tableByName(tables, "daily_journal_entry_heads");
+  const assignments = tableByName(tables, "daily_journal_entry_term_assignments");
+  const terms = tableByName(tables, "review_terms");
+  const versionsByKey = new Map<string, ReviewVersionChainRow[]>();
+  const versionById = indexUniqueRows(versions, "id");
+  const termById = indexUniqueRows(terms, "id");
+  for (const row of terms.rows) {
+    const name = canonicalReviewTermName(textCell(terms, row, "name"));
+    if (textCell(terms, row, "normalized_name") !== name.toLocaleLowerCase("en-US")) {
+      throw new Error("SQLite restore review-term normalized identity is inconsistent.");
+    }
+  }
+  for (const row of versions.rows) {
+    const workspaceId = textCell(versions, row, "workspace_id");
+    const isoDate = textCell(versions, row, "journal_date");
+    const parsedDate = new Date(isoDate + "T12:00:00.000Z");
+    if (
+      !/^(?:19[7-9][0-9]|[2-9][0-9]{3})-[0-9]{2}-[0-9]{2}$/.test(isoDate)
+      || !Number.isFinite(parsedDate.getTime())
+      || parsedDate.toISOString().slice(0, 10) !== isoDate
+    ) {
+      throw new Error("SQLite restore contains an invalid daily-entry date.");
+    }
+    const score = cell(versions, row, "process_score_pct");
+    if (score !== null && (BigInt(score) < 0n || BigInt(score) > 100n)) {
+      throw new Error("SQLite restore contains an invalid daily-entry process score.");
+    }
+    const state = textCell(versions, row, "state");
+    const recordedAt = BigInt(textCell(versions, row, "recorded_at_ms"));
+    const completedAt = cell(versions, row, "completed_at_ms");
+    if (
+      (state === "draft" && completedAt !== null)
+      || (
+        state === "completed"
+        && (completedAt === null || BigInt(completedAt) < recordedAt)
+      )
+      || (state !== "draft" && state !== "completed")
+    ) {
+      throw new Error("SQLite restore contains an inconsistent daily-entry state.");
+    }
+    const key = reviewChainKey(workspaceId, isoDate);
+    const values = versionsByKey.get(key) ?? [];
+    values.push({
+      id: textCell(versions, row, "id"),
+      version: BigInt(textCell(versions, row, "version_number")),
+      supersedesId: cell(versions, row, "supersedes_version_id"),
+    });
+    versionsByKey.set(key, values);
+  }
+
+  const headByKey = new Map<string, readonly (string | null)[]>();
+  for (const row of heads.rows) {
+    const key = reviewChainKey(
+      textCell(heads, row, "workspace_id"),
+      textCell(heads, row, "journal_date"),
+    );
+    if (headByKey.has(key)) {
+      throw new Error("SQLite restore contains duplicate daily-entry heads.");
+    }
+    headByKey.set(key, row);
+  }
+  for (const key of headByKey.keys()) {
+    if (!versionsByKey.has(key)) {
+      throw new Error("SQLite restore contains a daily-entry head without history.");
+    }
+  }
+  for (const [key, chain] of versionsByKey) {
+    const head = headByKey.get(key);
+    if (head === undefined) {
+      throw new Error("Every SQLite restore daily-entry history needs one current head.");
+    }
+    chain.sort((left, right) => (
+      left.version < right.version ? -1 : left.version > right.version ? 1 : 0
+    ));
+    chain.forEach((version, index) => {
+      if (
+        version.version !== BigInt(index + 1)
+        || version.supersedesId !== (index === 0 ? null : chain[index - 1]?.id ?? null)
+      ) {
+        throw new Error("SQLite restore daily-entry versions must be contiguous.");
+      }
+    });
+    if (textCell(heads, head, "entry_version_id") !== chain.at(-1)?.id) {
+      throw new Error("SQLite restore daily-entry head must point to the latest version.");
+    }
+  }
+
+  const assignmentKeys = new Set<string>();
+  const emotionByVersion = new Map<string, string>();
+  const tagsByVersion = new Map<string, { readonly ordinal: bigint; readonly name: string }[]>();
+  for (const row of assignments.rows) {
+    const versionId = textCell(assignments, row, "entry_version_id");
+    const version = versionById.get(versionId);
+    const termId = textCell(assignments, row, "term_id");
+    const term = termById.get(termId);
+    const category = textCell(assignments, row, "category");
+    const ordinal = BigInt(textCell(assignments, row, "ordinal"));
+    if (
+      version === undefined
+      || term === undefined
+      || !["emotion", "tag"].includes(category)
+      || ordinal < 0n
+      || ordinal > 19n
+      || (category === "emotion" && ordinal !== 0n)
+      || textCell(assignments, row, "workspace_id")
+        !== textCell(versions, version, "workspace_id")
+      || textCell(assignments, row, "journal_date")
+        !== textCell(versions, version, "journal_date")
+      || textCell(terms, term, "workspace_id")
+        !== textCell(assignments, row, "workspace_id")
+      || textCell(terms, term, "category") !== category
+    ) {
+      throw new Error("SQLite restore contains an inconsistent daily-entry term assignment.");
+    }
+    const key = JSON.stringify([versionId, category, ordinal.toString()]);
+    if (assignmentKeys.has(key) || (category === "emotion" && emotionByVersion.has(versionId))) {
+      throw new Error("SQLite restore contains duplicate daily-entry term assignments.");
+    }
+    assignmentKeys.add(key);
+    const name = textCell(terms, term, "name");
+    if (category === "emotion") {
+      emotionByVersion.set(versionId, name);
+    } else {
+      const tags = tagsByVersion.get(versionId) ?? [];
+      tags.push({ ordinal, name });
+      tagsByVersion.set(versionId, tags);
+    }
+  }
+
+  for (const row of versions.rows) {
+    const id = textCell(versions, row, "id");
+    try {
+      validateDailyJournalIdentifier(id, "SQLite restore daily-entry ID");
+    } catch (error) {
+      throw new Error("SQLite restore contains an invalid daily-entry ID.", { cause: error });
+    }
+    const state = textCell(versions, row, "state");
+    const scoreText = cell(versions, row, "process_score_pct");
+    const tagFacts = [...(tagsByVersion.get(id) ?? [])]
+      .sort((left, right) => left.ordinal < right.ordinal ? -1 : left.ordinal > right.ordinal ? 1 : 0);
+    tagFacts.forEach((tag, index) => {
+      if (tag.ordinal !== BigInt(index)) {
+        throw new Error("SQLite restore daily-entry tag ordinals must be contiguous.");
+      }
+    });
+    if (state !== "draft" && state !== "completed") {
+      throw new Error("SQLite restore contains an unsupported daily-entry state.");
+    }
+    const exact = {
+      submissionId: textCell(versions, row, "submission_id"),
+      isoDate: textCell(versions, row, "journal_date"),
+      expectedPreviousEntryId: cell(versions, row, "supersedes_version_id"),
+      state,
+      title: cell(versions, row, "title_text"),
+      note: textCell(versions, row, "note_text"),
+      emotion: emotionByVersion.get(id) ?? null,
+      processScorePct: scoreText === null ? null : Number(scoreText),
+      tags: tagFacts.map((tag) => tag.name),
+    } as const;
+    let prepared: ReturnType<typeof prepareDailyJournalEntry>;
+    try {
+      prepared = prepareDailyJournalEntry(exact);
+    } catch (error) {
+      throw new Error("SQLite restore daily-entry content violates the authoring contract.", {
+        cause: error,
+      });
+    }
+    if (
+      prepared.revision !== textCell(versions, row, "revision_sha256")
+      || prepared.title !== exact.title
+      || prepared.note !== exact.note
+      || prepared.emotion !== exact.emotion
+      || prepared.processScorePct !== exact.processScorePct
+      || prepared.tags.length !== exact.tags.length
+      || prepared.tags.some((tag, index) => tag !== exact.tags[index])
+    ) {
+      throw new Error("SQLite restore daily-entry revision does not bind its exact normalized content.");
+    }
+  }
+}
+
 
 function recomputeSummary(
   tables: readonly SqliteArchiveTable[],
@@ -681,6 +886,7 @@ export function decodeSqliteJournalRestoreArchive(
   assertSingleWorkspaceContract(tables);
   assertExecutionVersionChains(tables);
   assertReviewVersionChains(tables);
+  assertDailyEntryVersionChains(tables);
 
   const stateSha256 = sha256Hex(
     canonicalJournalArchiveJson(portableStateDigestInput(tables)),

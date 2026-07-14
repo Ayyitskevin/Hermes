@@ -9,6 +9,7 @@ import type {
 } from "../core/ledger";
 import type { PreparedManualExecution } from "./prepare-manual-execution";
 import type { PreparedTradeReview } from "./prepare-trade-review";
+import type { PreparedDailyJournalEntry } from "./prepare-daily-journal";
 import type { JournalExportArtifact } from "./journal-archive";
 import type { PreparedJournalRestore } from "./journal-restore";
 
@@ -114,6 +115,22 @@ export interface JournalTradeReviewRecord {
   readonly completedAtUs: string | null;
 }
 
+export interface JournalDailyEntryRecord {
+  readonly id: string;
+  readonly isoDate: string;
+  readonly version: number;
+  readonly state: "draft" | "completed";
+  readonly revision: string;
+  readonly title: string | null;
+  readonly note: string;
+  readonly emotion: string | null;
+  /** Optional self-report; never a derived performance or Plan Check metric. */
+  readonly processScorePct: number | null;
+  readonly tags: readonly string[];
+  readonly recordedAtUs: string;
+  readonly completedAtUs: string | null;
+}
+
 export interface JournalLedgerSnapshot {
   readonly workspace: JournalWorkspaceRecord | null;
   readonly accounts: readonly JournalAccountRecord[];
@@ -123,6 +140,8 @@ export interface JournalLedgerSnapshot {
   readonly tradeSubjects: readonly JournalTradeSubjectRecord[];
   /** Current head only; immutable prior revisions remain in the store. */
   readonly tradeReviews: readonly JournalTradeReviewRecord[];
+  /** Current head only; immutable prior daily-entry revisions remain in the store. */
+  readonly dailyEntries: readonly JournalDailyEntryRecord[];
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
   readonly imports: readonly JournalImportReceipt[];
@@ -155,6 +174,12 @@ export interface ManualExecutionCommitResult {
 export interface TradeReviewCommitResult {
   readonly outcome: "committed" | "duplicate";
   readonly reviewIds: readonly string[];
+  readonly ledger: JournalLedgerSnapshot;
+}
+
+export interface DailyJournalCommitResult {
+  readonly outcome: "committed" | "duplicate";
+  readonly entryVersionId: string;
   readonly ledger: JournalLedgerSnapshot;
 }
 
@@ -202,6 +227,18 @@ export class JournalTradeReviewError extends Error {
   }
 }
 
+export interface DailyJournalConflict {
+  readonly code: "submission_changed" | "entry_changed" | "workspace_changed";
+  readonly message: string;
+}
+
+export class JournalDailyEntryError extends Error {
+  constructor(readonly conflict: DailyJournalConflict) {
+    super(conflict.message);
+    this.name = "JournalDailyEntryError";
+  }
+}
+
 export interface CsvImportConflict {
   readonly code: "preview_changed" | "execution_changed" | "duplicate_execution";
   readonly message: string;
@@ -243,6 +280,7 @@ export interface JournalStore {
   commitCsvImport(command: PreparedCsvImport): Promise<CsvImportCommitResult>;
   commitManualExecution(command: PreparedManualExecution): Promise<ManualExecutionCommitResult>;
   commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult>;
+  commitDailyJournalEntry(command: PreparedDailyJournalEntry): Promise<DailyJournalCommitResult>;
   loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]>;
   acknowledgeManualExecution(submissionId: string): Promise<void>;
   rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot>;

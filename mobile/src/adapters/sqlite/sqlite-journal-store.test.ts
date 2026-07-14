@@ -14,6 +14,10 @@ import {
 } from "../../application/journal-archive";
 import { prepareCsvImport } from "../../application/prepare-csv-import";
 import {
+  type DailyJournalEntryInput,
+  prepareDailyJournalEntry,
+} from "../../application/prepare-daily-journal";
+import {
   prepareManualExecution,
   type ManualExecutionInput,
 } from "../../application/prepare-manual-execution";
@@ -386,6 +390,24 @@ function preparedReviewBatch(batchId: string, reviews: readonly PreparedTradeRev
   };
 }
 
+function preparedDailyEntry(
+  submissionDigit: string,
+  overrides: Partial<DailyJournalEntryInput> = {},
+) {
+  return prepareDailyJournalEntry({
+    submissionId: submissionDigit.repeat(64),
+    isoDate: "2026-07-13",
+    expectedPreviousEntryId: null,
+    state: "draft",
+    title: "Protected the process",
+    note: "Waited for confirmation.",
+    emotion: "Focused",
+    processScorePct: 88,
+    tags: ["Patient"],
+    ...overrides,
+  });
+}
+
 async function scalar(database: SqlDatabase, statement: string): Promise<number | string | null> {
   const rows = await database.query<SqlRow>(statement);
   const first = rows[0];
@@ -432,6 +454,126 @@ describe("SqliteJournalStore", () => {
       await expectHealthyDatabase(database);
     } finally {
       await store.close();
+    }
+  });
+
+  it("persists, retries, rolls back around, and restores immutable daily-entry chains", async () => {
+    const source = await createHarness();
+    const destination = await createHarness();
+    const replay = await createHarness();
+    try {
+      await expect(source.store.commitDailyJournalEntry(preparedDailyEntry("a")))
+        .rejects.toMatchObject({ conflict: { code: "workspace_changed" } });
+      expect(await count(source.database, "daily_journal_entry_versions")).toBe(0);
+
+      const imported = await source.store.commitCsvImport(preparedCsv());
+      const firstCommand = preparedDailyEntry("a");
+      const first = await source.store.commitDailyJournalEntry(firstCommand);
+      expect(first.ledger.dailyEntries).toEqual([
+        expect.objectContaining({
+          id: first.entryVersionId,
+          version: 1,
+          state: "draft",
+          emotion: "Focused",
+          tags: ["Patient"],
+        }),
+      ]);
+      expect(await source.store.commitDailyJournalEntry(firstCommand)).toMatchObject({
+        outcome: "duplicate",
+        entryVersionId: first.entryVersionId,
+      });
+      await expect(source.store.commitDailyJournalEntry(preparedDailyEntry("a", {
+        note: "Changed after the same submission ID was saved.",
+      }))).rejects.toMatchObject({ conflict: { code: "submission_changed" } });
+
+      const edit = await source.store.commitDailyJournalEntry(preparedDailyEntry("b", {
+        expectedPreviousEntryId: first.entryVersionId,
+        state: "completed",
+        title: null,
+        note: "Stayed patient and skipped a weak setup.",
+        emotion: "focused",
+        processScorePct: 93,
+        tags: ["patient", "No trade"],
+      }));
+      expect(edit.ledger.dailyEntries).toEqual([
+        expect.objectContaining({
+          id: edit.entryVersionId,
+          version: 2,
+          state: "completed",
+          emotion: "Focused",
+          tags: ["Patient", "No trade"],
+        }),
+      ]);
+      expect(await count(source.database, "daily_journal_entry_versions")).toBe(2);
+      expect(await count(source.database, "daily_journal_entry_heads")).toBe(1);
+      expect(await count(source.database, "daily_journal_entry_term_assignments")).toBe(5);
+      expect(await source.database.query(
+        `SELECT version_number, supersedes_version_id
+           FROM daily_journal_entry_versions ORDER BY version_number`,
+      )).toEqual([
+        { version_number: 1, supersedes_version_id: null },
+        { version_number: 2, supersedes_version_id: first.entryVersionId },
+      ]);
+
+      const stateBeforeStale = (await source.store.exportUserData()).archive.stateSha256;
+      await expect(source.store.commitDailyJournalEntry(preparedDailyEntry("c", {
+        expectedPreviousEntryId: first.entryVersionId,
+      }))).rejects.toMatchObject({ conflict: { code: "entry_changed" } });
+      expect((await source.store.exportUserData()).archive.stateSha256).toBe(stateBeforeStale);
+      await expect(source.database.run(
+        "UPDATE daily_journal_entry_versions SET note_text = 'mutated' WHERE id = ?",
+        [first.entryVersionId],
+      )).rejects.toThrow(/immutable/i);
+
+      const afterRollback = await source.store.rollbackImport(
+        imported.receipt.id,
+        "Daily reflections are not owned by CSV receipts",
+      );
+      expect(afterRollback.dailyEntries).toEqual([
+        expect.objectContaining({ id: edit.entryVersionId, version: 2 }),
+      ]);
+
+      const artifact = await source.store.exportUserData();
+      const prepared = await destination.store.prepareUserDataRestore(artifact.contents);
+      const restored = await destination.store.commitUserDataRestore(prepared);
+      expect(restored.ledger.dailyEntries).toEqual(afterRollback.dailyEntries);
+      expect(await count(destination.database, "daily_journal_entry_versions")).toBe(2);
+      expect(await count(destination.database, "daily_journal_entry_heads")).toBe(1);
+      expect((await destination.store.exportUserData()).archive.stateSha256)
+        .toBe(artifact.archive.stateSha256);
+
+      const restoredHead = restored.ledger.dailyEntries[0];
+      if (restoredHead === undefined) throw new Error("Restored daily-entry head is missing.");
+      const continued = await destination.store.commitDailyJournalEntry(preparedDailyEntry("d", {
+        expectedPreviousEntryId: restoredHead.id,
+        state: "completed",
+        title: null,
+        note: "Continued after native restore.",
+        emotion: "FOCUSED",
+        processScorePct: 95,
+        tags: ["PATIENT", "NO TRADE"],
+      }));
+      expect(continued.ledger.dailyEntries).toEqual([
+        expect.objectContaining({
+          version: 3,
+          emotion: "Focused",
+          tags: ["Patient", "No trade"],
+        }),
+      ]);
+      expect(await count(destination.database, "daily_journal_entry_versions")).toBe(3);
+      const continuedArtifact = await destination.store.exportUserData();
+      const replayPrepared = await replay.store.prepareUserDataRestore(continuedArtifact.contents);
+      const replayed = await replay.store.commitUserDataRestore(replayPrepared);
+      expect(replayed.ledger.dailyEntries).toEqual(continued.ledger.dailyEntries);
+      expect((await replay.store.exportUserData()).archive.stateSha256)
+        .toBe(continuedArtifact.archive.stateSha256);
+      await expectHealthyDatabase(source.database);
+      await expectHealthyDatabase(destination.database);
+      await expectHealthyDatabase(replay.database);
+    } finally {
+      await source.store.close();
+      await destination.store.close();
+      await replay.store.close();
     }
   });
 

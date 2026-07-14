@@ -283,7 +283,7 @@ never appear without their inspectable, versioned denominator.
 Slice C-B adds local-only, previewed restore for current
 `hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1
 from the current migration set; its decoder verifies the envelope checksum,
-all 32 tables and 257 pinned ordered columns, canonical rows and signed 64-bit
+all 35 tables and 280 pinned ordered columns, canonical rows and signed 64-bit
 integers, table/state digests, and a recomputed summary. Archive SQL is never
 executed, and live table-SQL hashes remain diagnostic.
 
@@ -293,7 +293,7 @@ recomputes table equality, report and summary equality, foreign keys, and
 archive, atomically rechecks that the destination is empty, verifies inside the
 transaction, and verifies the committed state again. An exact already-restored
 state is an idempotent retry; different nonempty state is never merged or
-overwritten. Browser development accepts only `browser-session-state` v1,
+overwritten. Browser development accepts only `browser-session-state` v2,
 validates a separate candidate before one atomic swap, and is not native
 recovery evidence.
 
@@ -304,12 +304,18 @@ attachment catalog v1 is empty, archives containing attachments fail closed,
 and Files, interruption/lifecycle, low-storage, and near-limit memory behavior
 remain native gates. Delete All Data remains unavailable.
 
+Compatibility is intentionally exact-runtime during this pre-release phase.
+The current build rejects browser v1 and pre-v4 native table sets; a legacy
+file must first be restored by its exact old runtime, then the live journal
+opened/migrated and exported again. On-device v3→v4 migration is implemented,
+but retained-data/interruption proof remains a Mac/iPhone release gate.
+
 Exit: export → delete → restore reproduces the same ledger, annotations,
 attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Three bounded Slice D increments are implemented in the current workspace. The
+Four bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -359,6 +365,19 @@ on more than one day. The selected view separately labels allocation-day
 contribution and whole-trade realized-to-date result. It remains a transient
 whole-workspace view: it does not select an account, provide arbitrary date/
 range filtering, rescope reports, or change schema/archive shapes.
+
+The fourth increment is Durable Daily Journal v1. An established local
+workspace can explicitly save a draft or completed day-level reflection for a
+trading or no-trade date, then edit it only by appending an optimistic immutable
+successor. The workspace-local date is durable identity. Headline, note,
+emotion, tags, and a self-reported process score are optional, but every version
+requires at least one authored signal; the score is excluded from performance,
+Plan Check, and Setup Breakdown analytics. Schema v4 adds immutable versions,
+one guarded head per date, and shared-vocabulary assignments. Browser payload
+v2 and native schema-v4 exports/restores preserve the complete chain, validate
+the content-bound revision, and reject legacy payloads rather than guessing at
+conversion. Demo examples remain fictional and read-only, and the editor states
+that Hermes never places or routes a trade.
 
 Still open in Slice D:
 
@@ -498,17 +517,18 @@ The 2026-07-13 Slice C-A Linux gate passed a locked install, 271 Vitest tests
 across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
-Slice C-B now pairs that export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The three
-Slice D increments add Plan Check, governed Setup Breakdown, and allocation-day
-calendar evidence with checksum-pinned cohorts, exact cash/R coverage, and
-contributor evidence, without changing stored or exported shapes. Final
-integration
+Slice C-B pairs the export manifest with current-schema, matching-runtime,
+empty-journal-only restore and idempotent exact-retry reconciliation. The four
+Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
+calendar evidence, and Durable Daily Journal v1. The first three remain
+derived-only; Daily Journal adds checksum-pinned schema v4 and browser payload
+v2 while preserving the outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Native restore acceptance on
-a Mac/iPhone, verified Delete All Data, daily notes, the remaining reports, and
-later attachment round-trip remain open—not broker connectivity, hosted sync,
-Android, recurring AI, or legacy cockpit extraction.
+a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device
+acceptance, verified Delete All Data, the remaining reports, and later
+attachment round-trip remain open—not broker connectivity, hosted sync, Android,
+recurring AI, or legacy cockpit extraction.
 
 ## Competitive and platform references
 

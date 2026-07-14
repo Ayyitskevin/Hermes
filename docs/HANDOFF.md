@@ -1,8 +1,116 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice D-C calendar evidence drill-down Linux milestone · updated 2026-07-13
+Status: verified Slice D-D Durable Daily Journal v1 Linux milestone · updated 2026-07-13
 
 ## Current handoff
+
+task: Deliver Durable Daily Journal v1: an explicit-save, mobile-first,
+day-level reflection workflow with immutable optimistic history, complete local
+export/restore coverage, and no trade-execution or analytics contamination.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/application/prepare-daily-journal.ts` defines the authored
+  contract: one workspace-local Gregorian date, draft/completed state, optional
+  headline/note/emotion/tags/self-reported process score, at least one signal,
+  NFC/code-point/control limits, secure submission identity, immutable date,
+  optimistic predecessor, and a deterministic content-bound revision.
+- `mobile/src/adapters/sqlite/schema/v4.ts` adds checksum-pinned immutable
+  `daily_journal_entry_versions`, one guarded `daily_journal_entry_heads` row per
+  date, and ordered shared-vocabulary assignments. SQLite and browser stores
+  provide atomic create/edit, exact retry idempotency, stale-head/change
+  conflicts, and lost-response reconciliation without mutating executions.
+- Native archive payload v1 now pins schema v4's 35 tables and 280 ordered
+  columns. Browser development payload is `browser-session-state` v2. Both
+  preserve all daily-entry versions/heads/submissions/vocabulary and recompute
+  normalized content revisions during restore. Restore now rejects poisoned
+  shared term names, mismatched native normalized identities, invalid IDs,
+  missing signals, broken chains/chronology, and unsupported legacy payloads.
+- Compatibility remains intentionally exact-runtime before release. The current
+  build rejects browser v1 and pre-v4 native table sets; recovery requires the
+  exact old runtime, followed by live database migration and a new current
+  export. On-device v3→v4 migration exists but still needs retained native data
+  and interruption evidence.
+- Journal UI supports today plus the newest unused date, trading/no-trade
+  context, explicit draft/complete saves, immutable edit dates, no autosave,
+  dirty-close confirmation, Unicode counters, focus containment/return,
+  background inerting, all-control busy state, truthful uncertain/known-saved
+  reconciliation, and 320px/200% reflow. Empty and demo states expose no write
+  action, and the editor states that Hermes never places or routes a trade.
+- A changed self-reported process score affects only the displayed daily entry;
+  a regression proves every other snapshot field plus Plan Check and Setup
+  Breakdown remain identical. Browser-session and SQL.js native-adapter
+  post-restore save → export → second restore are also proven with canonical
+  shared-vocabulary reuse.
+- `README.md`, the ledger contract, product blueprint, iOS roadmap, and Mac
+  handoff now document schema v4, browser payload v2, exact-runtime
+  compatibility, delivered Daily Journal scope, and the remaining native gates.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 38 files, 392 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 33 Playwright journeys passed,
+  including multi-date Daily Journal create/edit/discard, demo/empty isolation,
+  busy controls, immutable dates, and 320px/200% reflow.
+- `cd mobile && npm run build` — exit 0; Vite transformed 61 modules and emitted
+  the production bundle.
+- `cd mobile && npm run ios:sync` — exit 0; the verified production bundle was
+  copied into iOS and Capacitor found only
+  `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were unavailable
+  and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors after sync.
+
+assumptions:
+
+- Daily Journal writing requires an established local workspace so currency and
+  IANA time zone are never invented. It can cover any date from 1970-01-01
+  through workspace-local today, including no-trade dates; one current head
+  exists per date and prior versions remain evidence.
+- The optional process score is user-authored reflection, not a derived
+  performance, Plan Check, Setup Breakdown, prediction, advice, or incentive to
+  trade. Daily entries never create, place, route, modify, or cancel orders.
+- Browser session evidence is development-only and disappears on reload. Linux
+  SQL.js/Chromium proves deterministic contracts, not native SQLCipher,
+  Keychain, Files, WKWebView, iOS date-picker, lifecycle, or accessibility.
+- Native outer/table archive versions remain v1 even though the pinned current
+  table set is schema v4; browser payload v2 is a distinct runtime contract.
+  Fleet guard-layer screening was not evidenced.
+
+open:
+
+- HOLD native v3→v4 retained-data/interruption/relaunch, SQLCipher/Keychain,
+  Files export/restore/continued writes, VoiceOver, Dynamic Type, virtual
+  keyboard/date picker, 320px device layout, low-storage, near-limit-memory,
+  and response-loss behavior until measured on a current Mac and iPhone.
+- A single user-facing Playwright export → reload → restore → Journal journey
+  that authors a daily entry would strengthen composition evidence; the current
+  adapter round-trip/continued-write tests and separate export/restore browser
+  journeys cover the underlying contracts, so this is not a correctness hold.
+- Attachments, verified Delete All Data, account selection, reusable trade/date
+  filters, broader calendar navigation, vocabulary/playbook management, and
+  remaining reports are still Phase 1. Delete All Data is irreversible and
+  requires its dedicated human-gated slice.
+- Do not start broker sync, trade execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, price promises, or public comparative
+  claims from this slice.
+- Pass to Sonnet for final sign-off. The broader autonomous Hermes product goal
+  remains active; this verified Slice D-D boundary is a coherent stopping point.
+
+## Prior milestone — Slice D-C
+
+> Historical snapshot; current status and open items are superseded by the
+> active Slice D-D handoff above.
 
 task: Deliver a bounded Dashboard-calendar → Trades evidence drill-down that
 reconciles workspace-local allocation days to stable trade subjects and exact
@@ -107,7 +215,7 @@ open:
 ## Prior milestone — Slice D-B
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-C handoff above.
+> active Slice D-D handoff above.
 
 task: Deliver the second governed Slice D insight: a checksum-pinned offline
 Setup Breakdown derived from current projections and current saved review
@@ -212,7 +320,7 @@ open:
 ## Prior milestone — Slice D-A
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-B handoff above.
+> active Slice D-D handoff above.
 
 task: Deliver the first governed Slice D insight: an offline, evidence-linked
 plan-adherence report derived from current trade projections and current saved

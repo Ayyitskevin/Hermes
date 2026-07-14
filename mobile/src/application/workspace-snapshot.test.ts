@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
+import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import type {
   JournalLedgerSnapshot,
   JournalTradeReviewRecord,
@@ -66,6 +67,7 @@ function ledger(overrides: Partial<JournalLedgerSnapshot> = {}): JournalLedgerSn
     tradeReviews: [],
     reviewTerms: [],
     playbooks: [],
+    dailyEntries: [],
     imports: [],
     ...overrides,
   };
@@ -778,6 +780,65 @@ describe("journal workspace snapshot", () => {
       accountLabel: "Account Beta",
       rolledBack: true,
     });
+  });
+
+  it("maps one current daily-entry head per date in newest-first order", () => {
+    const dailyEntries = [{
+      id: "daily-new",
+      isoDate: "2026-07-13",
+      version: 2,
+      state: "completed" as const,
+      revision: "a".repeat(64),
+      title: "Protected the process",
+      note: "Stayed patient.",
+      emotion: "Focused",
+      processScorePct: 91,
+      tags: ["Patient"],
+      recordedAtUs: timestampUs("2026-07-13T15:00:00Z"),
+      completedAtUs: timestampUs("2026-07-13T15:00:00Z"),
+    }, {
+      id: "daily-old",
+      isoDate: "2026-07-12",
+      version: 1,
+      state: "draft" as const,
+      revision: "b".repeat(64),
+      title: null,
+      note: "No-trade reset day.",
+      emotion: null,
+      processScorePct: null,
+      tags: [],
+      recordedAtUs: timestampUs("2026-07-12T15:00:00Z"),
+      completedAtUs: null,
+    }];
+    const snapshot = workspaceSnapshotFromLedger(ledger({ dailyEntries }));
+    expect(snapshot.dailyJournal).toEqual([
+      expect.objectContaining({
+        isoDate: "2026-07-13",
+        dateLabel: "Jul 13",
+        entryVersionId: "daily-new",
+        version: 2,
+        state: "completed",
+        processScorePct: 91,
+      }),
+      expect.objectContaining({
+        isoDate: "2026-07-12",
+        dateLabel: "Jul 12",
+        state: "draft",
+      }),
+    ]);
+    const rescored = workspaceSnapshotFromLedger(ledger({
+      dailyEntries: dailyEntries.map((entry, index) => (
+        index === 0 ? { ...entry, processScorePct: 7 } : entry
+      )),
+    }));
+    const { dailyJournal: _dailyJournal, ...snapshotWithoutDailyJournal } = snapshot;
+    const { dailyJournal: _rescoredDailyJournal, ...rescoredWithoutDailyJournal } = rescored;
+    expect(rescoredWithoutDailyJournal).toEqual(snapshotWithoutDailyJournal);
+    expect(buildPlanAdherenceReport(rescored)).toEqual(buildPlanAdherenceReport(snapshot));
+    expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
+    expect(() => workspaceSnapshotFromLedger(ledger({
+      dailyEntries: [...dailyEntries, { ...dailyEntries[0]!, id: "duplicate-head" }],
+    }))).toThrow(/more than one head/);
   });
 
   it("rejects every active path that would require implicit FX", () => {

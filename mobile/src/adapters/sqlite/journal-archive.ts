@@ -47,12 +47,15 @@ export const SQLITE_JOURNAL_ARCHIVE_TABLES = Object.freeze([
   "trade_review_term_assignments",
   "trade_review_rule_results",
   "trade_review_heads",
+  "daily_journal_entry_versions",
+  "daily_journal_entry_term_assignments",
+  "daily_journal_entry_heads",
 ] as const);
 
 export type SqliteJournalArchiveTableName = typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number];
 
 /**
- * Export-v1 column contracts generated from the v1-v3 migrations with
+ * Export-v1 column contracts generated from the v1-v4 migrations with
  * PRAGMA table_xinfo. Each digest covers ordered name, declared type,
  * nullability, primary-key position, SQL default, and hidden value.
  */
@@ -91,6 +94,9 @@ export const SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256: Readonly<
   trade_review_term_assignments: "9e313549ff5a20aa2c9eb994b46d78169c268cb2378e228b9dd9392ec8c94c3d",
   trade_review_rule_results: "581a008c464e748db4ad1da26e2c496da6235109654e1b841ae58a71800e99ca",
   trade_review_heads: "b7e6b63731be74535b7808b4ee4c8271423853b1ac6cbe84379478166fb46f95",
+  daily_journal_entry_versions: "a50a88e940d8b65bf7ac1363d0c4e286a454bee48e3a88f2cbad1c3405b7806e",
+  daily_journal_entry_term_assignments: "bb50f27fabb51891037d58e7a2551c2a0d7cc770d31be595a2851683ec3d7e50",
+  daily_journal_entry_heads: "b561ff83a8e1e083f52585cd6d7a81ea59f065bf2b8afc718aa88f0fa68873d2",
 });
 
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;

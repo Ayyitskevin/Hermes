@@ -18,16 +18,25 @@ import {
   V3_MIGRATION_NAME,
   V3_MIGRATION_STATEMENTS,
   V3_MIGRATION_VERSION,
+  V4_MIGRATION_BODY,
+  V4_MIGRATION_CHECKSUM_SHA256,
+  V4_MIGRATION_NAME,
+  V4_MIGRATION_STATEMENTS,
+  V4_MIGRATION_VERSION,
   createCapacitorSchemaUpgrades,
   sha256Hex,
   v1MigrationChecksumInput,
   v2MigrationChecksumInput,
   v3MigrationChecksumInput,
+  v4MigrationChecksumInput,
 } from "./index";
 
 const REQUIRED_TABLES = [
   "accounts",
   "currencies",
+  "daily_journal_entry_heads",
+  "daily_journal_entry_term_assignments",
+  "daily_journal_entry_versions",
   "execution_fee_components",
   "execution_heads",
   "execution_sources",
@@ -62,6 +71,11 @@ const REQUIRED_TABLES = [
 
 const REQUIRED_INDEXES = [
   "accounts_workspace_active_idx",
+  "daily_journal_entry_heads_version_idx",
+  "daily_journal_entry_term_assignments_term_idx",
+  "daily_journal_entry_versions_date_idx",
+  "daily_journal_entry_versions_submission_idx",
+  "daily_journal_entry_versions_supersedes_idx",
   "execution_fee_components_currency_idx",
   "execution_sources_import_row_idx",
   "execution_versions_time_idx",
@@ -151,6 +165,21 @@ async function createV2Database(): Promise<Database> {
   return db;
 }
 
+async function createV3Database(): Promise<Database> {
+  const db = await createV2Database();
+  db.run("BEGIN IMMEDIATE");
+  try {
+    for (const statement of V3_MIGRATION_STATEMENTS) db.run(statement);
+    db.run("PRAGMA user_version = 3");
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    db.close();
+    throw error;
+  }
+  return db;
+}
+
 function seedTradeSubject(db: Database): void {
   db.run("INSERT INTO currencies VALUES ('USD', 2, 'US Dollar')");
   db.run(
@@ -218,7 +247,7 @@ describe("mobile SQLite migration contract", () => {
     expect(sha256Hex("")).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     expect(sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 
-    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1, 2, 3]);
+    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1, 2, 3, 4]);
     expect(MOBILE_SCHEMA_MIGRATIONS[0]).toMatchObject({
       toVersion: V1_MIGRATION_VERSION,
       name: V1_MIGRATION_NAME,
@@ -246,6 +275,15 @@ describe("mobile SQLite migration contract", () => {
     expect(V3_MIGRATION_CHECKSUM_SHA256).toBe(
       "f3f59b4ac9adb365f6f43e12d4f97d7e9004d040584f52f3b742d08ab65782a9",
     );
+    expect(MOBILE_SCHEMA_MIGRATIONS[3]).toMatchObject({
+      toVersion: V4_MIGRATION_VERSION,
+      name: V4_MIGRATION_NAME,
+      checksumSha256: V4_MIGRATION_CHECKSUM_SHA256,
+      checksumInput: v4MigrationChecksumInput(),
+    });
+    expect(V4_MIGRATION_CHECKSUM_SHA256).toBe(
+      "d48bffb0ce4420de7dbb881811f6479e0798e702a295dba902cb9eb525468938",
+    );
 
     const firstCopy = createCapacitorSchemaUpgrades();
     const secondCopy = createCapacitorSchemaUpgrades();
@@ -253,6 +291,7 @@ describe("mobile SQLite migration contract", () => {
       { toVersion: 1, statements: [...V1_MIGRATION_STATEMENTS] },
       { toVersion: 2, statements: [...V2_MIGRATION_STATEMENTS] },
       { toVersion: 3, statements: [...V3_MIGRATION_STATEMENTS] },
+      { toVersion: 4, statements: [...V4_MIGRATION_STATEMENTS] },
     ]);
     expect(secondCopy).toEqual(firstCopy);
     expect(secondCopy).not.toBe(firstCopy);
@@ -299,7 +338,12 @@ describe("mobile SQLite migration contract", () => {
   });
 
   it("declares the required strict tables, constraints, indexes, and immutable ledgers", () => {
-    const bodySql = [...V1_MIGRATION_BODY, ...V2_MIGRATION_BODY, ...V3_MIGRATION_BODY].join("\n");
+    const bodySql = [
+      ...V1_MIGRATION_BODY,
+      ...V2_MIGRATION_BODY,
+      ...V3_MIGRATION_BODY,
+      ...V4_MIGRATION_BODY,
+    ].join("\n");
 
     for (const tableName of REQUIRED_TABLES) {
       expect(bodySql).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS ${tableName} \\([\\s\\S]+?\\) STRICT`, "i"));
@@ -334,6 +378,8 @@ describe("mobile SQLite migration contract", () => {
       "trade_review_versions",
       "trade_review_term_assignments",
       "trade_review_rule_results",
+      "daily_journal_entry_versions",
+      "daily_journal_entry_term_assignments",
     ]) {
       expect(bodySql).toContain(`CREATE TRIGGER IF NOT EXISTS ${tableName}_reject_update`);
       expect(bodySql).toContain(`CREATE TRIGGER IF NOT EXISTS ${tableName}_reject_delete`);
@@ -366,7 +412,7 @@ describe("mobile SQLite migration contract", () => {
     const db = await createMigratedDatabase();
     try {
       expect(queryColumn(db, "PRAGMA foreign_keys")).toEqual([1]);
-      expect(queryColumn(db, "PRAGMA user_version")).toEqual([3]);
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([4]);
       expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
       expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
 
@@ -395,7 +441,7 @@ describe("mobile SQLite migration contract", () => {
         expect(indexes).toContain(indexName);
       }
 
-      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version")).toEqual([1, 2, 3]);
+      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version")).toEqual([1, 2, 3, 4]);
       expect(queryColumn(
         db,
         "SELECT checksum_sha256 FROM schema_migrations ORDER BY version",
@@ -403,6 +449,7 @@ describe("mobile SQLite migration contract", () => {
         V1_MIGRATION_CHECKSUM_SHA256,
         V2_MIGRATION_CHECKSUM_SHA256,
         V3_MIGRATION_CHECKSUM_SHA256,
+        V4_MIGRATION_CHECKSUM_SHA256,
       ]);
 
       expect(db.exec(
@@ -668,6 +715,114 @@ describe("mobile SQLite migration contract", () => {
       )).toEqual([1]);
       expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
       expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("upgrades and replays v4 without replacing existing v3 state", async () => {
+    const db = await createV3Database();
+    try {
+      seedTradeSubject(db);
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V4_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([3]);
+      expect(queryColumn(
+        db,
+        "SELECT count(*) FROM schema_migrations WHERE version = 4",
+      )).toEqual([1]);
+      db.run(
+        "INSERT INTO review_terms VALUES ('term-calm', 'workspace-1', 'emotion', 'Calm', 'calm', 2)",
+      );
+      db.run(
+        `INSERT INTO daily_journal_entry_versions (
+          id, workspace_id, journal_date, version_number, supersedes_version_id,
+          submission_id, revision_sha256, state, title_text, note_text,
+          process_score_pct, recorded_at_ms, completed_at_ms
+        ) VALUES ('daily-1', 'workspace-1', '2026-07-13', 1, NULL, ?, ?,
+          'completed', 'Protected the process', 'Stayed patient.', 88, 3, 3)`,
+        ["d".repeat(64), "e".repeat(64)],
+      );
+      db.run(
+        "INSERT INTO daily_journal_entry_term_assignments VALUES ('daily-1', 'workspace-1', '2026-07-13', 'term-calm', 'emotion', 0)",
+      );
+      db.run(
+        "INSERT INTO daily_journal_entry_heads VALUES ('workspace-1', '2026-07-13', 'daily-1', 3)",
+      );
+
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V4_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("PRAGMA user_version = 4");
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([4]);
+      expect(queryColumn(db, "SELECT id FROM trade_subjects")).toEqual(["trade-1"]);
+      expect(queryColumn(db, "SELECT id FROM daily_journal_entry_versions")).toEqual(["daily-1"]);
+      expect(queryColumn(db, "SELECT entry_version_id FROM daily_journal_entry_heads"))
+        .toEqual(["daily-1"]);
+      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version"))
+        .toEqual([1, 2, 3, 4]);
+      expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("enforces canonical daily dates, immutable versions, and one-link heads", async () => {
+    const db = await createMigratedDatabase();
+    try {
+      seedTradeSubject(db);
+      const insert = (
+        id: string,
+        date: string,
+        version: number,
+        predecessor: string | null,
+        digit: string,
+        recordedAtMs: number,
+      ) => db.run(
+        `INSERT INTO daily_journal_entry_versions (
+          id, workspace_id, journal_date, version_number, supersedes_version_id,
+          submission_id, revision_sha256, state, title_text, note_text,
+          process_score_pct, recorded_at_ms, completed_at_ms
+        ) VALUES (?, 'workspace-1', ?, ?, ?, ?, ?, 'completed',
+          'Reflection', 'Stayed patient.', 100, ?, ?)`,
+        [id, date, version, predecessor, digit.repeat(64), (digit === "f" ? "0" : digit).repeat(64), recordedAtMs, recordedAtMs],
+      );
+
+      expect(() => insert("bad-date", "2026-02-30", 1, null, "a", 1)).toThrow();
+      expect(() => db.run(
+        `INSERT INTO daily_journal_entry_versions (
+          id, workspace_id, journal_date, version_number, supersedes_version_id,
+          submission_id, revision_sha256, state, title_text, note_text,
+          process_score_pct, recorded_at_ms, completed_at_ms
+        ) VALUES ('bad-score', 'workspace-1', '2026-07-13', 1, NULL, ?, ?,
+          'completed', NULL, '', 101, 1, 1)`,
+        ["a".repeat(64), "b".repeat(64)],
+      )).toThrow();
+
+      insert("daily-1", "2026-07-13", 1, null, "b", 2);
+      db.run(
+        "INSERT INTO daily_journal_entry_heads VALUES ('workspace-1', '2026-07-13', 'daily-1', 2)",
+      );
+      expect(() => db.run(
+        "UPDATE daily_journal_entry_versions SET note_text = 'changed' WHERE id = 'daily-1'",
+      )).toThrow(/immutable/i);
+      expect(() => insert("daily-3", "2026-07-13", 3, "daily-1", "c", 3))
+        .toThrow(/current head|extend/i);
+
+      insert("daily-2", "2026-07-13", 2, "daily-1", "d", 3);
+      db.run(
+        "UPDATE daily_journal_entry_heads SET entry_version_id = 'daily-2', changed_at_ms = 3 WHERE workspace_id = 'workspace-1' AND journal_date = '2026-07-13'",
+      );
+      expect(queryColumn(db, "SELECT entry_version_id FROM daily_journal_entry_heads"))
+        .toEqual(["daily-2"]);
+      expect(() => db.run(
+        "UPDATE daily_journal_entry_heads SET entry_version_id = 'daily-1' WHERE workspace_id = 'workspace-1' AND journal_date = '2026-07-13'",
+      )).toThrow(/advance one/i);
+      expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
     } finally {
       db.close();
     }

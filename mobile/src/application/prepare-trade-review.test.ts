@@ -88,6 +88,15 @@ describe("prepared trade review", () => {
     expect(verifyPreparedTradeReview(prepared)).toEqual(prepared);
   });
 
+  it("bounds case-insensitive SQLite vocabulary identities", () => {
+    expect(() => prepareTradeReview(input({
+      emotion: "İ".repeat(120),
+    }))).toThrow(/1-120 visible characters/i);
+    expect(() => prepareTradeReview(input({
+      playbook: { name: "İ".repeat(120), rules: [] },
+    }))).toThrow(/1-120 visible characters/i);
+  });
+
   it("detects direct and rehashed post-review tampering", () => {
     const prepared = prepareTradeReview(input());
     expect(() => verifyPreparedTradeReview({

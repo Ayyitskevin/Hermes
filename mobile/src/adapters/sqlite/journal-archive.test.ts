@@ -81,18 +81,18 @@ async function migratedDatabase(): Promise<SqlJsArchiveDatabase> {
 }
 
 describe("SQLite journal export payload v1", () => {
-  it("covers every v1-v3 table and column with deterministic string-safe rows", async () => {
+  it("covers every v1-v4 table and column with deterministic string-safe rows", async () => {
     const database = await migratedDatabase();
     try {
       const first = await database.transaction(() => readSqliteJournalArchive(database));
       const second = await database.transaction(() => readSqliteJournalArchive(database));
       expect(first.stateSha256).toBe(second.stateSha256);
       expect(first.tables.map((table) => table.name)).toEqual(SQLITE_JOURNAL_ARCHIVE_TABLES);
-      expect(first.tables.flatMap((table) => table.columns)).toHaveLength(257);
+      expect(first.tables.flatMap((table) => table.columns)).toHaveLength(280);
       const migrations = sqliteArchiveTable(first, "schema_migrations");
-      expect(migrations.rows).toHaveLength(3);
+      expect(migrations.rows).toHaveLength(4);
       expect(migrations.rows.every((row) => typeof row[0] === "string")).toBe(true);
-      expect(migrations.rows.map((row) => row[0])).toEqual(["1", "2", "3"]);
+      expect(migrations.rows.map((row) => row[0])).toEqual(["1", "2", "3", "4"]);
       expect(sqliteArchiveTable(first, "metric_definitions").rows).toHaveLength(2);
     } finally {
       await database.close();

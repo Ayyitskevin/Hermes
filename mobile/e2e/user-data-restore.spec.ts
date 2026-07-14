@@ -114,7 +114,7 @@ test("restores a reviewed journal offline and re-exports identical durable diges
     await expect(restoreCard.locator("#user-data-restore-counts"))
       .toContainText("2 review versions");
     await expect(restoreCard.locator("#user-data-restore-payload"))
-      .toHaveText("browser-session-state v1 · empty target verified");
+      .toHaveText("browser-session-state v2 · empty target verified");
     await expect(restoreCard.locator("#user-data-restore-state-digest"))
       .toHaveText(original.archive.stateSha256);
     await expect(restoreCard.locator("#user-data-restore-report-digest"))
