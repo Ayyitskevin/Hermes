@@ -125,6 +125,18 @@ and an App Store disclosure.
   journal over existing data.
 - Visit Dashboard, Trades, Journal, Reports, and More with VoiceOver.
 - Search trades by symbol, setup, side, and tag; verify the empty search state.
+- With same-day executions across at least two accounts, open the Dashboard
+  trading day and reconcile its exact P&L, contributor count, allocation count,
+  workspace scope, durable trade identities, and each card's separate whole-
+  trade realized-to-date result.
+- Include a trade with allocations on multiple workspace-local dates and verify
+  it appears on each applicable day with only that day's exact contribution.
+- With VoiceOver and a hardware keyboard, open a day and confirm focus moves to
+  the Trades filter heading; exercise scoped search and review actions, then
+  clear the day and confirm focus returns to search. Changing tabs must clear the
+  transient day selection.
+- At 320 CSS pixels and 200% accessibility text, confirm the day tiles, filter,
+  contribution evidence, and controls have no horizontal overflow or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
   successor, and verify note, setup, mistakes, emotion, tags, playbook rules,
   risk, stop, exact R-multiple, exact percentage return, and their formula
@@ -280,7 +292,7 @@ and every skipped check. A clean console alone is not evidence.
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Plan Check and Setup Breakdown,
-  export generation, and Slice C-B local restore still need the native
+  calendar evidence, export generation, and Slice C-B local restore still need
   persistence, response-loss, migration, accessibility, and lifecycle checks
   above. Native Web Share/Files cancellation, save, reopen, custom MIME
   behavior, restore preview rollback, atomic commit, post-commit

@@ -112,6 +112,11 @@ submission-ready product:
   setup-name code-unit order rather than performance rank, and progressively
   renders pages of five setup groups and 25 contributors per group without
   claiming causation, prediction, or advice.
+- Dashboard trading days open a transient Trades evidence view. Each
+  workspace-local allocation day reconciles exact P&L and allocation counts to
+  durable trade subjects, while separately labeling the day contribution and
+  each card's whole-trade realized-to-date result. The view spans the current
+  whole workspace; it is not account selection or reusable date/range filtering.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,
@@ -124,9 +129,9 @@ response-loss recovery, low-storage, and near-limit memory behavior still
 require the Mac/device gate. Slice C-B restores a current-schema archive on its
 matching runtime, but that file is not a complete native backup: attachment
 catalog v1 is empty, archives containing attachments are rejected, and native
-lifecycle behavior remains unverified. Attachments, Delete All Data, daily
-notes, account/filter/calendar controls, and the remaining report families
-remain Phase 1 work.
+lifecycle behavior remains unverified. Attachments, Delete All Data, daily notes,
+account selection, reusable trade/date-range filters, broader calendar
+navigation, and the remaining report families remain Phase 1 work.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

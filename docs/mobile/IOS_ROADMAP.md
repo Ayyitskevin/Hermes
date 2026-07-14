@@ -236,6 +236,11 @@ Delivered in the current vertical slice:
   the first newly revealed group, and links every included trade to evidence.
   Existing archives retain all inputs; focused tests prove both governed
   reports recompute identically after browser export and restore.
+- Dashboard trading-day controls now open a transient Trades evidence view.
+  Workspace-time-zone allocation events reconcile exact day P&L to stable trade
+  subjects and allocation counts; multi-day trades may appear on multiple days.
+  This is a whole-workspace drill-down, not an account selector, arbitrary
+  date/range filter, saved filter, or report scope.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -248,9 +253,10 @@ Still required in Phase 1:
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
-- Deepen the delivered Trades review detail and Dashboard calendar with
-  filtering, calendar drill-down, account selection, daily notes,
-  vocabulary/playbook management, and the remaining reconciled report families.
+- Deepen the delivered Trades review detail and Dashboard calendar with account
+  selection, reusable trade/date-range filters, broader calendar navigation/
+  scoping, daily notes, vocabulary/playbook management, and the remaining
+  reconciled report families.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.

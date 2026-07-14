@@ -1,7 +1,8 @@
 import { calculatePerformance, summarizeSetups } from "../core/performance";
-import { multiplySignedDecimals } from "../core/signed-decimal";
+import { addSignedDecimals, multiplySignedDecimals } from "../core/signed-decimal";
 import { deriveTradeMetricsV1 } from "../core/trade-metrics";
 import type {
+  CalendarSession,
   JournalWorkspaceSnapshot,
   TradePreview,
   TradeRuleReviewPreview,
@@ -10,6 +11,10 @@ import type {
 const DEMO_ACCOUNT_LABEL = "Demo Brokerage";
 const DEMO_CURRENCY = "USD";
 const DEMO_INITIAL_RISK = "100";
+
+function stableCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
 
 const PLAYBOOK_RULES = Object.freeze({
   Breakout: Object.freeze([
@@ -298,6 +303,56 @@ const DEMO_TRADES: readonly TradePreview[] = Object.freeze([
   }),
 ]);
 
+function demoCalendar(trades: readonly TradePreview[]): readonly CalendarSession[] {
+  const sessions = new Map<string, {
+    pnlExact: string;
+    allocationCount: number;
+    readonly contributions: CalendarSession["contributions"][number][];
+  }>();
+  for (const trade of trades) {
+    const pnlExact = trade.resultPnlExact;
+    if (pnlExact === null) {
+      throw new Error(`Demo trade ${trade.tradeSubjectId} has no realized P&L.`);
+    }
+    if (trade.executions.some((execution) => !execution.occurredAt.startsWith(trade.tradedOn))) {
+      throw new Error(`Demo trade ${trade.tradeSubjectId} crosses a calendar day.`);
+    }
+    const existing = sessions.get(trade.tradedOn);
+    const contribution = Object.freeze({
+      tradeSubjectId: trade.tradeSubjectId,
+      pnlExact,
+      pnl: Number(pnlExact),
+      allocationCount: trade.executions.length,
+    });
+    const contributions = [...(existing?.contributions ?? []), contribution];
+    sessions.set(trade.tradedOn, {
+      pnlExact: addSignedDecimals(existing?.pnlExact ?? "0", pnlExact),
+      allocationCount: (existing?.allocationCount ?? 0) + trade.executions.length,
+      contributions,
+    });
+  }
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+  const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return Object.freeze(
+    [...sessions.entries()]
+      .sort(([left], [right]) => stableCompare(left, right))
+      .map(([isoDate, session]) => Object.freeze({
+        isoDate,
+        dayLabel: weekday.format(new Date(`${isoDate}T12:00:00Z`)),
+        dateLabel: date.format(new Date(`${isoDate}T12:00:00Z`)),
+        pnlExact: session.pnlExact,
+        pnl: Number(session.pnlExact),
+        tradeCount: session.contributions.length,
+        allocationCount: session.allocationCount,
+        contributions: Object.freeze(
+          [...session.contributions].sort((left, right) => (
+            stableCompare(left.tradeSubjectId, right.tradeSubjectId)
+          )),
+        ),
+      })),
+  );
+}
+
 const DEMO_PLAYBOOKS = Object.freeze(
   (["Pullback", "Breakout", "Reversal"] as const).map((name) => {
     const summary = summarizeSetups(DEMO_TRADES).find((item) => item.name === name);
@@ -340,14 +395,7 @@ export const DEMO_WORKSPACE: JournalWorkspaceSnapshot = Object.freeze({
     }),
   ]),
   equityCurve: Object.freeze([0, 180, 80, 300, 230, 320, 220, 360, 310]),
-  calendar: Object.freeze([
-    Object.freeze({ isoDate: "2026-07-01", dayLabel: "Wed", dateLabel: "Jul 1", pnl: 80, tradeCount: 2 }),
-    Object.freeze({ isoDate: "2026-07-02", dayLabel: "Thu", dateLabel: "Jul 2", pnl: 150, tradeCount: 2 }),
-    Object.freeze({ isoDate: "2026-07-06", dayLabel: "Mon", dateLabel: "Jul 6", pnl: 90, tradeCount: 1 }),
-    Object.freeze({ isoDate: "2026-07-07", dayLabel: "Tue", dateLabel: "Jul 7", pnl: -100, tradeCount: 1 }),
-    Object.freeze({ isoDate: "2026-07-08", dayLabel: "Wed", dateLabel: "Jul 8", pnl: 140, tradeCount: 1 }),
-    Object.freeze({ isoDate: "2026-07-09", dayLabel: "Thu", dateLabel: "Jul 9", pnl: -50, tradeCount: 1 }),
-  ]),
+  calendar: demoCalendar(DEMO_TRADES),
   trades: DEMO_TRADES,
   reviewProgress: Object.freeze({
     pendingTrades: 0,

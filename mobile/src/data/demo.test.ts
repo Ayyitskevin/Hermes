@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { summarizeSetups } from "../core/performance";
-import { multiplySignedDecimals } from "../core/signed-decimal";
+import { multiplySignedDecimals, sumSignedDecimals } from "../core/signed-decimal";
 import { demoDataSource } from "./demo";
 
 describe("offline demo journal", () => {
@@ -137,6 +137,23 @@ describe("offline demo journal", () => {
       expect(["Sat", "Sun"]).not.toContain(session.dayLabel);
       expect(session.tradeCount).toBe(trades.length);
       expect(session.pnl).toBe(trades.reduce((sum, trade) => sum + (trade.resultPnl ?? 0), 0));
+      const expectedSubjectIds = trades
+        .map((trade) => trade.tradeSubjectId)
+        .sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+      expect(session.contributions.map((contribution) => contribution.tradeSubjectId)).toEqual(
+        expectedSubjectIds,
+      );
+      expect(session.allocationCount).toBe(trades.length * 2);
+      expect(sumSignedDecimals(session.contributions.map((contribution) => contribution.pnlExact))).toBe(session.pnlExact);
+      for (const contribution of session.contributions) {
+        const trade = trades.find((candidate) => candidate.tradeSubjectId === contribution.tradeSubjectId);
+        expect(trade).toBeDefined();
+        expect(contribution).toMatchObject({
+          pnlExact: trade?.resultPnlExact,
+          pnl: trade?.resultPnl,
+          allocationCount: 2,
+        });
+      }
     }
 
     expect(workspace.trades.map((trade) => trade.tradedOn)).not.toContain("2026-07-03");

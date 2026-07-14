@@ -1,8 +1,113 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice D-B governed Setup Breakdown Linux milestone · updated 2026-07-13
+Status: verified Slice D-C calendar evidence drill-down Linux milestone · updated 2026-07-13
 
 ## Current handoff
+
+task: Deliver a bounded Dashboard-calendar → Trades evidence drill-down that
+reconciles workspace-local allocation days to stable trade subjects and exact
+P&L while preserving whole-trade result context, without account selection,
+arbitrary or persisted date/range filtering, report rescoping, schema/archive
+changes, trade execution, advice, or a native-readiness claim.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/application/workspace-snapshot.ts` now groups normalized
+  allocation P&L events by workspace-local date, maps projection IDs to durable
+  trade subjects, preserves exact signed-decimal day/contributor totals, counts
+  allocation fragments, sorts stable subject evidence by code unit, and fails
+  closed if contributions do not reconcile to the day total.
+- `mobile/src/core/types.ts` carries exact calendar totals, allocation counts,
+  and per-subject contributions as derived snapshot evidence. No SQLite,
+  migration, journal archive, or export-envelope shape changed.
+- `mobile/src/data/demo.ts` derives the fictional calendar from the same eight
+  demo trade previews and rejects cross-day demo fixtures rather than allowing
+  hand-maintained calendar drift.
+- `mobile/src/ui/calendar-day-view.ts` turns Dashboard days into native button
+  controls and renders a transient Trades evidence view with explicit workspace
+  scope, allocation-day P&L, per-trade contribution/allocation evidence, and
+  separately labeled whole-trade realized-to-date results.
+- Calendar selection has keyboard/VoiceOver-oriented focus and announcement
+  behavior, scoped search, review continuity, a clear action, tab/navigation
+  reset, 44-point targets, and 320px/200% reflow coverage. A still-valid day
+  survives internal workspace refresh; it is not saved or reused as report
+  scope.
+- Regression fixtures cover fractional exact aggregation, partial exits,
+  long-to-short AUTO reversal fee splitting, multi-day membership, same-day
+  multi-account aggregation, stable durable IDs, hostile markup, and browser
+  export → empty-container restore equality.
+- `README.md`, the product blueprint, iOS roadmap, and Mac handoff document the
+  delivered boundary, whole-workspace semantics, remaining filter/account
+  work, and required native calendar acceptance.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 35 files, 365 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; 30 Playwright journeys passed,
+  including the offline keyboard drill-down and 320px/200% reflow journey.
+- `cd mobile && npm run ios:sync` — exit 0; production build transformed 58
+  modules and copied the bundle; Capacitor found only
+  `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were
+  unavailable and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors after sync.
+- Independent read-only re-review found no release blocker and reconfirmed
+  exact-decimal reconciliation, stable identity, escaping, accessibility
+  flow, browser restore equality, and the absence of external requests.
+
+assumptions:
+
+- Calendar membership follows each normalized allocation event's timestamp in
+  the workspace time zone, not a trade open/close date. A multi-day trade can
+  therefore contribute to more than one day.
+- Allocation-day contribution is distinct from the trade card's whole-trade
+  realized-to-date result. Day totals cover the current whole workspace and
+  all active accounts in its single currency; the drill-down does not select
+  an account.
+- Selection is ephemeral UI state. Matching-runtime archives retain the ledger
+  facts needed to recompute it; stored and exported shapes remain unchanged.
+- The workflow is descriptive journaling evidence, not prediction, advice,
+  statistical significance, or an order-entry surface. Hermes still never
+  places, routes, changes, or cancels a trade.
+- Linux SQL.js and Chromium evidence does not prove native SQLCipher, Keychain,
+  Files, VoiceOver, Dynamic Type, lifecycle, signing, TestFlight, App Store, or
+  physical-iPhone behavior. Fleet guard-layer screening was not evidenced.
+
+open:
+
+- HOLD native calendar reconciliation, multi-account/multi-day fixtures,
+  VoiceOver focus/announcements, 320px/200% Dynamic Type, review continuity,
+  relaunch, and restore equality until measured on a current Mac/iPhone.
+- Filtered trade cards retain the existing card design: workspace scope is
+  explicit, but an individual card does not yet display its account label.
+  Account-aware same-symbol disambiguation belongs with the account/filter
+  contract rather than this transient day slice.
+- A dedicated local review-save-while-filtered browser journey and native
+  derived-calendar restore assertion are useful hardening, not correctness
+  holds; existing save refresh and hash-validated ledger restore paths compose.
+- Attachments, verified Delete All Data, Durable Daily Journal v1, account
+  selection, reusable trade/date-range filters, broader calendar navigation,
+  vocabulary/playbook management, and remaining reports are still Phase 1.
+- Do not start broker sync, trade execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, price promises, or public comparative
+  claims from this slice.
+- Pass to Sonnet for final sign-off. The broader autonomous Hermes product goal
+  remains active; the next coherent product slice is Durable Daily Journal v1.
+
+## Prior milestone — Slice D-B
+
+> Historical snapshot; current status and open items are superseded by the
+> active Slice D-C handoff above.
 
 task: Deliver the second governed Slice D insight: a checksum-pinned offline
 Setup Breakdown derived from current projections and current saved review

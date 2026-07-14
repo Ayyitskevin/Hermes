@@ -92,12 +92,25 @@ export interface ImportHistoryPreview extends ImportSummary {
   readonly warningCount: number;
 }
 
+export interface CalendarTradeContribution {
+  /** Durable trade identity; never a display symbol or projection-only ID. */
+  readonly tradeSubjectId: string;
+  /** Exact allocation-day P&L contribution before display conversion. */
+  readonly pnlExact: string;
+  readonly pnl: number;
+  readonly allocationCount: number;
+}
+
 export interface CalendarSession {
   readonly isoDate: string;
   readonly dayLabel: string;
   readonly dateLabel: string;
+  /** Exact sum of every allocation event assigned to this workspace-local day. */
+  readonly pnlExact: string;
   readonly pnl: number;
   readonly tradeCount: number;
+  readonly allocationCount: number;
+  readonly contributions: readonly CalendarTradeContribution[];
 }
 
 export interface DailyJournalPreview {

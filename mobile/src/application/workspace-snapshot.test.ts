@@ -199,8 +199,24 @@ describe("journal workspace snapshot", () => {
       },
       equityCurve: [0, -1, 98],
       calendar: [
-        { isoDate: "2026-07-01", dayLabel: "Wed", dateLabel: "Jul 1", pnl: -1, tradeCount: 1 },
-        { isoDate: "2026-07-02", dayLabel: "Thu", dateLabel: "Jul 2", pnl: 99, tradeCount: 1 },
+        {
+          isoDate: "2026-07-01",
+          dayLabel: "Wed",
+          dateLabel: "Jul 1",
+          pnlExact: "-1",
+          pnl: -1,
+          tradeCount: 1,
+          allocationCount: 1,
+        },
+        {
+          isoDate: "2026-07-02",
+          dayLabel: "Thu",
+          dateLabel: "Jul 2",
+          pnlExact: "99",
+          pnl: 99,
+          tradeCount: 1,
+          allocationCount: 1,
+        },
       ],
       importSummary: {
         receiptId: "latest-import",
@@ -581,14 +597,79 @@ describe("journal workspace snapshot", () => {
     }));
 
     expect(before.calendar.find((day) => day.isoDate === "2026-07-02")?.pnl).toBe(40);
+    expect(before.calendar.find((day) => day.isoDate === "2026-07-02")?.contributions).toEqual([{
+      tradeSubjectId: before.trades[0]?.tradeSubjectId,
+      pnlExact: "40",
+      pnl: 40,
+      allocationCount: 1,
+    }]);
     expect(after.calendar).toEqual([
       expect.objectContaining({ isoDate: "2026-07-01", pnl: 0, tradeCount: 1 }),
       expect.objectContaining({ isoDate: "2026-07-02", pnl: 40, tradeCount: 1 }),
       expect.objectContaining({ isoDate: "2026-07-03", pnl: 90, tradeCount: 1 }),
     ]);
+    expect(after.calendar.map((day) => day.pnlExact)).toEqual(["0", "40", "90"]);
+    expect(after.calendar.every((day) => day.allocationCount === 1)).toBe(true);
+    expect(after.calendar.flatMap((day) => day.contributions).every((contribution) => (
+      contribution.tradeSubjectId === after.trades[0]?.tradeSubjectId
+    ))).toBe(true);
     expect(after.equityCurve).toEqual([0, 0, 40, 130]);
     expect(after.trades[0]).toMatchObject({ status: "closed", resultPnl: 130 });
     expect(after.performance).toMatchObject({ netPnl: 130, tradeCount: 1 });
+  });
+
+  it("maps one reversal fill into two exact calendar contributors without losing fees", () => {
+    const snapshot = workspaceSnapshotFromLedger(ledger({
+      executions: [
+        execution({
+          id: "reversal-entry",
+          occurredAtUs: timestampUs("2026-07-01T14:30:00Z"),
+          quantity: "10",
+          price: "100",
+        }),
+        execution({
+          id: "reversal-fill",
+          occurredAtUs: timestampUs("2026-07-02T14:30:00Z"),
+          side: "SELL",
+          quantity: "15",
+          price: "90",
+          fees: [{ category: "COMMISSION", currency: "USD", costMinor: "5", minorUnit: 2 }],
+        }),
+      ],
+    }));
+    const long = snapshot.trades.find((trade) => trade.side === "long");
+    const short = snapshot.trades.find((trade) => trade.side === "short");
+    const reversalDay = snapshot.calendar.find((day) => day.isoDate === "2026-07-02");
+    if (long === undefined || short === undefined || reversalDay === undefined) {
+      throw new Error("Expected both reversal trades and their allocation day.");
+    }
+
+    expect(long).toMatchObject({ status: "closed", resultPnlExact: "-100.03" });
+    expect(short).toMatchObject({ status: "open", resultPnlExact: null });
+    expect(reversalDay).toMatchObject({
+      pnlExact: "-100.05",
+      pnl: -100.05,
+      tradeCount: 2,
+      allocationCount: 2,
+    });
+    const contributionBySubject = new Map(
+      reversalDay.contributions.map((contribution) => [contribution.tradeSubjectId, contribution]),
+    );
+    expect(contributionBySubject.get(long.tradeSubjectId)).toMatchObject({
+      pnlExact: "-100.03",
+      allocationCount: 1,
+    });
+    expect(contributionBySubject.get(short.tradeSubjectId)).toMatchObject({
+      pnlExact: "-0.02",
+      allocationCount: 1,
+    });
+    expect(reversalDay.contributions.map((contribution) => contribution.tradeSubjectId)).toEqual(
+      [long.tradeSubjectId, short.tradeSubjectId].sort((left, right) => (
+        left < right ? -1 : left > right ? 1 : 0
+      )),
+    );
+    expect(snapshot.calendar.map((day) => day.pnlExact)).toEqual(["0", "-100.05"]);
+    expect(snapshot.performance.netPnl).toBe(-100.05);
   });
 
   it("aggregates realized decimals exactly before converting display values", () => {
@@ -621,6 +702,24 @@ describe("journal workspace snapshot", () => {
     expect(snapshot.trades.map((trade) => trade.resultPnl)).toEqual([0.1, 0.2]);
     expect(snapshot.performance.netPnl).toBe(0.3);
     expect(snapshot.equityCurve.at(-1)).toBe(0.3);
+    expect(snapshot.calendar.map((day) => day.pnlExact)).toEqual(["0.1", "0.2"]);
+    expect(snapshot.calendar.map((day) => day.allocationCount)).toEqual([3, 1]);
+    expect(snapshot.calendar.map((day) => day.tradeCount)).toEqual([2, 1]);
+    for (const day of snapshot.calendar) {
+      expect(day.contributions.map((contribution) => contribution.tradeSubjectId)).toEqual(
+        day.contributions
+          .map((contribution) => contribution.tradeSubjectId)
+          .sort((left, right) => left < right ? -1 : left > right ? 1 : 0),
+      );
+    }
+    const secondTrade = snapshot.trades[1];
+    expect(secondTrade).toBeDefined();
+    expect(snapshot.calendar[0]?.contributions).toContainEqual({
+      tradeSubjectId: secondTrade?.tradeSubjectId,
+      pnlExact: "0",
+      pnl: 0,
+      allocationCount: 1,
+    });
   });
 
   it("keeps independent accounts separate in labels and projections", () => {
@@ -637,6 +736,16 @@ describe("journal workspace snapshot", () => {
 
     expect(snapshot.accountLabel).toBe("2 accounts");
     expect(snapshot.trades.map((candidate) => candidate.accountLabel)).toEqual(["Primary", "Secondary"]);
+    expect(snapshot.calendar).toEqual([expect.objectContaining({
+      pnlExact: "0",
+      tradeCount: 2,
+      allocationCount: 2,
+    })]);
+    expect(snapshot.calendar[0]?.contributions.map((contribution) => contribution.tradeSubjectId)).toEqual(
+      snapshot.trades.map((trade) => trade.tradeSubjectId).sort((left, right) => (
+        left < right ? -1 : left > right ? 1 : 0
+      )),
+    );
   });
 
   it("keeps each receipt attributed to its own account after rollback", () => {

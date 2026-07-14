@@ -445,27 +445,69 @@ function buildPnlEvents(
   });
 }
 
-function buildCalendar(events: readonly LedgerPnlEvent[], timeZone: string): readonly CalendarSession[] {
-  const sessions = new Map<string, { readonly day: ZonedDay; pnl: string; readonly tradeIds: Set<string> }>();
+function buildCalendar(
+  events: readonly LedgerPnlEvent[],
+  timeZone: string,
+  tradeSubjectByProjectionId: ReadonlyMap<string, string>,
+): readonly CalendarSession[] {
+  const sessions = new Map<string, {
+    readonly day: ZonedDay;
+    pnl: string;
+    allocationCount: number;
+    readonly contributions: Map<string, { pnl: string; allocationCount: number }>;
+  }>();
   for (const event of events) {
     const day = zonedDay(event.occurredAtUs, timeZone, `allocation ${event.id} time`);
+    const tradeSubjectId = tradeSubjectByProjectionId.get(event.tradeId);
+    invariant(
+      tradeSubjectId !== undefined,
+      `allocation ${event.id} references trade ${event.tradeId} without a durable subject`,
+    );
     const existing = sessions.get(day.isoDate);
-    const tradeIds = existing?.tradeIds ?? new Set<string>();
-    tradeIds.add(event.tradeId);
+    const contributions = existing?.contributions ?? new Map();
+    const existingContribution = contributions.get(tradeSubjectId);
+    contributions.set(tradeSubjectId, {
+      pnl: addSignedDecimals(existingContribution?.pnl ?? "0", event.pnlExact),
+      allocationCount: (existingContribution?.allocationCount ?? 0) + 1,
+    });
     sessions.set(day.isoDate, {
       day,
       pnl: addSignedDecimals(existing?.pnl ?? "0", event.pnlExact),
-      tradeIds,
+      allocationCount: (existing?.allocationCount ?? 0) + 1,
+      contributions,
     });
   }
   return [...sessions.values()]
-    .map((session) => ({
-      isoDate: session.day.isoDate,
-      dayLabel: session.day.dayLabel,
-      dateLabel: session.day.dateLabel,
-      pnl: displayNumber(session.pnl, `calendar P&L for ${session.day.isoDate}`),
-      tradeCount: session.tradeIds.size,
-    }))
+    .map((session) => {
+      const contributions = [...session.contributions.entries()]
+        .sort(([left], [right]) => stableCompare(left, right))
+        .map(([tradeSubjectId, contribution]) => ({
+          tradeSubjectId,
+          pnlExact: contribution.pnl,
+          pnl: displayNumber(
+            contribution.pnl,
+            `calendar trade contribution for ${session.day.isoDate}`,
+          ),
+          allocationCount: contribution.allocationCount,
+        }));
+      invariant(
+        compareSignedDecimals(
+          sumSignedDecimals(contributions.map((contribution) => contribution.pnlExact)),
+          session.pnl,
+        ) === 0,
+        `calendar contributions do not reconcile for ${session.day.isoDate}`,
+      );
+      return {
+        isoDate: session.day.isoDate,
+        dayLabel: session.day.dayLabel,
+        dateLabel: session.day.dateLabel,
+        pnlExact: session.pnl,
+        pnl: displayNumber(session.pnl, `calendar P&L for ${session.day.isoDate}`),
+        tradeCount: contributions.length,
+        allocationCount: session.allocationCount,
+        contributions,
+      };
+    })
     .sort((left, right) => stableCompare(left.isoDate, right.isoDate));
 }
 
@@ -777,7 +819,7 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     importSummary: history[0] === undefined ? EMPTY_IMPORT_SUMMARY : withoutWarnings(history[0]),
     importHistory: history,
     equityCurve: buildEquityCurve(pnlEvents),
-    calendar: buildCalendar(pnlEvents, workspace.timeZone),
+    calendar: buildCalendar(pnlEvents, workspace.timeZone, subjectByProjectionId),
     trades: previews,
     reviewProgress: buildReviewProgress(previews, executionDays),
     reviewOptions: buildReviewOptions(ledger),

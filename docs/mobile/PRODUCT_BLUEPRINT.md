@@ -309,7 +309,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Two bounded Slice D increments are implemented in the current workspace. The
+Three bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -351,11 +351,20 @@ non-predictive, non-advisory boundary.
 This report is also derived-only, and a dedicated browser archive test proves
 both governed reports recompute identically after export and restore.
 
+The third increment turns Dashboard trading days into a bounded evidence
+drill-down in Trades. Calendar membership is derived from normalized allocation
+events in the workspace time zone; exact day P&L reconciles to durable
+trade-subject contributions and allocation counts. A multi-day trade can appear
+on more than one day. The selected view separately labels allocation-day
+contribution and whole-trade realized-to-date result. It remains a transient
+whole-workspace view: it does not select an account, provide arbitrary date/
+range filtering, rescope reports, or change schema/archive shapes.
+
 Still open in Slice D:
 
 - Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
   remaining report families with reconciled drill-down, plus account selection,
-  filters, and calendar controls.
+  reusable trade/date-range filters, and broader calendar navigation/scoping.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
@@ -490,10 +499,11 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B now pairs that export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The first
-two Slice D increments add Plan Check and governed Setup Breakdown with
-checksum-pinned cohorts, exact cash/R coverage, and contributor evidence,
-without changing stored or exported shapes. Final integration
+empty-journal-only restore and idempotent exact-retry reconciliation. The three
+Slice D increments add Plan Check, governed Setup Breakdown, and allocation-day
+calendar evidence with checksum-pinned cohorts, exact cash/R coverage, and
+contributor evidence, without changing stored or exported shapes. Final
+integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Native restore acceptance on
 a Mac/iPhone, verified Delete All Data, daily notes, the remaining reports, and

@@ -164,6 +164,7 @@ describe("browser session user-data restore", () => {
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
+      expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
 
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
