@@ -215,6 +215,15 @@ account/range; a stale day fails closed before the UI explicitly clears that
 refinement. Search is normalized and bounded card visibility only and never
 changes exact P&L, trade, allocation, or activity-day totals.
 
+Structured Trades Facets v1 extends that card-visibility layer with four fixed
+exact values: asset class (Stock/ETF), direction, position state, and review
+state. The facets AND with search after scope evidence is reconciled. They do
+not trim or recompute the evidence collection, totals, calendar, Dashboard, or
+governed report inputs. Unsupported runtime values fail closed instead of being
+coerced into a broader view. Browser construction also detaches and freezes
+trade evidence so later mutation of a local source object cannot change an
+already-reconciled exact result.
+
 Scope state is session-only: it is not stored in SQLite, browser journal state,
 exports, restores, or report archives. It survives internal navigation and
 valid ledger refreshes, resets on local/demo mode changes or reload, and affects
@@ -222,6 +231,10 @@ Trades plus the Dashboard calendar only. Dashboard headline metrics, equity,
 review progress, Plan Check, and Setup Breakdown continue to consume the full
 workspace snapshot. This slice changes no schema, migration, store, archive,
 or governed report definition/version.
+
+Search and facet state share the same session boundary. Clear search and filters
+resets only those visibility controls and retains account/date/day scope; Clear
+all resets scope and visibility together. Neither action mutates ledger state.
 
 ## Rollback
 
@@ -386,8 +399,10 @@ explicit draft/completed saves, demo isolation, focus/busy/error behavior, and
 320px/200% browser reflow. Trade Browser coverage adds stable same-symbol
 multi-account identity, inclusive multi-day/leap/zero-P&L scope, fractional
 exact sums and counts, stale-day fail-closed handling, tampered-evidence
-rejection, report isolation, session retention/reset, real activity-month
-navigation, invalid-range recovery, focus visibility, and 320px/200% reflow.
+rejection, report isolation, real activity-month navigation, invalid-range
+recovery, focus visibility, fixed-facet/search AND
+composition, scope/report isolation under facets, distinct clear semantics,
+session retention/reset, and 320px/200% reflow.
 Native Files selection, lifecycle/interruption,
 Daily Journal relaunch and migration, low-storage, near-limit memory, VoiceOver,
 and physical-device SQLCipher behavior remain unverified.

@@ -11,6 +11,11 @@ import type {
 
 export const TRADE_BROWSER_SEARCH_MAX_CODE_POINTS = 200;
 
+export type TradeBrowserAssetClassFilter = "all" | "stock" | "etf";
+export type TradeBrowserDirectionFilter = "all" | "long" | "short";
+export type TradeBrowserPositionFilter = "all" | "open" | "closed";
+export type TradeBrowserReviewFilter = "all" | "pending" | "draft" | "completed";
+
 export interface TradeBrowserState {
   /** One stable ledger account ID, or null for every account. */
   readonly accountId: string | null;
@@ -24,6 +29,11 @@ export interface TradeBrowserState {
   readonly calendarMonth: string | null;
   /** Ephemeral text filter over already scoped trade cards. */
   readonly query: string;
+  /** Ephemeral exact facets over visible cards; they never redefine financial scope. */
+  readonly assetClass: TradeBrowserAssetClassFilter;
+  readonly direction: TradeBrowserDirectionFilter;
+  readonly positionState: TradeBrowserPositionFilter;
+  readonly reviewState: TradeBrowserReviewFilter;
 }
 
 export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
@@ -33,6 +43,10 @@ export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
   selectedDay: null,
   calendarMonth: null,
   query: "",
+  assetClass: "all",
+  direction: "all",
+  positionState: "all",
+  reviewState: "all",
 });
 
 export interface TradeBrowserEvidence {
@@ -58,6 +72,8 @@ export interface TradeBrowserResult {
   /** A stale day request is reported with empty evidence so callers cannot broaden silently. */
   readonly invalidatedSelectedDay: string | null;
   readonly isFiltered: boolean;
+  /** Search/facets affect visible cards only, never scope evidence or totals. */
+  readonly hasViewFilters: boolean;
   readonly accountLabel: string;
   readonly dateLabel: string;
   readonly scopeLabel: string;
@@ -67,7 +83,7 @@ export interface TradeBrowserResult {
   readonly selectedSession: CalendarSession | null;
   /** Account/date/day scoped trades before text search. */
   readonly evidence: readonly TradeBrowserEvidence[];
-  /** Text-search result. Search never changes the exact scope summary. */
+  /** Search/facet result. Visibility filters never change the exact scope summary. */
   readonly visibleEvidence: readonly TradeBrowserEvidence[];
   readonly contributionPnlExact: string;
   readonly contributionPnl: number;
@@ -134,6 +150,49 @@ function canonicalSearchQuery(raw: string): string {
   return normalized;
 }
 
+function canonicalFacet<Value extends string>(
+  raw: unknown,
+  allowed: readonly Value[],
+  label: string,
+): Value {
+  if (typeof raw !== "string" || !allowed.includes(raw as Value)) {
+    throw new Error(`${label} is not a supported trade-card filter.`);
+  }
+  return raw as Value;
+}
+
+function freezeMetricEvidence(
+  metric: TradePreview["resultRMetric"],
+): TradePreview["resultRMetric"] {
+  return Object.freeze({
+    ...metric,
+    numerator: metric.numerator === null
+      ? null
+      : Object.freeze({ ...metric.numerator }),
+    denominator: metric.denominator === null
+      ? null
+      : Object.freeze({ ...metric.denominator }),
+  }) as TradePreview["resultRMetric"];
+}
+
+function freezeTradePreview(trade: TradePreview): TradePreview {
+  return Object.freeze({
+    ...trade,
+    resultRMetric: freezeMetricEvidence(trade.resultRMetric),
+    percentReturnMetric: freezeMetricEvidence(trade.percentReturnMetric),
+    mistakes: Object.freeze([...trade.mistakes]),
+    reviewSessionDates: Object.freeze([...trade.reviewSessionDates]),
+    tags: Object.freeze([...trade.tags]),
+    rules: Object.freeze(trade.rules.map((rule) => Object.freeze({ ...rule }))),
+    initialRisk: trade.initialRisk === null
+      ? null
+      : Object.freeze({ ...trade.initialRisk }),
+    executions: Object.freeze(
+      trade.executions.map((execution) => Object.freeze({ ...execution })),
+    ),
+  });
+}
+
 function displayNumber(raw: string, label: string): number {
   const value = Number(raw);
   if (!Number.isFinite(value)) {
@@ -178,7 +237,27 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
         `Trade ${trade.tradeSubjectId} account label does not match its stable account.`,
       );
     }
-    trades.set(trade.tradeSubjectId, trade);
+    canonicalFacet(
+      trade.assetClass,
+      ["stock", "etf"] as const,
+      `Trade ${trade.tradeSubjectId} asset class`,
+    );
+    canonicalFacet(
+      trade.side,
+      ["long", "short"] as const,
+      `Trade ${trade.tradeSubjectId} direction`,
+    );
+    canonicalFacet(
+      trade.status,
+      ["open", "closed"] as const,
+      `Trade ${trade.tradeSubjectId} position state`,
+    );
+    canonicalFacet(
+      trade.reviewStatus,
+      ["pending", "draft", "completed"] as const,
+      `Trade ${trade.tradeSubjectId} review state`,
+    );
+    trades.set(trade.tradeSubjectId, freezeTradePreview(trade));
     counts.set(trade.accountId, (counts.get(trade.accountId) ?? 0) + 1);
   }
   for (const option of snapshot.accountOptions) {
@@ -342,6 +421,20 @@ function matchesSearch(evidence: TradeBrowserEvidence, query: string): boolean {
   return searchable.includes(query);
 }
 
+function matchesFacets(
+  evidence: TradeBrowserEvidence,
+  facets: Pick<
+    TradeBrowserState,
+    "assetClass" | "direction" | "positionState" | "reviewState"
+  >,
+): boolean {
+  const trade = evidence.trade;
+  return (facets.assetClass === "all" || trade.assetClass === facets.assetClass)
+    && (facets.direction === "all" || trade.side === facets.direction)
+    && (facets.positionState === "all" || trade.status === facets.positionState)
+    && (facets.reviewState === "all" || trade.reviewStatus === facets.reviewState);
+}
+
 function dateLabel(from: string | null, through: string | null): string {
   if (from === null && through === null) return "All activity dates";
   if (from !== null && through !== null) {
@@ -375,6 +468,26 @@ export function buildTradeBrowser(
     throw new Error("The selected account is no longer available in this journal.");
   }
   const query = canonicalSearchQuery(input.query);
+  const assetClass = canonicalFacet(
+    input.assetClass,
+    ["all", "stock", "etf"] as const,
+    "Asset class",
+  );
+  const direction = canonicalFacet(
+    input.direction,
+    ["all", "long", "short"] as const,
+    "Direction",
+  );
+  const positionState = canonicalFacet(
+    input.positionState,
+    ["all", "open", "closed"] as const,
+    "Position state",
+  );
+  const reviewState = canonicalFacet(
+    input.reviewState,
+    ["all", "pending", "draft", "completed"] as const,
+    "Review state",
+  );
   const requestedDay = canonicalIsoDate(input.selectedDay, "Selected activity day");
   const requestedMonth = canonicalMonth(input.calendarMonth);
 
@@ -412,7 +525,10 @@ export function buildTradeBrowser(
       : [selectedSession];
   const evidence = evidenceForSessions(evidenceSessions, trades);
   const visibleEvidence = Object.freeze(
-    evidence.filter((item) => matchesSearch(item, query)),
+    evidence.filter((item) => (
+      matchesFacets(item, { assetClass, direction, positionState, reviewState })
+      && matchesSearch(item, query)
+    )),
   );
   const contributionPnlExact = sumSignedDecimals(
     evidence.map((item) => item.contributionPnlExact),
@@ -450,12 +566,21 @@ export function buildTradeBrowser(
     selectedDay: selectedSession?.isoDate ?? null,
     calendarMonth: month,
     query,
+    assetClass,
+    direction,
+    positionState,
+    reviewState,
   });
 
   return Object.freeze({
     state,
     invalidatedSelectedDay,
     isFiltered: input.accountId !== null || activityFrom !== null || activityThrough !== null,
+    hasViewFilters: query.length > 0
+      || assetClass !== "all"
+      || direction !== "all"
+      || positionState !== "all"
+      || reviewState !== "all",
     accountLabel,
     dateLabel: scopeDateLabel,
     scopeLabel: `${accountLabel} · ${scopeDateLabel}`,

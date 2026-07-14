@@ -48,7 +48,8 @@ under the provisional identifier until that gate is cleared.
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
-  Scope v1, export, and matching-runtime local restore are implemented, but
+  Scope v1, Structured Trades Facets v1, export, and matching-runtime local
+  restore are implemented, but
   native restore acceptance, verified deletion, deeper reports, attachments,
   and Mac/device evidence remain incomplete.
 
@@ -256,6 +257,14 @@ Delivered in the current vertical slice:
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
   and both governed reports intentionally remain whole-workspace.
+- Structured Trades Facets v1 adds fixed exact asset-class, direction,
+  position-state, and review-state controls over already-scoped cards. The four
+  facets AND with normalized search and never change scope evidence, exact P&L,
+  counts, the calendar, Dashboard, or governed Reports. Clear search and filters
+  preserves account/date/day scope; Clear all resets both layers. Facet state is
+  session-only, survives internal navigation and valid refresh, and resets on a
+  mode switch or reload. This derived layer changes no schema, store, archive,
+  or report definition.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -270,8 +279,8 @@ Still required in Phase 1:
   and physical iPhone.
 - Deepen the delivered Trades review detail and scope with saved presets,
   optional persistent/report scope, fuller account management,
-  vocabulary/playbook management, and the remaining reconciled report
-  families.
+  dynamic tag/mistake/emotion facets, vocabulary/playbook management, and the
+  remaining reconciled report families.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.
@@ -291,8 +300,9 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add prioritized broker-specific CSV adapters behind the generic mapping core.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
-- Add templates, reminders, deeper filters, drawdown/streak/time-of-day/tag
-  reports, deeper setup comparisons, and explainable report drill-down.
+- Add templates, reminders, saved view presets, dynamic vocabulary facets,
+  drawdown/streak/time-of-day/tag reports, deeper setup comparisons, and
+  explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
 

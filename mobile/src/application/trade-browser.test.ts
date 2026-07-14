@@ -48,6 +48,7 @@ describe("trade browser", () => {
     expect(browser.scopeLabel).toBe("All accounts · All activity dates");
     expect(browser.evidence).toHaveLength(8);
     expect(browser.visibleEvidence).toHaveLength(8);
+    expect(browser.hasViewFilters).toBe(false);
     expect(browser.contributionPnlExact).toBe("310");
     expect(browser.allocationCount).toBe(16);
     expect(browser.activityDayCount).toBe(6);
@@ -99,6 +100,69 @@ describe("trade browser", () => {
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["QQQ"]);
     expect(browser.contributionPnlExact).toBe("-220");
     expect(browser.visibleEvidence[0]?.contributionPnlExact).toBe("-50");
+  });
+
+  it("ANDs exact card facets with search without changing scope evidence or totals", () => {
+    const facets = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "etf",
+      direction: "short",
+      positionState: "closed",
+      reviewState: "completed",
+    });
+
+    expect(facets.hasViewFilters).toBe(true);
+    expect(facets.state).toMatchObject({
+      assetClass: "etf",
+      direction: "short",
+      positionState: "closed",
+      reviewState: "completed",
+    });
+    expect(facets.evidence).toHaveLength(8);
+    expect(facets.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["QQQ"]);
+    expect(facets.contributionPnlExact).toBe("310");
+    expect(facets.allocationCount).toBe(16);
+    expect(facets.activityDayCount).toBe(6);
+    expect(facets.calendar).toEqual(buildTradeBrowser(DEMO_WORKSPACE).calendar);
+    expect(Object.isFrozen(facets.state)).toBe(true);
+    expect(Object.isFrozen(facets.visibleEvidence)).toBe(true);
+
+    const conflictingSearch = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...facets.state,
+      query: "spy",
+    });
+    expect(conflictingSearch.evidence).toEqual(facets.evidence);
+    expect(conflictingSearch.visibleEvidence).toEqual([]);
+    expect(conflictingSearch.contributionPnlExact).toBe("310");
+  });
+
+  it("matches every fixed facet against the canonical trade field only", () => {
+    const varied: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: DEMO_WORKSPACE.trades.map((trade, index) => Object.freeze({
+        ...trade,
+        status: index === 0 ? "open" as const : "closed" as const,
+        reviewStatus: index === 0
+          ? "draft" as const
+          : index === 1
+            ? "pending" as const
+            : "completed" as const,
+      })),
+    };
+
+    const visible = (overrides: Partial<typeof EMPTY_TRADE_BROWSER_STATE>) => (
+      buildTradeBrowser(varied, { ...EMPTY_TRADE_BROWSER_STATE, ...overrides })
+        .visibleEvidence.map(({ trade }) => trade.symbol)
+    );
+    expect(visible({ assetClass: "etf" })).toEqual(["QQQ", "SPY"]);
+    expect(visible({ assetClass: "stock" })).toHaveLength(6);
+    expect(visible({ direction: "short" })).toEqual(["QQQ", "TSLA"]);
+    expect(visible({ direction: "long" })).toHaveLength(6);
+    expect(visible({ positionState: "open" })).toEqual(["AAPL"]);
+    expect(visible({ positionState: "closed" })).toHaveLength(7);
+    expect(visible({ reviewState: "draft" })).toEqual(["AAPL"]);
+    expect(visible({ reviewState: "pending" })).toEqual(["MSFT"]);
+    expect(visible({ reviewState: "completed" })).toHaveLength(6);
   });
 
   it("aggregates multi-day and zero-P&L activity without double-counting a trade", () => {
@@ -218,6 +282,71 @@ describe("trade browser", () => {
       activityDates: ["2026-07-01", "2026-07-02"],
     });
     expect(browser.contributionPnlExact).toBe("0.3");
+
+    const stockOnly = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "stock",
+    });
+    const etfOnly = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "etf",
+    });
+    expect(stockOnly.visibleEvidence.map(({ trade }) => ({
+      assetClass: trade.assetClass,
+      subject: trade.tradeSubjectId,
+      symbol: trade.symbol,
+    }))).toEqual([{
+      assetClass: "stock",
+      subject: primary.tradeSubjectId,
+      symbol: "AAPL",
+    }]);
+    expect(etfOnly.visibleEvidence.map(({ trade }) => ({
+      assetClass: trade.assetClass,
+      subject: trade.tradeSubjectId,
+      symbol: trade.symbol,
+    }))).toEqual([{
+      assetClass: "etf",
+      subject: swing.tradeSubjectId,
+      symbol: "AAPL",
+    }]);
+  });
+
+  it("detaches and freezes card evidence from a mutable local snapshot", () => {
+    const source = demoTrade("AAPL");
+    const mutableTrade = {
+      ...source,
+      mistakes: [...source.mistakes],
+      reviewSessionDates: [...source.reviewSessionDates],
+      tags: [...source.tags],
+      rules: source.rules.map((rule) => ({ ...rule })),
+      initialRisk: source.initialRisk === null ? null : { ...source.initialRisk },
+      executions: source.executions.map((execution) => ({ ...execution })),
+    };
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: [mutableTrade, ...DEMO_WORKSPACE.trades.slice(1)],
+    };
+    const browser = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "stock",
+    });
+    const evidence = browser.visibleEvidence.find(({ trade }) => (
+      trade.tradeSubjectId === mutableTrade.tradeSubjectId
+    ));
+    if (evidence === undefined) throw new Error("Missing mutable-source evidence.");
+
+    mutableTrade.assetClass = "etf";
+    mutableTrade.tags.push("mutated-after-build");
+    if (mutableTrade.executions[0] !== undefined) {
+      mutableTrade.executions[0].price = "0";
+    }
+
+    expect(evidence.trade.assetClass).toBe("stock");
+    expect(evidence.trade.tags).not.toContain("mutated-after-build");
+    expect(evidence.trade.executions[0]?.price).not.toBe("0");
+    expect(Object.isFrozen(evidence.trade)).toBe(true);
+    expect(Object.isFrozen(evidence.trade.tags)).toBe(true);
+    expect(Object.isFrozen(evidence.trade.executions[0])).toBe(true);
   });
 
   it("fails closed when a retained selected day is no longer in scope", () => {
@@ -260,6 +389,39 @@ describe("trade browser", () => {
       ...EMPTY_TRADE_BROWSER_STATE,
       query: "\tAAPL",
     })).toThrow(/control characters/);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "option" as never,
+    })).toThrow(/Asset class.*not a supported/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      direction: "buy" as never,
+    })).toThrow(/Direction.*not a supported/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      positionState: "partial" as never,
+    })).toThrow(/Position state.*not a supported/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      reviewState: undefined as never,
+    })).toThrow(/Review state.*not a supported/i);
+
+    for (const [field, value, label] of [
+      ["assetClass", "option", "asset class"],
+      ["side", "buy", "direction"],
+      ["status", "partial", "position state"],
+      ["reviewStatus", "unknown", "review state"],
+    ] as const) {
+      const malformed = {
+        ...DEMO_WORKSPACE,
+        trades: DEMO_WORKSPACE.trades.map((trade, index) => (
+          index === 0 ? { ...trade, [field]: value } : trade
+        )),
+      } as unknown as JournalWorkspaceSnapshot;
+      expect(() => buildTradeBrowser(malformed)).toThrow(
+        new RegExp(`Trade .* ${label}.*not a supported`, "i"),
+      );
+    }
 
     const firstDay = DEMO_WORKSPACE.calendar[0];
     if (firstDay === undefined) throw new Error("Missing demo calendar day.");

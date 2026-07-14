@@ -127,6 +127,13 @@ submission-ready product:
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
   progress, Plan Check, and Setup Breakdown remain whole-workspace.
+- Structured Trades Facets v1 ANDs the existing normalized search with four
+  fixed, exact card filters: asset class (Stock/ETF), direction, position state,
+  and review state. These session-only controls change visible Trades cards
+  only; they retain account/date/day scope and never change exact scope totals,
+  the calendar, Dashboard, or governed Reports. Clear search and filters
+  preserves scope, Clear all resets both layers, and mode switches or reload
+  reset the ephemeral state.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,

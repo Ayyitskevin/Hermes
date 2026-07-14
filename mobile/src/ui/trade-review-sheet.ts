@@ -15,9 +15,13 @@ const METRIC_REASON: Readonly<Record<NonNullable<TradeMetricEvidence["nullReason
   invalid_denominator: "The metric denominator must be positive.",
 };
 
+function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
+  return trade.assetClass === "etf" ? "ETF" : "Stock";
+}
+
 export function reviewTradeAction(trade: TradePreview, label?: string): string {
   const action = label ?? (trade.reviewStatus === "pending" ? "Review trade" : "Edit review");
-  const accessibleName = `${action} for ${trade.symbol}, ${trade.sessionLabel}`;
+  const accessibleName = `${action} for ${trade.symbol} ${assetClassLabel(trade)}, ${trade.sessionLabel}`;
   return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
 }
 
@@ -172,7 +176,7 @@ export function tradeReviewSheetTemplate(
     <section class="settings-sheet trade-review-sheet" role="dialog" aria-modal="true" aria-labelledby="trade-review-title">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-heading">
-        <div><p class="eyebrow">${escapeHtml(reviewLabel)}</p><h2 id="trade-review-title" tabindex="-1">${escapeHtml(trade.symbol)} trade review</h2></div>
+        <div><p class="eyebrow">${escapeHtml(reviewLabel)}</p><h2 id="trade-review-title" tabindex="-1">${escapeHtml(trade.symbol)} trade review · ${assetClassLabel(trade)}</h2></div>
         <button class="icon-button" type="button" data-trade-review-close aria-label="Close trade review">×</button>
       </div>
       ${demoReadOnly

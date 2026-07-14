@@ -59,7 +59,7 @@ function localWorkspace(): JournalWorkspaceSnapshot {
 describe("trade review sheet", () => {
   it("renders escaped execution facts, exact metric evidence, and versioned review inputs", () => {
     const html = tradeReviewSheetTemplate(trade(), localWorkspace());
-    expect(html).toContain("&lt;AAPL&gt; trade review");
+    expect(html).toContain("&lt;AAPL&gt; trade review · Stock");
     expect(html).not.toContain("<AAPL>");
     expect(html).toContain("19.8 USD ÷ 10 USD");
     expect(html).toContain("1.98R");
@@ -196,7 +196,7 @@ describe("trade review sheet", () => {
     ]);
     expect(reviewTradeAction(trade())).toContain('data-review-trade="subject-1"');
     expect(reviewTradeAction(trade())).toContain(
-      'aria-label="Edit review for &lt;AAPL&gt;, Jul 1 · Morning"',
+      'aria-label="Edit review for &lt;AAPL&gt; Stock, Jul 1 · Morning"',
     );
     expect(reviewTradeAction(trade(), "Open <review>")).toContain("Open &lt;review&gt;");
     expect(tradeReviewSaveFailureKind(new Error("definite rejection"))).toBe("failed");

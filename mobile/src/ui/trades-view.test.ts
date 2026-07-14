@@ -4,6 +4,7 @@ import {
   EMPTY_TRADE_BROWSER_STATE,
   buildTradeBrowser,
 } from "../application/trade-browser";
+import { EMPTY_WORKSPACE } from "../application/workspace-snapshot";
 import { DEMO_WORKSPACE } from "../data/demo";
 import { tradesView } from "./trades-view";
 
@@ -19,7 +20,7 @@ describe("trades view", () => {
 
     expect(html).toContain('option value="demo-account-swing" selected');
     expect(html).toContain('name="account" aria-describedby="trade-scope-error"');
-    expect(html).toContain('type="search" maxlength="200" aria-describedby="trade-search-error"');
+    expect(html).toContain('type="search" maxlength="200" aria-describedby="trade-search-error trade-view-filter-boundary"');
     expect(html).toContain('value="2026-07-07"');
     expect(html).toContain('value="2026-07-09"');
     expect(html).toContain("Demo Swing · Jul 7, 2026–Jul 9, 2026");
@@ -34,6 +35,47 @@ describe("trades view", () => {
     expect(html).toContain("Whole trade");
     expect(html).toContain("governed report totals");
     expect(html).toContain("remain whole-workspace");
+  });
+
+  it("renders exact card facets separately from allocation scope", () => {
+    const browser = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      assetClass: "etf",
+      direction: "short",
+      positionState: "closed",
+      reviewState: "completed",
+    });
+    const html = tradesView(DEMO_WORKSPACE, browser);
+
+    expect(html).toContain('id="trade-filter-asset-class"');
+    expect(html).toContain('<option value="etf" selected>ETF</option>');
+    expect(html).toContain('<option value="short" selected>Short</option>');
+    expect(html).toContain('<option value="closed" selected>Closed</option>');
+    expect(html).toContain('<option value="completed" selected>Completed</option>');
+    expect(html).toContain("change visible cards and search results");
+    expect(html).toContain("never change allocation scope");
+    expect(html).toContain("Showing 1 of 8 trades");
+    expect(html).toMatch(/data-trade-subject="demo-subject-qqq" >/);
+    expect(html).toMatch(/data-trade-subject="demo-subject-spy" hidden>/);
+    expect(html).toContain('<span class="status-chip">ETF</span>');
+    expect(html).toContain("+$310.00");
+    expect(html).toContain("8 contributing trades · 16 allocations · 6 activity days");
+    expect(html).toContain("data-trade-view-clear");
+    expect(html).not.toContain("data-trade-view-clear disabled");
+  });
+
+  it("qualifies same-symbol card headings and review actions by asset class", () => {
+    const stockTwin = { ...DEMO_WORKSPACE.trades[0]!, symbol: "QQQ" };
+    const snapshot = {
+      ...DEMO_WORKSPACE,
+      trades: [stockTwin, ...DEMO_WORKSPACE.trades.slice(1)],
+    };
+    const html = tradesView(snapshot, buildTradeBrowser(snapshot));
+
+    expect(html).toContain('<h2>QQQ<span class="sr-only"> · Stock ·');
+    expect(html).toContain('<h2>QQQ<span class="sr-only"> · ETF ·');
+    expect(html).toContain("for QQQ Stock,");
+    expect(html).toContain("for QQQ ETF,");
   });
 
   it("renders selected-day allocation evidence without relabeling whole-trade P&L", () => {
@@ -71,6 +113,7 @@ describe("trades view", () => {
     expect(html).toMatch(/data-trade-subject="demo-subject-spy" hidden>/);
     expect(html).toMatch(/data-trade-subject="demo-subject-tsla" hidden>/);
     expect(html).toContain('value="qqq"');
+    expect(html).toContain("data-trade-view-clear");
   });
 
   it("renders a reconciled empty scope with a useful recovery path", () => {
@@ -86,5 +129,13 @@ describe("trades view", () => {
     expect(html).toContain("No activity matches this scope");
     expect(html).toContain("Clear or widen the account and activity-date scope.");
     expect(html).toContain("Clear all");
+  });
+
+  it("does not reference the absent facet description in an empty workspace", () => {
+    const html = tradesView(EMPTY_WORKSPACE, buildTradeBrowser(EMPTY_WORKSPACE));
+
+    expect(html).toContain('aria-describedby="trade-search-error"');
+    expect(html).not.toContain('aria-describedby="trade-search-error trade-view-filter-boundary"');
+    expect(html).not.toContain('id="trade-view-filter-boundary"');
   });
 });

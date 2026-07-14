@@ -315,7 +315,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Five bounded Slice D increments are implemented in the current workspace. The
+Six bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -395,11 +395,25 @@ Dashboard calendar only: headline metrics, equity, review progress, Plan Check,
 and Setup Breakdown remain whole-workspace. No schema, migration, journal
 store, archive, or report-definition version changed.
 
+The sixth increment is Structured Trades Facets v1. Four fixed exact facets—
+asset class (Stock/ETF), direction, position state, and review state—AND with
+the existing normalized text query over cards already admitted by the account,
+date, and selected-day scope. Facets and search change visible cards only. They
+never change exact contribution P&L, trade/allocation/day counts, calendar
+evidence, Dashboard metrics, Plan Check, or Setup Breakdown. Clear search and
+filters resets the query and facets while retaining scope; Clear all resets both
+layers.
+The state is session-only, survives internal navigation and valid refresh, and
+resets on a local/demo switch or reload. Fixed options deliberately avoid
+inventing dynamic vocabulary semantics. No schema, migration, store, archive,
+or governed report-definition version changed.
+
 Still open in Slice D:
 
 - Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
   remaining report families with reconciled drill-down, plus saved scope
-  presets, persistent/report scope, and fuller account management.
+  presets, saved view presets, dynamic vocabulary facets, persistent/report
+  scope, and fuller account management.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
@@ -534,10 +548,11 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The five
+empty-journal-only restore and idempotent exact-retry reconciliation. The six
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
-calendar evidence, Durable Daily Journal v1, and Trade Browser Scope v1. The
-four increments other than Daily Journal remain derived-only; Daily Journal
+calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, and
+Structured Trades Facets v1. The five increments other than Daily Journal
+remain derived-only; Daily Journal
 adds checksum-pinned schema v4 and browser payload v2 while preserving the
 outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
@@ -551,6 +566,7 @@ recurring AI, or legacy cockpit extraction.
 
 - [TradeZella pricing and capability matrix](https://www.tradezella.com/pricing)
 - [TradeZella getting-started workflow](https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella)
+- [TradeZella filter workflow](https://help.tradezella.com/en/articles/12417670-using-filters-in-tradezella)
 - [TradeZella feature requests](https://tradezella.canny.io/feature-requests?sort=top)
 - [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - [Capacitor documentation](https://capacitorjs.com/docs)

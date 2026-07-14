@@ -366,11 +366,18 @@ p { line-height: 1.55; }
 .journal-metrics { display: grid; gap: .3rem; text-align: right; font-family: "B612 Mono", monospace; }
 .journal-metrics span { color: var(--muted); font-size: .76rem; }
 .trade-scope-form,
+.trade-view-filters,
 .trade-scope-summary { display: grid; gap: .85rem; }
 .trade-scope-form h2,
 .trade-scope-form p,
+.trade-view-filters h2,
+.trade-view-filters p,
 .trade-scope-summary p { margin: 0; }
-.trade-scope-form > div:first-child > p:last-child { margin-top: .4rem; color: var(--muted); }
+.trade-scope-form > div:first-child > p:last-child,
+.trade-view-filters > div:first-child > p:last-child {
+  margin-top: .4rem;
+  color: var(--muted);
+}
 .trade-scope-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
@@ -923,7 +930,8 @@ input[type="file"]::file-selector-button {
   .daily-journal-sheet .quick-actions,
   .daily-journal-intro,
   .trade-scope-fields,
-  .trade-scope-form .quick-actions { grid-template-columns: minmax(0, 1fr); }
+  .trade-scope-form .quick-actions,
+  .trade-view-filters .quick-actions { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row label:first-child { grid-column: 1; }
   .review-execution-row { grid-template-columns: 1fr; }

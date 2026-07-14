@@ -141,18 +141,26 @@ and an App Store disclosure.
 - Search scoped trades by symbol, account, setup, side, status, review state,
   mistake, emotion, or tag. Confirm search changes visible cards only and never
   the exact scope summary.
-- With VoiceOver and a hardware keyboard, confirm account/range/day/search state
-  survives tab navigation and valid ledger refreshes. Clearing a selected day
-  must retain account/range; Clear all must reset every filter; switching
-  local/demo mode or reloading must reset session-only scope. If an account or
-  day disappears after refresh, confirm Hermes announces the recovery instead
-  of silently broadening or trapping the app.
+- Apply asset-class, direction, position-state, and review-state facets in
+  combination with search. Confirm they AND against canonical trade fields,
+  change visible cards only, expose the asset-class chip, and leave exact scope
+  P&L/counts, the calendar, Dashboard, Plan Check, and Setup Breakdown unchanged.
+  For duplicate symbols, confirm each heading and review action announces enough
+  asset-class/account/session context to identify the intended trade.
+- With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
+  state survives tab navigation and valid ledger refreshes. Clearing a selected
+  day must retain account/range and card filters; Clear search and filters must
+  retain account/range/day while clearing search/facets; Clear all must reset
+  both layers. Switching local/demo mode or reloading must reset session-only state.
+  If an account or day disappears after refresh, confirm Hermes announces the
+  recovery instead of silently broadening or trapping the app.
 - Confirm Dashboard headline P&L, equity, and review progress plus Plan Check
   and Setup Breakdown remain whole-workspace while only Trades and the
   Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
-  inputs, month controls, day tiles, scope summary, contribution evidence, and
-  focused destinations have no horizontal overflow or clipping.
+  inputs, four facet selects, month controls, day tiles, scope summary,
+  contribution evidence, and focused destinations have no horizontal overflow
+  or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
   successor, and verify note, setup, mistakes, emotion, tags, playbook rules,
   risk, stop, exact R-multiple, exact percentage return, and their formula

@@ -1,8 +1,114 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice D-E Trade Browser Scope v1 Linux milestone · updated 2026-07-14
+Status: verified Slice D-F Structured Trades Facets v1 Linux milestone · updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Structured Trades Facets v1: four fixed exact, session-only card
+filters that compose with normalized search while preserving the existing
+account/date/day financial scope and whole-workspace report boundary.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/application/trade-browser.ts` adds exact asset-class,
+  direction, position-state, and review-state facets. Facets AND with search
+  only after account/date/day evidence is reconciled, so they never change
+  exact contribution P&L, trade/allocation/day counts, or calendar evidence.
+  Unsupported filter or source enum values fail closed. Browser evidence is a
+  detached, recursively frozen trade preview rather than an alias to a mutable
+  local snapshot.
+- `mobile/src/ui/trades-view.ts` renders four labeled native selects, an
+  asset-class chip, truthful search/facet empty states, live visible-card
+  counts, and a **Clear search and filters** action that retains financial
+  scope. Clear all resets both layers. Duplicate-symbol card headings add
+  screen-reader-only asset-class/account/session identity.
+- `mobile/src/ui/trade-review-sheet.ts` adds asset class to review action and
+  dialog accessible names, keeping same-symbol Stock/ETF review targets
+  distinguishable. Existing search-only copy and exact Trade Browser behavior
+  remain backward compatible.
+- Facet/search state survives internal navigation, selected-day changes, valid
+  review-refresh writes, and valid snapshot refreshes. It resets on local/demo
+  switches or reload. Calendar-day activation announces retained view-filter
+  results, including zero visible cards.
+- `mobile/e2e/trade-browser-facets.spec.ts` covers four-way facet AND logic,
+  conflicting search, selected-day/account retention, separate clear actions,
+  whole-workspace Dashboard/Plan Check/Setup Breakdown isolation, local review
+  refresh, mode reset, offline behavior, 44-point controls, and 320px/200%
+  reflow. Core/UI tests add malformed-source rejection, mutable-source
+  detachment, and same-symbol Stock/ETF subject/accessibility identity.
+- README, roadmap, product blueprint, ledger contract, and Mac handoff now
+  document the delivered visibility boundary and remaining dynamic/native work.
+  No schema, migration, adapter, store, archive, or governed report definition
+  changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 40 files, 409 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 39 Playwright journeys passed,
+  including facet/search/scope composition, valid review-refresh retention,
+  calendar-day zero-result announcements, report isolation, legacy search
+  behavior, review accessibility, and 320px/200% reflow.
+- `cd mobile && npm run build` — exit 0; Vite transformed 63 modules and
+  emitted the production bundle.
+- `cd mobile && npm run ios:sync` — exit 0; the verified production bundle was
+  copied into iOS and Capacitor found only
+  `@capacitor-community/sqlite@8.1.0`. CocoaPods and `xcodebuild` were
+  unavailable and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors after sync.
+- Independent read-only core and UI re-reviews reported no remaining
+  correctness or accessibility finding in the implemented boundary.
+
+assumptions:
+
+- V1 intentionally exposes only fixed values already canonical in
+  `TradePreview`: Stock/ETF, long/short, open/closed, and
+  pending/draft/completed. Dynamic setup/tag/mistake/emotion vocabulary is not
+  inferred or persisted by this slice.
+- Search and facets change visible cards only. Account/date/day scope totals,
+  the Dashboard calendar evidence, Dashboard metrics, Plan Check, and Setup
+  Breakdown do not consume `visibleEvidence`.
+- View-filter state is ephemeral. **Clear search and filters** preserves
+  account/date/day scope; **Clear all** resets view filters and financial scope.
+- Linux SQL.js/Chromium evidence proves deterministic browser contracts, not
+  native SQLCipher, Keychain, WKWebView, iOS picker, lifecycle, VoiceOver, or
+  physical-device behavior. Fleet guard-layer screening was not evidenced.
+
+open:
+
+- HOLD native facet/select traversal, VoiceOver announcements, Dynamic Type,
+  hardware keyboard, background/relaunch reset, and physical 320px behavior
+  until measured on a current Mac and iPhone.
+- Saved view/scope presets, dynamic vocabulary facets, optional persistent or
+  governed-report scope, fuller account management, and remaining reconciled
+  report families remain Phase 1/2 work.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP were intentionally
+  not merged: both started from pre-facet `2841a67` and remain human-gated.
+  Their later manual rebase must preserve this slice's immutable facet evidence,
+  class-qualified review identity, and one asset-class chip while reconciling
+  overlapping product docs.
+- Attachments and verified Delete All Data remain separate governed slices.
+  Delete All Data is irreversible and requires its dedicated human gate.
+- Do not start broker sync, trade execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, price promises, or public comparative
+  claims from this slice.
+- Pass to Sonnet for final sign-off. The broader autonomous Hermes product goal
+  remains active; this verified Slice D-F boundary is a coherent stopping point.
+
+## Prior milestone — Slice D-E
+
+> Historical snapshot; current status and open items are superseded by the
+> active Slice D-F handoff above.
 
 task: Deliver Trade Browser Scope v1: a derived-only, mobile-first account and
 allocation-date evidence browser with exact scoped contributions, activity
@@ -100,7 +206,7 @@ open:
 ## Prior milestone — Slice D-D
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-E handoff above.
+> active Slice D-F handoff above.
 
 task: Deliver Durable Daily Journal v1: an explicit-save, mobile-first,
 day-level reflection workflow with immutable optimistic history, complete local
@@ -208,7 +314,7 @@ open:
 ## Prior milestone — Slice D-C
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-E handoff above.
+> active Slice D-F handoff above.
 
 task: Deliver a bounded Dashboard-calendar → Trades evidence drill-down that
 reconciles workspace-local allocation days to stable trade subjects and exact
@@ -313,7 +419,7 @@ open:
 ## Prior milestone — Slice D-B
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-E handoff above.
+> active Slice D-F handoff above.
 
 task: Deliver the second governed Slice D insight: a checksum-pinned offline
 Setup Breakdown derived from current projections and current saved review
@@ -418,7 +524,7 @@ open:
 ## Prior milestone — Slice D-A
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-E handoff above.
+> active Slice D-F handoff above.
 
 task: Deliver the first governed Slice D insight: an offline, evidence-linked
 plan-adherence report derived from current trade projections and current saved

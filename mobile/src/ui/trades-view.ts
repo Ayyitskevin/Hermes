@@ -1,5 +1,9 @@
 import type {
+  TradeBrowserAssetClassFilter,
+  TradeBrowserDirectionFilter,
   TradeBrowserEvidence,
+  TradeBrowserPositionFilter,
+  TradeBrowserReviewFilter,
   TradeBrowserResult,
 } from "../application/trade-browser";
 import { TRADE_BROWSER_SEARCH_MAX_CODE_POINTS } from "../application/trade-browser";
@@ -18,10 +22,19 @@ export interface TradeScopeInput {
   readonly activityThrough: string | null;
 }
 
+export interface TradeViewFilterInput {
+  readonly assetClass: TradeBrowserAssetClassFilter;
+  readonly direction: TradeBrowserDirectionFilter;
+  readonly positionState: TradeBrowserPositionFilter;
+  readonly reviewState: TradeBrowserReviewFilter;
+}
+
 export interface TradesViewHandlers {
   readonly applyScope: (input: TradeScopeInput) => void;
   readonly clearAll: () => void;
   readonly clearSelectedDay: () => void;
+  readonly clearViewFilters: () => void;
+  readonly updateViewFilters: (input: TradeViewFilterInput) => TradeBrowserResult;
   readonly updateQuery: (query: string) => TradeBrowserResult;
 }
 
@@ -103,17 +116,23 @@ function tradeCard(
   browser: TradeBrowserResult,
   currency: string,
   visible: boolean,
+  qualifyHeading: boolean,
 ): string {
   const trade = evidence.trade;
   const tone = resultClass(trade.resultPnl);
   const interim = hasInterimPartialMetrics(trade) ? "Interim partial · " : "";
+  const assetClass = trade.assetClass === "etf" ? "ETF" : "Stock";
+  const headingQualifier = qualifyHeading
+    ? `<span class="sr-only"> · ${assetClass} · ${escapeHtml(trade.accountLabel)} · ${escapeHtml(trade.sessionLabel)}</span>`
+    : "";
   return `<article class="card trade-card" data-trade-subject="${escapeHtml(trade.tradeSubjectId)}" ${visible ? "" : "hidden"}>
     <div class="trade-card-heading">
       <div>
+        <span class="status-chip">${assetClass}</span>
         <span class="status-chip">${escapeHtml(trade.side)}</span>
         <span class="status-chip">${escapeHtml(trade.status)}</span>
         <span class="status-chip review-${trade.reviewStatus}">${escapeHtml(trade.reviewStatus)}</span>
-        <h2>${escapeHtml(trade.symbol)}</h2>
+        <h2>${escapeHtml(trade.symbol)}${headingQualifier}</h2>
         <p>${escapeHtml(trade.setup)} · ${escapeHtml(trade.sessionLabel)}</p>
         <p class="trade-account">${escapeHtml(trade.accountLabel)}</p>
       </div>
@@ -132,6 +151,57 @@ function tradeCard(
     <div class="tag-row">${trade.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
     <div class="quick-actions">${reviewTradeAction(trade)}</div>
   </article>`;
+}
+
+function selected(current: string, candidate: string): string {
+  return current === candidate ? "selected" : "";
+}
+
+function viewFilters(browser: TradeBrowserResult): string {
+  const controls = "trade-card-list trade-count trade-empty";
+  const describedBy = "trade-view-filter-boundary trade-view-filter-error";
+  return `<section class="card trade-view-filters" aria-labelledby="trade-view-filter-title">
+    <div>
+      <p class="card-label">VISIBLE CARDS</p>
+      <h2 id="trade-view-filter-title">Exact trade filters</h2>
+      <p id="trade-view-filter-boundary">These session-only filters change visible cards and search results. They never change allocation scope, P&amp;L totals, the calendar, Dashboard metrics, or Reports.</p>
+    </div>
+    <div class="trade-scope-fields">
+      <label>Asset class
+        <select id="trade-filter-asset-class" aria-controls="${controls}" aria-describedby="${describedBy}">
+          <option value="all" ${selected(browser.state.assetClass, "all")}>All asset classes</option>
+          <option value="stock" ${selected(browser.state.assetClass, "stock")}>Stock</option>
+          <option value="etf" ${selected(browser.state.assetClass, "etf")}>ETF</option>
+        </select>
+      </label>
+      <label>Direction
+        <select id="trade-filter-direction" aria-controls="${controls}" aria-describedby="${describedBy}">
+          <option value="all" ${selected(browser.state.direction, "all")}>All directions</option>
+          <option value="long" ${selected(browser.state.direction, "long")}>Long</option>
+          <option value="short" ${selected(browser.state.direction, "short")}>Short</option>
+        </select>
+      </label>
+      <label>Position state
+        <select id="trade-filter-position" aria-controls="${controls}" aria-describedby="${describedBy}">
+          <option value="all" ${selected(browser.state.positionState, "all")}>Open and closed</option>
+          <option value="open" ${selected(browser.state.positionState, "open")}>Open</option>
+          <option value="closed" ${selected(browser.state.positionState, "closed")}>Closed</option>
+        </select>
+      </label>
+      <label>Review state
+        <select id="trade-filter-review" aria-controls="${controls}" aria-describedby="${describedBy}">
+          <option value="all" ${selected(browser.state.reviewState, "all")}>All review states</option>
+          <option value="pending" ${selected(browser.state.reviewState, "pending")}>Pending</option>
+          <option value="draft" ${selected(browser.state.reviewState, "draft")}>Draft</option>
+          <option value="completed" ${selected(browser.state.reviewState, "completed")}>Completed</option>
+        </select>
+      </label>
+    </div>
+    <p class="form-error" id="trade-view-filter-error" role="alert" hidden></p>
+    <div class="quick-actions">
+      <button class="secondary-button" type="button" data-trade-view-clear ${browser.hasViewFilters ? "" : "disabled"}>Clear search and filters</button>
+    </div>
+  </section>`;
 }
 
 function scopeForm(snapshot: JournalWorkspaceSnapshot, browser: TradeBrowserResult): string {
@@ -180,6 +250,25 @@ function scopeSummary(browser: TradeBrowserResult, currency: string): string {
   </article>`;
 }
 
+function hasExactViewFacet(browser: TradeBrowserResult): boolean {
+  return browser.state.assetClass !== "all"
+    || browser.state.direction !== "all"
+    || browser.state.positionState !== "all"
+    || browser.state.reviewState !== "all";
+}
+
+function noMatchTitle(browser: TradeBrowserResult): string {
+  return hasExactViewFacet(browser)
+    ? "No trades match these filters"
+    : "No trades match this search";
+}
+
+function noMatchCopy(browser: TradeBrowserResult): string {
+  return hasExactViewFacet(browser)
+    ? "Change or clear the search and exact trade filters."
+    : "Try another symbol, account, setup, side, or tag.";
+}
+
 export function tradesView(
   snapshot: JournalWorkspaceSnapshot,
   browser: TradeBrowserResult,
@@ -189,6 +278,10 @@ export function tradesView(
     browser.visibleEvidence.map((evidence) => evidence.trade.tradeSubjectId),
   );
   const selected = browser.selectedSession;
+  const symbolCounts = new Map<string, number>();
+  for (const trade of snapshot.trades) {
+    symbolCounts.set(trade.symbol, (symbolCounts.get(trade.symbol) ?? 0) + 1);
+  }
   const scopeLabel = selected === null
     ? total === 1 ? "SCOPED TRADE" : "SCOPED TRADES"
     : total === 1 ? "ALLOCATION-DAY CONTRIBUTOR" : "ALLOCATION-DAY CONTRIBUTORS";
@@ -197,22 +290,27 @@ export function tradesView(
     browser,
     snapshot.currencyCode,
     visibleSubjects.has(evidence.trade.tradeSubjectId),
+    (symbolCounts.get(evidence.trade.symbol) ?? 0) > 1,
   )).join("");
   const searchLabel = selected === null
     ? "Search scoped trades"
     : `Search ${selected.dateLabel} scoped trades`;
   const visibleCount = browser.visibleEvidence.length;
+  const searchDescribedBy = snapshot.accountOptions.length === 0
+    ? "trade-search-error"
+    : "trade-search-error trade-view-filter-boundary";
   return `<section class="screen-stack" aria-labelledby="trades-title">
     <div class="screen-heading"><div><p class="eyebrow">${total} ${scopeLabel}</p><h1 id="trades-title">Trades</h1></div><span class="demo-badge">${snapshot.provenance === "demo" ? "DEMO" : snapshot.provenance === "empty" ? "NEW" : "LOCAL"}</span></div>
     ${snapshot.accountOptions.length === 0 ? "" : scopeForm(snapshot, browser)}
     ${selected === null ? "" : calendarDayFilterCard(selected, snapshot.currencyCode, browser.scopeLabel)}
     ${snapshot.accountOptions.length === 0 ? "" : scopeSummary(browser, snapshot.currencyCode)}
     ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
-    <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" maxlength="${TRADE_BROWSER_SEARCH_MAX_CODE_POINTS}" aria-describedby="trade-search-error" placeholder="Search symbol, account, setup, or tag" autocomplete="off" value="${escapeHtml(browser.state.query)}" /></label>
+    ${snapshot.accountOptions.length === 0 ? "" : viewFilters(browser)}
+    <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" maxlength="${TRADE_BROWSER_SEARCH_MAX_CODE_POINTS}" aria-describedby="${searchDescribedBy}" aria-controls="trade-card-list trade-count trade-empty" placeholder="Search symbol, account, setup, or tag" autocomplete="off" value="${escapeHtml(browser.state.query)}" /></label>
     <p class="form-error" id="trade-search-error" role="alert" hidden></p>
-    <p class="result-count" id="trade-count" role="status">${browser.state.query.length > 0 ? `Showing ${visibleCount} of ${countNoun(total, "trade")}` : `Showing ${countNoun(total, "trade")}`}</p>
-    <div class="journal-list">${cards}</div>
-    <article class="empty-state" id="trade-empty" ${visibleCount === 0 ? "" : "hidden"}><h2>${snapshot.trades.length === 0 ? "No trades yet" : total === 0 ? "No activity matches this scope" : "No trades match this search"}</h2><p>${snapshot.trades.length === 0 ? "Add an execution or import a CSV to build your journal." : total === 0 ? "Clear or widen the account and activity-date scope." : "Try another symbol, account, setup, side, or tag."}</p></article>
+    <p class="result-count" id="trade-count" role="status">${browser.hasViewFilters ? `Showing ${visibleCount} of ${countNoun(total, "trade")}` : `Showing ${countNoun(total, "trade")}`}</p>
+    <div class="journal-list" id="trade-card-list">${cards}</div>
+    <article class="empty-state" id="trade-empty" ${visibleCount === 0 ? "" : "hidden"}><h2 data-trade-empty-title>${snapshot.trades.length === 0 ? "No trades yet" : total === 0 ? "No activity matches this scope" : noMatchTitle(browser)}</h2><p data-trade-empty-copy>${snapshot.trades.length === 0 ? "Add an execution or import a CSV to build your journal." : total === 0 ? "Clear or widen the account and activity-date scope." : noMatchCopy(browser)}</p></article>
   </section>`;
 }
 
@@ -225,12 +323,20 @@ function updateSearchResult(root: HTMLElement, browser: TradeBrowserResult): voi
   });
   const count = root.querySelector<HTMLElement>("#trade-count");
   if (count !== null) {
-    count.textContent = browser.state.query.length > 0
+    count.textContent = browser.hasViewFilters
       ? `Showing ${browser.visibleEvidence.length} of ${countNoun(browser.evidence.length, "trade")}`
       : `Showing ${countNoun(browser.evidence.length, "trade")}`;
   }
   const empty = root.querySelector<HTMLElement>("#trade-empty");
   if (empty !== null) empty.hidden = browser.visibleEvidence.length !== 0;
+  if (browser.evidence.length > 0) {
+    const title = root.querySelector<HTMLElement>("[data-trade-empty-title]");
+    const copy = root.querySelector<HTMLElement>("[data-trade-empty-copy]");
+    if (title !== null) title.textContent = noMatchTitle(browser);
+    if (copy !== null) copy.textContent = noMatchCopy(browser);
+  }
+  const clear = root.querySelector<HTMLButtonElement>("[data-trade-view-clear]");
+  if (clear !== null) clear.disabled = !browser.hasViewFilters;
 }
 
 export function bindTradesView(
@@ -274,6 +380,44 @@ export function bindTradesView(
   root.querySelector<HTMLButtonElement>("[data-calendar-day-clear]")?.addEventListener(
     "click",
     handlers.clearSelectedDay,
+  );
+
+  const facetControls = Array.from(root.querySelectorAll<HTMLSelectElement>(
+    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review",
+  ));
+  const filterError = root.querySelector<HTMLElement>("#trade-view-filter-error");
+  const applyViewFilters = () => {
+    try {
+      const result = handlers.updateViewFilters({
+        assetClass: root.querySelector<HTMLSelectElement>("#trade-filter-asset-class")
+          ?.value as TradeBrowserAssetClassFilter ?? "all",
+        direction: root.querySelector<HTMLSelectElement>("#trade-filter-direction")
+          ?.value as TradeBrowserDirectionFilter ?? "all",
+        positionState: root.querySelector<HTMLSelectElement>("#trade-filter-position")
+          ?.value as TradeBrowserPositionFilter ?? "all",
+        reviewState: root.querySelector<HTMLSelectElement>("#trade-filter-review")
+          ?.value as TradeBrowserReviewFilter ?? "all",
+      });
+      facetControls.forEach((control) => control.removeAttribute("aria-invalid"));
+      if (filterError !== null) {
+        filterError.hidden = true;
+        filterError.textContent = "";
+      }
+      updateSearchResult(root, result);
+    } catch (caught) {
+      facetControls.forEach((control) => control.setAttribute("aria-invalid", "true"));
+      if (filterError !== null) {
+        filterError.hidden = false;
+        filterError.textContent = caught instanceof Error
+          ? caught.message
+          : "The exact trade filters are invalid.";
+      }
+    }
+  };
+  facetControls.forEach((control) => control.addEventListener("change", applyViewFilters));
+  root.querySelector<HTMLButtonElement>("[data-trade-view-clear]")?.addEventListener(
+    "click",
+    handlers.clearViewFilters,
   );
 
   const search = root.querySelector<HTMLInputElement>("#trade-search");

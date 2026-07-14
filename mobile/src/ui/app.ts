@@ -81,6 +81,20 @@ function countNoun(count: number, singular: string, plural = `${singular}s`): st
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function viewFilterAnnouncement(browser: TradeBrowserResult): string {
+  if (!browser.hasViewFilters) return "";
+  const hasSearch = browser.state.query.length > 0;
+  const hasFacet = browser.state.assetClass !== "all"
+    || browser.state.direction !== "all"
+    || browser.state.positionState !== "all"
+    || browser.state.reviewState !== "all";
+  return hasFacet && hasSearch
+    ? ` Search and card filters show ${browser.visibleEvidence.length} of ${browser.evidence.length} trades.`
+    : hasFacet
+    ? ` Card filters show ${browser.visibleEvidence.length} of ${browser.evidence.length} trades.`
+    : ` Search shows ${browser.visibleEvidence.length} of ${browser.evidence.length} cards.`;
+}
+
 function modeLabel(snapshot: JournalWorkspaceSnapshot): string {
   if (snapshot.provenance === "demo") return "DEMO";
   if (snapshot.provenance === "empty") return "NEW";
@@ -705,7 +719,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         calendarMonth: null,
       };
       queueScopeNotice(
-        "The selected account is no longer available. Hermes reset the account and day filters while retaining the activity dates and search.",
+        "The selected account is no longer available. Hermes reset the account and day filters while retaining the activity dates, search, and exact trade filters.",
       );
     }
     let browser = buildTradeBrowser(snapshot, tradeBrowserState);
@@ -717,7 +731,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       };
       browser = buildTradeBrowser(snapshot, tradeBrowserState);
       queueScopeNotice(
-        `The selected activity day ${invalidatedDay} is no longer available. Hermes retained the account and date scope and cleared only the day refinement.`,
+        `The selected activity day ${invalidatedDay} is no longer available. Hermes retained the account and date scope plus card filters and cleared only the day refinement.`,
       );
     }
     tradeBrowserState = browser.state;
@@ -755,9 +769,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           });
           tradeBrowserState = next.state;
           render("trades", false);
-          const searchAnnouncement = next.state.query.length === 0
-            ? ""
-            : ` Search shows ${next.visibleEvidence.length} of ${next.evidence.length} cards.`;
+          const searchAnnouncement = viewFilterAnnouncement(next);
           announceStatus(`Trade browser scope applied. Scope contains ${countNoun(next.evidence.length, "contributing trade")} across ${countNoun(next.activityDayCount, "activity day")}.${searchAnnouncement}`);
           root.querySelector<HTMLElement>("#trade-scope-summary")?.focus();
         },
@@ -775,11 +787,31 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           });
           tradeBrowserState = next.state;
           render("trades", false);
-          const searchAnnouncement = next.state.query.length === 0
-            ? ""
-            : ` Search shows ${next.visibleEvidence.length} of ${next.evidence.length} cards.`;
+          const searchAnnouncement = viewFilterAnnouncement(next);
           announceStatus(`Calendar day filter cleared. Retained scope contains ${countNoun(next.evidence.length, "trade")}.${searchAnnouncement}`);
           root.querySelector<HTMLInputElement>("#trade-search")?.focus();
+        },
+        clearViewFilters: () => {
+          const next = buildTradeBrowser(snapshot, {
+            ...tradeBrowserState,
+            query: "",
+            assetClass: "all",
+            direction: "all",
+            positionState: "all",
+            reviewState: "all",
+          });
+          tradeBrowserState = next.state;
+          render("trades", false);
+          announceStatus(`Search and trade card filters cleared. Showing ${countNoun(next.evidence.length, "scoped trade")}.`);
+          root.querySelector<HTMLSelectElement>("#trade-filter-asset-class")?.focus();
+        },
+        updateViewFilters: (input) => {
+          const next = buildTradeBrowser(snapshot, {
+            ...tradeBrowserState,
+            ...input,
+          });
+          tradeBrowserState = next.state;
+          return next;
         },
         updateQuery: (query) => {
           const next = buildTradeBrowser(snapshot, {
@@ -854,7 +886,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         if (day === null) return;
         tradeBrowserState = next.state;
         render("trades", false);
-        announceStatus(calendarDayAnnouncement(day, snapshot.currencyCode));
+        announceStatus(
+          `${calendarDayAnnouncement(day, snapshot.currencyCode)}${viewFilterAnnouncement(next)}`,
+        );
         root.querySelector<HTMLElement>("#calendar-day-filter-title")?.focus();
       });
     });
