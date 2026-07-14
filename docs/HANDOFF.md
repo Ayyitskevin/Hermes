@@ -1,9 +1,135 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Daily Journal Recovery Continuity v1 Linux milestone ·
+Status: verified Startup Recovery v1 and pre-native iOS handoff gate ·
 updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Startup Recovery v1 and a truthful pre-native iOS evidence gate:
+fail closed when the first application open/read cannot establish safe
+ownership, permit one full-document retry only after confirmed teardown, and
+separate Linux bundle/config-copy proof from later CocoaPods/Xcode/device proof.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/index.html, mobile/src/ui/startup.ts, and mobile/src/styles.css add a
+  semantic pre-JavaScript opening surface plus a focused, keyboard-reachable,
+  320px/200%-reflowing recovery alert. Rendered copy is generic and does not
+  expose the caught plugin/database detail. No fallback journal, reset, delete,
+  or reinstall action is offered.
+- The startup controller owns one attempt per document. A constructed
+  JournalApplication must close before retry appears. A native factory failure
+  is retryable only when factory cleanup remains confirmed; an unconfirmed
+  teardown withholds retry and requires a full app close/reopen. The retry is
+  guarded against duplicate activation and performs a full document reload.
+- NativeJournalDatabaseFactory now keeps retrieve/create acquisition inside its
+  cleanup boundary, attempts both database-handle and connection-registry close
+  paths, and aggregates the original open failure with every cleanup failure in
+  NativeJournalOpenCleanupError. This covers acquisition response loss before a
+  JournalApplication can own the connection.
+- startApp installs its document keydown listener only after the initial render
+  and onboarding bind succeed, so a failed first read does not leak a global
+  listener into the recovery surface.
+- mobile/scripts/verify-ios-sync.mjs independently hashes the production
+  bundle, byte-compares all six files with the ignored iOS public copy, permits
+  only the two generated Cordova shims, validates selected generated app/
+  SQLite registration fields, and rejects staged, unstaged, or untracked native
+  and lockfile drift. Its evidence matrix keeps CocoaPods, native compilation,
+  Xcode, Simulator, iPhone, SQLCipher/Keychain, lifecycle, VoiceOver, and
+  Dynamic Type at NOT RUN.
+- CI now runs the pure ios:copy phase before the verifier. The Mac handoff runs
+  copy → verifier → ios:sync/CocoaPods, preserving the pre-native report and
+  recording native evidence separately. README, roadmap, product blueprint,
+  and Mac acceptance copy reflect that evidence boundary.
+- No schema, migration, archive format, store projection, governed formula,
+  financial definition, destructive workflow, or public comparative claim is
+  changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 417 tests passed. Native factory
+  regressions cover simultaneous handle/registry cleanup failure and connection
+  acquisition response loss; startup regressions cover retryable creation,
+  close-before-retry, application-close failure, and uncertain factory cleanup.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed, including every
+  selected config mismatch, invalid JSON, all three native NOT RUN rows, and
+  unstaged/staged/untracked drift controls.
+- `cd mobile && npm run test:e2e` — exit 0; all 42 Playwright journeys passed.
+  Startup recovery covers transient and repeated failures, singular controls,
+  generic rendered detail, no fallback/external request, focus/keyboard, 48px
+  retry, 320px width, and 200% text.
+- `cd mobile && npm run build` — exit 0; Vite transformed 64 modules and emitted
+  the production bundle.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; 6 bundle
+  files matched byte-for-byte with SHA-256
+  `98f8b6387c50b0205326d4ae57c6b28bf5e39240884d3941816337619dc7b5e8`;
+  selected generated identity/SQLite registration and git drift passed; every
+  native row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no native/lock drift or whitespace errors.
+- Independent read-only startup/core, UI, and iOS-evidence re-reviews reported
+  no remaining finding. The startup recovery journeys also passed 10 repeated
+  reviewer runs (20/20 tests).
+
+assumptions:
+
+- Chromium injects a browser-preference failure after application construction;
+  it proves the generic recovery surface and browser ownership behavior, not a
+  native plugin failure. Controller and native-adapter units independently bind
+  the same teardown-classification contract.
+- “Did not display the technical failure detail” is a rendered-UI claim. Native
+  dependency diagnostics and Xcode/device console behavior remain unmeasured
+  and are not represented as private by this milestone.
+- verify:ios-sync validates a byte-identical public asset copy and selected
+  generated-config fields. It is not a canonical whole-config comparison,
+  CocoaPods resolution, native compile, plugin-runtime, signing, or
+  device-readiness result.
+- The retry is one guarded action in the current document. Reload creates a new
+  document and rechecks the same retained local journal; it does not create a
+  browser/demo replacement.
+- No schema, migration, archive, formula, financial, destructive, security-
+  credential, or public-positioning decision is inferred from this reliability
+  slice.
+
+open:
+
+- HOLD CocoaPods/Podfile.lock/workspace resolution, Xcode build, Simulator and
+  physical-iPhone startup injection, same-journal retry, teardown-failure
+  relaunch, SQLCipher/Keychain, migration, force-quit/background lifecycle,
+  Files handoff, backup, low-storage/near-limit-memory, VoiceOver, Dynamic Type,
+  and physical 320px evidence until recorded on a current Mac and iPhone.
+- Audit native SQLite plugin diagnostics and error propagation before claiming
+  that journal paths or technical failure details stay out of Xcode/device
+  consoles.
+- A known Daily Journal stale-head conflict is rejected safely by both stores,
+  but the editor currently re-enables the obsolete submission as a generic
+  retry instead of preserving text and offering a reload/reconcile action.
+- Upgrade the GitHub Action runtimes in a separate low-risk maintenance slice;
+  current checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices; deletion requires its dedicated human
+  gate.
+- Do not claim native backup readiness or start broker sync, trade execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Recovery Continuity v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Startup Recovery handoff above.
 
 task: Deliver Daily Journal Recovery Continuity v1: compose the existing Daily
 Journal and matching-runtime recovery contracts into one user-facing
@@ -103,7 +229,7 @@ open:
 ## Prior milestone — Slice D-F
 
 > Historical snapshot; current status and open items are superseded by the
-> active Recovery Continuity handoff above.
+> active Startup Recovery handoff above.
 
 task: Deliver Structured Trades Facets v1: four fixed exact, session-only card
 filters that compose with normalized search while preserving the existing

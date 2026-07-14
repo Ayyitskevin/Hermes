@@ -35,25 +35,38 @@ cd mobile
 npm ci
 npx playwright install chromium
 npm run typecheck
+npm run test:boundary
 npm test
+npm run test:ios-sync
 npm run test:e2e
+npm run ios:copy
+npm run verify:ios-sync
 npm run ios:sync
-cd ios/App
-pod install
-cd ../..
 npm run ios:open
 ```
 
-`ios:sync` rebuilds the local bundle before copying it into Xcode. The production
-Capacitor configuration deliberately has no remote `server.url`. Linux cannot
-run CocoaPods, so the first reviewed Mac run must generate `Podfile.lock` and
-`App.xcworkspace`; review and commit both plus any CocoaPods project-phase
-changes before treating native dependency resolution as reproducible.
+`ios:copy` rebuilds the local bundle and copies web/config artifacts without a
+native dependency update. Run verify:ios-sync immediately after that copy, while
+tracked native/lockfile state is still clean. It proves every production file
+copied byte-for-byte and validates the selected generated app identity/SQLite
+registration contract. Those PASS rows are pre-native handoff evidence only;
+they leave every CocoaPods, Xcode, Simulator, iPhone, SQLCipher/Keychain,
+lifecycle, and accessibility row NOT RUN.
+
+Only after that report, run `ios:sync`. With the pinned Capacitor CocoaPods
+project on a Mac, this repeats the copy, updates native plugin files, and invokes
+CocoaPods. The production configuration deliberately has no remote `server.url`.
+The first reviewed Mac run must generate `Podfile.lock` and `App.xcworkspace`;
+review and commit both plus any CocoaPods project-phase changes before treating
+native dependency resolution as reproducible. Record the Pod command/output in
+the separate native evidence rows; do not revise the earlier pre-native report.
 
 ## Xcode setup
 
-1. Run `pod install`, then open `mobile/ios/App/App.xcworkspace` through
-   `npm run ios:open`. Do not build the `.xcodeproj` directly.
+1. After `npm run ios:sync` completes its CocoaPods update, open
+   `mobile/ios/App/App.xcworkspace` through `npm run ios:open`. If the Podfile is
+   changed separately, rerun `pod install` first. Do not build the `.xcodeproj`
+   directly.
 2. Select the `App` target and the project's Apple development team.
 3. Confirm display name `Hermes Journal`, marketing version `1.0`, build `1`,
    automatic signing, iPhone-only device family, and iOS 16 minimum.
@@ -76,6 +89,15 @@ and an App Store disclosure.
 ## Execution-ledger device acceptance
 
 - Delete/reinstall and launch in airplane mode.
+- Hold a native database open long enough to observe the semantic **Opening
+  Hermes Journal** status with VoiceOver. Inject Keychain-missing, integrity,
+  initial-ledger-read, and teardown failures separately. Confirm the recovery
+  heading is focused, raw plugin/path detail is absent, no demo/browser or
+  replacement journal opens, and no reset/delete action appears. After a clean
+  teardown, **Try opening again** must perform one full reload and reopen the
+  same retained journal; after teardown failure, no retry control may appear
+  and the copy must require a full app close/reopen. Repeat at 320 CSS pixels
+  and 200% Dynamic Type.
 - Complete all three welcome pages; force quit and confirm completion persists.
 - Choose **Start my journal** and confirm the empty journal is primary. Separately
   choose the demo and confirm `DEMO` remains visible and every result is fictional.
@@ -309,6 +331,34 @@ and an App Store disclosure.
 Record device model, iOS version, Xcode version, commit SHA, result, screenshots,
 and every skipped check. A clean console alone is not evidence.
 
+## Native evidence record
+
+File one record per commit/device run in the downstream handoff. Use only
+PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
+
+    commit: <full SHA>
+    recorded_at: <ISO-8601 with timezone>
+    operator: <name>
+    macos: <version>
+    xcode: <version and build>
+    simulator: <model + iOS, or NOT RUN>
+    device: <model + iOS, or NOT RUN>
+    configuration: <Debug/Release; signing team redacted>
+
+| Gate | Status | Re-runnable evidence / artifact |
+|---|---|---|
+| npm ci + TypeScript/unit/browser gates | status | commands + result |
+| verify:ios-sync bundle/config/copy/drift | status | digest + output |
+| pod install + reviewed Podfile.lock/workspace | status | command + diff |
+| xcodebuild compile/test | status | exact command + result bundle |
+| Simulator startup/recovery/lifecycle | status | fixture + screenshot/log |
+| Physical iPhone startup/recovery/lifecycle | status | fixture + screenshot/log |
+| SQLCipher/Keychain/backup/migration | status | diagnostic evidence |
+| VoiceOver/Dynamic Type/keyboard/layout | status | settings + observed result |
+| Files export/restore/continued writes | status | archive digests + result |
+
+    open: <every skipped, blocked, failed, or ambiguous item>
+
 ## App Store Connect
 
 1. Enroll in the Apple Developer Program and accept the Paid Apps Agreement.
@@ -332,6 +382,13 @@ and every skipped check. A clean console alone is not evidence.
 
 - This Linux work has not run Xcode, Simulator, code signing, an archive,
   TestFlight, VoiceOver on device, or a physical-iPhone test.
+- Chromium proves the generic Startup Recovery v1 alert/focus/reload and
+  teardown ownership contract only. Native Keychain/integrity/connection
+  failure injection, same-journal retry, close-failure relaunch, VoiceOver, and
+  Dynamic Type remain unobserved.
+- Native plugin diagnostics and error logging have not been audited on device.
+  Do not claim that journal paths or technical failure details stay out of the
+  Xcode/device console until that dependency/runtime audit has recorded evidence.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

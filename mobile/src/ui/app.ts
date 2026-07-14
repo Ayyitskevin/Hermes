@@ -952,6 +952,8 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     closeSettings();
     bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
   });
+  render("dashboard", false);
+  bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
   document.addEventListener("keydown", (event) => {
     const welcome = root.querySelector<HTMLElement>(".onboarding");
     const settingsSheet = root.querySelector<HTMLElement>(".settings-sheet");
@@ -959,9 +961,6 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     else if (settings && !settings.hidden && settingsSheet) trapModalFocus(settingsSheet, event);
     if (event.key === "Escape" && settings && !settings.hidden) closeSettings();
   });
-
-  render("dashboard", false);
-  bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
   if (recoveredManualExecutions.length > 0) {
     const recoveredCount = recoveredManualExecutions.length;
     if (announcer) {

@@ -534,6 +534,7 @@ Connect discovery gates:
 | Proposed $9.99 price cannot fund maintenance | Treat it as an unapproved measured hypothesis; do not include recurring-cost features |
 | “Direct competitor” becomes a parity trap | Compete on the mobile review loop and trust; keep explicit non-goals |
 | WebView UI stops feeling native | Use native affordances and measure; platform rewrite requires a proven blocker |
+| Startup failure strands or silently replaces the journal | Semantic pre-JavaScript status; fail-closed teardown; one full-document retry only after confirmed close; never fall back or reset |
 | Import edge cases damage trust | Immutable provenance, preview, reconciliation, idempotency, rollback, broker fixtures |
 | Financial/App Store classification | Accurate journaling/analytics positioning, no advice/execution, legal and human submission review |
 | Sensitive financial data leaks | Local-first architecture, encryption, no financial telemetry, explicit export/deletion |
@@ -569,7 +570,13 @@ outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Recovery Continuity adds
 browser composition and stale-selection evidence across existing C-B/Daily
-Journal boundaries without changing their versioned contracts. Native restore
+Journal boundaries without changing their versioned contracts. Startup
+Recovery v1 adds a semantic opening/failure path, application teardown before
+full-document retry, privacy-safe rendered copy, and deterministic Chromium
+accessibility evidence. The Linux CI handoff now verifies the ignored iOS
+public copy byte-for-byte and validates selected generated-registration fields
+while explicitly leaving all native rows NOT RUN. Neither reliability milestone changes a schema,
+migration, formula, archive, or financial definition. Native restore
 acceptance on
 a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device
 acceptance, verified Delete All Data, the remaining reports, and later

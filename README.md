@@ -65,6 +65,12 @@ submission-ready product:
 - Vite, TypeScript, Capacitor 8, and an iPhone-only CocoaPods iOS project.
 - Original journal-first navigation with an empty private journal by default;
   the fictional demo is an explicit, isolated choice.
+- A semantic pre-JavaScript opening surface and fail-closed Startup Recovery v1.
+  If application creation or the first journal read fails, Hermes confirms
+  factory cleanup or closes the constructed application before offering one
+  guarded full-document retry. It never opens browser/demo storage as a native
+  fallback, never renders raw plugin/database detail, and withholds retry when
+  teardown cannot be confirmed.
 - Versioned STRICT SQLite migrations for immutable import provenance, execution
   versions, current heads, FIFO projections, fees, receipts, rollbacks, and
   durable manual-submission reconciliation.
@@ -143,10 +149,19 @@ submission-ready product:
   reset the ephemeral state.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
-- CI for locked dependencies, types, unit tests, browser flows, production build,
-  native sync, and the legacy Python safety suite.
+- CI for locked dependencies, types, unit tests, browser flows, production
+  build, byte-identical Linux-to-iOS-shell public-copy evidence, generated-config
+  contract validation, and the legacy Python safety suite. Its Actions summary
+  keeps CocoaPods, Xcode, Simulator,
+  iPhone, SQLCipher/Keychain lifecycle, VoiceOver, and Dynamic Type at
+  NOT RUN until a recorded Mac/device handoff proves them.
 
-Linux tests exercise the real schema/repository through SQL.js. Native
+Linux tests exercise the real schema/repository through SQL.js. The
+verify:ios-sync command independently hashes every production bundle file,
+matches it against the ignored Capacitor public directory, validates the
+generated local-only identity/SQLite registration, and proves tracked
+native/lockfile cleanliness. That is bundle-handoff evidence, not a CocoaPods
+resolution, native compile, or plugin-runtime result. Native
 encryption, Keychain recovery behavior, CocoaPods resolution, kill/relaunch,
 device backup behavior, native export/restore Files handoff, force-quit/
 response-loss recovery, low-storage, and near-limit memory behavior still
@@ -172,15 +187,22 @@ Node 22.12 or newer is required.
 cd mobile
 npm ci
 npm run typecheck
+npm run test:boundary
 npm test
+npm run test:ios-sync
 npm run test:e2e
-npm run ios:sync
+npm run ios:copy
+npm run verify:ios-sync
 ```
 
 The TypeScript bundle and native container can be generated on Linux. Xcode,
 Simulator, physical-device, signing, TestFlight, and App Store verification
 require macOS. The first Mac setup must run `pod install` in `mobile/ios/App`
-and commit the resulting lockfile, workspace, and reviewed project changes.
+through the later `ios:sync` native-update phase and commit the resulting
+lockfile, workspace, and reviewed project changes.
+verify:ios-sync must print PASS only for the bundle, byte-identical copy,
+selected generated-config registration contract, and tracked-drift rows; every
+Mac/device row remains NOT RUN on Linux.
 
 ## Architecture
 

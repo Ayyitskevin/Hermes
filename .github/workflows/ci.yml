@@ -32,7 +32,7 @@ jobs:
         run: pytest -v
 
   mobile:
-    name: Mobile Linux gate
+    name: Mobile Linux contract gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -53,14 +53,15 @@ jobs:
         run: npm run test:boundary
       - name: Unit tests
         run: npm test
+      - name: Unit-test the iOS sync evidence verifier
+        run: npm run test:ios-sync
       - name: Install mobile browser
         run: npx playwright install --with-deps chromium
       - name: Build and run mobile UI smoke
         run: npm run test:e2e
-      - name: Verify the iOS project can receive the bundle
-        run: npm run ios:sync
+      - name: Build and copy the bundle into the iOS shell (Linux; no native build)
+        run: npm run ios:copy
+      - name: Verify and report the Linux-to-Mac iOS handoff
+        run: npm run verify:ios-sync
       - name: Audit production dependencies
         run: npm audit --omit=dev
-      - name: Verify native sync produced no tracked drift
-        working-directory: .
-        run: git diff --exit-code --

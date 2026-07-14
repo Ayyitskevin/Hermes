@@ -14,7 +14,15 @@
     <title>Hermes Journal</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app" data-startup-state="opening" aria-busy="true">
+      <main class="startup-screen" data-startup-view="opening" aria-labelledby="startup-title">
+        <section class="card startup-card">
+          <p class="eyebrow">PRIVATE LOCAL JOURNAL</p>
+          <h1 id="startup-title">Opening Hermes Journal</h1>
+          <p id="startup-status" class="startup-status" role="status" aria-live="polite" aria-atomic="true">Checking local journal storage and journal integrity.</p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

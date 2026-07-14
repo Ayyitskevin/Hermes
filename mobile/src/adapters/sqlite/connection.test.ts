@@ -4,6 +4,7 @@ import type { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import {
   CapacitorSqlDatabase,
   NativeJournalDatabaseFactory,
+  NativeJournalOpenCleanupError,
   generateEncryptionPassphrase,
   type NativeJournalDatabaseOptions,
 } from "./connection";
@@ -337,6 +338,87 @@ describe("Capacitor SQLite connection adapter", () => {
 
     await expect(factory.open()).rejects.toThrow(/SQLCipher's integrity check/);
     expect(nativeDatabase.close).toHaveBeenCalledOnce();
+    expect(sqlite.closeConnection).toHaveBeenCalledWith("hermes-journal", false);
+  });
+
+  it("marks native startup cleanup uncertain and attempts every close path", async () => {
+    const databaseCloseFailure = new Error("native database close failed");
+    const connectionCloseFailure = new Error("connection registry close failed");
+    const nativeDatabase = {
+      open: vi.fn(async () => undefined),
+      execute: vi.fn(async () => ({ changes: { changes: 0 } })),
+      query: vi.fn(async (statement: string) => {
+        if (statement === "PRAGMA foreign_keys;") return { values: [{ foreign_keys: 1 }] };
+        if (statement === "PRAGMA quick_check;") return { values: [{ quick_check: "damaged" }] };
+        throw new Error(`Unexpected native query: ${statement}`);
+      }),
+      isDBOpen: vi.fn(async () => ({ result: true })),
+      close: vi.fn(async () => { throw databaseCloseFailure; }),
+    };
+    const database = nativeDatabase as unknown as SQLiteDBConnection;
+    const sqlite = {
+      isInConfigEncryption: vi.fn(async () => ({ result: true })),
+      isSecretStored: vi.fn(async () => ({ result: true })),
+      isDatabase: vi.fn(async () => ({ result: true })),
+      setEncryptionSecret: vi.fn(),
+      addUpgradeStatement: vi.fn(async () => undefined),
+      checkConnectionsConsistency: vi.fn(async () => ({ result: false })),
+      isConnection: vi.fn(async () => ({ result: true })),
+      retrieveConnection: vi.fn(),
+      createConnection: vi.fn(async () => database),
+      isDatabaseEncrypted: vi.fn(async () => ({ result: true })),
+      closeConnection: vi.fn(async () => { throw connectionCloseFailure; }),
+    } as unknown as NonNullable<NativeJournalDatabaseOptions["sqlite"]>;
+    const factory = new NativeJournalDatabaseFactory({
+      version: 1,
+      upgrades: [],
+      sqlite,
+      platform: () => "ios",
+    });
+
+    const failure = await factory.open().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(NativeJournalOpenCleanupError);
+    expect((failure as NativeJournalOpenCleanupError).errors).toEqual([
+      expect.objectContaining({ message: expect.stringMatching(/integrity check/) }),
+      databaseCloseFailure,
+      connectionCloseFailure,
+    ]);
+    expect(nativeDatabase.close).toHaveBeenCalledOnce();
+    expect(sqlite.closeConnection).toHaveBeenCalledWith("hermes-journal", false);
+  });
+
+  it("checks registry cleanup when native connection acquisition rejects", async () => {
+    const acquisitionFailure = new Error("native create response was lost");
+    const connectionCloseFailure = new Error("registry cleanup failed");
+    const sqlite = {
+      isInConfigEncryption: vi.fn(async () => ({ result: true })),
+      isSecretStored: vi.fn(async () => ({ result: true })),
+      isDatabase: vi.fn(async () => ({ result: true })),
+      setEncryptionSecret: vi.fn(),
+      addUpgradeStatement: vi.fn(async () => undefined),
+      checkConnectionsConsistency: vi.fn(async () => ({ result: false })),
+      isConnection: vi.fn(async () => ({ result: true })),
+      retrieveConnection: vi.fn(),
+      createConnection: vi.fn(async () => { throw acquisitionFailure; }),
+      isDatabaseEncrypted: vi.fn(async () => ({ result: true })),
+      closeConnection: vi.fn(async () => { throw connectionCloseFailure; }),
+    } as unknown as NonNullable<NativeJournalDatabaseOptions["sqlite"]>;
+    const factory = new NativeJournalDatabaseFactory({
+      version: 1,
+      upgrades: [],
+      sqlite,
+      platform: () => "ios",
+    });
+
+    const failure = await factory.open().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(NativeJournalOpenCleanupError);
+    expect((failure as NativeJournalOpenCleanupError).errors).toEqual([
+      acquisitionFailure,
+      connectionCloseFailure,
+    ]);
+    expect(sqlite.isConnection).toHaveBeenCalledWith("hermes-journal", false);
     expect(sqlite.closeConnection).toHaveBeenCalledWith("hermes-journal", false);
   });
 });

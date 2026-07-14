@@ -142,6 +142,11 @@ Delivered:
 - Dashboard, Trades, Journal, Reports, and More navigation.
 - Three-step journal onboarding with the empty private journal as the primary
   choice and persistent, explicit fictional-demo provenance.
+- A semantic opening surface plus fail-closed Startup Recovery v1. A failed
+  initial open never falls back to demo/browser storage; factory cleanup is
+  confirmed or a constructed application is closed before one guarded
+  full-document retry is offered, and an unconfirmed teardown requires a full
+  app close/reopen.
 - Eight coherent fictional trades with P&L/R/win-rate/profit-factor/expectancy
   derived from the same records.
 - Working trade search and position-size planning tool.
@@ -149,7 +154,11 @@ Delivered:
   reduced motion, and 200% short-landscape browser coverage.
 - Production CSP blocking all network connections in the demo.
 - Linux CI for locked install, TypeScript, unit tests, browser flows, bundle
-  build, Capacitor sync, and the legacy Python safety suite.
+  build, byte-identical Capacitor public-copy verification, selected generated-
+  config contract validation, explicit tracked native/lockfile drift, and the
+  legacy Python safety suite. Its job summary reports CocoaPods, Xcode,
+  Simulator, iPhone, SQLCipher/Keychain lifecycle, VoiceOver, and Dynamic Type
+  as NOT RUN.
 
 Not delivered in Phase 0: durable financial records, manual entry, CSV file
 selection, native device/Xcode evidence, final branding, or App Store metadata.
@@ -285,6 +294,10 @@ Still required in Phase 1:
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
+- Inject native factory-open, initial-ledger-read, and teardown failures. Verify
+  VoiceOver announces the startup recovery surface, no replacement/fallback
+  journal opens, clean retry reopens the same data, and unconfirmed teardown
+  requires a full app relaunch at 320 CSS pixels and 200% Dynamic Type.
 - Deepen the delivered Trades review detail and scope with saved presets,
   optional persistent/report scope, fuller account management,
   dynamic tag/mistake/emotion facets, vocabulary/playbook management, and the
@@ -368,7 +381,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 
 Durable trade/day annotations, Trade Browser Scope v1, matching-runtime local
 restore, and the governed evidence-linked Plan Check and Setup Breakdown
-increments are implemented.
+increments are implemented. Startup Recovery v1 and the Linux-to-Mac evidence
+boundary harden application initialization and CI handoff without changing a
+schema, migration, financial definition, or native readiness claim.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,

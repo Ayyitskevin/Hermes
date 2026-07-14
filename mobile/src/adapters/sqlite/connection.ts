@@ -205,6 +205,16 @@ export interface NativeJournalDatabaseOptions {
   readonly platform?: () => string;
 }
 
+export class NativeJournalOpenCleanupError extends AggregateError {
+  constructor(openFailure: unknown, cleanupFailures: readonly unknown[]) {
+    super(
+      [openFailure, ...cleanupFailures],
+      "Hermes could not confirm that the native journal connection closed after startup failed.",
+    );
+    this.name = "NativeJournalOpenCleanupError";
+  }
+}
+
 export class NativeJournalDatabaseFactory implements JournalDatabaseFactory {
   private readonly databaseName: string;
   private readonly sqlite: NonNullable<NativeJournalDatabaseOptions["sqlite"]>;
@@ -232,19 +242,20 @@ export class NativeJournalDatabaseFactory implements JournalDatabaseFactory {
     }
 
     await this.sqlite.addUpgradeStatement(this.databaseName, [...this.options.upgrades]);
-    const consistent = (await this.sqlite.checkConnectionsConsistency()).result;
-    const exists = consistent && (await this.sqlite.isConnection(this.databaseName, false)).result;
-    const database = exists
-      ? await this.sqlite.retrieveConnection(this.databaseName, false)
-      : await this.sqlite.createConnection(
-        this.databaseName,
-        true,
-        "secret",
-        this.options.version,
-        false,
-      );
-
+    let database: SQLiteDBConnection | null = null;
     try {
+      const consistent = (await this.sqlite.checkConnectionsConsistency()).result;
+      const exists = consistent
+        && (await this.sqlite.isConnection(this.databaseName, false)).result;
+      database = exists
+        ? await this.sqlite.retrieveConnection(this.databaseName, false)
+        : await this.sqlite.createConnection(
+          this.databaseName,
+          true,
+          "secret",
+          this.options.version,
+          false,
+        );
       await database.open();
       await database.execute("PRAGMA foreign_keys = ON;", false);
       const foreignKeys = await database.query("PRAGMA foreign_keys;");
@@ -270,13 +281,23 @@ export class NativeJournalDatabaseFactory implements JournalDatabaseFactory {
         () => this.sqlite.closeConnection(this.databaseName, false),
       );
     } catch (error) {
+      const cleanupFailures: unknown[] = [];
+      if (database !== null) {
+        try {
+          if ((await database.isDBOpen()).result) await database.close();
+        } catch (cleanupFailure) {
+          cleanupFailures.push(cleanupFailure);
+        }
+      }
       try {
-        if ((await database.isDBOpen()).result) await database.close();
         if ((await this.sqlite.isConnection(this.databaseName, false)).result) {
           await this.sqlite.closeConnection(this.databaseName, false);
         }
-      } catch {
-        // Preserve the initialization failure; the next launch rechecks consistency.
+      } catch (cleanupFailure) {
+        cleanupFailures.push(cleanupFailure);
+      }
+      if (cleanupFailures.length > 0) {
+        throw new NativeJournalOpenCleanupError(error, cleanupFailures);
       }
       throw error;
     }

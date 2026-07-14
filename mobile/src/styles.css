@@ -59,6 +59,32 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom));
 }
 
+.startup-screen {
+  width: 100%;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  display: grid;
+  align-items: center;
+}
+
+.startup-card {
+  width: min(100%, 32rem);
+  min-width: 0;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.startup-card h1,
+.startup-card p { margin: 0; }
+.startup-status,
+.startup-guidance { color: var(--muted); }
+.startup-error { color: var(--negative); }
+.startup-card .primary-button { width: 100%; }
+#startup-error-title:focus-visible { outline: 2px solid var(--cyan); outline-offset: .3rem; }
+
 .topbar {
   min-height: calc(4.4rem + env(safe-area-inset-top));
   padding: calc(.75rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) .7rem max(1rem, env(safe-area-inset-left));
