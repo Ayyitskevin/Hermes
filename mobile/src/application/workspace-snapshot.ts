@@ -46,6 +46,7 @@ export const EMPTY_WORKSPACE: JournalWorkspaceSnapshot = Object.freeze({
   currencyCode: "USD",
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   accountLabel: "No account",
+  accountOptions: Object.freeze([]),
   periodLabel: "No trades yet",
   performance: Object.freeze(calculatePerformance([])),
   importSummary: EMPTY_IMPORT_SUMMARY,
@@ -430,6 +431,7 @@ function mapTrade(
     preview: {
       id: tradeSubjectId,
       tradeSubjectId,
+      accountId: account.id,
       symbol: instrument.symbol,
       assetClass: instrument.assetClass,
       side: trade.direction === "LONG" ? "long" : "short",
@@ -878,6 +880,22 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     : activeAccounts.length > 1
       ? `${activeAccounts.length} accounts`
       : ledger.accounts[0]?.name ?? workspace.name;
+  const tradeCountByAccount = new Map<string, number>();
+  for (const trade of previews) {
+    tradeCountByAccount.set(
+      trade.accountId,
+      (tradeCountByAccount.get(trade.accountId) ?? 0) + 1,
+    );
+  }
+  const accountOptions = ledger.accounts
+    .map((account) => ({
+      id: account.id,
+      label: account.name,
+      tradeCount: tradeCountByAccount.get(account.id) ?? 0,
+    }))
+    .sort((left, right) => (
+      stableCompare(left.label, right.label) || stableCompare(left.id, right.id)
+    ));
 
   return {
     provenance: "local",
@@ -885,6 +903,7 @@ export function workspaceSnapshotFromLedger(ledger: JournalLedgerSnapshot): Jour
     currencyCode: workspace.defaultCurrency,
     timeZone: workspace.timeZone,
     accountLabel,
+    accountOptions,
     periodLabel: periodLabel(executionDays),
     performance: exactPerformance(mappedTrades, workspaceNetPnlExact),
     importSummary: history[0] === undefined ? EMPTY_IMPORT_SUMMARY : withoutWarnings(history[0]),

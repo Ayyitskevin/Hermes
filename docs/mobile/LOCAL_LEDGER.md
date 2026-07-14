@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + local restore · 2026-07-13
+Status: implemented execution + versioned trade/day review + derived trade-browser scope + local restore · 2026-07-14
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -198,6 +198,31 @@ projection. The digest includes each active execution ID and exact immutable
 version ID, so rollback and restoration cannot masquerade as the same head set
 even when their normalized P&L output is identical.
 
+## Derived trade-browser scope
+
+Trade Browser Scope v1 adds no second source of truth. Account options and the
+account label on every trade preview derive from retained ledger accounts and
+their stable IDs; labels are display text and are never filter identity.
+Account/date filtering consumes only the current deterministic trade previews
+and exact calendar contributions.
+
+Dates are optional inclusive workspace-local allocation/activity dates. They
+are not generic trade, opening, or closing dates. A multi-day trade belongs to
+each scoped day with a contribution and appears once in range evidence with its
+exact contributions reaggregated as canonical decimal strings. Zero-P&L
+allocations remain activity. An optional selected day intersects the retained
+account/range; a stale day fails closed before the UI explicitly clears that
+refinement. Search is normalized and bounded card visibility only and never
+changes exact P&L, trade, allocation, or activity-day totals.
+
+Scope state is session-only: it is not stored in SQLite, browser journal state,
+exports, restores, or report archives. It survives internal navigation and
+valid ledger refreshes, resets on local/demo mode changes or reload, and affects
+Trades plus the Dashboard calendar only. Dashboard headline metrics, equity,
+review progress, Plan Check, and Setup Breakdown continue to consume the full
+workspace snapshot. This slice changes no schema, migration, store, archive,
+or governed report definition/version.
+
 ## Rollback
 
 Receipt rollback requires an explicit user confirmation. For every execution
@@ -358,7 +383,12 @@ dates/version chains, submission idempotency, optimistic conflicts, atomic
 session/SQLite commits, lost-response reconciliation, v3→v4 migration,
 content-bound native/browser restore validation, trading/no-trade display,
 explicit draft/completed saves, demo isolation, focus/busy/error behavior, and
-320px/200% browser reflow. Native Files selection, lifecycle/interruption,
+320px/200% browser reflow. Trade Browser coverage adds stable same-symbol
+multi-account identity, inclusive multi-day/leap/zero-P&L scope, fractional
+exact sums and counts, stale-day fail-closed handling, tampered-evidence
+rejection, report isolation, session retention/reset, real activity-month
+navigation, invalid-range recovery, focus visibility, and 320px/200% reflow.
+Native Files selection, lifecycle/interruption,
 Daily Journal relaunch and migration, low-storage, near-limit memory, VoiceOver,
 and physical-device SQLCipher behavior remain unverified.
 

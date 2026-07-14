@@ -28,6 +28,7 @@ test("calendar day opens reconciled trade evidence and clears without losing rev
 
   const filterHeading = page.getByRole("heading", { name: "Wednesday, July 1, 2026" });
   await expect(filterHeading).toBeFocused();
+  await expect(filterHeading).toBeInViewport();
   await expect(page.getByRole("button", { name: "Trades", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
@@ -54,7 +55,7 @@ test("calendar day opens reconciled trade evidence and clears without losing rev
     msftCard.locator('[data-calendar-trade-contribution][data-calendar-day-pnl-exact="-100"]'),
   ).toContainText("-$100.00");
 
-  const search = page.getByRole("searchbox", { name: "Search Jul 1 trades" });
+  const search = page.getByRole("searchbox", { name: "Search Jul 1 scoped trades" });
   await search.fill("MSFT");
   await expect(page.getByRole("status")).toHaveText("Showing 1 of 2 trades");
   await expect(page.locator(".trade-card:visible")).toHaveCount(1);
@@ -67,17 +68,22 @@ test("calendar day opens reconciled trade evidence and clears without losing rev
   await page.getByRole("button", { name: "Close trade review" }).click();
 
   await page.getByRole("button", { name: "Clear day filter" }).click();
-  await expect(page.getByRole("searchbox", { name: "Search trades" })).toBeFocused();
+  const restoredSearch = page.getByRole("searchbox", { name: "Search scoped trades" });
+  await expect(restoredSearch).toBeFocused();
+  await expect(restoredSearch).toBeInViewport();
   await expect(page.locator(".trade-card")).toHaveCount(8);
   await expect(page.getByRole("status")).toHaveText("Showing 8 trades");
   await expect(page.locator("#route-announcer")).toHaveText(
-    "Calendar day filter cleared. Showing 8 trades.",
+    "Calendar day filter cleared. Retained scope contains 8 trades.",
   );
 
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await jul1.click();
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Trades", exact: true }).click();
+  await expect(page.locator(".trade-card")).toHaveCount(2);
+  await expect(page.locator("[data-calendar-day-filter]")).toBeVisible();
+  await page.getByRole("button", { name: "Clear day filter" }).click();
   await expect(page.locator(".trade-card")).toHaveCount(8);
   expect(externalRequests).toEqual([]);
 });
@@ -89,13 +95,15 @@ test("calendar drill-down reflows at 320px with 200% text and keeps touch target
     document.documentElement.dataset.testTextScale = "200";
   });
   await page.getByRole("button", { name: /Open Wednesday, July 1, 2026/ }).click();
-  await expect(page.getByRole("heading", { name: "Wednesday, July 1, 2026" })).toBeVisible();
+  const scaledHeading = page.getByRole("heading", { name: "Wednesday, July 1, 2026" });
+  await expect(scaledHeading).toBeFocused();
+  await expect(scaledHeading).toBeInViewport();
 
   const horizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(horizontalOverflow).toBeLessThanOrEqual(1);
-  for (const control of await page.locator("button:visible, input:visible").all()) {
+  for (const control of await page.locator("button:visible, input:visible, select:visible").all()) {
     const box = await control.boundingBox();
     expect(box, "visible control should have a layout box").not.toBeNull();
     expect(box?.width ?? 0, "control width").toBeGreaterThanOrEqual(44);

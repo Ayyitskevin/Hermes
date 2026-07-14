@@ -9,6 +9,10 @@ import type {
   JournalWorkspaceSnapshot,
   TradePreview,
 } from "../core/types";
+import {
+  buildTradeBrowser,
+  type TradeBrowserResult,
+} from "../application/trade-browser";
 
 export interface SelectedCalendarDay {
   readonly session: CalendarSession;
@@ -163,31 +167,41 @@ export function calendarDayAnnouncement(
   return `Trades for ${calendarFullDate(session.isoDate)}. ${countNoun(session.tradeCount, "contributing trade")}, ${countNoun(session.allocationCount, "allocation")}, ${signedCurrency(session.pnl, currency)} allocation-day P&L.`;
 }
 
-export function calendarDaySection(snapshot: JournalWorkspaceSnapshot): string {
-  const days = snapshot.calendar.map((session) => {
+export function calendarDaySection(
+  snapshot: JournalWorkspaceSnapshot,
+  browser: TradeBrowserResult = buildTradeBrowser(snapshot),
+): string {
+  const days = browser.calendar.sessions.map((session) => {
     validateCalendarSession(session);
     const money = signedCurrency(session.pnl, snapshot.currencyCode);
     const label = `Open ${calendarFullDate(session.isoDate)}: ${money} allocation-day P&L from ${countNoun(session.tradeCount, "contributing trade")}`;
-    return `<button class="calendar-day ${resultClass(session.pnl)}" type="button" data-calendar-day="${escapeHtml(session.isoDate)}" aria-label="${escapeHtml(label)}">
+    const selected = browser.state.selectedDay === session.isoDate;
+    return `<button class="calendar-day ${resultClass(session.pnl)}" type="button" data-calendar-day="${escapeHtml(session.isoDate)}" aria-label="${escapeHtml(label)}" aria-pressed="${selected}">
       <span>${escapeHtml(session.dayLabel)}</span><strong>${escapeHtml(session.dateLabel)}</strong><small>${escapeHtml(money)} · ${countNoun(session.tradeCount, "trade")}</small>
     </button>`;
   }).join("");
   return `<section aria-labelledby="calendar-title" data-calendar-day-section>
-    <div class="section-title"><h2 id="calendar-title">Trading days</h2><span>${snapshot.provenance === "demo" ? "Demo journal" : "Local journal"}</span></div>
-    <div class="calendar-grid">${days || "<p>No trading days yet.</p>"}</div>
+    <div class="section-title"><h2 id="calendar-title">Trading activity</h2><span>${countNoun(browser.calendar.scopedSessionCount, "scoped day")}</span></div>
+    <p class="scope-boundary">Trade browser scope: ${escapeHtml(browser.scopeLabel)}. Account/date filters change this calendar and Trades only; Dashboard totals and governed Reports remain whole-workspace.</p>
+    <div class="calendar-month-nav" role="group" aria-label="Activity month">
+      <button class="icon-button" type="button" data-calendar-month="${escapeHtml(browser.calendar.previousMonth ?? "")}" aria-label="Previous activity month" ${browser.calendar.previousMonth === null ? "disabled" : ""}>←</button>
+      <h3 id="calendar-month-title" tabindex="-1">${escapeHtml(browser.calendar.monthLabel)}</h3>
+      <button class="icon-button" type="button" data-calendar-month="${escapeHtml(browser.calendar.nextMonth ?? "")}" aria-label="Next activity month" ${browser.calendar.nextMonth === null ? "disabled" : ""}>→</button>
+    </div>
+    <div class="calendar-grid">${days || "<p>No trading activity matches this scope.</p>"}</div>
   </section>`;
 }
 
 export function calendarDayFilterCard(
   session: CalendarSession,
   currency: string,
-  accountLabel: string,
+  scopeLabel: string,
 ): string {
   validateCalendarSession(session);
   const fullDate = calendarFullDate(session.isoDate);
   return `<article class="card calendar-day-filter" aria-labelledby="calendar-day-filter-title" data-calendar-day-filter="${escapeHtml(session.isoDate)}">
     <div class="section-title"><div><p class="card-label">CALENDAR DAY</p><h2 id="calendar-day-filter-title" tabindex="-1">${escapeHtml(fullDate)}</h2></div><strong class="${resultClass(session.pnl)}">${escapeHtml(signedCurrency(session.pnl, currency))}</strong></div>
-    <p>${countNoun(session.tradeCount, "contributing trade")} · ${countNoun(session.allocationCount, "allocation")} · Workspace scope: ${escapeHtml(accountLabel)}. The day total and contribution labels use allocation-day P&amp;L; each card's main result remains the whole trade's realized-to-date result.</p>
+    <p>${countNoun(session.tradeCount, "contributing trade")} · ${countNoun(session.allocationCount, "allocation")} · Trade browser scope: ${escapeHtml(scopeLabel)}. The day total and contribution labels use allocation-day P&amp;L; each card's main result remains the whole trade's realized-to-date result.</p>
     <button class="secondary-button" type="button" data-calendar-day-clear>Clear day filter</button>
   </article>`;
 }

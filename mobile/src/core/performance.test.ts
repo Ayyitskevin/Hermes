@@ -28,6 +28,7 @@ function trade(options: TradeOverrides = {}): TradePreview {
     initialRisk = { amount: "100", currency: "USD" },
     fullEntryNotional = "100",
     metricIsPartial = false,
+    accountId = "account-primary",
     ...overrides
   } = options;
   const metrics = deriveTradeMetricsV1({
@@ -43,6 +44,7 @@ function trade(options: TradeOverrides = {}): TradePreview {
   return {
     id: "trade-1",
     tradeSubjectId: "subject-1",
+    accountId,
     reviewId: "review-1",
     symbol: "TEST",
     assetClass: "stock",

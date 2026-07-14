@@ -236,6 +236,35 @@ p { line-height: 1.55; }
 .calendar-day small { min-width: 0; overflow-wrap: anywhere; }
 .calendar-day:hover { border-color: rgb(92 225 230 / 48%); }
 .calendar-day:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.calendar-day[aria-pressed="true"] {
+  border-color: var(--cyan);
+  background: rgb(92 225 230 / 12%);
+  box-shadow: inset 0 0 0 2px rgb(92 225 230 / 32%);
+}
+
+.scope-boundary {
+  margin: .5rem 0 0;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.calendar-month-nav {
+  margin-top: .7rem;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: .65rem;
+  align-items: center;
+}
+
+.calendar-month-nav h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.calendar-month-nav .icon-button { width: 48px; min-height: 48px; }
 
 .calendar-day-filter {
   display: grid;
@@ -333,8 +362,43 @@ p { line-height: 1.55; }
 
 .trade-card-heading h2 { margin-top: .45rem; font-size: 1.35rem; }
 .trade-card-heading p { margin: .2rem 0 0; color: var(--muted); font-size: .78rem; }
+.trade-card-heading .trade-account { color: var(--cyan); }
 .journal-metrics { display: grid; gap: .3rem; text-align: right; font-family: "B612 Mono", monospace; }
 .journal-metrics span { color: var(--muted); font-size: .76rem; }
+.trade-scope-form,
+.trade-scope-summary { display: grid; gap: .85rem; }
+.trade-scope-form h2,
+.trade-scope-form p,
+.trade-scope-summary p { margin: 0; }
+.trade-scope-form > div:first-child > p:last-child { margin-top: .4rem; color: var(--muted); }
+.trade-scope-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  gap: .75rem;
+}
+.trade-scope-fields > label,
+.trade-scope-fields input,
+.trade-scope-fields select {
+  min-width: 0;
+  max-width: 100%;
+}
+.trade-scope-summary { border-color: rgb(92 225 230 / 28%); }
+.trade-scope-summary .section-title { align-items: start; }
+.trade-scope-summary .section-title > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--cyan);
+  font: 700 1.15rem/1.2 "B612 Mono", monospace;
+}
+.trade-scope-summary .section-title > strong.positive { color: var(--positive); }
+.trade-scope-summary .section-title > strong.negative { color: var(--negative); }
+.trade-scope-summary:focus-visible,
+#calendar-month-title:focus-visible,
+#calendar-day-filter-title:focus-visible,
+.form-error[tabindex="-1"]:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
 .execution-grid {
   margin: 0;
   padding: .75rem 0;
@@ -629,6 +693,7 @@ form { display: grid; gap: 1rem; }
 label { display: grid; gap: .35rem; color: var(--muted); font-size: .78rem; }
 input, select, textarea {
   width: 100%;
+  min-width: 0;
   min-height: 48px;
   padding: .65rem .7rem;
   border: 1px solid var(--line);
@@ -856,7 +921,9 @@ input[type="file"]::file-selector-button {
   .trade-review-sheet .quick-actions,
   .daily-journal-sheet .field-grid,
   .daily-journal-sheet .quick-actions,
-  .daily-journal-intro { grid-template-columns: minmax(0, 1fr); }
+  .daily-journal-intro,
+  .trade-scope-fields,
+  .trade-scope-form .quick-actions { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row { grid-template-columns: minmax(0, 1fr); }
   .review-rule-row label:first-child { grid-column: 1; }
   .review-execution-row { grid-template-columns: 1fr; }

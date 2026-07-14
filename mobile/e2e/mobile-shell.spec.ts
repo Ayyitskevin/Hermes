@@ -77,14 +77,14 @@ test("journal navigation, search, sizing, settings, and touch targets work", asy
   }
 
   await page.getByRole("button", { name: "Trades", exact: true }).click();
-  const search = page.getByPlaceholder("Search symbol, setup, or tag");
+  const search = page.getByRole("searchbox", { name: "Search scoped trades" });
   await search.fill("Chased entry");
   await expect(page.getByRole("status")).toHaveText("Showing 1 of 8 trades");
   await expect(page.locator(".trade-card:visible")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "SPY", exact: true })).toBeVisible();
   await search.fill("not-a-trade");
   await expect(page.locator(".trade-card:visible")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "No trades match" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No trades match this search" })).toBeVisible();
   await search.fill("");
   await expect(page.locator(".trade-card:visible")).toHaveCount(8);
 

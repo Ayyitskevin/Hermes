@@ -737,6 +737,14 @@ describe("journal workspace snapshot", () => {
     }));
 
     expect(snapshot.accountLabel).toBe("2 accounts");
+    expect(snapshot.accountOptions).toEqual([
+      { id: "account-1", label: "Primary", tradeCount: 1 },
+      { id: "account-2", label: "Secondary", tradeCount: 1 },
+    ]);
+    expect(snapshot.trades.map((candidate) => candidate.accountId)).toEqual([
+      "account-1",
+      "account-2",
+    ]);
     expect(snapshot.trades.map((candidate) => candidate.accountLabel)).toEqual(["Primary", "Secondary"]);
     expect(snapshot.calendar).toEqual([expect.objectContaining({
       pnlExact: "0",

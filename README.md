@@ -102,7 +102,8 @@ submission-ready product:
   67,108,864-byte UTF-8 limit.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
-- A clearly labeled, fully offline demo journal with eight fictional trades.
+- A clearly labeled, fully offline demo journal with eight fictional trades
+  split across two fictional accounts.
 - Headline currency P&L, win rate, profit factor, versioned percent return, and
   risk-backed R derived from real ledger records; unavailable denominators fail
   visibly instead of producing an invented metric.
@@ -117,11 +118,15 @@ submission-ready product:
   setup-name code-unit order rather than performance rank, and progressively
   renders pages of five setup groups and 25 contributors per group without
   claiming causation, prediction, or advice.
-- Dashboard trading days open a transient Trades evidence view. Each
-  workspace-local allocation day reconciles exact P&L and allocation counts to
-  durable trade subjects, while separately labeling the day contribution and
-  each card's whole-trade realized-to-date result. The view spans the current
-  whole workspace; it is not account selection or reusable date/range filtering.
+- Trade Browser Scope v1 uses stable account IDs plus optional inclusive
+  workspace-local allocation/activity dates to derive exact scoped P&L, trade,
+  allocation, and activity-day evidence. Dashboard month navigation visits
+  months with scoped activity; selecting a day refines the retained
+  account/range, and clearing the day restores it. Every card shows its account
+  and keeps whole-trade realized-to-date P&L separate from scoped allocation
+  contribution. Search changes card visibility only. Scope is session-only and
+  affects Trades plus the Dashboard calendar; headline metrics, equity, review
+  progress, Plan Check, and Setup Breakdown remain whole-workspace.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production build,
@@ -137,9 +142,9 @@ catalog v1 is empty, archives containing attachments are rejected, and native
 lifecycle behavior remains unverified. The current build deliberately rejects
 older browser payloads and pre-v4 native table sets; a pre-release legacy file
 must first be restored by its exact old runtime, then opened/migrated and
-exported again with the current build. Attachments, Delete All Data, account
-selection, reusable trade/date-range filters, broader calendar navigation, and
-the remaining report families remain Phase 1 work. Native v3→v4 migration,
+exported again with the current build. Attachments, Delete All Data, saved scope
+presets, persistent/report scoping, full account management, and the remaining
+report families remain Phase 1 work. Native v3→v4 migration,
 Daily Journal relaunch/export/restore, VoiceOver, and small-screen behavior
 still require Mac/iPhone evidence.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and

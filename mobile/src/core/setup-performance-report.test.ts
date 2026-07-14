@@ -20,6 +20,7 @@ type TradeOptions = {
   readonly status?: TradePreview["status"];
   readonly reviewStatus?: TradePreview["reviewStatus"];
   readonly tradedOn?: string;
+  readonly accountId?: string;
   readonly accountLabel?: string;
   readonly symbol?: string;
   readonly side?: TradePreview["side"];
@@ -34,6 +35,7 @@ function trade({
   status = "closed",
   reviewStatus = "completed",
   tradedOn = "2026-07-01",
+  accountId = "account-primary",
   accountLabel = "Primary",
   symbol = id.toUpperCase(),
   side = "long",
@@ -50,6 +52,7 @@ function trade({
   return {
     id: `projection-${id}`,
     tradeSubjectId: `subject-${id}`,
+    accountId,
     symbol,
     assetClass: "stock",
     side,
@@ -97,6 +100,11 @@ function snapshot(
     currencyCode: "USD",
     timeZone: "America/New_York",
     accountLabel,
+    accountOptions: [{
+      id: "account-primary",
+      label: accountLabel,
+      tradeCount: trades.length,
+    }],
     periodLabel: "Jul 1–5, 2026",
     performance: {
       netPnl: 0,

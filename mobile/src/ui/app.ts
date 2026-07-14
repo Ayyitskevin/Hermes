@@ -1,15 +1,17 @@
 import { JournalApplication } from "../application/journal-application";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
+import {
+  buildTradeBrowser,
+  EMPTY_TRADE_BROWSER_STATE,
+  type TradeBrowserResult,
+  type TradeBrowserState,
+} from "../application/trade-browser";
 import { escapeHtml } from "../core/html";
 import { sizePosition, type PositionSide } from "../core/sizing";
 import type { JournalWorkspaceSnapshot, TabId, TradePreview } from "../core/types";
 import {
   calendarDayAnnouncement,
-  calendarDayFilterCard,
   calendarDaySection,
-  calendarTradeContributionCard,
-  selectCalendarDay,
-  type SelectedCalendarDay,
 } from "./calendar-day-view";
 import { bindImportForm, importTool } from "./import-tool";
 import {
@@ -33,6 +35,7 @@ import {
 } from "./reports-view";
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
+import { bindTradesView, tradesView } from "./trades-view";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -57,22 +60,9 @@ function signedCurrency(value: number | null, currency: string): string {
   }).format(value);
 }
 
-function currencyValue(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 6,
-  }).format(value);
-}
-
 function signedR(value: number | null, unavailable = "Open"): string {
   if (value === null) return unavailable;
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}R`;
-}
-
-function signedPercent(value: number | null, unavailable = "—"): string {
-  if (value === null) return unavailable;
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
 function resultClass(value: number | null): "positive" | "negative" | "" {
@@ -194,7 +184,10 @@ function emptyDashboardView(snapshot: JournalWorkspaceSnapshot): string {
   </section>`;
 }
 
-function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
+function dashboardView(
+  snapshot: JournalWorkspaceSnapshot,
+  browser: TradeBrowserResult,
+): string {
   if (snapshot.provenance === "empty") return emptyDashboardView(snapshot);
   const performance = snapshot.performance;
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
@@ -229,7 +222,7 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
       <div class="section-title"><div><p class="card-label">CUMULATIVE RESULT</p><h2>Performance trend</h2></div><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong></div>
       ${equityChart(snapshot)}
     </article>
-    ${calendarDaySection(snapshot)}
+    ${calendarDaySection(snapshot, browser)}
     ${planAdherenceDashboardCard(snapshot)}
     <div class="quick-actions" aria-label="Dashboard shortcuts">
       ${snapshot.provenance === "demo" ? "" : manualExecutionAction("Add execution")}
@@ -240,51 +233,6 @@ function dashboardView(snapshot: JournalWorkspaceSnapshot): string {
       <div class="section-title"><h2 id="recent-title">Recent trades</h2><span>${snapshot.provenance === "demo" ? "Fictional" : "On device"}</span></div>
       <div class="trade-list">${recentTrades.map((trade) => compactTradeRow(trade, snapshot.currencyCode)).join("")}</div>
     </section>
-  </section>`;
-}
-
-function tradeCard(trade: TradePreview, currency: string, dayContribution = ""): string {
-  const searchable = [trade.symbol, trade.side, trade.setup, trade.accountLabel, ...trade.tags].join(" ").toLowerCase();
-  const tone = resultClass(trade.resultPnl);
-  const interim = hasInterimPartialMetrics(trade) ? "Interim partial · " : "";
-  return `<article class="card trade-card" data-trade-search="${escapeHtml(searchable)}">
-    <div class="trade-card-heading">
-      <div><span class="status-chip">${escapeHtml(trade.side)}</span><span class="status-chip">${escapeHtml(trade.status)}</span><span class="status-chip review-${trade.reviewStatus}">${escapeHtml(trade.reviewStatus)}</span><h2>${escapeHtml(trade.symbol)}</h2><p>${escapeHtml(trade.setup)} · ${escapeHtml(trade.sessionLabel)}</p></div>
-      <div class="journal-metrics"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(interim)}${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))} · ${escapeHtml(signedPercent(trade.percentReturn, trade.status === "open" ? "Partial unavailable" : "—"))}</span></div>
-    </div>
-    ${dayContribution}
-    <dl class="execution-grid">
-      <div><dt>Quantity</dt><dd>${trade.quantity}</dd></div>
-      <div><dt>Average in</dt><dd>${escapeHtml(currencyValue(trade.averageEntry, currency))}</dd></div>
-      <div><dt>Average out</dt><dd>${trade.averageExit === null ? "Open" : escapeHtml(currencyValue(trade.averageExit, currency))}</dd></div>
-    </dl>
-    <p>${escapeHtml(trade.note)}</p>
-    <div class="tag-row">${trade.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
-    <div class="quick-actions">${reviewTradeAction(trade)}</div>
-  </article>`;
-}
-
-function tradesView(snapshot: JournalWorkspaceSnapshot, selectedCalendarDay: SelectedCalendarDay | null): string {
-  const total = selectedCalendarDay?.trades.length ?? snapshot.trades.length;
-  const scopeLabel = selectedCalendarDay === null
-    ? `${snapshot.provenance === "demo" ? "FICTIONAL" : "EXECUTION-DERIVED"} ${total === 1 ? "RECORD" : "RECORDS"}`
-    : `ALLOCATION-DAY ${total === 1 ? "CONTRIBUTOR" : "CONTRIBUTORS"}`;
-  const cards = selectedCalendarDay === null
-    ? [...snapshot.trades].reverse().map((trade) => tradeCard(trade, snapshot.currencyCode)).join("")
-    : selectedCalendarDay.trades.map(({ trade, contribution }) => tradeCard(
-      trade,
-      snapshot.currencyCode,
-      calendarTradeContributionCard(selectedCalendarDay.session, contribution, snapshot.currencyCode),
-    )).join("");
-  const searchLabel = selectedCalendarDay === null ? "Search trades" : `Search ${selectedCalendarDay.session.dateLabel} trades`;
-  return `<section class="screen-stack" aria-labelledby="trades-title">
-    <div class="screen-heading"><div><p class="eyebrow">${total} ${scopeLabel}</p><h1 id="trades-title">Trades</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
-    ${selectedCalendarDay === null ? "" : calendarDayFilterCard(selectedCalendarDay.session, snapshot.currencyCode, snapshot.accountLabel)}
-    ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
-    <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" placeholder="Search symbol, setup, or tag" autocomplete="off" /></label>
-    <p class="result-count" id="trade-count" role="status">Showing ${countNoun(total, "trade")}</p>
-    <div class="journal-list">${cards}</div>
-    <article class="empty-state" id="trade-empty" ${total === 0 ? "" : "hidden"}><h2>${snapshot.trades.length === 0 ? "No trades yet" : "No trades match"}</h2><p>${snapshot.trades.length === 0 ? "Add an execution or import a CSV to build your journal." : "Try another symbol, setup, side, or tag."}</p></article>
   </section>`;
 }
 
@@ -445,11 +393,11 @@ function viewFor(
   tab: TabId,
   snapshot: JournalWorkspaceSnapshot,
   persistence: JournalApplication["persistence"],
-  selectedCalendarDay: SelectedCalendarDay | null,
+  browser: TradeBrowserResult,
 ): string {
   switch (tab) {
-    case "dashboard": return dashboardView(snapshot);
-    case "trades": return tradesView(snapshot, selectedCalendarDay);
+    case "dashboard": return dashboardView(snapshot, browser);
+    case "trades": return tradesView(snapshot, browser);
     case "journal": return journalView(snapshot);
     case "reports": return reportsView(snapshot);
     case "more": return moreView(snapshot, persistence);
@@ -550,26 +498,6 @@ function bindSizingForm(root: HTMLElement): void {
       error.hidden = false;
       error.textContent = caught instanceof Error ? caught.message : "Check the plan inputs.";
     }
-  });
-}
-
-function bindTradeSearch(root: HTMLElement, total: number): void {
-  const input = root.querySelector<HTMLInputElement>("#trade-search");
-  const count = root.querySelector<HTMLElement>("#trade-count");
-  const empty = root.querySelector<HTMLElement>("#trade-empty");
-  if (!input || !count || !empty) return;
-  input.addEventListener("input", () => {
-    const query = input.value.trim().toLowerCase();
-    let visible = 0;
-    root.querySelectorAll<HTMLElement>("[data-trade-search]").forEach((card) => {
-      const matches = (card.dataset.tradeSearch ?? "").includes(query);
-      card.hidden = !matches;
-      if (matches) visible += 1;
-    });
-    count.textContent = query
-      ? `Showing ${visible} of ${countNoun(total, "trade")}`
-      : `Showing ${countNoun(total, "trade")}`;
-    empty.hidden = visible !== 0;
   });
 }
 
@@ -697,8 +625,22 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   const announcer = root.querySelector<HTMLElement>("#route-announcer");
   const settings = root.querySelector<HTMLElement>("#settings");
   let currentTab: TabId = "dashboard";
-  let selectedCalendarDate: string | null = null;
+  let tradeBrowserState: TradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
   let returnFocus: HTMLElement | null = null;
+  let pendingScopeNotice: string | null = null;
+
+  const queueScopeNotice = (notice: string) => {
+    pendingScopeNotice = pendingScopeNotice === null
+      ? notice
+      : `${pendingScopeNotice} ${notice}`;
+  };
+  const announceStatus = (message: string) => {
+    if (announcer === null) return;
+    announcer.textContent = pendingScopeNotice === null
+      ? message
+      : `${message} ${pendingScopeNotice}`;
+    pendingScopeNotice = null;
+  };
 
   const setBackgroundInert = (inert: boolean) => {
     document.body.classList.toggle("modal-open", inert);
@@ -752,18 +694,43 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   const render = (tab: TabId, announce = true) => {
     currentTab = tab;
     updateChrome();
-    const selectedCalendarDay = selectedCalendarDate === null ? null : selectCalendarDay(snapshot, selectedCalendarDate);
-    if (selectedCalendarDate !== null && selectedCalendarDay === null) {
-      selectedCalendarDate = null;
+    if (
+      tradeBrowserState.accountId !== null
+      && !snapshot.accountOptions.some((account) => account.id === tradeBrowserState.accountId)
+    ) {
+      tradeBrowserState = {
+        ...tradeBrowserState,
+        accountId: null,
+        selectedDay: null,
+        calendarMonth: null,
+      };
+      queueScopeNotice(
+        "The selected account is no longer available. Hermes reset the account and day filters while retaining the activity dates and search.",
+      );
     }
-    if (screen) screen.innerHTML = viewFor(tab, snapshot, application.persistence, selectedCalendarDay);
+    let browser = buildTradeBrowser(snapshot, tradeBrowserState);
+    if (browser.invalidatedSelectedDay !== null) {
+      const invalidatedDay = browser.invalidatedSelectedDay;
+      tradeBrowserState = {
+        ...browser.state,
+        selectedDay: null,
+      };
+      browser = buildTradeBrowser(snapshot, tradeBrowserState);
+      queueScopeNotice(
+        `The selected activity day ${invalidatedDay} is no longer available. Hermes retained the account and date scope and cleared only the day refinement.`,
+      );
+    }
+    tradeBrowserState = browser.state;
+    if (screen) screen.innerHTML = viewFor(tab, snapshot, application.persistence, browser);
     root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
       const active = button.dataset.tab === tab;
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
-    if (announce && announcer) announcer.textContent = `${TABS.find((item) => item.id === tab)?.label ?? "Screen"} screen`;
+    if (announce) {
+      announceStatus(`${TABS.find((item) => item.id === tab)?.label ?? "Screen"} screen`);
+    }
     if (announce) {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       screen?.focus({ preventScroll: true });
@@ -775,14 +742,59 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       bindUserDataRestore(root, application, async (announcement) => {
         snapshot = await application.loadWorkspace();
         render(currentTab, false);
-        if (announcer) announcer.textContent = announcement;
+        announceStatus(announcement);
       });
     }
-    if (tab === "trades") bindTradeSearch(root, selectedCalendarDay?.trades.length ?? snapshot.trades.length);
+    if (tab === "trades") {
+      bindTradesView(root, browser, {
+        applyScope: (input) => {
+          const next = buildTradeBrowser(snapshot, {
+            ...tradeBrowserState,
+            ...input,
+            selectedDay: null,
+          });
+          tradeBrowserState = next.state;
+          render("trades", false);
+          const searchAnnouncement = next.state.query.length === 0
+            ? ""
+            : ` Search shows ${next.visibleEvidence.length} of ${next.evidence.length} cards.`;
+          announceStatus(`Trade browser scope applied. Scope contains ${countNoun(next.evidence.length, "contributing trade")} across ${countNoun(next.activityDayCount, "activity day")}.${searchAnnouncement}`);
+          root.querySelector<HTMLElement>("#trade-scope-summary")?.focus();
+        },
+        clearAll: () => {
+          const next = buildTradeBrowser(snapshot, EMPTY_TRADE_BROWSER_STATE);
+          tradeBrowserState = next.state;
+          render("trades", false);
+          announceStatus(`Trade browser scope cleared. Showing ${countNoun(next.evidence.length, "trade")}.`);
+          root.querySelector<HTMLSelectElement>("#trade-scope-account")?.focus();
+        },
+        clearSelectedDay: () => {
+          const next = buildTradeBrowser(snapshot, {
+            ...tradeBrowserState,
+            selectedDay: null,
+          });
+          tradeBrowserState = next.state;
+          render("trades", false);
+          const searchAnnouncement = next.state.query.length === 0
+            ? ""
+            : ` Search shows ${next.visibleEvidence.length} of ${next.evidence.length} cards.`;
+          announceStatus(`Calendar day filter cleared. Retained scope contains ${countNoun(next.evidence.length, "trade")}.${searchAnnouncement}`);
+          root.querySelector<HTMLInputElement>("#trade-search")?.focus();
+        },
+        updateQuery: (query) => {
+          const next = buildTradeBrowser(snapshot, {
+            ...tradeBrowserState,
+            query,
+          });
+          tradeBrowserState = next.state;
+          return next;
+        },
+      });
+    }
     bindImportForm(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
-      if (announcer) announcer.textContent = announcement;
+      announceStatus(announcement);
     });
     bindManualExecutionActions(
       root,
@@ -792,7 +804,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       async (announcement) => {
         snapshot = await application.loadWorkspace();
         render(currentTab, false);
-        if (announcer) announcer.textContent = announcement;
+        announceStatus(announcement);
       },
     );
     bindTradeReviewActions(
@@ -803,7 +815,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       async (announcement) => {
         snapshot = await application.loadWorkspace();
         render(currentTab, false);
-        if (announcer) announcer.textContent = announcement;
+        announceStatus(announcement);
       },
     );
     if (tab === "journal") {
@@ -815,54 +827,61 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         async (announcement) => {
           snapshot = await application.loadWorkspace();
           render(currentTab, false);
-          if (announcer) announcer.textContent = announcement;
+          announceStatus(announcement);
         },
       );
     }
     bindBatchReviewTagging(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
-      if (announcer) announcer.textContent = announcement;
+      announceStatus(announcement);
     });
     bindRollbacks(root, application, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
-      if (announcer) announcer.textContent = announcement;
+      announceStatus(announcement);
     });
     root.querySelectorAll<HTMLButtonElement>("button[data-calendar-day]").forEach((button) => {
       button.addEventListener("click", () => {
         const isoDate = button.dataset.calendarDay;
         if (isoDate === undefined) return;
-        const day = selectCalendarDay(snapshot, isoDate);
+        const next = buildTradeBrowser(snapshot, {
+          ...tradeBrowserState,
+          selectedDay: isoDate,
+          calendarMonth: isoDate.slice(0, 7),
+        });
+        const day = next.selectedSession;
         if (day === null) return;
-        selectedCalendarDate = isoDate;
+        tradeBrowserState = next.state;
         render("trades", false);
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-        if (announcer) {
-          announcer.textContent = calendarDayAnnouncement(day.session, snapshot.currencyCode);
-        }
-        root.querySelector<HTMLElement>("#calendar-day-filter-title")?.focus({ preventScroll: true });
+        announceStatus(calendarDayAnnouncement(day, snapshot.currencyCode));
+        root.querySelector<HTMLElement>("#calendar-day-filter-title")?.focus();
       });
     });
-    root.querySelector<HTMLButtonElement>("[data-calendar-day-clear]")?.addEventListener("click", () => {
-      selectedCalendarDate = null;
-      render("trades", false);
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      if (announcer) {
-        announcer.textContent = `Calendar day filter cleared. Showing ${countNoun(snapshot.trades.length, "trade")}.`;
-      }
-      root.querySelector<HTMLInputElement>("#trade-search")?.focus({ preventScroll: true });
+    root.querySelectorAll<HTMLButtonElement>("button[data-calendar-month]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const month = button.dataset.calendarMonth;
+        if (month === undefined || month.length === 0) return;
+        const next = buildTradeBrowser(snapshot, {
+          ...tradeBrowserState,
+          selectedDay: null,
+          calendarMonth: month,
+        });
+        tradeBrowserState = next.state;
+        render(currentTab, false);
+        announceStatus(`Showing ${next.calendar.monthLabel} trading activity.`);
+        root.querySelector<HTMLElement>("#calendar-month-title")?.focus();
+      });
     });
     root.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
-        selectedCalendarDate = null;
         render((button.dataset.route as TabId | undefined) ?? currentTab);
       });
     });
     root.querySelectorAll<HTMLButtonElement>("[data-explore-demo]").forEach((button) => {
       button.addEventListener("click", async () => {
         snapshot = await application.exploreDemo();
-        selectedCalendarDate = null;
+        tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
         render("dashboard");
       });
     });
@@ -872,13 +891,12 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
-    selectedCalendarDate = null;
+    tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     render("dashboard", false);
   };
 
   root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      selectedCalendarDate = null;
       render((button.dataset.tab as TabId | undefined) ?? currentTab);
     });
   });
@@ -888,7 +906,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = snapshot.provenance === "demo"
       ? await application.startJournal()
       : await application.exploreDemo();
-    selectedCalendarDate = null;
+    tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     closeSettings();
     render("dashboard");
   });

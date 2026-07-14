@@ -82,7 +82,8 @@ test("manual entry creates exact fills, a closed trade, and no phantom import re
   await expect(page.getByText("1 trade with realized P&L", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Trades", exact: true }).click();
   await expect(page.getByRole("heading", { name: "AAPL", exact: true })).toBeVisible();
-  await expect(page.getByText("+$18.00", { exact: true })).toBeVisible();
+  await expect(page.locator(".trade-card").getByText("+$18.00", { exact: true }))
+    .toBeVisible();
 
   await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByText("LATEST IMPORT RECEIPT", { exact: true })).toHaveCount(0);

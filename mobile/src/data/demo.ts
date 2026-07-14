@@ -8,7 +8,11 @@ import type {
   TradeRuleReviewPreview,
 } from "../core/types";
 
-const DEMO_ACCOUNT_LABEL = "Demo Brokerage";
+const DEMO_ACCOUNTS = Object.freeze({
+  primary: Object.freeze({ id: "demo-account-primary", label: "Demo Brokerage" }),
+  swing: Object.freeze({ id: "demo-account-swing", label: "Demo Swing" }),
+});
+const DEMO_ACCOUNT_LABEL = "2 demo accounts";
 const DEMO_CURRENCY = "USD";
 const DEMO_INITIAL_RISK = "100";
 
@@ -54,6 +58,7 @@ interface DemoTradeInput {
   readonly tags: readonly string[];
   readonly followedPlan: boolean;
   readonly plannedStop: string;
+  readonly account?: keyof typeof DEMO_ACCOUNTS;
   readonly brokenRuleIndex?: number;
 }
 
@@ -66,6 +71,7 @@ function demoRules(input: DemoTradeInput, tradeSubjectId: string): readonly Trad
 }
 
 function demoTrade(input: DemoTradeInput): TradePreview {
+  const account = DEMO_ACCOUNTS[input.account ?? "primary"];
   const tradeSubjectId = `demo-subject-${input.id}`;
   const reviewId = `demo-review-${input.id}-v1`;
   const fullEntryNotional = multiplySignedDecimals(input.quantity, input.entry);
@@ -85,6 +91,7 @@ function demoTrade(input: DemoTradeInput): TradePreview {
   return Object.freeze({
     id: tradeSubjectId,
     tradeSubjectId,
+    accountId: account.id,
     reviewId,
     symbol: input.symbol,
     assetClass: input.assetClass,
@@ -108,7 +115,7 @@ function demoTrade(input: DemoTradeInput): TradePreview {
     tradedOn: input.tradedOn,
     reviewSessionDates: Object.freeze([input.tradedOn]),
     sessionLabel: input.sessionLabel,
-    accountLabel: DEMO_ACCOUNT_LABEL,
+    accountLabel: account.label,
     note: input.note,
     tags: Object.freeze([...input.tags]),
     followedPlan: input.followedPlan,
@@ -221,6 +228,7 @@ const DEMO_TRADES: readonly TradePreview[] = Object.freeze([
     tags: ["Early entry", "Invalidation respected"],
     followedPlan: false,
     plannedStop: "328.4",
+    account: "swing",
     brokenRuleIndex: 0,
   }),
   demoTrade({
@@ -260,6 +268,7 @@ const DEMO_TRADES: readonly TradePreview[] = Object.freeze([
     tags: ["Chased entry", "Stopped on plan"],
     followedPlan: false,
     plannedStop: "602.6",
+    account: "swing",
     brokenRuleIndex: 2,
   }),
   demoTrade({
@@ -299,6 +308,7 @@ const DEMO_TRADES: readonly TradePreview[] = Object.freeze([
     tags: ["Early exit", "Risk reduced"],
     followedPlan: false,
     plannedStop: "577.2",
+    account: "swing",
     brokenRuleIndex: 0,
   }),
 ]);
@@ -367,15 +377,22 @@ export const DEMO_WORKSPACE: JournalWorkspaceSnapshot = Object.freeze({
   currencyCode: DEMO_CURRENCY,
   timeZone: "UTC",
   accountLabel: DEMO_ACCOUNT_LABEL,
+  accountOptions: Object.freeze(
+    Object.values(DEMO_ACCOUNTS).map((account) => Object.freeze({
+      id: account.id,
+      label: account.label,
+      tradeCount: DEMO_TRADES.filter((trade) => trade.accountId === account.id).length,
+    })),
+  ),
   periodLabel: "Jul 1–9, 2026",
   performance: Object.freeze(calculatePerformance(DEMO_TRADES)),
   importSummary: Object.freeze({
     receiptId: "demo-import",
-    accountLabel: DEMO_ACCOUNT_LABEL,
+    accountLabel: DEMO_ACCOUNTS.primary.label,
     sourceLabel: "Generic broker CSV",
     importedAtLabel: "Demo import · Jul 9",
     executions: DEMO_TRADES.length,
-    accounts: 1,
+    accounts: 2,
     rejectedRows: 0,
     skippedRows: 0,
     rolledBack: false,
@@ -383,11 +400,11 @@ export const DEMO_WORKSPACE: JournalWorkspaceSnapshot = Object.freeze({
   importHistory: Object.freeze([
     Object.freeze({
       receiptId: "demo-import",
-      accountLabel: DEMO_ACCOUNT_LABEL,
+      accountLabel: DEMO_ACCOUNTS.primary.label,
       sourceLabel: "Generic broker CSV",
       importedAtLabel: "Demo import · Jul 9",
       executions: DEMO_TRADES.length,
-      accounts: 1,
+      accounts: 2,
       rejectedRows: 0,
       skippedRows: 0,
       rolledBack: false,

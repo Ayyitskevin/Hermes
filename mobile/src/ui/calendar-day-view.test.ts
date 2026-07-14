@@ -22,6 +22,10 @@ describe("calendar day view", () => {
     const html = calendarDaySection(DEMO_WORKSPACE);
     expect(html.match(/data-calendar-day=/g)).toHaveLength(6);
     expect(html).toContain('aria-label="Open Wednesday, July 1, 2026: +$80.00 allocation-day P&amp;L from 2 contributing trades"');
+    expect(html).toContain('id="calendar-month-title" tabindex="-1">July 2026');
+    expect(html).toContain('class="calendar-month-nav" role="group" aria-label="Activity month"');
+    expect(html).toContain("Account/date filters change this calendar and Trades only");
+    expect(html.match(/data-calendar-month=""/g)).toHaveLength(2);
     expect(html).not.toContain('<article class="calendar-day');
 
     const selected = selectCalendarDay(DEMO_WORKSPACE, "2026-07-01");
@@ -49,7 +53,7 @@ describe("calendar day view", () => {
     expect(filter).toContain("+$80.00");
     expect(filter).toContain("whole trade's realized-to-date result");
     expect(filter).toContain("data-calendar-day-clear");
-    expect(filter).toContain("Workspace scope: Demo Brokerage");
+    expect(filter).toContain("Trade browser scope: Demo Brokerage");
 
     const aapl = selected.trades.find(({ trade }) => trade.symbol === "AAPL");
     if (aapl === undefined) throw new Error("Missing AAPL contribution.");
@@ -84,6 +88,11 @@ describe("calendar day view", () => {
     };
     const snapshot: JournalWorkspaceSnapshot = {
       ...DEMO_WORKSPACE,
+      accountOptions: [{
+        id: base.accountId,
+        label: base.accountLabel,
+        tradeCount: 1,
+      }],
       calendar: [session],
       trades: [{ ...base, id: subject, tradeSubjectId: subject }],
     };

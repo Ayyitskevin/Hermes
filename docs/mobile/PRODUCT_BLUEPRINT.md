@@ -315,7 +315,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Four bounded Slice D increments are implemented in the current workspace. The
+Five bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -362,9 +362,10 @@ drill-down in Trades. Calendar membership is derived from normalized allocation
 events in the workspace time zone; exact day P&L reconciles to durable
 trade-subject contributions and allocation counts. A multi-day trade can appear
 on more than one day. The selected view separately labels allocation-day
-contribution and whole-trade realized-to-date result. It remains a transient
-whole-workspace view: it does not select an account, provide arbitrary date/
-range filtering, rescope reports, or change schema/archive shapes.
+contribution and whole-trade realized-to-date result. At that increment
+boundary it remained a transient whole-workspace view without account/date
+scope; the fifth increment below extends the same evidence model. Neither
+increment rescopes reports or changes schema/archive shapes.
 
 The fourth increment is Durable Daily Journal v1. An established local
 workspace can explicitly save a draft or completed day-level reflection for a
@@ -379,11 +380,26 @@ the content-bound revision, and reject legacy payloads rather than guessing at
 conversion. Demo examples remain fictional and read-only, and the editor states
 that Hermes never places or routes a trade.
 
+The fifth increment is Trade Browser Scope v1. It is a derived-only projection
+over stable ledger account IDs and exact calendar contributions: all accounts
+or one account, optional inclusive workspace-local allocation/activity dates,
+and an optional selected-day intersection. Exact decimal contribution P&L,
+trade, allocation, and day counts are reaggregated from calendar evidence;
+multi-day and zero-P&L activity remain visible. The Dashboard calendar pages
+only through months containing scoped activity, every trade card identifies
+its account, and scoped allocation contribution is explicitly separate from
+whole-trade realized-to-date P&L. Search changes visible cards but never scope
+totals. State is session-only, survives internal navigation/refresh while
+valid, and resets on local/demo switches or reload. It scopes Trades and the
+Dashboard calendar only: headline metrics, equity, review progress, Plan Check,
+and Setup Breakdown remain whole-workspace. No schema, migration, journal
+store, archive, or report-definition version changed.
+
 Still open in Slice D:
 
 - Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
-  remaining report families with reconciled drill-down, plus account selection,
-  reusable trade/date-range filters, and broader calendar navigation/scoping.
+  remaining report families with reconciled drill-down, plus saved scope
+  presets, persistent/report scope, and fuller account management.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
@@ -518,11 +534,12 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The four
+empty-journal-only restore and idempotent exact-retry reconciliation. The five
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
-calendar evidence, and Durable Daily Journal v1. The first three remain
-derived-only; Daily Journal adds checksum-pinned schema v4 and browser payload
-v2 while preserving the outer archive version. Final integration
+calendar evidence, Durable Daily Journal v1, and Trade Browser Scope v1. The
+four increments other than Daily Journal remain derived-only; Daily Journal
+adds checksum-pinned schema v4 and browser payload v2 while preserving the
+outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Native restore acceptance on
 a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device

@@ -128,19 +128,31 @@ and an App Store disclosure.
   migration. Both must fail visibly without silently creating a replacement
   journal over existing data.
 - Visit Dashboard, Trades, Journal, Reports, and More with VoiceOver.
-- Search trades by symbol, setup, side, and tag; verify the empty search state.
-- With same-day executions across at least two accounts, open the Dashboard
-  trading day and reconcile its exact P&L, contributor count, allocation count,
-  workspace scope, durable trade identities, and each card's separate whole-
-  trade realized-to-date result.
-- Include a trade with allocations on multiple workspace-local dates and verify
-  it appears on each applicable day with only that day's exact contribution.
-- With VoiceOver and a hardware keyboard, open a day and confirm focus moves to
-  the Trades filter heading; exercise scoped search and review actions, then
-  clear the day and confirm focus returns to search. Changing tabs must clear the
-  transient day selection.
-- At 320 CSS pixels and 200% accessibility text, confirm the day tiles, filter,
-  contribution evidence, and controls have no horizontal overflow or clipping.
+- With the same symbol in two accounts, select each stable account in turn and
+  confirm no result crosses accounts even when labels or symbols match. Every
+  card must expose its account label.
+- Apply inclusive allocation/activity date boundaries across a multi-day trade,
+  including a zero-P&L allocation. Reconcile the exact scoped P&L, contributing
+  trade, allocation, and activity-day counts. Confirm the scoped contribution
+  label remains separate from each card's whole-trade realized-to-date result.
+- Page backward and forward only through months containing scoped activity.
+  Confirm the month heading and announcement, selected-day pressed state, focus
+  visibility, 44-point controls, and no invented empty calendar sessions.
+- Search scoped trades by symbol, account, setup, side, status, review state,
+  mistake, emotion, or tag. Confirm search changes visible cards only and never
+  the exact scope summary.
+- With VoiceOver and a hardware keyboard, confirm account/range/day/search state
+  survives tab navigation and valid ledger refreshes. Clearing a selected day
+  must retain account/range; Clear all must reset every filter; switching
+  local/demo mode or reloading must reset session-only scope. If an account or
+  day disappears after refresh, confirm Hermes announces the recovery instead
+  of silently broadening or trapping the app.
+- Confirm Dashboard headline P&L, equity, and review progress plus Plan Check
+  and Setup Breakdown remain whole-workspace while only Trades and the
+  Dashboard calendar are scoped.
+- At 320 CSS pixels and 200% accessibility text, confirm account select, date
+  inputs, month controls, day tiles, scope summary, contribution evidence, and
+  focused destinations have no horizontal overflow or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
   successor, and verify note, setup, mistakes, emotion, tags, playbook rules,
   risk, stop, exact R-multiple, exact percentage return, and their formula
@@ -314,9 +326,9 @@ and every skipped check. A clean console alone is not evidence.
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Plan Check and Setup Breakdown,
-  calendar evidence, export generation, and Slice C-B local restore still need
-  persistence, response-loss, migration, accessibility, and lifecycle checks
-  above. Native Web Share/Files cancellation, save, reopen, custom MIME
+  Trade Browser Scope v1, export generation, and Slice C-B local restore still
+  need persistence, response-loss, migration, accessibility, and lifecycle
+  checks above. Native Web Share/Files cancellation, save, reopen, custom MIME
   behavior, restore preview rollback, atomic commit, post-commit
   reconciliation, interruption retry, and near-64-MiB memory behavior have not
   been observed.

@@ -25,6 +25,8 @@ export interface TradeRuleReviewPreview {
 export interface TradePreview {
   readonly id: string;
   readonly tradeSubjectId: string;
+  /** Stable account identity for derived browsing scope; never filter by label. */
+  readonly accountId: string;
   readonly symbol: string;
   readonly assetClass: "stock" | "etf";
   readonly side: TradeSide;
@@ -73,6 +75,13 @@ export interface PerformanceSnapshot {
   readonly rTradeCount: number;
   readonly ruleAdherencePct: number | null;
   readonly ruleReviewCount: number;
+  readonly tradeCount: number;
+}
+
+export interface JournalAccountOption {
+  /** Stable ledger identity used by ephemeral account filters. */
+  readonly id: string;
+  readonly label: string;
   readonly tradeCount: number;
 }
 
@@ -166,6 +175,8 @@ export interface JournalWorkspaceSnapshot {
   readonly currencyCode: string;
   readonly timeZone: string;
   readonly accountLabel: string;
+  /** Active and retained ledger accounts available to the trade browser. */
+  readonly accountOptions: readonly JournalAccountOption[];
   readonly periodLabel: string;
   readonly performance: PerformanceSnapshot;
   readonly importSummary: ImportSummary;

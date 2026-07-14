@@ -47,10 +47,10 @@ under the provisional identifier until that gate is cleared.
   sync, and recurring AI
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
-  capture, versioned trade review, Durable Daily Journal v1, export, and
-  matching-runtime local restore are implemented, but native restore
-  acceptance, verified deletion, deeper reports, attachments, and Mac/device
-  evidence remain incomplete.
+  capture, versioned trade review, Durable Daily Journal v1, Trade Browser
+  Scope v1, export, and matching-runtime local restore are implemented, but
+  native restore acceptance, verified deletion, deeper reports, attachments,
+  and Mac/device evidence remain incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -247,11 +247,15 @@ Delivered in the current vertical slice:
   the first newly revealed group, and links every included trade to evidence.
   Existing archives retain all inputs; focused tests prove both governed
   reports recompute identically after browser export and restore.
-- Dashboard trading-day controls now open a transient Trades evidence view.
-  Workspace-time-zone allocation events reconcile exact day P&L to stable trade
-  subjects and allocation counts; multi-day trades may appear on multiple days.
-  This is a whole-workspace drill-down, not an account selector, arbitrary
-  date/range filter, saved filter, or report scope.
+- Trade Browser Scope v1 derives an all-account or stable single-account view
+  over optional inclusive workspace-local allocation/activity dates. Exact
+  contribution P&L, trade, allocation, and day counts reconcile from calendar
+  evidence; selected days intersect the retained account/range; activity-month
+  navigation skips empty scoped months; search changes card visibility only;
+  every card shows its account and separates scoped contribution from
+  whole-trade P&L. Session state survives internal navigation and valid ledger
+  refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
+  and both governed reports intentionally remain whole-workspace.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -264,10 +268,10 @@ Still required in Phase 1:
 - Verify native encryption, Keychain loss/reinstall behavior, backup behavior,
   CocoaPods lock resolution, kill/relaunch persistence, and migrations on a Mac
   and physical iPhone.
-- Deepen the delivered Trades review detail and Dashboard calendar with account
-  selection, reusable trade/date-range filters, broader calendar navigation/
-  scoping, vocabulary/playbook management, and the remaining
-  reconciled report families.
+- Deepen the delivered Trades review detail and scope with saved presets,
+  optional persistent/report scope, fuller account management,
+  vocabulary/playbook management, and the remaining reconciled report
+  families.
 - Add a generic-CSV asset-class contract before claiming ETF/options/futures/
   crypto file coverage; the current generic CSV adapter intentionally records
   rows as stock.
@@ -344,8 +348,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-Durable trade/day annotations, matching-runtime local restore, and the governed
-evidence-linked Plan Check and Setup Breakdown increments are implemented.
+Durable trade/day annotations, Trade Browser Scope v1, matching-runtime local
+restore, and the governed evidence-linked Plan Check and Setup Breakdown
+increments are implemented.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,
