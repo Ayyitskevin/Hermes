@@ -49,7 +49,8 @@ under the provisional identifier until that gate is cleared.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, export, and matching-runtime local
-  restore are implemented, but
+  restore are implemented. Browser Recovery Continuity also proves a restored
+  daily draft can append and survive a second restore, but
   native restore acceptance, verified deletion, deeper reports, attachments,
   and Mac/device evidence remain incomplete.
 
@@ -217,6 +218,13 @@ Delivered in the current vertical slice:
   requires a verified preview and explicit confirmation, rejects `File.size`
   above 64 MiB before reading, and relies on an independent 67,108,864-byte
   UTF-8 parser limit.
+- Recovery Continuity v1 adds browser composition evidence without changing
+  those contracts: a UI-authored daily draft survives offline empty-session
+  restore, appends exactly one successor through the restored optimistic head,
+  re-exports with two versions/one head/two submissions, and survives a second
+  restore. A delayed file read that is superseded by another selection cannot
+  expose preview evidence or approval, and successful restore focuses the
+  stable rendered screen.
 - The current matching-runtime archive is restorable but is not a complete
   native backup: attachment catalog v1 is empty, archives with attachments are
   rejected, and native Files/lifecycle/low-storage/near-limit-memory behavior
@@ -286,8 +294,8 @@ Still required in Phase 1:
   rows as stock.
 - Prove native export and restore Files/share/cancel/save/reopen behavior on a
   Mac and iPhone, including empty-state preview rollback, atomic commit, exact
-  response-loss retry, interruption, relaunch, low storage, and near-limit
-  memory behavior.
+  response-loss retry, asynchronous file replacement, continued Daily Journal
+  writes, interruption, relaunch, low storage, and near-limit memory behavior.
 - After native restore acceptance, add verified Delete All Data with database,
   Keychain, attachment, interruption, response-loss, and receipt behavior.
 

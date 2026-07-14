@@ -1,8 +1,109 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Slice D-F Structured Trades Facets v1 Linux milestone · updated 2026-07-14
+Status: verified Daily Journal Recovery Continuity v1 Linux milestone ·
+updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Daily Journal Recovery Continuity v1: compose the existing Daily
+Journal and matching-runtime recovery contracts into one user-facing
+author → export → empty-session restore → continue-writing → re-export →
+second-restore journey, and prove stale asynchronous file reads cannot expose
+restore approval.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/user-data-restore.ts now focuses the stable #screen region
+  after a successful restore refresh. The focused commit button is removed by
+  that refresh, so focus no longer falls back to an unspecified browser target.
+- mobile/e2e/user-data-restore.spec.ts authors a real Daily Journal draft,
+  exports it, restores it into a fresh browser session while offline, verifies
+  the restored review and daily content, and edits the restored immutable head
+  through the real Journal UI. The continued export is inspected for exactly
+  two versions, one date head pointing to version 2, and two submission
+  receipts, then restored into a second fresh session and re-exported with the
+  same state/report digests.
+- The same suite deterministically pauses archive A's File.text(), selects
+  distinct valid archive B, releases A, and proves A cannot reveal preview
+  details, change status or focus, enable confirmation/commit, or mutate the
+  empty destination. B remains independently previewable and its exact state
+  digest is the only evidence shown.
+- Existing versioned envelope/payload/schema contracts, financial formulas,
+  report definitions, archive summary, non-merge restore semantics, and Daily
+  Journal authoring semantics are unchanged. This is browser composition and
+  accessibility hardening, not a seventh Slice D product increment.
+- README, ledger, roadmap, product blueprint, and Mac handoff distinguish the
+  new Linux/Chromium composition evidence from native Files, SQLCipher,
+  Keychain, WKWebView, lifecycle, and device accessibility gates.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 40 files, 409 tests passed.
+- cd mobile && npm run test:e2e -- user-data-restore.spec.ts — exit 0; all
+  4 restore journeys passed, including the composed continued-write recovery
+  path, deterministic stale-file race, demo isolation, and 320px/200% reflow.
+- `cd mobile && npm run test:e2e` — exit 0; all 40 Playwright journeys
+  passed.
+- `cd mobile && npm run build` — exit 0; Vite transformed 63 modules and
+  emitted the production bundle.
+- `cd mobile && npm run ios:sync` — exit 0; the verified bundle was copied
+  into iOS and Capacitor found only `@capacitor-community/sqlite@8.1.0`.
+  CocoaPods and `xcodebuild` were unavailable and explicitly skipped.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors after sync.
+- Three independent read-only reviews reported no remaining archive/store
+  correctness, UI/accessibility/timing, integration, or documentation finding.
+  The delayed-file race also passed 5/5 repeated reviewer runs.
+
+assumptions:
+
+- Browser restore uses the intentionally ephemeral browser-session-state v2
+  development adapter. Reload is used only to create an empty destination; it
+  is not persistence or native recovery evidence.
+- The composed test inspects immutable daily versions, heads, and submissions
+  in the verified payload instead of adding fields to the exact archive-v1
+  summary. A trustworthy summary-shape change would require a separate
+  compatibility decision.
+- A Daily Journal successor changes the broad archive state/report-input
+  digests because those digests bind the full ledger. Current governed report
+  formulas still exclude the self-reported process score.
+- No schema, migration, archive format, store algorithm, financial definition,
+  destructive action, or public comparative claim is changed.
+
+open:
+
+- HOLD native Files selection/share/reopen, asynchronous adapter preview,
+  SQLCipher/Keychain, v3→v4 retained-data migration, force-quit/relaunch,
+  response-loss, low-storage/near-limit-memory, VoiceOver, Dynamic Type, and
+  physical-device continued writes until measured on a current Mac and iPhone.
+- A known Daily Journal stale-head conflict is rejected safely by both stores,
+  but the editor currently re-enables the obsolete submission as a generic
+  retry instead of offering a preserve-text-and-reload reconciliation action.
+  That UX hardening is separate from this restore-file preview race.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Both began before Structured Trades
+  Facets v1 and require a manual rebase preserving class-qualified review
+  identity, one asset-class chip, and immutable facet evidence.
+- Attachments and verified Delete All Data remain separate governed slices.
+  Delete All Data is irreversible and requires its dedicated human gate.
+- Do not claim native backup readiness or start broker sync, trade execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Slice D-F
+
+> Historical snapshot; current status and open items are superseded by the
+> active Recovery Continuity handoff above.
 
 task: Deliver Structured Trades Facets v1: four fixed exact, session-only card
 filters that compose with normalized search while preserving the existing

@@ -191,6 +191,12 @@ and an App Store disclosure.
   dirty-close confirmation, all-controls-disabled busy state, character-count
   feedback, 44-point targets, long-token wrapping, and truthful reconcile copy.
   Demo and empty workspaces must expose no Daily Journal write control.
+- Linux/Chromium Recovery Continuity now composes a UI-authored draft through
+  export, offline empty-session restore, continued writing, re-export, and a
+  second restore. It also delays one browser `File.text()`, replaces the file,
+  and proves stale evidence never becomes approvable. This is a test analogue,
+  not completion of the native Files, adapter-latency, WKWebView, lifecycle, or
+  device-accessibility checks below.
 - Build a local journal containing CSV source rows, an independent manual fill,
   a rolled-back receipt, and at least two immutable versions of one trade review.
   In More, confirm export warns that JSON is unencrypted, restore is blocked
@@ -242,6 +248,8 @@ and an App Store disclosure.
   metric definitions, stable subjects, ledger, report digest, and state digest
   against the source. Save another reflection after restore, export again, and
   restore that file into a second empty container to prove continued writes.
+  After each successful restore refresh, confirm focus lands on the stable
+  rendered screen rather than the removed commit control or browser chrome.
 - Export the restored journal again. State/report digests must equal the source
   even though export time/archive digest may differ. Confirm no archive SQL was
   executed and no live table-SQL diagnostic was treated as compatibility input.

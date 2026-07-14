@@ -408,6 +408,17 @@ resets on a local/demo switch or reload. Fixed options deliberately avoid
 inventing dynamic vocabulary semantics. No schema, migration, store, archive,
 or governed report-definition version changed.
 
+A recovery-continuity hardening milestone composes the fourth increment with
+Slice C-B rather than adding a seventh product increment. In the browser
+development runtime, a UI-authored draft now has one executable journey through
+export, offline empty-session restore, continued immutable writing, re-export,
+and a second restore. The continued payload proves two versions, one head, and
+two submissions; the replayed export reproduces the same state/report digests.
+A deterministic delayed-file test also proves a superseded read cannot expose
+or enable restore approval, and a successful commit focuses stable rendered
+content. Native Files, adapter latency, lifecycle, and device accessibility
+remain separate gates.
+
 Still open in Slice D:
 
 - Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
@@ -556,7 +567,10 @@ remain derived-only; Daily Journal
 adds checksum-pinned schema v4 and browser payload v2 while preserving the
 outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
-blueprint does not duplicate unfinalized evidence. Native restore acceptance on
+blueprint does not duplicate unfinalized evidence. Recovery Continuity adds
+browser composition and stale-selection evidence across existing C-B/Daily
+Journal boundaries without changing their versioned contracts. Native restore
+acceptance on
 a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device
 acceptance, verified Delete All Data, the remaining reports, and later
 attachment round-trip remain open—not broker connectivity, hosted sync, Android,

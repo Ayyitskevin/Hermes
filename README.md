@@ -100,6 +100,13 @@ submission-ready product:
   already-restored state as an idempotent retry. The UI rejects files larger
   than 64 MiB before reading them; the parser independently enforces the same
   67,108,864-byte UTF-8 limit.
+- Browser Recovery Continuity v1 composes the real Daily Journal and recovery
+  surfaces: a draft can be exported, restored into a fresh empty session,
+  continued through its restored immutable head, re-exported, and restored
+  again with exact version/head/submission evidence. A delayed superseded file
+  read cannot reveal or enable stale approval, and successful restore moves
+  focus to stable rendered content. This Chromium evidence is not a native
+  Files or lifecycle claim.
 - Exact decimal-string normalization for partial fills, long/short reversals,
   fee allocation, and currency-separated P&L without implicit FX.
 - A clearly labeled, fully offline demo journal with eight fictional trades
@@ -151,9 +158,9 @@ older browser payloads and pre-v4 native table sets; a pre-release legacy file
 must first be restored by its exact old runtime, then opened/migrated and
 exported again with the current build. Attachments, Delete All Data, saved scope
 presets, persistent/report scoping, full account management, and the remaining
-report families remain Phase 1 work. Native v3→v4 migration,
-Daily Journal relaunch/export/restore, VoiceOver, and small-screen behavior
-still require Mac/iPhone evidence.
+report families remain Phase 1 work. Native v3→v4 migration, Daily Journal
+relaunch/Files export/restore/continued writes, VoiceOver, and small-screen
+behavior still require Mac/iPhone evidence.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

@@ -346,6 +346,15 @@ export-compliance answers also require a human determination.
   payload metadata, requires explicit confirmation, and distinguishes committed,
   already-restored, uncertain, and failed outcomes. Demo has no restore control;
   nonempty journals have no chooser or enabled restore action.
+- Recovery Continuity browser evidence composes Daily Journal authoring with
+  that boundary: export → empty-session restore preserves the draft head,
+  continued writing appends one successor, and the continued export restores
+  again with two immutable versions, one current head, and two submission
+  receipts. A deterministically delayed superseded file read cannot reveal
+  details, move focus, enable confirmation/commit, or mutate the empty
+  destination; the replacement file must earn its own preview. Successful
+  commit focuses the stable rendered screen after the old commit control is
+  removed.
 - A current-schema archive is now restorable on its matching runtime, but it is
   not a complete native backup until attachment round-trip and native
   Files/lifecycle/interruption/low-storage/near-limit-memory gates pass. Delete
@@ -396,7 +405,11 @@ dates/version chains, submission idempotency, optimistic conflicts, atomic
 session/SQLite commits, lost-response reconciliation, v3→v4 migration,
 content-bound native/browser restore validation, trading/no-trade display,
 explicit draft/completed saves, demo isolation, focus/busy/error behavior, and
-320px/200% browser reflow. Trade Browser coverage adds stable same-symbol
+320px/200% browser reflow. Browser composition additionally covers a real
+Daily Journal draft through export, offline empty-session restore, continued
+immutable writing, re-export, second restore, exact version/head/submission
+evidence, post-restore focus, and asynchronous file-replacement invalidation.
+Trade Browser coverage adds stable same-symbol
 multi-account identity, inclusive multi-day/leap/zero-P&L scope, fractional
 exact sums and counts, stale-day fail-closed handling, tampered-evidence
 rejection, report isolation, real activity-month navigation, invalid-range

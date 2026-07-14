@@ -10,6 +10,35 @@ import {
 const BASE_ORIGIN = "http://127.0.0.1:4173";
 const ONBOARDING_KEY = "hermes.journal.onboarding.v2";
 
+interface BrowserDailyJournalPayload {
+  readonly dailyEntryVersions: readonly {
+    readonly id: string;
+    readonly isoDate: string;
+    readonly version: number;
+    readonly state: "draft" | "completed";
+    readonly title: string | null;
+    readonly note: string;
+    readonly emotion: string | null;
+    readonly processScorePct: number | null;
+    readonly tags: readonly string[];
+  }[];
+  readonly dailyEntryHeads: readonly (readonly [string, string])[];
+  readonly dailyEntrySubmissions: readonly (readonly [
+    string,
+    { readonly revision: string; readonly entryVersionId: string },
+  ])[];
+}
+
+function dailyJournalPayload(archive: JournalArchive): BrowserDailyJournalPayload {
+  if (
+    archive.payload.kind !== "browser-session-state"
+    || archive.payload.version !== 2
+  ) {
+    throw new Error("Expected a browser-session-state v2 recovery fixture.");
+  }
+  return archive.payload.data as unknown as BrowserDailyJournalPayload;
+}
+
 function trackExternalRequests(page: Page): string[] {
   const externalRequests: string[] = [];
   page.on("request", (request) => {
@@ -79,55 +108,97 @@ async function downloadArchive(page: Page): Promise<{
   return { contents, archive: parseJournalArchive(contents) };
 }
 
-test("restores a reviewed journal offline and re-exports identical durable digests", async ({
+async function writeDailyDraft(page: Page): Promise<string> {
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  await page.getByRole("button", { name: "Write daily reflection" }).click();
+  const dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const isoDate = await dialog.locator("#daily-entry-date").inputValue();
+  await dialog.locator("#daily-entry-headline").fill("Recovery checkpoint");
+  await dialog.locator("#daily-entry-note").fill("Draft written before export.");
+  await dialog.locator("#daily-entry-emotion").fill("Focused");
+  await dialog.locator("#daily-entry-score").fill("88");
+  await dialog.locator("#daily-entry-tags").fill("Patient, Recovery");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.locator(".journal-note").filter({ hasText: "Recovery checkpoint" }))
+    .toContainText("Draft written before export.");
+  return isoDate;
+}
+
+async function restoreArchive(
+  page: Page,
+  source: { readonly contents: string; readonly archive: JournalArchive },
+  fileName: string,
+): Promise<void> {
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const restoreCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Restore into this empty journal" }),
+  });
+  await restoreCard.getByLabel("Hermes archive").setInputFiles({
+    name: fileName,
+    mimeType: "application/vnd.hermes.journal+json",
+    buffer: Buffer.from(source.contents),
+  });
+  const preview = restoreCard.getByRole("button", { name: "Preview archive" });
+  await expect(preview).toBeEnabled();
+  await preview.click();
+
+  await expect(restoreCard.getByRole("heading", { name: "Ready for confirmation" }))
+    .toBeFocused();
+  await expect(restoreCard.locator("#user-data-restore-counts")).toContainText(
+    `${source.archive.summary.activeExecutions} active execution${source.archive.summary.activeExecutions === "1" ? "" : "s"}`,
+  );
+  await expect(restoreCard.locator("#user-data-restore-counts")).toContainText(
+    `${source.archive.summary.reviewVersions} review version${source.archive.summary.reviewVersions === "1" ? "" : "s"}`,
+  );
+  await expect(restoreCard.locator("#user-data-restore-payload"))
+    .toHaveText("browser-session-state v2 · empty target verified");
+  await expect(restoreCard.locator("#user-data-restore-state-digest"))
+    .toHaveText(source.archive.stateSha256);
+  await expect(restoreCard.locator("#user-data-restore-report-digest"))
+    .toHaveText(source.archive.reportSha256);
+
+  const commit = restoreCard.locator("#user-data-restore-commit");
+  await expect(commit).toBeDisabled();
+  await restoreCard.locator("#user-data-restore-confirm").check();
+  await expect(commit).toBeEnabled();
+  await commit.click();
+  await expect(page.locator("#route-announcer")).toHaveText(
+    "Restore complete. The verified journal is now available on this device.",
+  );
+  await expect(page.locator("#screen")).toBeFocused();
+}
+
+test("restores a daily draft offline, continues its immutable history, and restores the successor", async ({
   context,
   page,
 }) => {
   const externalRequests = trackExternalRequests(page);
   await startWithReviewedTrade(page);
+  const dailyDate = await writeDailyDraft(page);
   await page.getByRole("button", { name: "More", exact: true }).click();
   const original = await downloadArchive(page);
   expect(original.archive.summary.reviewVersions).toBe("2");
+  const originalDaily = dailyJournalPayload(original.archive);
+  expect(originalDaily.dailyEntryVersions).toEqual([
+    expect.objectContaining({
+      isoDate: dailyDate,
+      version: 1,
+      state: "draft",
+      title: "Recovery checkpoint",
+      note: "Draft written before export.",
+      emotion: "Focused",
+      processScorePct: 88,
+      tags: ["Patient", "Recovery"],
+    }),
+  ]);
+  expect(originalDaily.dailyEntryHeads).toHaveLength(1);
+  expect(originalDaily.dailyEntrySubmissions).toHaveLength(1);
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Build your journal", exact: true })).toBeVisible();
   await context.setOffline(true);
   try {
-    await page.getByRole("button", { name: "More", exact: true }).click();
-    const restoreCard = page.getByRole("article").filter({
-      has: page.getByRole("heading", { name: "Restore into this empty journal" }),
-    });
-    const fileInput = restoreCard.getByLabel("Hermes archive");
-    await fileInput.setInputFiles({
-      name: "reviewed-journal.json",
-      mimeType: "application/vnd.hermes.journal+json",
-      buffer: Buffer.from(original.contents),
-    });
-    const preview = restoreCard.getByRole("button", { name: "Preview archive" });
-    await expect(preview).toBeEnabled();
-    await preview.click();
-
-    await expect(restoreCard.getByRole("heading", { name: "Ready for confirmation" }))
-      .toBeFocused();
-    await expect(restoreCard.locator("#user-data-restore-counts"))
-      .toContainText("2 active executions");
-    await expect(restoreCard.locator("#user-data-restore-counts"))
-      .toContainText("2 review versions");
-    await expect(restoreCard.locator("#user-data-restore-payload"))
-      .toHaveText("browser-session-state v2 · empty target verified");
-    await expect(restoreCard.locator("#user-data-restore-state-digest"))
-      .toHaveText(original.archive.stateSha256);
-    await expect(restoreCard.locator("#user-data-restore-report-digest"))
-      .toHaveText(original.archive.reportSha256);
-
-    const commit = restoreCard.getByRole("button", { name: "Restore verified archive" });
-    await expect(commit).toBeDisabled();
-    await restoreCard.locator("#user-data-restore-confirm").check();
-    await expect(commit).toBeEnabled();
-    await commit.click();
-    await expect(page.locator("#route-announcer")).toHaveText(
-      "Restore complete. The verified journal is now available on this device.",
-    );
+    await restoreArchive(page, original, "daily-draft.json");
 
     const blockedRestore = page.getByRole("article").filter({
       has: page.getByRole("heading", { name: "Empty journal required" }),
@@ -148,15 +219,226 @@ test("restores a reviewed journal offline and re-exports identical durable diges
       .toHaveValue("Second immutable restore review.");
     await restoredReview.getByRole("button", { name: "Cancel" }).click();
 
+    await page.getByRole("button", { name: "Journal", exact: true }).click();
+    const restoredDaily = page.locator(".journal-note").filter({
+      hasText: "Recovery checkpoint",
+    });
+    await expect(restoredDaily).toHaveCount(1);
+    await expect(restoredDaily).toContainText("Draft written before export.");
+    await expect(restoredDaily).toContainText("draft");
+    await expect(restoredDaily).toContainText("Focused");
+    await expect(restoredDaily).toContainText("88% process");
+    await expect(restoredDaily).toContainText("Patient");
+    await expect(restoredDaily).toContainText("Recovery");
+
     await page.getByRole("button", { name: "More", exact: true }).click();
     const restored = await downloadArchive(page);
     expect(restored.archive.stateSha256).toBe(original.archive.stateSha256);
     expect(restored.archive.reportSha256).toBe(original.archive.reportSha256);
     expect(restored.archive.summary.reviewVersions).toBe("2");
+
+    await page.getByRole("button", { name: "Journal", exact: true }).click();
+    await restoredDaily.getByRole("button", { name: /Edit daily reflection for/u }).click();
+    const editor = page.getByRole("dialog", { name: "Edit daily reflection" });
+    await expect(editor.locator("#daily-entry-date")).toHaveAttribute("readonly", "");
+    await expect(editor.locator("#daily-entry-date")).toHaveValue(dailyDate);
+    await expect(editor.locator("#daily-entry-headline")).toHaveValue("Recovery checkpoint");
+    await expect(editor.locator("#daily-entry-note")).toHaveValue("Draft written before export.");
+    await expect(editor.locator("#daily-entry-emotion")).toHaveValue("Focused");
+    await expect(editor.locator("#daily-entry-score")).toHaveValue("88");
+    await expect(editor.locator("#daily-entry-tags")).toHaveValue("Patient, Recovery");
+    await editor.locator("#daily-entry-note").fill("Continued safely after restoring the archive.");
+    await editor.locator("#daily-entry-emotion").fill("Relieved");
+    await editor.locator("#daily-entry-score").fill("94");
+    await editor.locator("#daily-entry-tags").fill("Patient, Recovery verified");
+    await editor.getByRole("button", { name: "Complete reflection" }).click();
+    await expect(page.locator("#route-announcer")).toContainText("saved on device.");
+    await expect(page.locator("#screen")).toBeFocused();
+
+    const completedDaily = page.locator(".journal-note").filter({
+      hasText: "Recovery checkpoint",
+    });
+    await expect(completedDaily).toHaveCount(1);
+    await expect(completedDaily).toContainText("Continued safely after restoring the archive.");
+    await expect(completedDaily).toContainText("completed");
+    await expect(completedDaily).toContainText("Relieved");
+    await expect(completedDaily).toContainText("94% process");
+
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    const continued = await downloadArchive(page);
+    expect(continued.archive.stateSha256).not.toBe(original.archive.stateSha256);
+    const continuedDaily = dailyJournalPayload(continued.archive);
+    expect(continuedDaily.dailyEntryVersions).toHaveLength(2);
+    expect(continuedDaily.dailyEntryHeads).toHaveLength(1);
+    expect(continuedDaily.dailyEntrySubmissions).toHaveLength(2);
+    const versions = [...continuedDaily.dailyEntryVersions]
+      .sort((left, right) => left.version - right.version);
+    const first = versions[0];
+    const second = versions[1];
+    if (first === undefined || second === undefined) {
+      throw new Error("Expected two immutable daily-entry versions.");
+    }
+    expect(first).toMatchObject({
+      isoDate: dailyDate,
+      version: 1,
+      state: "draft",
+      note: "Draft written before export.",
+      emotion: "Focused",
+      processScorePct: 88,
+      tags: ["Patient", "Recovery"],
+    });
+    expect(second).toMatchObject({
+      isoDate: dailyDate,
+      version: 2,
+      state: "completed",
+      note: "Continued safely after restoring the archive.",
+      emotion: "Relieved",
+      processScorePct: 94,
+      tags: ["Patient", "Recovery verified"],
+    });
+    expect(continuedDaily.dailyEntryHeads).toEqual([[dailyDate, second.id]]);
+    expect(continuedDaily.dailyEntrySubmissions
+      .map(([, submission]) => submission.entryVersionId)
+      .sort()).toEqual([first.id, second.id].sort());
+
+    await context.setOffline(false);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Build your journal", exact: true }))
+      .toBeVisible();
+    await context.setOffline(true);
+    await restoreArchive(page, continued, "continued-daily-journal.json");
+    await page.getByRole("button", { name: "Journal", exact: true }).click();
+    const replayedDaily = page.locator(".journal-note").filter({
+      hasText: "Recovery checkpoint",
+    });
+    await expect(replayedDaily).toHaveCount(1);
+    await expect(replayedDaily).toContainText("Continued safely after restoring the archive.");
+    await expect(replayedDaily).toContainText("completed");
+    await expect(replayedDaily).toContainText("Relieved");
+
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    const replayed = await downloadArchive(page);
+    expect(replayed.archive.stateSha256).toBe(continued.archive.stateSha256);
+    expect(replayed.archive.reportSha256).toBe(continued.archive.reportSha256);
     expect(externalRequests).toEqual([]);
   } finally {
     await context.setOffline(false);
   }
+});
+
+test("changing files during an asynchronous preview cannot expose stale restore approval", async ({
+  page,
+}) => {
+  const externalRequests = trackExternalRequests(page);
+  await startWithReviewedTrade(page);
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const original = await downloadArchive(page);
+  await writeDailyDraft(page);
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const replacement = await downloadArchive(page);
+  expect(replacement.archive.stateSha256).not.toBe(original.archive.stateSha256);
+
+  await page.addInitScript(() => {
+    const nativeText = File.prototype.text;
+    Object.defineProperty(File.prototype, "text", {
+      configurable: true,
+      writable: true,
+      value(this: File): Promise<string> {
+        if (this.name !== "slow-original.json") return nativeText.call(this);
+        const file = this;
+        return new Promise<string>((resolve, reject) => {
+          Reflect.set(window, "__hermesReleaseSlowArchive", async () => {
+            try {
+              resolve(await nativeText.call(file));
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+      },
+    });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "More", exact: true }).click();
+
+  const restoreCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Restore into this empty journal" }),
+  });
+  const input = restoreCard.getByLabel("Hermes archive");
+  const preview = restoreCard.getByRole("button", { name: "Preview archive" });
+  const details = restoreCard.locator("#user-data-restore-details");
+  const confirmation = restoreCard.locator("#user-data-restore-confirm");
+  const commit = restoreCard.locator("#user-data-restore-commit");
+  const status = restoreCard.locator("#user-data-restore-status");
+
+  await input.setInputFiles({
+    name: "slow-original.json",
+    mimeType: "application/vnd.hermes.journal+json",
+    buffer: Buffer.from(original.contents),
+  });
+  await preview.click();
+  await expect(status).toContainText("Reading and verifying");
+  await page.waitForFunction(() => (
+    typeof Reflect.get(window, "__hermesReleaseSlowArchive") === "function"
+  ));
+
+  await input.setInputFiles({
+    name: "replacement.json",
+    mimeType: "application/vnd.hermes.journal+json",
+    buffer: Buffer.from(replacement.contents),
+  });
+  await expect(status).toHaveText(
+    "replacement.json. Choose Preview archive to verify it before restore.",
+  );
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(details).toBeHidden();
+  await expect(confirmation).toBeDisabled();
+  await expect(commit).toBeDisabled();
+  await expect(preview).toBeEnabled();
+
+  await page.evaluate(async () => {
+    const release = Reflect.get(window, "__hermesReleaseSlowArchive");
+    if (typeof release !== "function") {
+      throw new Error("The delayed archive read was not installed.");
+    }
+    await release();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  });
+  await expect(status).toHaveText(
+    "replacement.json. Choose Preview archive to verify it before restore.",
+  );
+  await expect(input).toBeFocused();
+  await expect(details).toBeHidden();
+  await expect(confirmation).toBeDisabled();
+  await expect(commit).toBeDisabled();
+  await expect(preview).toBeEnabled();
+
+  await preview.click();
+  await expect(restoreCard.getByRole("heading", { name: "Ready for confirmation" }))
+    .toBeFocused();
+  await expect(restoreCard.locator("#user-data-restore-state-digest"))
+    .toHaveText(replacement.archive.stateSha256);
+  await expect(restoreCard.locator("#user-data-restore-state-digest"))
+    .not.toHaveText(original.archive.stateSha256);
+  await expect(status).toContainText("Verified: the archive is compatible");
+  await expect(confirmation).toBeEnabled();
+  await expect(confirmation).not.toBeChecked();
+  await expect(commit).toBeDisabled();
+
+  await restoreCard.getByRole("button", { name: "Cancel" }).click();
+  await expect(status).toHaveText(
+    "Restore preview cancelled. Choose an archive to start again.",
+  );
+  await expect(input).toBeFocused();
+  await expect(details).toBeHidden();
+  await expect(commit).toBeDisabled();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Build your journal", exact: true }))
+    .toBeVisible();
+  expect(externalRequests).toEqual([]);
 });
 
 test("demo mode omits every private restore surface", async ({ page }) => {

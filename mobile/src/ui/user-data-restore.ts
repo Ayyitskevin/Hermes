@@ -278,6 +278,7 @@ export function bindUserDataRestore(
       : "Restore complete. The verified journal is now available on this device.";
     try {
       await refresh(announcement);
+      root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
     } catch (caught) {
       if (card.isConnected) {
         showError(message(caught, "The restored journal could not be redrawn."), `${announcement} The screen could not refresh.`);
