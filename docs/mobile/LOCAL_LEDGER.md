@@ -327,19 +327,41 @@ Scope and visibility state are session-only: they are not stored in SQLite,
 browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
 changes or reload, and affects Trades plus the Dashboard calendar only.
-Dashboard headline metrics, equity, review progress, Plan Check, and Setup
-Breakdown continue to consume the full workspace snapshot. This slice changes
-no schema, migration, store, archive, or governed report definition/version.
+Dashboard headline metrics, equity, review progress, Plan Check, Mistake
+Patterns, and Setup Breakdown continue to consume the full workspace snapshot.
+This slice changes no schema, migration, store, archive, or governed report
+definition/version.
+
+Mistake Patterns v1 stays inside the derived-report boundary. Its complete
+immutable builder consumes current projection trades and exact mistake labels
+from coherent current completed review heads; open and closed positions are
+equally eligible and no P&L, currency, risk, or outcome evidence is read.
+`mistake-patterns-report-v1` is pinned by SHA-256
+`f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c`.
+Pending/draft reviews and completed heads without an assignment are mutually
+exclusive exclusions. Unique included trades reconcile to total current trades,
+while summed exact-label group assignments separately reconcile to total saved
+assignments; a multi-label trade therefore remains one included trade and may
+appear in several groups.
+
+Completed-head IDs, stable subject IDs, and the existing saved-review label
+normalization/limit invariants fail closed. The report never repairs, normalizes,
+deduplicates, or drops stored values; case-folding is validation identity only.
+Exact labels use code-unit group order; evidence uses traded date descending
+then stable subject ID. Five-group and
+25-contributor limits belong only to transient presentation. No report state,
+definition input, or result enters SQLite, browser journal state, export/restore,
+archive shape, or report-input digests; restore recomputes from existing inputs.
 
 Reports Navigator v1 remains inside that same derived boundary. It adds no
 scope or result state: semantic in-page links target the existing Performance
-Summary, Journal Curve, Plan Check, and Setup Breakdown markup, while the
-Dashboard shortcut may enter Plan Check directly. Activating a link scrolls and
+Summary, Journal Curve, Plan Check, Mistake Patterns, and Setup Breakdown
+markup, while the Dashboard shortcut may enter Plan Check directly. Activating a link scrolls and
 focuses current DOM only; open disclosure state survives because no report is
 rebuilt. The responsive top-bar position and clipped-control focus correction
 are presentation behavior only. No navigation value enters SQLite, browser
 journal state, local preferences, export/restore, archive digests, report-input
-digests, or governed definitions. Both report builders still receive the full
+digests, or governed definitions. All three report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -349,8 +371,8 @@ trade-subject ID must resolve to exactly one trade in the reconciled full
 snapshot before Hermes renders an **Open trade** control, and activation repeats
 that exact validation against the current render snapshot. Symbols, visible
 labels, DOM position, and Trade Browser search are never identity fallback.
-The allowlisted Plan/Setup source and captured trigger node live only in the
-current sheet closure and DOM attributes. They do not enter SQLite, browser
+The allowlisted Plan/Mistake/Setup source and captured trigger node live only in
+the current sheet closure and DOM attributes. They do not enter SQLite, browser
 journal state, Trade Browser state, preferences, URLs, exports, restores,
 digests, report definitions, or archives. Opening and closing perform no store
 operations. A review save uses the existing stable-subject review command and may
@@ -588,12 +610,13 @@ fingerprints, preference neutrality, 44-point controls, and fully visible
 keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
 Report Trade Continuation coverage adds exact render/activation identity,
-escaped source/action metadata, progressive Plan and Setup row/group actions,
+escaped source/action metadata, progressive Plan, Mistake, and Setup row/group
+actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
 fail-closed unknown identity before inert state, offline read-only inspection,
 retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
-trigger return, source-heading return after moving Plan/Setup evidence, focus
-trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
+trigger return, source-heading return after moving Plan/Setup/Mistake evidence,
+focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit
 memory, VoiceOver, and physical-device SQLCipher behavior remain unverified.

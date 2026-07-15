@@ -19,6 +19,7 @@ import {
 } from "../application/prepare-trade-review";
 import type { PreparedJournalRestore } from "../application/journal-restore";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
+import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import {
@@ -111,7 +112,7 @@ async function reviewedSourceArchive(): Promise<{
     state: "completed",
     note: "Waited for confirmation and followed the exit plan.",
     setup: "Breakout",
-    mistakes: [],
+    mistakes: ["Late scale-out"],
     tags: ["Patient entry"],
     emotion: "Focused",
     playbook: {
@@ -169,11 +170,13 @@ describe("browser session user-data restore", () => {
     const destination = new SessionJournalStore();
     try {
       const beforeSnapshot = workspaceSnapshotFromLedger(await source.store.load());
+      const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
+      const afterMistakes = buildMistakePatternsReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
@@ -181,6 +184,22 @@ describe("browser session user-data restore", () => {
 
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
+      expect(afterMistakes).toEqual(beforeMistakes);
+      expect(afterMistakes.metadata).toMatchObject({
+        includedTradeCount: 1,
+        totalAssignmentCount: 1,
+      });
+      expect(afterMistakes.groups).toEqual([
+        expect.objectContaining({
+          mistake: "Late scale-out",
+          assignmentCount: 1,
+          tradeSubjectIds: [expect.any(String)],
+        }),
+      ]);
+      expect(afterMistakes.groups[0]?.evidence[0]).toMatchObject({
+        symbol: "NVDA",
+        mistake: "Late scale-out",
+      });
       expect(afterPlan.metadata.includedTradeCount).toBe(1);
       expect(afterPlan.groups[0]).toMatchObject({
         classification: "followed",

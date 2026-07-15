@@ -91,6 +91,11 @@ describe("trade review sheet", () => {
 
   it("labels exact report origins without changing the trade or browser scope", () => {
     const html = tradeReviewSheetTemplate(trade(), localWorkspace(), "plan-check");
+    const mistakeHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "mistake-patterns",
+    );
 
     expect(html).toContain(
       "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
@@ -100,6 +105,10 @@ describe("trade review sheet", () => {
     expect(html).toContain(
       "This full-workspace report does not use or change your Trades filters.",
     );
+    expect(mistakeHtml).toContain(
+      'data-trade-review-report-context="mistake-patterns"',
+    );
+    expect(mistakeHtml).toContain("Opened from Mistake patterns.");
   });
 
   it("renders complete escaped evidence for one coherent saved review", () => {
@@ -378,6 +387,19 @@ describe("trade review sheet", () => {
       "Open &lt;AAPL&gt; trade — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
     expect(action).not.toContain('data-review-trade="subject-1"');
+
+    const mistakeAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "mistake-patterns",
+      "saved mistake Early entry",
+    );
+    expect(mistakeAction).toContain(
+      'data-trade-review-report-source="mistake-patterns"',
+    );
+    expect(mistakeAction).toContain(
+      "Open &lt;AAPL&gt; trade for saved mistake Early entry — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
 
     expect(() => reportTradeAction(snapshot, "missing", "plan-check")).toThrow(
       /exactly one trade/u,

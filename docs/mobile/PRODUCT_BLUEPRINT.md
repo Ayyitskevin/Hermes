@@ -354,8 +354,24 @@ per group page; within each group, evidence uses traded date descending then
 stable subject ID and renders at most 25 contributors per action. Copy
 discloses scope, exclusions, rounding, ordering, and its non-causal,
 non-predictive, non-advisory boundary.
-This report is also derived-only, and a dedicated browser archive test proves
-both governed reports recompute identically after export and restore.
+This report is also derived-only: no schema or archive shape changed, and
+existing current-schema archives retain its inputs.
+
+The count-only Mistake Patterns report uses definition
+`mistake-patterns-report-v1`, pinned by checksum
+`f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c`.
+It consumes the current projection and current completed review heads without a
+position-state, realized-result, currency, or outcome condition. Pending/draft
+reviews are excluded first; completed heads without a saved mistake assignment
+are excluded next. Unique included trades reconcile separately from total exact
+label assignments, because one trade may appear once in several groups. Saved
+labels are validated without normalization or repair, groups use stable
+mistake-name code-unit order, and evidence uses traded date descending then
+stable subject ID. Presentation renders five groups and 25 contributors per
+action. The report contains no P&L, win rate, R, expectancy, rate, ranking,
+causal, predictive, or advisory output. A dedicated browser archive test proves
+all three governed reports recompute identically after export and restore. No
+schema, archive, or digest-shape change is included.
 
 The third increment turns Dashboard trading days into a bounded evidence
 drill-down in Trades. Calendar membership is derived from normalized allocation
@@ -373,7 +389,7 @@ trading or no-trade date, then edit it only by appending an optimistic immutable
 successor. The workspace-local date is durable identity. Headline, note,
 emotion, tags, and a self-reported process score are optional, but every version
 requires at least one authored signal; the score is excluded from performance,
-Plan Check, and Setup Breakdown analytics. Schema v4 adds immutable versions,
+Plan Check, Setup Breakdown, and Mistake Patterns analytics. Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
 v2 and native schema-v4 exports/restores preserve the complete chain, validate
 the content-bound revision, and reject legacy payloads rather than guessing at
@@ -495,10 +511,10 @@ store, archive, or governed report-definition change. Saved presets, persistent
 or report scope, and vocabulary/playbook management remain separate work.
 
 An eighth increment, Reports Navigator v1, reorganizes only the existing
-Reports presentation. A semantic menu follows DOM order—Performance Summary,
+Reports presentation. Its semantic menu follows DOM order—Performance Summary,
 Journal Curve, Plan Check, then Setup Breakdown—and every destination has a
 stable focusable heading plus a return path. Dashboard's existing Plan Check
-shortcut now lands on that heading. In-page jumps measure the live top chrome,
+shortcut lands on that heading. In-page jumps measure the live top chrome,
 scroll without animation, then focus without a second scroll; opened report
 disclosures and DOM identity survive every jump. At widths through 480 CSS
 pixels the top bar enters normal document flow, leaving the fixed primary tabs
@@ -526,6 +542,16 @@ account/date/day/search/facet state. No URL, selected-trade state, schema,
 migration, store, archive, digest input, formula, definition, checksum, cohort
 definition or eligibility rule, ordering, or pagination changes.
 
+A tenth increment, Mistake Patterns v1, adds the governed count-and-evidence
+projection described above between Plan Check and Setup Breakdown. Every exact
+label group and contributor uses progressive presentation only; the builder
+returns the complete immutable report. Contributors reuse stable-ID in-place
+continuation with label-specific accessible names. Ordinary close returns to the
+exact trigger; an explicit review save that moves, adds, or removes assignments
+returns to the Mistake Patterns heading after the report rebuild. The source is
+allowlisted transient DOM context and does not consume or change Trades scope,
+search, facets, URLs, persistence, archives, or digests.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -539,7 +565,7 @@ remain separate gates.
 
 Still open in Slice D:
 
-- Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
+- Drawdown, streak, time/day, symbol, direction, tag, emotion, and
   remaining report families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
   management, and fuller vocabulary/playbook management.
@@ -679,11 +705,12 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The nine
+empty-journal-only restore and idempotent exact-retry reconciliation. The ten
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
 calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, Structured
-Trades Facets v1, Dynamic Review Facets v1, Reports Navigator v1, and Report
-Trade Continuation v1. The seven presentation/projection increments other than
+Trades Facets v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade
+Continuation v1, and Mistake Patterns v1. The eight presentation/projection
+increments other than
 Daily Journal and Report Trade Continuation remain derived-only. Report Trade
 Continuation reuses the existing versioned review save path without changing
 its persistence contract; Daily Journal adds checksum-pinned schema v4 and

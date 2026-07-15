@@ -363,32 +363,34 @@ and an App Store disclosure.
 - From Dashboard, activate **Open plan check** and confirm focus lands on the
   visible Plan Check heading rather than the generic Reports container. In the
   Report sections landmark, verify VoiceOver and hardware-keyboard order is
-  Performance Summary, Journal Curve, Plan Check, then Setup Breakdown. Open a
-  Plan and Setup disclosure, visit all four targets, and use every **Back to
-  report menu** link; focus must remain visible and both disclosures must stay
-  open. At 320 CSS pixels and again in the 421–440 CSS-pixel device class with
+  Performance Summary, Journal Curve, Plan Check, Mistake Patterns, then Setup
+  Breakdown. Open a Plan, Mistake, and Setup disclosure, visit all five targets,
+  and use every **Back to report menu** link; focus must remain visible and all
+  three disclosures must stay open. At 320 CSS pixels and again in the 421–440
+  CSS-pixel device class with
   200% Dynamic Type, confirm the top bar scrolls
   away, the fixed primary tabs remain available, every menu/return/summary
   control is at least 44 points and can be fully visible between viewport edges
   and the tab bar, and there is no internal or document overflow. Repeat with
   Reduce Motion and inspect the network log. This native row remains NOT RUN
   until observed on the Mac/iPhone candidate.
-- With VoiceOver and a hardware keyboard, open **Open trade** from a Plan Check
-  contributor and a Setup Breakdown contributor. Confirm the action and sheet
+- With VoiceOver and a hardware keyboard, open **Open trade** from a Plan Check,
+  Mistake Patterns, and Setup Breakdown contributor. Confirm the action and sheet
   heading announce symbol, asset class, account, and session; duplicate symbols
   in different accounts/sessions open the stable-ID-matched trade, never the
   first symbol match. Close, Cancel, Escape, and backdrop dismissal must return
   visible focus to the exact trigger without changing the opened disclosures,
   loaded contributor/group pages, scroll, report evidence, or retained Trades
   account/date/day/search/facets.
-- Repeat after revealing Plan contributors 26 and 51, Setup contributors 26 and
-  51, and a Setup group appended after the initial five. Activate nested button
-  content with pointer, keyboard, and VoiceOver. Unknown/tampered identity or
+- Repeat after revealing Plan contributors 26 and 51, Mistake and Setup
+  contributors 26 and 51, and a Mistake or Setup group appended after the
+  initial five. Activate nested button content with pointer, keyboard, and
+  VoiceOver. Unknown/tampered identity or
   source data must show a focused error without opening a sheet or making the
   background inert.
-- In a local journal, save a review change that moves a Plan classification and
-  then a Setup group. Confirm the rebuilt report is announced and focus lands
-  on the originating report heading, not a disconnected row. Repeat at 320 and
+- In a local journal, save review changes that move a Plan classification, a
+  Setup group, and exact Mistake assignments. Confirm the rebuilt report is
+  announced and focus lands on the originating report heading, not a disconnected row. Repeat at 320 and
   421 CSS pixels with 200% Dynamic Type, offline, and during lifecycle changes.
 - Open both Plan Check groups with VoiceOver and reconcile their disjoint
   trades, current saved rule evidence, exact net/win/R coverage, 44-point
@@ -403,12 +405,25 @@ and an App Store disclosure.
 - Open all three groups with VoiceOver and reconcile their disjoint contributing
   trades, exact net/win/R values, 44-point summaries, exclusion/rounding copy,
   and non-ranking/non-advisory disclosure.
+- In Reports, verify Mistake Patterns shows `mistake-patterns-report-v1` and
+  checksum
+  `f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c`,
+  two unique demo trades, two assignments, six completed reviews without an
+  assignment, and code-unit-ordered Chased entry/Early entry groups. Confirm it
+  has no currency, P&L, win, R, expectancy, rate, or rank metric. With a local
+  multi-label fixture, reconcile unique trades separately from summed
+  assignments, exact-ID continuation, and focus return after a saved edit.
+- With at least six exact mistake labels and one group containing at least 26
+  contributors, verify each group action adds at most five groups and each
+  evidence action at most 25 contributors, with exact live status, visible
+  focus, 44-point controls, VoiceOver labels, and 200% Dynamic Type reflow.
 - With a local fixture containing at least six classified setup names and one
   setup with at least 26 included trades, verify each group action adds at most
   five groups, each evidence action adds at most 25 contributors, live status
   stays exact, focus moves to the first newly revealed group, controls remain
   44 points, and 200% text reflows at 320 CSS pixels without clipping.
-- After native export → empty-container restore, verify both governed reports,
+- After native export → empty-container restore, verify all three governed
+  reports,
   their checksums, cohorts, exclusions, group/evidence order, exact values, and
   contributor identities equal the source.
 - Calculate valid long and short plans; verify wrong-side stops show inline errors.
@@ -509,15 +524,16 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   does not apply its custom-directory backup-exclusion flag. Actual device and
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
-- Manual entry, versioned reviews, governed Plan Check and Setup Breakdown,
+- Manual entry, versioned reviews, governed Plan Check, Mistake Patterns, and
+  Setup Breakdown,
   export generation, and Slice C-B local restore still need the applicable
   persistence, response-loss, migration, accessibility, and lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, and Dynamic Review
   Facets v1 intentionally remain session-only; they still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
-  behaviors. Report Trade Continuation v1 is browser-verified only; native
-  stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
+  behaviors. Mistake Patterns and Report Trade Continuation are browser-verified
+  only; native stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
   activation, exact-trigger return, post-save heading fallback, offline
   lifecycle, Dynamic Type, and hardware-keyboard acceptance remain NOT RUN.
   Native Web Share/Files cancellation, save, reopen, custom MIME

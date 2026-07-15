@@ -7,6 +7,10 @@ import {
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import {
+  bindMistakePatternsView,
+  mistakePatternsSection,
+} from "./mistake-patterns-view";
+import {
   bindSetupPerformanceView,
   setupPerformanceSection,
 } from "./setup-performance-view";
@@ -21,6 +25,7 @@ const REPORT_TARGET_IDS = Object.freeze([
   "reports-navigation-title",
   "performance-summary-title",
   "plan-check-title",
+  "mistake-patterns-title",
   "setup-performance-title",
   "cumulative-result-title",
 ] as const);
@@ -33,6 +38,7 @@ function reportNavigation(): string {
       <li><a class="report-navigation-link" href="#performance-summary-title" data-report-target="performance-summary-title">Performance summary</a></li>
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
+      <li><a class="report-navigation-link" href="#mistake-patterns-title" data-report-target="mistake-patterns-title">Mistake patterns</a></li>
       <li><a class="report-navigation-link" href="#setup-performance-title" data-report-target="setup-performance-title">Setup breakdown</a></li>
     </ul>
   </nav>`;
@@ -351,6 +357,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
       <article class="card chart-card" aria-labelledby="cumulative-result-title"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2 id="cumulative-result-title" class="report-target" tabindex="-1">Cumulative result</h2></div><div class="report-section-actions"><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>${reportMenuLink()}</div></div>${equityChart(snapshot)}</article>
     </section>
     ${planCheckSection(snapshot)}
+    ${mistakePatternsSection(snapshot)}
     ${setupPerformanceSection(snapshot)}
   </section>`;
 }
@@ -360,6 +367,7 @@ export function bindReportsView(
   snapshot: JournalWorkspaceSnapshot,
 ): void {
   bindReportNavigation(root);
+  bindMistakePatternsView(root, snapshot);
   bindSetupPerformanceView(root, snapshot);
   const planCheck = root.querySelector<HTMLElement>("[data-plan-check]");
   if (planCheck === null) return;

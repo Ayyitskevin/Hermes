@@ -33,16 +33,35 @@ export function reviewTradeAction(trade: TradePreview, label?: string): string {
   return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
 }
 
-export type TradeReviewReportSource = "plan-check" | "setup-performance";
+export type TradeReviewReportSource =
+  | "plan-check"
+  | "mistake-patterns"
+  | "setup-performance";
+
+const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
+  "plan-check": Object.freeze({ label: "Plan check", targetId: "plan-check-title" }),
+  "mistake-patterns": Object.freeze({
+    label: "Mistake patterns",
+    targetId: "mistake-patterns-title",
+  }),
+  "setup-performance": Object.freeze({
+    label: "Setup breakdown",
+    targetId: "setup-performance-title",
+  }),
+}) satisfies Readonly<Record<TradeReviewReportSource, Readonly<{
+  label: string;
+  targetId: string;
+}>>>;
 
 function reportSourceLabel(source: TradeReviewReportSource): string {
-  return source === "plan-check" ? "Plan check" : "Setup breakdown";
+  return TRADE_REVIEW_REPORT_SOURCE_METADATA[source].label;
 }
 
 export function reportTradeAction(
   snapshot: JournalWorkspaceSnapshot,
   tradeSubjectId: string,
   source: TradeReviewReportSource,
+  accessibleContext?: string,
 ): string {
   const matches = snapshot.trades.filter((trade) => (
     trade.tradeSubjectId === tradeSubjectId
@@ -56,7 +75,8 @@ export function reportTradeAction(
   if (trade === undefined) {
     throw new Error(`The ${reportSourceLabel(source)} contributor trade is missing.`);
   }
-  const accessibleName = `Open ${trade.symbol} trade — ${assetClassLabel(trade)}, ${trade.accountLabel}, ${trade.sessionLabel}`;
+  const context = accessibleContext === undefined ? "" : ` for ${accessibleContext}`;
+  const accessibleName = `Open ${trade.symbol} trade${context} — ${assetClassLabel(trade)}, ${trade.accountLabel}, ${trade.sessionLabel}`;
   return `<button class="secondary-button report-trade-action" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" data-trade-review-report-source="${source}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">Open trade</button>`;
 }
 
@@ -441,8 +461,12 @@ function tradeReviewReportSource(
   trigger: HTMLButtonElement,
 ): TradeReviewReportSource | null | undefined {
   const source = trigger.dataset.tradeReviewReportSource;
-  if (source === undefined) return undefined;
-  if (source === "plan-check" || source === "setup-performance") return source;
+  if (source === undefined) {
+    return trigger.classList.contains("report-trade-action") ? null : undefined;
+  }
+  if (Object.hasOwn(TRADE_REVIEW_REPORT_SOURCE_METADATA, source)) {
+    return source as TradeReviewReportSource;
+  }
   return null;
 }
 
@@ -466,9 +490,7 @@ function focusAfterTradeReviewRefresh(
   reportSource: TradeReviewReportSource | undefined,
 ): void {
   if (reportSource !== undefined) {
-    const targetId = reportSource === "plan-check"
-      ? "plan-check-title"
-      : "setup-performance-title";
+    const targetId = TRADE_REVIEW_REPORT_SOURCE_METADATA[reportSource].targetId;
     const target = root.querySelector<HTMLElement>(`#${targetId}`);
     if (target !== null) {
       const topbarBottom = root.querySelector<HTMLElement>(".topbar")

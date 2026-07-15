@@ -311,8 +311,19 @@ Delivered in the current vertical slice:
   stable setup-name code unit rather than outcome. It renders at most five
   groups per action and 25 contributors per group per evidence action, focuses
   the first newly revealed group, and links every included trade to evidence.
-  Existing archives retain all inputs; focused tests prove both governed
-  reports recompute identically after browser export and restore.
+  Existing archives retain all inputs; a focused test proves governed reports
+  recompute identically after browser export and restore.
+- Mistake Patterns v1 is a count-only report over exact saved mistake labels on
+  current completed review heads. Definition `mistake-patterns-report-v1` is
+  pinned by SHA-256
+  `f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c`.
+  Open and closed trades are equally eligible; pending/draft reviews and
+  completed heads without assignments reconcile separately. Unique included
+  trades and total assignments conserve independently when a trade has several
+  labels. Groups use stable mistake-name code-unit order, evidence uses traded
+  date descending then subject ID, and presentation reveals at most five groups
+  and 25 contributors per action. No financial, rate, rank, causal, predictive,
+  advisory, schema, store, archive, or digest-shape change is included.
 - Trade Browser Scope v1 derives an all-account or stable single-account view
   over optional inclusive workspace-local allocation/activity dates. Exact
   contribution P&L, trade, allocation, and day counts reconcile from calendar
@@ -321,7 +332,7 @@ Delivered in the current vertical slice:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and both governed reports intentionally remain whole-workspace.
+  and all three governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -341,10 +352,10 @@ Delivered in the current vertical slice:
   valid refresh state, reset on mode switch or reload, and never change exact
   scope evidence/totals, the calendar, Dashboard, governed Reports, schema,
   store, archive, or report definitions.
-- Reports Navigator v1 exposes the existing Performance Summary, Journal Curve,
-  Plan Check, and Setup Breakdown in semantic DOM order. Dashboard enters Plan
-  Check directly, every section returns to the menu, and jumps preserve opened
-  disclosures while moving focus below measured chrome without animation. At
+- Reports Navigator v1 exposes Performance Summary, Journal Curve, Plan Check,
+  Mistake Patterns, and Setup Breakdown in semantic DOM order. Dashboard enters
+  Plan Check directly, every section returns to the menu, and jumps preserve
+  opened disclosures while moving focus below measured chrome without animation. At
   480 CSS pixels or narrower the top bar scrolls with content, leaving the
   fixed primary tabs and enough visible height for bounded report controls at
   200% text. Production Chromium proves keyboard and pointer activation, direct
@@ -355,9 +366,10 @@ Delivered in the current vertical slice:
   fingerprints. This adds no schema, store, archive, digest input, formula,
   checksum, cohort, evidence-order, or pagination change.
 - Report Trade Continuation v1 opens the existing exact trade review/detail
-  sheet in place from every Plan Check and Setup Breakdown contributor. Stable
-  subject IDs are validated at render and activation; asset class, account, and
-  session disambiguate duplicate symbols; a replaceable delegated listener
+  sheet in place from every Plan Check, Mistake Patterns, and Setup Breakdown
+  contributor. Stable subject IDs are validated at render and activation; asset
+  class, account, and session disambiguate duplicate symbols; a replaceable
+  delegated listener
   covers progressively appended rows and groups. A missing or duplicate
   render-time match aborts an incoherent report; activation-time invalid
   identity/source data shows a focused error without inert state or a store
@@ -473,8 +485,8 @@ tier-by-tier claim. Reverify before public comparative positioning.
 
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
-v1, matching-runtime local
-restore, and the governed Plan Check and Setup Breakdown are implemented.
+v1, Mistake Patterns v1, matching-runtime local restore, and all three governed
+reports are implemented.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

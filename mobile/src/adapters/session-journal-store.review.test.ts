@@ -17,6 +17,7 @@ import {
   type PreparedTradeReview,
   type TradeReviewInput,
 } from "../application/prepare-trade-review";
+import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { SessionJournalStore } from "./session-journal-store";
 
@@ -247,14 +248,21 @@ describe("browser session trade reviews", () => {
       const before = buildSetupPerformanceReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeMistakes = buildMistakePatternsReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
 
       const edited = await store.commitTradeReviews(batch("setup-edited", [
         review("b", tradeSubjectId, {
           expectedPreviousReviewId: firstHead.id,
           setup: "Pullback",
+          mistakes: ["Late scale-out"],
         }),
       ]));
       const after = buildSetupPerformanceReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
+      const afterMistakes = buildMistakePatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
 
@@ -272,6 +280,14 @@ describe("browser session trade reviews", () => {
         cashExpectancyExact: "10",
         tradeSubjectIds: [tradeSubjectId],
       });
+      expect(beforeMistakes.groups.map((group) => [
+        group.mistake,
+        group.tradeSubjectIds,
+      ])).toEqual([["FOMO", [tradeSubjectId]]]);
+      expect(afterMistakes.groups.map((group) => [
+        group.mistake,
+        group.tradeSubjectIds,
+      ])).toEqual([["Late scale-out", [tradeSubjectId]]]);
     } finally {
       await store.close();
     }

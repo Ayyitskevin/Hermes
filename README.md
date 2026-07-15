@@ -171,8 +171,17 @@ submission-ready product:
   setup-name code-unit order rather than performance rank, and progressively
   renders pages of five setup groups and 25 contributors per group without
   claiming causation, prediction, or advice.
+- Mistake Patterns v1 is a checksum-pinned, count-only projection over exact
+  mistake labels on current completed review heads. Open and closed trades are
+  equally eligible; pending/draft reviews and completed reviews without an
+  assignment reconcile separately. Unique included trades stay distinct from
+  total label assignments when one trade has several mistakes. Groups use
+  stable label code-unit order, pages are bounded to five groups and 25
+  contributors, and every row opens the exact stable-ID trade without showing
+  P&L, win rate, R, expectancy, rank, causation, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
-  Plan Check, and Setup Breakdown in one semantic, DOM-ordered report menu.
+  Plan Check, Mistake Patterns, and Setup Breakdown in one semantic,
+  DOM-ordered report menu.
   Dashboard opens Plan Check directly; every section returns to the menu; jumps
   preserve open evidence disclosures and move visible focus below live chrome.
   At iPhone widths the redundant top bar scrolls with content so 200% text and
@@ -180,13 +189,14 @@ submission-ready product:
   This is transient presentation over the unchanged full-workspace snapshot:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
-- Report Trade Continuation v1 adds an **Open trade** action to every Plan Check
-  and Setup Breakdown contributor. It resolves exactly one current trade by the
-  stable subject ID and reuses the existing review/detail sheet in place, so
+- Report Trade Continuation v1 adds an **Open trade** action to every Plan Check,
+  Mistake Patterns, and Setup Breakdown contributor. It resolves exactly one
+  current trade by the stable subject ID and reuses the existing review/detail
+  sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
   routing through or clearing Trades. Delegated activation covers contributors
-  and setup groups appended after binding. Ordinary close returns to the exact
-  row; a save or refresh that rebuilds evidence returns to the originating
+  and progressively appended report rows/groups. Ordinary close returns to the
+  exact row; a save or refresh that rebuilds evidence returns to the originating
   report heading. The report source is transient DOM context. No report-origin
   or selected-trade state is persisted; Trades state and the report,
   review-persistence, checksum, and archive contracts remain unchanged.
@@ -198,7 +208,8 @@ submission-ready product:
   and keeps whole-trade realized-to-date P&L separate from scoped allocation
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
-  progress, Plan Check, and Setup Breakdown remain whole-workspace.
+  progress, Plan Check, Mistake Patterns, and Setup Breakdown remain
+  whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

@@ -1,9 +1,154 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Report Trade Continuation v1 ·
+Status: verified Mistake Patterns v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver governed Mistake Patterns v1: show count-only exact saved-mistake
+patterns with stable trade evidence on iPhone, without adding performance
+interpretation, persistence, schema, archive, or native-readiness claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New checksum-pinned definition mistake-patterns-report-v1 with canonical
+  SHA-256 f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c
+  consumes the current projection and current completed review heads only.
+- The complete immutable builder includes open and closed trades equally,
+  excludes pending/draft reviews before completed heads without an assignment,
+  and reconciles unique included trades separately from exact label
+  assignments. A multi-label trade remains one included trade and contributes
+  once to each exact saved-label group.
+- Stable subject and completed-head IDs fail closed unless they are unique,
+  trimmed, C0/C1-control-free strings of 1–256 code points; completed versions
+  must be positive safe integers. Saved labels fail closed on malformed,
+  non-normalized, over-limit, within-head duplicate, or cross-head
+  case-identity/conflicting-display input.
+- Groups use stable label code-unit order. Evidence uses traded date descending
+  then stable subject ID. The report exposes no P&L, currency, win, R,
+  expectancy, rate, rank, causal, predictive, or advisory output.
+- Reports now places Mistake Patterns between Plan Check and Setup Breakdown.
+  Presentation reveals at most five groups and 25 assigned-trade rows per
+  action, with exact live counts, focus movement, escaped evidence, and a
+  neutral empty state.
+- Every mistake contributor opens the exact stable-ID trade through the
+  existing review/detail sheet with a label-specific accessible name. Ordinary
+  close returns to the exact trigger; an explicit save that changes assignments
+  rebuilds the report and returns focus to the Mistake Patterns heading.
+- The report-source allowlist is exhaustive across Plan, Mistake, and Setup.
+  Unknown or missing source metadata on a report action fails closed with a
+  focused alert before any dialog, inert background, or store operation.
+- Existing browser restore, real session-store current-head, workspace
+  process-score independence, Reports navigation, conflicting Trades-state,
+  mobile reflow, and report-save journeys now protect the new report without
+  changing their ownership boundaries.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  record the delivered report while leaving VoiceOver, native Dynamic Type,
+  lifecycle, SQLCipher, and physical-device acceptance explicitly open.
+- No schema, migration, store, archive/export shape, digest input, financial
+  formula/version, existing report definition/checksum, native source,
+  credential, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0 after final review corrections.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0 after final review corrections; 43 files,
+  478 tests passed.
+- cd mobile && npx vitest run src/core/mistake-patterns-report.test.ts —
+  exit 0; all 26 checksum, cohort, conservation, ordering, immutability,
+  position/result-neutrality, current-head, and fail-closed cases passed.
+- cd mobile && npm run test:ios-sync — exit 0; 8 tests passed.
+- cd mobile && npm run test:e2e -- e2e/reports-navigation.spec.ts — exit 0;
+  all 7 Reports journeys passed, including exact demo counts, stable-ID
+  continuation, missing/unknown source tampering, and 320/421px 200% text.
+- cd mobile && npm run test:e2e — exit 0; all 60 production-browser journeys
+  passed in 34.5 seconds, including the local post-save Plan/Setup/Mistake
+  regrouping journey.
+- cd mobile && npm run ios:copy && npm run verify:ios-sync — exit 0; Vite
+  transformed 66 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  5e6fb6edc4ac2ffc1015006958ce238f6903a218038d117be1bac319bf37c7d2,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --exit-code -- mobile/ios mobile/package-lock.json and git diff
+  --check — exit 0; no tracked native/lock drift or whitespace errors.
+- Three independent read-only reviews found no remaining implementation or
+  scope blocker. Their two fail-closed findings, one governed mutation-coverage
+  finding, and documentation-truth findings were corrected before the final
+  unit/type/diff gate. These reviews are advisory; the rerunnable commands above
+  are authoritative.
+- Legacy Python ruff / pytest — NOT RUN locally: this checkout has no project
+  venv, and the offline dependency set is incomplete. The hosted Legacy Python
+  safety job must provide that independent evidence after publication.
+
+assumptions:
+
+- Mistake Patterns intentionally consumes the reconciled full-workspace
+  projection and each trade's current completed review head. Trade Browser
+  account/date/day/search/facet state does not scope governed report truth.
+- Exact saved display labels are report identity after the existing authored
+  review normalization and limit contract. The report validates but never
+  repairs, normalizes, deduplicates, or drops stored values.
+- Open and closed trades are equally eligible; no result, currency, risk, or
+  position-state condition is part of the cohort.
+- tradeSubjectId remains the only continuation identity. The allowlisted report
+  source and captured trigger are transient DOM state and absent from URLs,
+  storage, exports, restores, archives, and digests.
+- Browser evidence uses production Chromium and the in-memory
+  SessionJournalStore. It is not a native bridge, SQLCipher transaction, second
+  scene, relaunch, VoiceOver, hardware-keyboard, or physical-iPhone result.
+
+open:
+
+- HOLD native Mistake Patterns acceptance: verify checksum/count narration,
+  multi-label conservation, five/25 progressive controls, exact-ID
+  continuation, close/save focus return, VoiceOver, 200% native Dynamic Type,
+  hardware keyboard, lifecycle, relaunch, and physical-device layout on a
+  current Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft omits
+  current-review-head source and draft/completed eligibility from its proposed
+  evidence/checksum definition. Resolve that definition before approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before claiming
+  ETF/options/futures/crypto file coverage; the current generic adapter records
+  rows as stock.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- MED — re-audit the next autonomous product slice after publication. Emotion
+  Patterns v1 is the nearest safe count-and-evidence reuse, but it should ship
+  only if it adds decision value rather than report-family repetition; keep any
+  candidate free of P&L/rate/rank/causation/advice and persistence.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Attachments, verified Delete All Data, saved presets, persistent/report scope,
+  fuller account/vocabulary/playbook management, remaining report families,
+  and native restore/backup acceptance remain separate governed work.
+- Fleet guard-layer screening was not evidenced for this slice; do not treat
+  this handoff as guard approval.
+- Do not claim native readiness, native backup completeness, broader CSV asset
+  support, or start broker sync, execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, pricing, or public comparative
+  positioning from this milestone.
+
+## Prior milestone — Report Trade Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Mistake Patterns v1 handoff above.
+
+Status: verified Report Trade Continuation v1 ·
+updated 2026-07-15
+
+### Historical handoff
 
 task: Deliver Report Trade Continuation v1: open the exact existing trade from
 Plan Check and Setup Breakdown evidence on iPhone without routing through
@@ -141,7 +286,8 @@ open:
 ## Prior milestone — Reports Navigator v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Report Trade Continuation v1 handoff above.
+> newer Report Trade Continuation v1 milestone and now by the active Mistake
+> Patterns v1 handoff above.
 
 Status: verified Reports Navigator v1 ·
 updated 2026-07-15

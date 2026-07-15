@@ -435,6 +435,44 @@ test("report review saves return to the source heading when evidence moves", asy
   );
   await expect(movedAction).toHaveCount(1);
   await expect(movedAction).toHaveAttribute("aria-label", /Open AAPL trade/u);
+
+  const lateScaleOut = page.locator("[data-mistake-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Late scale-out" }) });
+  await lateScaleOut.locator("summary").click();
+  const mistakeAction = lateScaleOut.getByRole("button", {
+    name: /Open AAPL trade for saved mistake Late scale-out/u,
+  });
+  await mistakeAction.click();
+  const mistakeDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(mistakeDialog.locator("[data-trade-review-report-context]"))
+    .toHaveText(
+      "Opened from Mistake patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+  await mistakeDialog.locator("#review-mistakes")
+    .fill("Early entry, Chased entry");
+  await mistakeDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(mistakeDialog).toHaveCount(0);
+  await expect(page.locator("#mistake-patterns-title")).toBeFocused();
+  const mistakeSection = page.locator("[data-mistake-patterns]");
+  await expect(mistakeSection.getByText("2 unique trades of 2 trades", { exact: true }))
+    .toBeVisible();
+  await expect(mistakeSection.getByText("3 saved mistake assignments", { exact: true }))
+    .toBeVisible();
+  const chased = mistakeSection.locator("[data-mistake-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Chased entry" }) });
+  const early = mistakeSection.locator("[data-mistake-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Early entry" }) });
+  const retainedLate = mistakeSection.locator("[data-mistake-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Late scale-out" }) });
+  await expect(chased.locator('[data-mistake-patterns-trade]')).toHaveCount(1);
+  await expect(chased.locator('[data-mistake-patterns-trade]')).toContainText("AAPL");
+  await expect(early.locator('[data-mistake-patterns-trade]')).toHaveCount(1);
+  await expect(early.locator('[data-mistake-patterns-trade]')).toContainText("AAPL");
+  await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toHaveCount(1);
+  await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toContainText("MSFT");
 });
 
 test("a proven batch tag commit retries only the failed journal refresh", async ({ page, context }) => {

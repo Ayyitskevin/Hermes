@@ -20,6 +20,11 @@ const REPORT_DESTINATIONS = [
     returnLink: "[data-plan-check] > .section-title .report-menu-link",
   },
   {
+    link: "Mistake patterns",
+    target: "#mistake-patterns-title",
+    returnLink: "[data-mistake-patterns] > .section-title .report-menu-link",
+  },
+  {
     link: "Setup breakdown",
     target: "#setup-performance-title",
     returnLink: "[data-setup-performance] > .section-title .report-menu-link",
@@ -91,6 +96,18 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         evidence: attributes(
           "[data-plan-check-trade]",
           "data-plan-check-trade",
+        ),
+      },
+      mistakes: {
+        metadata: text("[data-mistake-patterns] .mistake-patterns-meta"),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-mistake-patterns-group-index] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-mistake-patterns-trade]",
+          "data-mistake-patterns-trade",
         ),
       },
       setup: {
@@ -206,12 +223,17 @@ test(
     const planGroup = page.locator(
       '[data-plan-check-group="followed"]',
     );
+    const mistakeGroup = page.locator(
+      '[data-mistake-patterns-group-index="0"]',
+    );
     const setupGroup = page.locator(
       '[data-setup-performance-group-index="0"]',
     );
     await planGroup.locator("summary").click();
+    await mistakeGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(planGroup).toHaveAttribute("open", "");
+    await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
 
     for (const [index, destination] of REPORT_DESTINATIONS.entries()) {
@@ -235,6 +257,7 @@ test(
     await expect(menuHeading).toBeFocused();
     await expectUnobscured(menuHeading);
     await expect(planGroup).toHaveAttribute("open", "");
+    await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-navigation-sentinel",
@@ -245,6 +268,51 @@ test(
     await expect(
       page.getByRole("button", { name: "Reports", exact: true }),
     ).toHaveAttribute("aria-current", "page");
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "mistake patterns reports exact current-head counts without performance fields",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-mistake-patterns]");
+    await expect(section).toBeVisible();
+    const metadata = section.locator(".mistake-patterns-meta");
+    for (const expected of [
+      "mistake-patterns-report-v1",
+      "f94fc896308348f55a665aeafba665f0f3d4ee50fc225c4dba1087bc2babad3c",
+      "Current completed review heads",
+      "2 unique trades of 8 trades",
+      "2 saved mistake assignments",
+      "0 pending or draft · 6 completed without a saved mistake",
+    ]) {
+      await expect(metadata).toContainText(expected);
+    }
+    await expect(
+      section.locator("[data-mistake-patterns-group-index] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual(["Chased entry", "Early entry"]);
+    await expect(
+      section.locator("[data-mistake-patterns-trade]").evaluateAll((elements) => (
+        elements.map((element) => element.getAttribute("data-mistake-patterns-trade"))
+      )),
+    ).resolves.toEqual(["demo-subject-spy", "demo-subject-tsla"]);
+    await expect(section.locator("dt").allTextContents()).resolves.not.toContain("Currency");
+    for (const prohibited of ["Cash expectancy", "Win rate", "Average R", "Net P&L"]) {
+      await expect(section.getByText(prohibited, { exact: true })).toHaveCount(0);
+    }
+    await section.getByText("How this report works", { exact: true }).click();
+    await expect(section).toContainText(
+      "total assignments and summed group counts can exceed unique included trades",
+    );
+    await expect(section).toContainText("never count or performance rank");
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
     expect(externalRequests).toEqual([]);
   },
 );
@@ -303,6 +371,7 @@ test(
 
     const summaries = page.locator([
       "[data-plan-check-group] > summary",
+      "[data-mistake-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
     ].join(", "));
     for (let index = 0; index < await summaries.count(); index += 1) {
@@ -330,6 +399,8 @@ test(
         "[data-report-overview] *",
         "[data-plan-check]",
         "[data-plan-check] *",
+        "[data-mistake-patterns]",
+        "[data-mistake-patterns] *",
         "[data-setup-performance]",
         "[data-setup-performance] *",
       ].join(", ")))
@@ -377,14 +448,19 @@ test(
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".topbar")).toHaveCSS("position", "static");
     const followedGroup = page.locator('[data-plan-check-group="followed"]');
+    const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
     await followedGroup.locator(":scope > summary").click();
+    await mistakeGroup.locator(":scope > summary").click();
     await expect(followedGroup).toHaveAttribute("open", "");
+    await expect(mistakeGroup).toHaveAttribute("open", "");
 
     const controls = page.locator([
       "a[data-report-target]",
       "[data-plan-check-group] > summary",
+      "[data-mistake-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
       '[data-plan-check-group="followed"][open] .report-trade-action',
+      '[data-mistake-patterns-group-index="0"][open] .report-trade-action',
     ].join(", "));
     const controlCount = await controls.count();
     expect(controlCount).toBeGreaterThanOrEqual(10);
@@ -419,6 +495,7 @@ test(
         "[data-report-navigation]",
         "[data-report-overview]",
         "[data-plan-check]",
+        "[data-mistake-patterns]",
         "[data-setup-performance]",
       ].join(", "))).map((element) => element.scrollWidth - element.clientWidth),
     }));
@@ -449,10 +526,13 @@ test(
 
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     const planGroup = page.locator('[data-plan-check-group="followed"]');
+    const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
     await planGroup.locator("summary").click();
+    await mistakeGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(planGroup).toHaveAttribute("open", "");
+    await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await page.locator("[data-plan-check]").evaluate((element) => {
       element.dataset.tradeContinuationSentinel = "preserved";
@@ -497,6 +577,25 @@ test(
     expect(Math.abs(await page.evaluate(() => window.scrollY) - scrollBefore))
       .toBeLessThanOrEqual(1);
 
+    const mistakeAction = page.locator(
+      '[data-mistake-patterns-trade="demo-subject-spy"] .report-trade-action',
+    );
+    await expect(mistakeAction).toHaveAccessibleName(
+      "Open SPY trade for saved mistake Chased entry — ETF, Demo Swing, Jul 7 · Afternoon",
+    );
+    await mistakeAction.click();
+    const mistakeDialog = page.getByRole("dialog", {
+      name: /SPY trade review · ETF · Demo Swing · Jul 7 · Afternoon/u,
+    });
+    await expect(mistakeDialog).toBeVisible();
+    await expect(mistakeDialog.locator("[data-trade-review-report-context]")).toHaveText(
+      "Opened from Mistake patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(mistakeDialog).toHaveCount(0);
+    await expect(mistakeAction).toBeFocused();
+    await expectUnobscured(mistakeAction);
+
     await action.evaluate((element) => {
       const clone = element.cloneNode(true) as HTMLButtonElement;
       clone.id = "appended-report-trade";
@@ -540,6 +639,24 @@ test(
     });
 
     await appended.evaluate((element) => {
+      delete element.dataset.tradeReviewReportSource;
+    });
+    await appended.locator("span").click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const missingSourceError = page.locator(
+      "[data-trade-review-open-error]",
+    );
+    await expect(missingSourceError).toHaveText(
+      "Hermes could not open this exact trade because its stable local identity is unavailable.",
+    );
+    await expect(missingSourceError).toBeFocused();
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    await appended.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.dataset.tradeReviewReportSource = "plan-check";
+    });
+
+    await appended.evaluate((element) => {
       element.dataset.reviewTrade = "missing-subject";
     });
     await appended.locator("span").click();
@@ -554,6 +671,7 @@ test(
     });
 
     await expect(planGroup).toHaveAttribute("open", "");
+    await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-trade-continuation-sentinel",
@@ -675,6 +793,37 @@ for (const viewport of [
       await expect(action).toBeFocused();
       await expectUnobscured(action);
       await expectTouchTarget(action);
+
+      const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
+      await mistakeGroup.locator(":scope > summary").click();
+      const mistakeAction = mistakeGroup.locator(".report-trade-action");
+      await mistakeAction.focus();
+      await expect(mistakeAction).toBeFocused();
+      await expectUnobscured(mistakeAction);
+      await expectTouchTarget(mistakeAction);
+      await expect(mistakeAction).toHaveAccessibleName(
+        "Open SPY trade for saved mistake Chased entry — ETF, Demo Swing, Jul 7 · Afternoon",
+      );
+      await mistakeAction.click();
+      const mistakeDialog = page.getByRole("dialog", {
+        name: /SPY trade review · ETF · Demo Swing · Jul 7 · Afternoon/u,
+      });
+      await expect(mistakeDialog).toBeVisible();
+      await expect(mistakeDialog.locator("[data-trade-review-report-context]"))
+        .toHaveText(
+          "Opened from Mistake patterns. This full-workspace report does not use or change your Trades filters.",
+        );
+      const mistakeOverflow = await mistakeDialog.evaluate((element) => ({
+        document: document.documentElement.scrollWidth - window.innerWidth,
+        dialog: element.scrollWidth - element.clientWidth,
+      }));
+      expect(mistakeOverflow.document).toBeLessThanOrEqual(1);
+      expect(mistakeOverflow.dialog).toBeLessThanOrEqual(1);
+      await page.keyboard.press("Escape");
+      await expect(mistakeDialog).toHaveCount(0);
+      await expect(mistakeAction).toBeFocused();
+      await expectUnobscured(mistakeAction);
+      await expectTouchTarget(mistakeAction);
       expect(await localStorageSnapshot(page)).toEqual(storageBefore);
       expect(externalRequests).toEqual([]);
     },
