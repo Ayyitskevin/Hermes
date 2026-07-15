@@ -198,9 +198,22 @@ describe("browser session trade reviews", () => {
         plannedStop: visibleEdit.plannedStop,
       }).revision).toBe(visibleEdit.revision);
 
+      const beforeHistoricalReplay = await store.exportUserData();
       const oldRetry = await store.commitTradeReviews(batch("first-review", [firstCommand]));
       expect(oldRetry).toMatchObject({ outcome: "duplicate", reviewIds: first.reviewIds });
       expect(oldRetry.ledger.tradeReviews[0]?.id).toBe(edited.reviewIds[0]);
+      const afterHistoricalReplay = await store.exportUserData();
+      const replayData = parseJournalArchive(afterHistoricalReplay.contents)
+        .payload.data as unknown as {
+          readonly reviewVersions: readonly unknown[];
+          readonly reviewHeads: readonly unknown[];
+          readonly reviewSubmissions: readonly unknown[];
+        };
+      expect(afterHistoricalReplay.archive.stateSha256)
+        .toBe(beforeHistoricalReplay.archive.stateSha256);
+      expect(replayData.reviewVersions).toHaveLength(2);
+      expect(replayData.reviewHeads).toHaveLength(1);
+      expect(replayData.reviewSubmissions).toHaveLength(2);
 
       const changedSubmission = review("b", tradeSubjectId, {
         expectedPreviousReviewId: firstHead.id,

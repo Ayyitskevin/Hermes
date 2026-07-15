@@ -19,6 +19,7 @@ import {
   JournalApplication,
   JournalRestoreCommitStatusUncertainError,
   ManualExecutionCommitStatusUncertainError,
+  TradeReviewCommitStatusUncertainError,
 } from "./journal-application";
 import type { PreparedDailyJournalEntry } from "./prepare-daily-journal";
 import { prepareDailyJournalEntry } from "./prepare-daily-journal";
@@ -259,6 +260,235 @@ describe("JournalApplication trade review workflow", () => {
       expect(recovered.reviewIds).toEqual([recovered.ledger.tradeReviews[0]?.id]);
       expect(recovered.ledger.tradeReviews).toHaveLength(1);
       expect(recovered.ledger.tradeReviews[0]?.revision).toBe(review.revision);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it.each([
+    "submission_changed",
+    "review_changed",
+    "trade_changed",
+  ] as const)(
+    "keeps a %s response uncertain after an earlier commit response was unknown",
+    async (code) => {
+      class AmbiguousThenDomainStore extends SessionJournalStore {
+        commitCalls = 0;
+
+        override async commitTradeReviews(
+          _command: PreparedTradeReviewBatch,
+        ): Promise<TradeReviewCommitResult> {
+          this.commitCalls += 1;
+          if (this.commitCalls === 1) {
+            throw new Error("Native bridge response was lost.");
+          }
+          throw new JournalTradeReviewError({
+            code,
+            message: "Adapter state changed before exact receipt proof.",
+          });
+        }
+      }
+
+      const store = new AmbiguousThenDomainStore();
+      const application = new JournalApplication(store, "browser-session");
+      try {
+        const tradeSubjectId = await openTrade(store, "IBM", "a", 11);
+        const review = application.prepareReview(reviewInput(
+          "b".repeat(64),
+          tradeSubjectId,
+        ));
+        await expect(application.commitReviewsSafely(
+          application.prepareReviewBatch([review], "ambiguous-domain"),
+        )).rejects.toBeInstanceOf(TradeReviewCommitStatusUncertainError);
+        expect(store.commitCalls).toBe(2);
+        expect((await store.load()).tradeReviews).toEqual([]);
+      } finally {
+        await application.close();
+      }
+    },
+  );
+
+  it("keeps a later domain response uncertain when the first rejection reason is undefined", async () => {
+    class UndefinedThenDomainStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      override async commitTradeReviews(
+        _command: PreparedTradeReviewBatch,
+      ): Promise<TradeReviewCommitResult> {
+        this.commitCalls += 1;
+        if (this.commitCalls === 1) throw undefined;
+        throw new JournalTradeReviewError({
+          code: "review_changed",
+          message: "A later domain response is not prior-attempt proof.",
+        });
+      }
+    }
+
+    const store = new UndefinedThenDomainStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      const tradeSubjectId = await openTrade(store, "SAP", "6", 11);
+      const review = application.prepareReview(reviewInput(
+        "7".repeat(64),
+        tradeSubjectId,
+      ));
+      await expect(application.commitReviewsSafely(
+        application.prepareReviewBatch([review], "undefined-then-domain"),
+      )).rejects.toBeInstanceOf(TradeReviewCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+      expect((await store.load()).tradeReviews).toEqual([]);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("recovers an exact committed review batch by receipt after newer heads advance", async () => {
+    class ReceiptRecoveryReviewStore extends SessionJournalStore {
+      commitCalls = 0;
+      blockLoads = false;
+
+      override async load(): ReturnType<SessionJournalStore["load"]> {
+        if (this.blockLoads) throw new Error("Native read response is unavailable.");
+        return super.load();
+      }
+
+      seed(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult> {
+        return super.commitTradeReviews(command);
+      }
+
+      override async commitTradeReviews(
+        command: PreparedTradeReviewBatch,
+      ): Promise<TradeReviewCommitResult> {
+        this.commitCalls += 1;
+        return super.commitTradeReviews(command);
+      }
+    }
+
+    const store = new ReceiptRecoveryReviewStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      const firstSubject = await openTrade(store, "ORCL", "c", 12);
+      const secondSubject = await openTrade(store, "CSCO", "d", 13);
+      const first = application.prepareReview(reviewInput(
+        "e".repeat(64),
+        firstSubject,
+      ));
+      const second = application.prepareReview(reviewInput(
+        "f".repeat(64),
+        secondSubject,
+        { note: "Protected the second setup." },
+      ));
+      const exactBatch = application.prepareReviewBatch(
+        [second, first],
+        "historical-exact-batch",
+      );
+      expect(Object.isFrozen(exactBatch)).toBe(true);
+      expect(Object.isFrozen(exactBatch.reviews)).toBe(true);
+
+      store.blockLoads = true;
+      await expect(application.commitReviewsSafely(exactBatch))
+        .rejects.toBeInstanceOf(TradeReviewCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+
+      store.blockLoads = false;
+      const committed = await store.load();
+      const originalBySubject = new Map(
+        committed.tradeReviews.map((review) => [review.tradeSubjectId, review] as const),
+      );
+      const laterFirst = prepareTradeReview(reviewInput(
+        "1".repeat(64),
+        firstSubject,
+        {
+          expectedPreviousReviewId: originalBySubject.get(firstSubject)?.id ?? null,
+          note: "A later first-subject review.",
+        },
+      ));
+      const laterSecond = prepareTradeReview(reviewInput(
+        "2".repeat(64),
+        secondSubject,
+        {
+          expectedPreviousReviewId: originalBySubject.get(secondSubject)?.id ?? null,
+          note: "A later second-subject review.",
+        },
+      ));
+      await store.seed({
+        batchId: "later-heads",
+        revision: tradeReviewBatchRevision("later-heads", [laterFirst, laterSecond]),
+        reviews: [laterFirst, laterSecond],
+      });
+
+      const recovered = await application.commitReviewsSafely(exactBatch);
+      expect(recovered).toMatchObject({ outcome: "duplicate" });
+      expect(recovered.reviewIds).toEqual([
+        originalBySubject.get(secondSubject)?.id,
+        originalBySubject.get(firstSubject)?.id,
+      ]);
+      expect(recovered.ledger.tradeReviews).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          tradeSubjectId: firstSubject,
+          version: 2,
+          revision: laterFirst.revision,
+        }),
+        expect.objectContaining({
+          tradeSubjectId: secondSubject,
+          version: 2,
+          revision: laterSecond.revision,
+        }),
+      ]));
+      expect(store.commitCalls).toBe(3);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("does not prove identical review content saved under a different submission", async () => {
+    class SameContentDifferentReviewSubmissionStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      seed(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult> {
+        return super.commitTradeReviews(command);
+      }
+
+      override async commitTradeReviews(
+        _command: PreparedTradeReviewBatch,
+      ): Promise<TradeReviewCommitResult> {
+        this.commitCalls += 1;
+        throw new Error("Native bridge is unavailable.");
+      }
+    }
+
+    const store = new SameContentDifferentReviewSubmissionStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      const tradeSubjectId = await openTrade(store, "INTC", "3", 14);
+      const exact = application.prepareReview(reviewInput(
+        "4".repeat(64),
+        tradeSubjectId,
+      ));
+      const differentSubmission = application.prepareReview(reviewInput(
+        "5".repeat(64),
+        tradeSubjectId,
+      ));
+      expect(differentSubmission.revision).not.toBe(exact.revision);
+      await store.seed({
+        batchId: "different-submission",
+        revision: tradeReviewBatchRevision(
+          "different-submission",
+          [differentSubmission],
+        ),
+        reviews: [differentSubmission],
+      });
+
+      await expect(application.commitReviewsSafely(
+        application.prepareReviewBatch([exact], "exact-missing-submission"),
+      )).rejects.toBeInstanceOf(TradeReviewCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+      expect((await store.load()).tradeReviews).toEqual([
+        expect.objectContaining({
+          revision: differentSubmission.revision,
+          note: exact.note,
+        }),
+      ]);
     } finally {
       await application.close();
     }

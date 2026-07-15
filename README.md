@@ -102,6 +102,14 @@ submission-ready product:
   deterministic stale recovery uses the flow above, repeated ambiguity stays
   locked, and a proven commit followed by render failure exposes refresh only.
   Production-browser evidence is not native bridge, relaunch, or device proof.
+- Single-Trade Review Exact-Command Recovery v1 gives the individual review
+  sheet the same no-reconstruction boundary while retaining its own frozen
+  PreparedTradeReviewBatch. Unknown outcomes expose exact replay only; a
+  matching member receipt recovers the original immutable version, a newer head
+  preserves the raw form and blocks obsolete submits, and a proven save with a
+  failed render exposes refresh only. The production-browser evidence does not
+  cover native bridge/lifecycle behavior. Atomic batch tagging and full
+  stale-head comparison/consent remain separate HIGH reliability slices.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

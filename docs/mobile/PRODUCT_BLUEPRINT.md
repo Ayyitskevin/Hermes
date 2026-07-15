@@ -405,6 +405,20 @@ followed by render failure offers refresh only. Chromium proves this state
 machine offline in the production bundle, not native bridge loss, multi-scene
 lifecycle, relaunch, or device accessibility.
 
+Single-Trade Review Exact-Command Recovery v1 applies the same safety invariant
+to the individual trade-review sheet without sharing editor state or changing
+the review schema. The sheet owns one frozen PreparedTradeReviewBatch until
+ordered member-receipt proof, enables only exact replay while status is
+unknown, preserves the raw form and blocks obsolete saves on a fresh
+`review_changed`, and offers refresh only after positive commit proof. Domain
+errors observed after an earlier unknown attempt remain ambiguous unless the
+current exact revision is positively proven. Chromium covers repeated
+ambiguity, exact recovery, competing-head and submission-collision paths,
+privacy/focus/reflow, and zero-persistence refresh. Atomic batch tagging and
+the richer Trade Review stale-head evidence/consent flow remain separate HIGH
+work; native bridge, multi-scene, relaunch, and device accessibility remain
+unproven.
+
 The fifth increment is Trade Browser Scope v1. It is a derived-only projection
 over stable ledger account IDs and exact calendar contributions: all accounts
 or one account, optional inclusive workspace-local allocation/activity dates,
@@ -602,6 +616,8 @@ accessibility evidence. Daily Journal Stale-Head Recovery v1 adds
 preserve-review-consent-resubmit behavior at the existing optimistic head
 boundary, and Exact-Command Recovery v1 closes the browser unknown-save gap
 with receipt-first replay and refresh-only handling after proven commit. The
+individual Trade Review sheet now has its own exact-command recovery boundary;
+this does not include batch tagging or the full stale-head consent flow. The
 Linux CI handoff now verifies the ignored iOS
 public copy byte-for-byte and validates selected generated-registration fields
 while explicitly leaving all native rows NOT RUN. None of these reliability

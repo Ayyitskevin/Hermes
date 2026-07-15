@@ -70,7 +70,7 @@ export class ManualExecutionCommitStatusUncertainError extends Error {
 export class TradeReviewCommitStatusUncertainError extends Error {
   constructor(cause: unknown) {
     super(
-      "Hermes could not confirm whether this trade review was saved. Reload the journal before editing this trade again.",
+      "Hermes could not confirm whether this exact trade review save committed. Keep this sheet open and retry the same save; do not reopen or re-enter this review.",
       { cause },
     );
     this.name = "TradeReviewCommitStatusUncertainError";
@@ -269,11 +269,20 @@ export class JournalApplication {
   ): Promise<TradeReviewCommitResult> {
     this.assertLocalReviewMode();
     let lastError: unknown;
+    let hadUnknownCommitError = false;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         return await this.commitReviews(prepared);
       } catch (error) {
-        if (error instanceof JournalTradeReviewError) throw error;
+        if (error instanceof JournalTradeReviewError) {
+          if (!hadUnknownCommitError) throw error;
+          // A domain error does not say whether the adapter checked the exact
+          // submission receipt first. After an earlier unknown response, it
+          // cannot prove that the prior attempt did not commit. Preserve
+          // ambiguity and let the current-head fallback provide positive proof.
+        } else {
+          hadUnknownCommitError = true;
+        }
         lastError = error;
       }
     }

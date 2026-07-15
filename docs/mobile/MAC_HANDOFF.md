@@ -188,10 +188,18 @@ and an App Store disclosure.
   risk, stop, exact R-multiple, exact percentage return, and their formula
   versions survive force quit/relaunch. Edit it again and confirm a new review
   version is appended while every execution fact remains unchanged.
-- Batch-tag two trades atomically. Retry the exact submission after a simulated
-  lost response and confirm no duplicate review version is created; combine one
-  already-saved submission with one fresh submission and confirm the mixed
-  batch is rejected without partial state.
+- For the individual review sheet, simulate bridge loss before and after
+  commit. Confirm the same frozen batch/member submission is replayed without
+  rereading authored controls or generating an ID, historical receipt recovery
+  returns the original version after a newer head, non-head ambiguity stays
+  frozen, and a proven commit with render failure exposes refresh only. Repeat
+  through background/foreground, force quit/relaunch, a second real scene,
+  VoiceOver, hardware keyboard, and 200% Dynamic Type before marking native
+  acceptance PASS.
+- Batch-tag two trades atomically and confirm ordinary success plus mixed
+  saved/fresh atomic rejection. Do not mark ambiguous-save recovery PASS:
+  current batch-tag UI recreates member and batch identities on a new action and
+  is an explicit HIGH hold until it retains one exact prepared batch.
 - With VoiceOver and a hardware keyboard, confirm focus remains inside the
   review sheet through rule removal and returns to its trigger on close.
   While a save is pending, confirm every editable control is disabled.
@@ -419,6 +427,13 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   confirmed-not-saved ambiguity, repeated unknown results, stale-after-unknown,
   successor receipt lookup, refresh failure after proven commit, multi-scene
   lifecycle, relaunch, and accessibility before accepting this path on iOS.
+- Browser Single-Trade Review exact-command recovery is implemented and
+  covered, but native acceptance is NOT RUN. Record bridge loss before/after
+  commit, repeated ambiguity, historical receipt recovery, competing-head and
+  submission-collision behavior, refresh-only post-proof recovery,
+  multi-scene/lifecycle/relaunch, VoiceOver, hardware keyboard, and Dynamic
+  Type. Atomic batch-tag recovery and full Trade Review stale-head
+  evidence/consent are separate HIGH holds and must not inherit this result.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

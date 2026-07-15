@@ -2,7 +2,15 @@ import {
   TradeReviewCommitStatusUncertainError,
   type JournalApplication,
 } from "../application/journal-application";
-import type { TradeReviewRuleInput } from "../application/prepare-trade-review";
+import {
+  TradeReviewPreparationError,
+  type TradeReviewRuleInput,
+} from "../application/prepare-trade-review";
+import {
+  JournalTradeReviewError,
+  type PreparedTradeReviewBatch,
+  type TradeReviewCommitResult,
+} from "../application/journal-store";
 import { escapeHtml } from "../core/html";
 import type { TradeMetricEvidence } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
@@ -34,10 +42,14 @@ export function parseReviewList(value: string): readonly string[] {
 
 export function tradeReviewSaveFailureKind(
   error: unknown,
-): "uncertain" | "failed" {
-  return error instanceof TradeReviewCommitStatusUncertainError
-    ? "uncertain"
-    : "failed";
+): "uncertain" | "stale" | "blocked" | "retryable" {
+  if (error instanceof TradeReviewCommitStatusUncertainError) return "uncertain";
+  if (
+    error instanceof JournalTradeReviewError
+    && error.conflict.code === "review_changed"
+  ) return "stale";
+  if (error instanceof JournalTradeReviewError) return "blocked";
+  return "retryable";
 }
 
 function metricValue(metric: TradeMetricEvidence): string {
@@ -173,7 +185,7 @@ export function tradeReviewSheetTemplate(
     ? `<button class="primary-button" type="submit" data-review-state="completed">Save review changes</button>`
     : `<button class="secondary-button" type="submit" data-review-state="draft">Save draft</button><button class="primary-button" type="submit" data-review-state="completed">Mark reviewed</button>`;
   return `<div class="sheet-backdrop trade-review-backdrop" id="trade-review" data-trade-review-backdrop>
-    <section class="settings-sheet trade-review-sheet" role="dialog" aria-modal="true" aria-labelledby="trade-review-title">
+    <section class="settings-sheet trade-review-sheet" role="dialog" aria-modal="true" aria-labelledby="trade-review-title" tabindex="-1">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-heading">
         <div><p class="eyebrow">${escapeHtml(reviewLabel)}</p><h2 id="trade-review-title" tabindex="-1">${escapeHtml(trade.symbol)} trade review · ${assetClassLabel(trade)}</h2></div>
@@ -216,7 +228,7 @@ export function tradeReviewSheetTemplate(
         <label class="review-note-label">Reflection<textarea id="review-note" rows="5" maxlength="5000" placeholder="What happened, what did you do well, and what changes next time?" ${disabled}>${escapeHtml(note)}</textarea></label>
         <p class="form-error" id="trade-review-error" role="alert" tabindex="-1" hidden></p>
         <p class="sr-only" id="trade-review-status" aria-live="polite"></p>
-        <button class="secondary-button" id="trade-review-reconcile" type="button" hidden>Reload journal and reconcile</button>
+        <button class="secondary-button" id="trade-review-reconcile" type="button" hidden>Retry this exact save</button>
         <div class="quick-actions">
           <button class="secondary-button" type="button" data-trade-review-close>${readOnly ? "Close" : "Cancel"}</button>
           ${readOnly ? "" : saveActions}
@@ -233,7 +245,11 @@ function trapFocus(container: HTMLElement, event: KeyboardEvent): void {
   )).filter((element) => !element.hidden && element.getClientRects().length > 0);
   const first = focusable[0];
   const last = focusable.at(-1);
-  if (first === undefined || last === undefined) return;
+  if (first === undefined || last === undefined) {
+    event.preventDefault();
+    container.focus({ preventScroll: true });
+    return;
+  }
   const active = document.activeElement;
   const activeIsInTabOrder = active instanceof HTMLElement && focusable.includes(active);
   if (!container.contains(active) || !activeIsInTabOrder) {
@@ -337,52 +353,213 @@ export function bindTradeReviewActions(
         ? null
         : application.createReviewSubmissionId();
       let saving = false;
-      let controlStates: ReadonlyArray<readonly [
-        HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
-        boolean,
-      ]> = [];
+      let uncertain = false;
+      let committed = false;
+      let saveBlocked = false;
+      let reopenRefreshPending = false;
+      let uncertainPrepared: PreparedTradeReviewBatch | null = null;
+      let attemptedState: "draft" | "completed" = trade.reviewStatus === "completed"
+        ? "completed"
+        : "draft";
+      type ReviewControl =
+        | HTMLButtonElement
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | HTMLSelectElement;
+      const currentControls = () => Array.from(
+        sheet.querySelectorAll<ReviewControl>("button, input, textarea, select"),
+      );
+      const initiallyDisabled = new Map<ReviewControl, boolean>(
+        currentControls().map((control) => [control, control.disabled] as const),
+      );
+      const submitButtons = Array.from(form.querySelectorAll<HTMLButtonElement>(
+        "button[type=submit][data-review-state]",
+      ));
 
       const setPersistenceBusy = (busy: boolean) => {
+        saving = busy;
         sheet.setAttribute("aria-busy", String(busy));
-        if (busy) {
-          const controls = Array.from(sheet.querySelectorAll<
-            HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-          >("button, input, textarea, select"));
-          controlStates = controls.map((control) => [control, control.disabled] as const);
-          controls.forEach((control) => { control.disabled = true; });
-        } else {
-          controlStates.forEach(([control, wasDisabled]) => { control.disabled = wasDisabled; });
-          controlStates = [];
+        currentControls().forEach((control) => {
+          if (!initiallyDisabled.has(control)) {
+            initiallyDisabled.set(control, control.disabled);
+          }
+          control.disabled = busy || (initiallyDisabled.get(control) ?? false);
+        });
+        if (!busy && saveBlocked) {
+          submitButtons.forEach((button) => { button.disabled = true; });
         }
+        if (reopenRefreshPending) {
+          backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]")
+            .forEach((button) => { button.disabled = true; });
+        }
+      };
+      const showUncertainSave = (message: string) => {
+        committed = false;
+        reopenRefreshPending = false;
+        uncertain = true;
+        saving = false;
+        sheet.setAttribute("aria-busy", "false");
+        reconcile.textContent = "Retry this exact save";
+        reconcile.hidden = false;
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = message;
+        status.textContent = "Trade review save status is still uncertain";
+        error.focus({ preventScroll: true });
+      };
+      const showCommittedRefreshFailure = () => {
+        committed = true;
+        reopenRefreshPending = false;
+        uncertain = true;
+        uncertainPrepared = null;
+        saving = false;
+        sheet.setAttribute("aria-busy", "false");
+        reconcile.textContent = "Retry journal refresh";
+        reconcile.hidden = false;
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = "This trade review is saved on this device, but the journal screen could not refresh. Do not save it again. Retry the journal refresh or restart Hermes before editing this trade.";
+        status.textContent = "Trade review saved but journal refresh still failed";
+        error.focus({ preventScroll: true });
+      };
+      const showStaleConflict = () => {
+        committed = false;
+        uncertain = false;
+        uncertainPrepared = null;
+        saveBlocked = true;
+        reopenRefreshPending = true;
+        reconcile.textContent = "Refresh journal before reopening";
+        reconcile.hidden = false;
+        setPersistenceBusy(false);
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = "Hermes did not apply this exact save because its prepared review no longer matches the current journal. Nothing was overwritten, and your unsaved changes are still here. Refresh the journal before reopening this trade.";
+        status.textContent = "Prepared trade review no longer matches; refresh before reopening";
+        error.focus({ preventScroll: true });
+      };
+      const showBlockedSave = () => {
+        committed = false;
+        uncertain = false;
+        uncertainPrepared = null;
+        saveBlocked = true;
+        reopenRefreshPending = true;
+        reconcile.textContent = "Refresh journal before reopening";
+        reconcile.hidden = false;
+        setPersistenceBusy(false);
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = "Hermes could not safely apply this prepared review to the current journal. Your unsaved changes are still here. Refresh the journal before reopening this trade.";
+        status.textContent = "Trade review was not saved; refresh before reopening";
+        error.focus({ preventScroll: true });
+      };
+      const refreshAfterConfirmedSave = async (
+        result: TradeReviewCommitResult,
+        exactReplay: boolean,
+      ) => {
+        status.textContent = exactReplay
+          ? "Exact trade review save confirmed; refreshing journal"
+          : "Trade review saved; refreshing journal";
+        const announcement = result.outcome === "duplicate"
+          ? "This trade review was already saved; no duplicate version was created."
+          : attemptedState === "completed"
+            ? `${trade.symbol} review completed.`
+            : `${trade.symbol} review draft saved.`;
+        try {
+          await refresh(announcement);
+        } catch {
+          showCommittedRefreshFailure();
+          return;
+        }
+        saving = false;
+        uncertain = false;
+        backdrop.remove();
+        setBackgroundInert(false);
+        root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
       };
 
       const close = (force = false) => {
-        if (saving) return;
-        const dirty = formFingerprint(form) !== initialFingerprint;
+        if (saving || uncertain || reopenRefreshPending) return;
+        const dirty = formFingerprint(form) !== initialFingerprint || saveBlocked;
         if (!force && dirty && !window.confirm("Discard the unsaved trade review?")) return;
         backdrop.remove();
         setBackgroundInert(false);
-        returnFocus.focus();
+        if (returnFocus.isConnected) returnFocus.focus();
+        else root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
         button.addEventListener("click", () => close());
       });
       reconcile.addEventListener("click", async () => {
-        reconcile.disabled = true;
-        error.hidden = false;
-        error.textContent = "Reloading the local journal to reconcile this review.";
-        status.textContent = "Reconciling uncertain trade review save";
+        if (saving) return;
+        sheet.focus({ preventScroll: true });
+        setPersistenceBusy(true);
+        error.hidden = true;
+        if (reopenRefreshPending) {
+          status.textContent = "Refreshing the journal before this trade is reopened";
+          try {
+            await refresh("Journal refreshed after rejecting an obsolete trade review save.");
+            reopenRefreshPending = false;
+            reconcile.hidden = true;
+            setPersistenceBusy(false);
+            error.hidden = false;
+            error.textContent = "The journal is refreshed. Nothing was overwritten, and your unsaved changes are still here. Cancel discards this draft; then reopen the trade to review the latest saved version.";
+            status.textContent = "Journal refreshed; the obsolete review remains unsaved";
+            error.focus({ preventScroll: true });
+          } catch {
+            setPersistenceBusy(false);
+            reconcile.textContent = "Refresh journal before reopening";
+            reconcile.hidden = false;
+            reconcile.disabled = false;
+            error.hidden = false;
+            error.textContent = "Hermes could not refresh the journal. Your unsaved changes are still here and saving remains blocked. Retry the journal refresh before reopening this trade.";
+            status.textContent = "Journal refresh failed; trade review remains unsaved";
+            error.focus({ preventScroll: true });
+          }
+          return;
+        }
+        if (committed) {
+          status.textContent = "Reloading the confirmed saved trade review";
+          try {
+            await refresh("Journal reloaded after the saved trade review could not refresh.");
+            saving = false;
+            uncertain = false;
+            backdrop.remove();
+            setBackgroundInert(false);
+            root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          } catch {
+            showCommittedRefreshFailure();
+          }
+          return;
+        }
+
+        const prepared = uncertainPrepared;
+        if (prepared === null) {
+          saving = false;
+          sheet.setAttribute("aria-busy", "false");
+          reconcile.disabled = true;
+          error.hidden = false;
+          error.textContent = "Hermes cannot safely retry this review because its exact prepared command is unavailable. Your draft remains frozen here. Keep this sheet open and do not re-enter this review.";
+          status.textContent = "Exact trade review save command is unavailable";
+          error.focus({ preventScroll: true });
+          return;
+        }
+
+        status.textContent = "Retrying the exact trade review save on device";
         try {
-          await refresh("Journal reloaded after reconciling an uncertain review save.");
-          backdrop.remove();
-          setBackgroundInert(false);
-          root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          const result = await application.commitReviewsSafely(prepared);
+          committed = true;
+          uncertain = false;
+          uncertainPrepared = null;
+          await refreshAfterConfirmedSave(result, true);
         } catch (caught) {
-          reconcile.disabled = false;
-          const detail = caught instanceof Error ? " " + caught.message : "";
-          error.textContent = "Review status is still uncertain. Retry reload or restart Hermes; do not re-enter this review." + detail;
-          status.textContent = "Trade review save status remains uncertain";
-          error.focus();
+          const failureKind = tradeReviewSaveFailureKind(caught);
+          if (failureKind === "stale") {
+            showStaleConflict();
+            return;
+          }
+          showUncertainSave(failureKind === "blocked"
+            ? "Hermes could not safely prove whether this exact review save committed. The form remains locked and the outcome is still unknown. Keep this sheet open and retry the same save when the device is ready."
+            : "Hermes still could not confirm this exact review save. The form remains locked and the outcome is still unknown. Keep this sheet open and retry the same save when the device is ready.");
         }
       });
       backdrop.addEventListener("click", (event) => {
@@ -436,10 +613,13 @@ export function bindTradeReviewActions(
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (submissionId === null || saving) return;
+        if (submissionId === null || saving || uncertain || saveBlocked) return;
         const submitter = (event as SubmitEvent).submitter;
         const state = submitter instanceof HTMLButtonElement
           && submitter.dataset.reviewState === "completed" ? "completed" : "draft";
+        attemptedState = state;
+        error.hidden = true;
+        uncertainPrepared = null;
         const playbookName = value(form, "review-playbook").trim();
         const rules: TradeReviewRuleInput[] = Array.from(
           ruleRows.querySelectorAll<HTMLElement>("[data-review-rule-row]"),
@@ -476,40 +656,39 @@ export function bindTradeReviewActions(
             plannedStop: value(form, "review-stop"),
           });
           const batch = application.prepareReviewBatch([prepared]);
-          saving = true;
+          uncertainPrepared = batch;
+          sheet.focus({ preventScroll: true });
           setPersistenceBusy(true);
           status.textContent = state === "completed" ? "Saving completed review" : "Saving draft";
           const result = await application.commitReviewsSafely(batch);
-          backdrop.remove();
-          setBackgroundInert(false);
-          const announcement = result.outcome === "duplicate"
-            ? "This trade review was already saved; no duplicate version was created."
-            : state === "completed" ? `${trade.symbol} review completed.` : `${trade.symbol} review draft saved.`;
-          try {
-            await refresh(announcement);
-          } catch (refreshError) {
-            const detail = refreshError instanceof Error ? ` ${refreshError.message}` : "";
-            window.alert(`The trade review was saved, but the screen could not refresh.${detail}`);
-          }
-          root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          committed = true;
+          uncertain = false;
+          uncertainPrepared = null;
+          await refreshAfterConfirmedSave(result, false);
         } catch (caught) {
-          if (tradeReviewSaveFailureKind(caught) === "uncertain") {
-            error.hidden = false;
-            error.textContent = caught instanceof Error
+          const failureKind = tradeReviewSaveFailureKind(caught);
+          if (failureKind === "uncertain") {
+            showUncertainSave(caught instanceof TradeReviewCommitStatusUncertainError
               ? caught.message
-              : "Hermes could not confirm whether this review was saved.";
-            status.textContent = "Trade review save status uncertain";
-            reconcile.hidden = false;
-            reconcile.disabled = false;
-            error.focus();
+              : "Hermes could not confirm whether this exact review save committed. The form is locked here. Retry this exact save to reuse the same review identity.");
             return;
           }
-          saving = false;
+          if (failureKind === "stale") {
+            showStaleConflict();
+            return;
+          }
+          if (failureKind === "blocked") {
+            showBlockedSave();
+            return;
+          }
+          uncertainPrepared = null;
           setPersistenceBusy(false);
           error.hidden = false;
-          error.textContent = caught instanceof Error ? caught.message : "The trade review was not saved.";
-          status.textContent = "Trade review save failed";
-          error.focus();
+          error.textContent = caught instanceof TradeReviewPreparationError
+            ? caught.message
+            : "Hermes could not prepare or save this trade review. Your unsaved changes are still here. Review the form and try again.";
+          status.textContent = "Trade review was not saved";
+          error.focus({ preventScroll: true });
         }
       });
       backdrop.querySelector<HTMLElement>("#trade-review-title")?.focus();

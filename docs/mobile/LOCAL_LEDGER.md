@@ -144,6 +144,30 @@ cannot be downgraded from the edit sheet. A review session is one workspace-loca
 date with an execution; it is credited when at least one trade with an allocation
 that date has a saved draft or completed review.
 
+Single-Trade Review Exact-Command Recovery v1 closes the individual sheet's
+unknown-outcome gap without changing storage. The sheet retains its frozen
+single-member PreparedTradeReviewBatch before the first commit, including the
+batch integrity identity, member submission ID, expected predecessor,
+normalized review, member revision, and batch revision. Unknown status locks
+every authored and close control; **Retry this exact save** is the only enabled
+action and neither rereads the form nor creates an identity.
+
+Durable proof remains the ordered set of exact member submission/revision
+receipts—there is no persisted batch receipt. Both stores resolve an existing
+member receipt before current-review-head comparison, although session
+projection work and SQLite clock/workspace checks can fail earlier. Therefore a
+domain error after an earlier unknown response in the same safe-call sequence
+is not treated as proof; only a current exact revision fallback may reconcile
+it. A later user retry starts a fresh exact call: an exact receipt can return
+the original historical version while a newer head stays projected. A
+first-result `review_changed` preserves the raw form, disables obsolete saves,
+and blocks every dismissal path until an explicit background refresh succeeds.
+Other direct first-result receipt conflicts use the same fail-closed refresh
+path. Non-head conflicts after ambiguity stay frozen. Positive
+commit/duplicate proof clears the command; a render failure then exposes
+**Retry journal refresh** with zero persistence. Full newer-head
+evidence/consent and atomic batch-tag recovery are separate HIGH slices.
+
 ## Daily-journal sequence
 
 ```text
@@ -449,8 +473,17 @@ reread or ID generation, a later competing head, deterministic stale recovery,
 and an explicit successor. Export evidence proves one immutable version and one
 receipt per accepted submission; a separate one-shot render failure proves a
 positively committed save exposes refresh only. This is production-bundle
-browser evidence, not native bridge or lifecycle acceptance. Browser
-composition additionally covers a real
+browser evidence, not native bridge or lifecycle acceptance. Single-Trade
+Review recovery coverage independently exercises repeated pre-mutation
+ambiguity followed by exact success, a competing current head, a
+same-submission/different-content receipt collision, and a proven commit with a
+failed render. Instrumented production journeys prove zero form rereads and ID
+generation during exact replay, zero persistence during refresh-only recovery,
+privacy-safe copy, focus/dismiss containment, 320px/200% layout, and exact
+version/head/submission archive cardinality. This remains browser
+SessionJournalStore evidence, not native SQLite bridge, multi-scene, relaunch,
+VoiceOver, or Dynamic Type evidence. Browser composition additionally covers a
+real
 Daily Journal draft through export, offline empty-session restore, continued
 immutable writing, re-export, second restore, exact version/head/submission
 evidence, post-restore focus, and asynchronous file-replacement invalidation.

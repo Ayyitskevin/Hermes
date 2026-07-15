@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TradeReviewCommitStatusUncertainError } from "../application/journal-application";
+import { JournalTradeReviewError } from "../application/journal-store";
 import { deriveTradeMetricsV1 } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
@@ -76,6 +77,9 @@ describe("trade review sheet", () => {
     expect(html).toContain("User-confirmed amount");
     expect(html).toContain('id="trade-review-reconcile"');
     expect(html).toMatch(/id="trade-review-reconcile"[^>]*hidden/u);
+    expect(html).toContain("Retry this exact save");
+    expect(html).toMatch(/class="settings-sheet trade-review-sheet"[^>]*tabindex="-1"/u);
+    expect(html).not.toContain("Reload journal and reconcile");
     expect(html).not.toMatch(/place order|execute trade|send order/iu);
   });
 
@@ -199,9 +203,21 @@ describe("trade review sheet", () => {
       'aria-label="Edit review for &lt;AAPL&gt; Stock, Jul 1 · Morning"',
     );
     expect(reviewTradeAction(trade(), "Open <review>")).toContain("Open &lt;review&gt;");
-    expect(tradeReviewSaveFailureKind(new Error("definite rejection"))).toBe("failed");
+    expect(tradeReviewSaveFailureKind(new Error("preparation failed"))).toBe("retryable");
     expect(tradeReviewSaveFailureKind(
       new TradeReviewCommitStatusUncertainError(new Error("bridge response lost")),
     )).toBe("uncertain");
+    expect(tradeReviewSaveFailureKind(new JournalTradeReviewError({
+      code: "review_changed",
+      message: "stale",
+    }))).toBe("stale");
+    expect(tradeReviewSaveFailureKind(new JournalTradeReviewError({
+      code: "submission_changed",
+      message: "collision",
+    }))).toBe("blocked");
+    expect(tradeReviewSaveFailureKind(new JournalTradeReviewError({
+      code: "trade_changed",
+      message: "missing trade",
+    }))).toBe("blocked");
   });
 });

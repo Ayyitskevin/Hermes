@@ -202,6 +202,16 @@ Delivered in the current vertical slice:
 - SQLite v3 immutable review versions and optimistic heads attached to stable
   trade subjects, including reusable setup/mistake/emotion/tag vocabulary,
   playbooks, rule outcomes, user-confirmed risk, and optional planned stops.
+- Single-Trade Review Exact-Command Recovery v1 retains the individual sheet's
+  frozen prepared batch across unknown status and exposes exact replay only.
+  Ordered member receipts recover historical committed versions; same-call
+  domain errors after an earlier unknown remain ambiguous, fresh stale-head
+  rejection preserves the form and blocks obsolete submits, and post-proof
+  render failure offers refresh only. Production Chromium proves no form
+  reread/new ID, privacy/focus, 320px/200% recovery layout, exact archive
+  cardinality, and zero persistence during refresh. Atomic batch tagging,
+  richer stale-head evidence/consent, native bridge/lifecycle, relaunch, and
+  device accessibility remain open.
 - SQLite v4 immutable daily-reflection versions and one optimistic head per
   workspace-local date. Trading and no-trade days support explicit draft or
   completed saves, optional headline/note/emotion/tags/self-reported process
@@ -410,6 +420,9 @@ boundary harden application initialization and CI handoff without changing a
 schema, migration, financial definition, or native readiness claim.
 Daily Journal Exact-Command Recovery v1 closes the browser unknown-save gap
 without strengthening any native claim.
+Single-Trade Review Exact-Command Recovery v1 closes only the individual
+review-sheet gap; batch tagging and the full stale-head consent flow remain
+HIGH holds, and no native claim is strengthened.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,

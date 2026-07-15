@@ -1,9 +1,147 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Daily Journal Exact-Command Recovery v1 ·
+Status: verified Single-Trade Review Exact-Command Recovery v1 ·
 updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Single-Trade Review Exact-Command Recovery v1 for the individual
+Trade Review sheet: retain one immutable prepared command across an unknown
+save outcome, permit only exact replay, fail closed on unproven conflicts, and
+separate proven-commit refresh failure from persistence retry.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/trade-review-sheet.ts retains the frozen single-member
+  PreparedTradeReviewBatch before the first commit call. Unknown status locks
+  every authored control and close path; **Retry this exact save** is the only
+  enabled action and reuses the same batch/member identities, predecessor,
+  normalized review, and revisions without rereading the form.
+- mobile/src/application/journal-application.ts tracks whether any earlier
+  response in the same safe-call sequence was unknown. After that boundary,
+  every later JournalTradeReviewError remains ambiguous unless the current
+  exact revision positively reconciles the command. This explicit state also
+  covers an adapter rejection whose value is undefined.
+- Durable proof is the ordered set of exact member submission/revision
+  receipts; there is no persisted batch receipt. Browser-session and SQLite
+  regressions prove a historical exact retry can return its original version
+  after later heads advance while preserving current projections, hashes,
+  version/head cardinality, and receipt cardinality. Equal content under a
+  different submission is not proof.
+- A deterministic first-result conflict preserves the raw form, disables
+  obsolete submits and every dismissal path, and exposes **Refresh journal
+  before reopening**. Successful refresh updates the background but retains
+  the draft until the user explicitly cancels and reopens. Refresh failure
+  remains blocked and retryable. Any non-head conflict after an earlier unknown
+  result stays frozen with exact replay as the only action.
+- Positive committed/duplicate proof clears the retained command. If rendering
+  then fails, the sheet exposes only **Retry journal refresh** and cannot invoke
+  persistence. Raw adapter, database, and path details are never rendered;
+  only bounded preparation errors may surface.
+- Busy transitions dynamically capture current controls, including rule fields
+  added after the sheet opens. Repeated activation is synchronously guarded,
+  zero-control focus trapping falls back to the dialog, and disconnected
+  trigger close falls back to #screen.
+- Five production-bound Playwright journeys prove repeated pre-mutation
+  ambiguity and exact replay, double-activation protection, a competing head,
+  a direct first-attempt receipt conflict, same-submission/different-content
+  ambiguity, and known-commit render failure. They assert zero form rereads or
+  identity generation during replay, exact persisted review fields and ledger
+  cardinality, enforced refresh-before-dismissal, offline behavior, and
+  320px/200% reflow where applicable.
+- README, the ledger contract, product blueprint, iOS roadmap, and Mac handoff
+  describe this individual-sheet browser boundary. Atomic batch-tag recovery,
+  full Trade Review stale-head evidence/consent/rebase, native bridge loss,
+  multi-scene behavior, relaunch, SQLCipher/Keychain, VoiceOver, Dynamic Type,
+  and physical-device acceptance remain open.
+- No schema, migration, archive shape, store algorithm, execution fact,
+  governed formula, financial definition, security credential, destructive
+  workflow, native source, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 428 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 51 Playwright journeys
+  passed, including the five new recovery journeys.
+- Focused final `cd mobile && npm run test:e2e -- e2e/trade-review.spec.ts
+  --grep "uncertain trade review|exact review retry|direct review receipt
+  conflict|different content owns|proven trade review commit"` — exit 0; all
+  5 recovery journeys passed together.
+- `cd mobile && npm run build` — exit 0; Vite transformed 64 modules and
+  emitted the production bundle.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  `4f98c5cb39cb5bbc1379d94719004c695ce0e7ba363ccb3b44d90d86ac7c017d`;
+  selected generated identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Independent read-only application/store, UI/accessibility, and integration
+  audits are CLEAN after the final refresh-before-dismissal gate. Reverification
+  covered typecheck, 61 focused application/store tests, 9 UI tests, and both
+  stale/direct production recovery journeys.
+
+assumptions:
+
+- Browser evidence uses one production application and its in-memory
+  SessionJournalStore. Multiple retained editors are deterministic UI
+  concurrency evidence, not a second WKWebView scene, native SQLite bridge,
+  SQLCipher transaction, relaunch, or device lifecycle result.
+- The retained prepared command exists only in sheet memory. Reloading or
+  force-quitting during ambiguity can lose it, so recovery copy requires the
+  sheet to remain open until commit is positively proven.
+- Existing exact member receipts are sufficient for this single-member sheet.
+  They do not establish atomic replay for a multi-member batch, which has no
+  durable batch receipt and currently regenerates batch/member identities.
+- Same-call domain errors after an unknown response are intentionally treated
+  as ambiguous because the application contract does not prove whether receipt
+  lookup preceded a clock, workspace, projection, bridge, or store failure.
+- No schema, migration, archive, formula, financial, destructive, security-
+  credential, native, or public-positioning decision is inferred from this
+  reliability slice.
+
+open:
+
+- HIGH: atomic batch-tag exact-command recovery. Current
+  `bindBatchReviewTagging` / `addTagToTrades` behavior regenerates
+  batch/member identities and must not be presented as safe ambiguous replay.
+- HIGH: full Trade Review stale-head recovery with proved latest evidence,
+  explicit review/consent, a fresh command, and guarded rebase. This increment
+  provides only fail-closed refresh-before-reopen.
+- HOLD native individual-review acceptance: repeat bridge loss before/after
+  commit, repeated ambiguity, a later head from a second real scene,
+  receipt-first replay, direct and post-unknown conflicts, proven-commit refresh
+  failure, background/foreground, force quit/relaunch, SQLCipher/Keychain,
+  VoiceOver, Dynamic Type, and physical-device layout on a current Mac/iPhone.
+- Upgrade GitHub Action runtimes in a separate low-risk maintenance slice;
+  current checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices; deletion requires its dedicated human
+  gate.
+- Do not claim broad Trade Review recovery, native backup readiness, or start
+  broker sync, trade execution, hosted Connect, Android, recurring AI,
+  TestFlight, App Store submission, pricing, or public comparative positioning
+  from this milestone.
+
+## Prior milestone — Daily Journal Exact-Command Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Single-Trade Review Exact-Command Recovery handoff above.
 
 task: Deliver Daily Journal Exact-Command Recovery v1: retain the immutable
 prepared command across an unknown save outcome, permit only exact replay,
@@ -123,12 +261,9 @@ assumptions:
 
 open:
 
-- HIGH next reliability slice: Trade Review still exposes its older uncertain-
-  save **Reload journal and reconcile** action. Audit and, if confirmed,
-  replace readable-ledger closure with retained exact batch-command replay,
-  receipt/status proof, deterministic stale handling, and refresh-only behavior
-  after proven commit. Keep that editor/store contract separate from Daily
-  Journal rather than generalizing prematurely.
+- Superseded by the active individual-sheet milestone above: exact replay and
+  refresh-only recovery are now delivered narrowly for one Trade Review.
+  Atomic batch-tag recovery and full stale-head evidence/consent remain open.
 - HOLD native Daily Journal acceptance: repeat bridge loss before/after commit,
   repeated ambiguity, a later head from a second real scene, receipt-first
   replay, stale-after-unknown, proven-commit refresh failure, background/

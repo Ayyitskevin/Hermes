@@ -697,6 +697,30 @@ describe("SqliteJournalStore", () => {
         plannedStop: visibleEdit.plannedStop,
       }).revision).toBe(visibleEdit.revision);
 
+      const beforeHistoricalReplay = await store.exportUserData();
+      const historicalRetry = await store.commitTradeReviews(firstCommand);
+      expect(historicalRetry).toMatchObject({
+        outcome: "duplicate",
+        reviewIds: first.reviewIds,
+        ledger: {
+          tradeReviews: [expect.objectContaining({
+            id: edited.reviewIds[0],
+            version: 2,
+          })],
+        },
+      });
+      expect((await store.exportUserData()).archive.stateSha256)
+        .toBe(beforeHistoricalReplay.archive.stateSha256);
+      expect(await count(database, "trade_review_versions")).toBe(2);
+      expect(await count(database, "trade_review_heads")).toBe(1);
+      expect(await database.query(
+        `SELECT submission_id, version_number
+           FROM trade_review_versions ORDER BY version_number`,
+      )).toEqual([
+        { submission_id: firstCommand.reviews[0]?.submissionId, version_number: 1 },
+        { submission_id: edit.reviews[0]?.submissionId, version_number: 2 },
+      ]);
+
       const validTamperBase = preparedReview(tradeSubjectId, "c", {
         expectedPreviousReviewId: visibleEdit.id,
       });
