@@ -1,9 +1,133 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Individual Trade Review Stale-Head Recovery v1 ·
-updated 2026-07-14
+Status: verified Batch Tag Known-Commit Refresh-Only Recovery v1 ·
+updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver Batch Tag Known-Commit Refresh-Only Recovery v1: once a batch
+tag result resolves, make redraw recovery one-way and prove it cannot prepare
+or submit another review batch.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/app.ts now validates and mounts a recovery alert dialog before
+  persistence, then synchronously locks the tag, selected subjects, submit,
+  navigation, and background interactions behind one `ready → saving →
+  committed` UI state. Deterministic pre-commit failure removes the modal,
+  restores the original controls, and returns focus to bounded form error.
+- A direct `committed` result retains truthful atomic-batch wording. A
+  reconciled `duplicate` result says only that exact selected member revisions
+  are already present and explicitly withholds atomic batch identity because
+  the store has no durable batch receipt.
+- Once the result resolves, the old form can never re-enter
+  `addTagToTrades`. A failed redraw exposes only **Retry journal refresh**;
+  repeated form submissions and repeated retry activation are synchronously
+  guarded, generate no identity, and make no store call. Caught adapter,
+  database, and path detail is replaced with bounded local copy.
+- The recovery sheet is outside `#screen`, so it survives a redraw that
+  disconnects the old form. It owns inert/modal state before the first
+  persistence await, remains programmatically focusable with no enabled
+  controls, traps Tab, ignores Escape/backdrop dismissal, and releases only
+  the modal ownership it acquired after successful refresh or definite
+  pre-commit rejection.
+- The production-browser regression runs offline at 320px and 200% text. It
+  proves pre-commit cleanup, two selected trades, a positively calibrated
+  direct store-call tripwire, blocked double submit, blocked double retry, two
+  failed redraws, private-detail suppression, focus/inert/Escape/backdrop
+  containment, no horizontal overflow, a 44-point retry target, and cleanup
+  after success.
+- Export evidence keys both selected subjects to exactly one v1 draft, one
+  current head, and one matching submission/revision receipt. Active and
+  inactive executions, import receipts and their revision index, manual
+  submissions, and execution/import counters remain exactly unchanged.
+- README, local-ledger contract, product blueprint, iOS roadmap, and Mac
+  handoff distinguish this resolved-result boundary from unknown batch status.
+  Atomic batch exact-command recovery remains a separate HIGH, human-gated
+  schema/migration/export/restore design.
+- No schema, migration, review digest, store algorithm, archive shape,
+  execution fact, governed formula, financial definition, security
+  credential, destructive workflow, native source, or public comparative claim
+  changed.
+
+verified:
+
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 433 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 52 production-browser
+  journeys passed, including all 14 Trade Review journeys and the new
+  two-member batch redraw regression.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0;
+  Vite transformed 64 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `7113c109a1cc7c8f9acd533b6c30f6cbfd5767d417670b28c2b12488a812df5a`,
+  selected generated identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Legacy Python `ruff` / `pytest` — NOT RUN locally: this checkout has no
+  project venv, and the offline uv cache lacks `apscheduler`. The hosted
+  Legacy Python safety job must supply that independent evidence after publish;
+  the failed offline probe changed no tracked file and its temporary venv was
+  removed.
+
+assumptions:
+
+- Three independent read-only re-audits reported CLEAN after their initial
+  proof-classification, store-tripwire, exact-receipt, modal-ownership, focus,
+  and responsive findings were addressed. Those advisory reports are not
+  cold-rerunnable evidence; the command-backed gates above remain
+  authoritative.
+- `outcome: committed` is the direct atomic store result.
+  `outcome: duplicate` proves only reconciled exact member revisions in this
+  UI; it does not inherit atomic batch identity.
+- Browser evidence uses the production application and in-memory
+  SessionJournalStore. It is not a native bridge, SQLCipher transaction,
+  second scene, relaunch, VoiceOver, hardware-keyboard, or physical-device
+  result.
+- Unknown batch status before a resolved result is intentionally not replayed
+  or called recovered by this slice. A durable batch receipt remains necessary
+  for exact atomic proof across ambiguity.
+
+open:
+
+- HIGH — HUMAN GATE: design atomic batch exact-command recovery around a
+  durable batch receipt. Approve schema/migration/export/restore behavior
+  before implementation; current member receipts must not be presented as one
+  atomic batch identity.
+- HOLD native batch/individual review acceptance: repeat bridge loss,
+  resolved-result redraw failure, duplicate reconciliation, multi-scene races,
+  background/foreground, force quit/relaunch, SQLCipher/Keychain, VoiceOver,
+  Dynamic Type, hardware keyboard, and physical-device layout on a current
+  Mac/iPhone.
+- MED — next autonomous product candidate: session-only exact dynamic
+  tag/mistake/emotion facets over already-scoped Trades cards, without changing
+  ledger/report scope.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices.
+- Do not claim ambiguous batch exact recovery, native backup readiness,
+  native multi-scene/device acceptance, or start broker sync, trade execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Individual Trade Review Stale-Head Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Batch Tag Known-Commit Refresh-Only Recovery handoff above.
 
 task: Deliver Individual Trade Review Stale-Head Recovery v1: preserve one
 complete unsaved review after deterministic optimistic-concurrency rejection,

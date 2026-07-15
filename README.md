@@ -119,6 +119,17 @@ submission-ready product:
   multi-scene/lifecycle evidence. Atomic batch exact-command recovery remains a
   separate HIGH, human-gated schema/migration slice because exact atomic proof
   requires a durable batch receipt.
+- Batch Tag Known-Commit Refresh-Only Recovery v1 validates a recovery surface
+  before saving, locks the queue controls behind one modal save/refresh state,
+  and never re-enters persistence after a resolved result. A direct
+  `committed` result may be described as one atomic batch; a reconciled
+  `duplicate` result says only that the selected member revisions are already
+  present because there is no durable batch receipt. If redraw fails, the sole
+  action retries the journal refresh with private adapter detail withheld.
+  Production Chromium proves zero repeat store calls, exact member
+  head/submission cardinality, unchanged execution provenance, focus
+  containment, and 320px/200% reflow. Unknown batch status before a resolved
+  result remains the separate human-gated exact-command problem above.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

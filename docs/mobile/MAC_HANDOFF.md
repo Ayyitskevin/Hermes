@@ -209,9 +209,13 @@ and an App Store disclosure.
   hardware keyboard, 200% Dynamic Type, and two real scenes before marking
   native acceptance PASS.
 - Batch-tag two trades atomically and confirm ordinary success plus mixed
-  saved/fresh atomic rejection. Do not mark ambiguous-save recovery PASS:
-  current batch-tag UI recreates member and batch identities on a new action and
-  is an explicit HIGH hold until it retains one exact prepared batch.
+  saved/fresh atomic rejection. After a positively resolved result, lose the
+  redraw response and confirm the modal exposes only **Retry journal refresh**,
+  keeps background/focus contained, creates no identity, and performs no store
+  call. For a reconciled duplicate, confirm copy withholds atomic batch
+  identity. Do not mark ambiguous-save recovery PASS: an unknown result before
+  resolution still lacks a durable batch receipt and remains an explicit HIGH
+  hold.
 - With VoiceOver and a hardware keyboard, confirm focus remains inside the
   review sheet through rule removal and returns to its trigger on close.
   While a save is pending, confirm every editable control is disabled.
@@ -451,6 +455,9 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   stale no-mutation. Native multi-scene/lifecycle/accessibility acceptance is
   still NOT RUN and must not inherit these results. Atomic batch ambiguous
   recovery remains a human-gated HIGH pending a durable batch-receipt schema.
+  Browser Batch Tag Known-Commit Refresh-Only Recovery is implemented, but its
+  modal/focus, bridge-loss, background/foreground, relaunch, VoiceOver,
+  hardware-keyboard, and Dynamic Type behavior is still NOT RUN natively.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

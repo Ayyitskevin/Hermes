@@ -11,11 +11,21 @@ const BASE_ORIGIN = "http://127.0.0.1:4173";
 const ONBOARDING_KEY = "hermes.journal.onboarding.v2";
 
 interface ReviewArchiveData {
+  readonly activeExecutions: readonly unknown[];
+  readonly inactiveExecutions: readonly unknown[];
+  readonly receipts: readonly unknown[];
+  readonly receiptByRevision: readonly unknown[];
+  readonly manualSubmissions: readonly unknown[];
+  readonly counters: {
+    readonly nextExecutionSequence: string;
+    readonly nextReceiptOrdinal: string;
+  };
   readonly reviewVersions: readonly {
     readonly id: string;
     readonly tradeSubjectId: string;
     readonly version: number;
     readonly state: "draft" | "completed";
+    readonly revision: string;
     readonly note: string;
     readonly setup: string | null;
     readonly mistakes: readonly string[];
@@ -367,6 +377,244 @@ test("trade reviews persist exact risk metrics, edit immutably, and clear an ato
   await page.getByRole("button", { name: "Journal", exact: true }).click();
   await expect(page.locator(".review-queue-item")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Review queue clear" })).toBeVisible();
+});
+
+test("a proven batch tag commit retries only the failed journal refresh", async ({ page, context }) => {
+  const externalRequests = logExternalRequests(page);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await importTwoClosedTrades(page);
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  const before = reviewArchiveData(await exportJournal(page));
+  const executionStateBefore = {
+    activeExecutions: before.activeExecutions,
+    inactiveExecutions: before.inactiveExecutions,
+    receipts: before.receipts,
+    receiptByRevision: before.receiptByRevision,
+    manualSubmissions: before.manualSubmissions,
+    nextExecutionSequence: before.counters.nextExecutionSequence,
+    nextReceiptOrdinal: before.counters.nextReceiptOrdinal,
+  };
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  await installPreparedReviewCounters(page);
+  await context.setOffline(true);
+
+  const subjects = page.locator("[data-batch-review-subject]");
+  await expect(subjects).toHaveCount(2);
+  const selectedSubjectIds = await subjects.evaluateAll((elements) => (
+    elements.map((element) => (element as HTMLInputElement).value)
+  ));
+  for (const subject of await subjects.all()) await subject.check();
+  const submit = page.getByRole("button", { name: "Apply tag to selected" });
+  await submit.click();
+  const preparationError = page.locator("#batch-review-error");
+  await expect(preparationError).toBeVisible();
+  await expect(preparationError).toBeFocused();
+  await expect(page.locator("#batch-review-refresh-recovery")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#batch-review-tag")).toBeEnabled();
+  await expect(submit).toBeEnabled();
+  for (const subject of await subjects.all()) await expect(subject).toBeEnabled();
+  await resetPreparedReviewProbe(page);
+  await page.locator("#batch-review-tag").fill("Earnings day");
+
+  const privateDetail = "/private/journals/kevin.db injected batch refresh failure";
+  await page.evaluate((detail) => {
+    const mapDescriptor = Object.getOwnPropertyDescriptor(Map.prototype, "get");
+    const originalMapGet = mapDescriptor?.value as (
+      (this: Map<unknown, unknown>, key: unknown) => unknown
+    ) | undefined;
+    if (mapDescriptor === undefined || originalMapGet === undefined) {
+      throw new Error("Map.prototype.get is not instrumentable.");
+    }
+    const root = document.documentElement;
+    root.dataset.batchCommitMapReads = "0";
+    Object.defineProperty(Map.prototype, "get", {
+      ...mapDescriptor,
+      value(this: Map<unknown, unknown>, key: unknown) {
+        if ((new Error().stack ?? "").includes("commitTradeReviews")) {
+          const reads = Number(root.dataset.batchCommitMapReads ?? "0") + 1;
+          root.dataset.batchCommitMapReads = String(reads);
+        }
+        return originalMapGet.call(this, key);
+      },
+    });
+
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    root.dataset.batchRefreshRenderFailures = "0";
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        if (this.id === "screen") {
+          const failures = Number(root.dataset.batchRefreshRenderFailures ?? "0") + 1;
+          root.dataset.batchRefreshRenderFailures = String(failures);
+          if (failures === 2) {
+            Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+          }
+          throw new Error(`${detail} ${failures}`);
+        }
+        setter.call(this, value);
+      },
+    });
+  }, privateDetail);
+
+  await submit.click();
+  const recovery = page.getByRole("alertdialog", { name: "Batch tag saved" });
+  const status = recovery.locator("#batch-review-refresh-status");
+  const retry = recovery.getByRole("button", { name: "Retry journal refresh" });
+  await expect(recovery).toBeVisible();
+  await expect(recovery).toContainText("Do not apply the tag again");
+  await expect(status).toContainText("selected review updates remain");
+  await expect(status).not.toContainText(privateDetail);
+  await expect(status).toBeFocused();
+  await expect(retry).toBeEnabled();
+  await expect(page.locator("#screen")).toHaveAttribute("inert", "");
+  await expect(page.locator("#screen")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("body")).toHaveClass(/modal-open/u);
+  await expect(page.locator("#batch-review-form")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("#batch-review-tag")).toBeDisabled();
+  await expect(page.locator("#batch-review-form button[type='submit']")).toBeDisabled();
+  for (const subject of await subjects.all()) await expect(subject).toBeDisabled();
+  const enabledRecoveryControls = await recovery
+    .locator("button:visible, input:visible, textarea:visible, select:visible")
+    .evaluateAll((elements) => elements
+      .filter((element) => !(
+        element as HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      ).disabled)
+      .map((element) => element.id));
+  expect(enabledRecoveryControls).toEqual(["batch-review-refresh-retry"]);
+  const overflow = await recovery.evaluate((element) => ({
+    document: document.documentElement.scrollWidth - window.innerWidth,
+    sheet: element.scrollWidth - element.clientWidth,
+    right: Math.ceil(element.getBoundingClientRect().right - window.innerWidth),
+  }));
+  expect(overflow.document).toBeLessThanOrEqual(1);
+  expect(overflow.sheet).toBeLessThanOrEqual(1);
+  expect(overflow.right).toBeLessThanOrEqual(0);
+  const retryBox = await retry.boundingBox();
+  expect(retryBox, "refresh retry should have a layout box").not.toBeNull();
+  expect(retryBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+  expect(retryBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await page.keyboard.press("Escape");
+  await expect(recovery).toBeVisible();
+  await page.locator("#batch-review-refresh-recovery").dispatchEvent("click");
+  await expect(recovery).toBeVisible();
+
+  const initialCommit = await preparedReviewProbe(page);
+  expect(initialCommit.commands).toHaveLength(2);
+  expect(initialCommit.randomIds.length).toBeGreaterThanOrEqual(
+    initialCommit.commands.length,
+  );
+  expect(Number(await page.evaluate(() => (
+    document.documentElement.dataset.batchCommitMapReads
+  )))).toBeGreaterThan(0);
+  await resetPreparedReviewProbe(page);
+  await page.evaluate(() => {
+    document.documentElement.dataset.batchCommitMapReads = "0";
+  });
+
+  await page.locator("#batch-review-form").evaluate((element) => {
+    element.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  });
+  expect(await preparedReviewProbe(page)).toEqual({ commands: [], randomIds: [] });
+  expect(await page.evaluate(() => (
+    document.documentElement.dataset.batchCommitMapReads
+  ))).toBe("0");
+
+  const pendingRetry = await retry.evaluate((button) => {
+    (button as HTMLButtonElement).click();
+    (button as HTMLButtonElement).click();
+    const sheet = button.closest<HTMLElement>(".batch-review-refresh-sheet");
+    if (sheet === null) throw new Error("Batch refresh sheet is missing.");
+    const tabAllowed = sheet.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    }));
+    return {
+      activeIsSheet: document.activeElement === sheet,
+      retryDisabled: (button as HTMLButtonElement).disabled,
+      retryHidden: (button as HTMLButtonElement).hidden,
+      tabAllowed,
+    };
+  });
+  expect(pendingRetry).toEqual({
+    activeIsSheet: true,
+    retryDisabled: true,
+    retryHidden: true,
+    tabAllowed: false,
+  });
+  await expect(status).toContainText("selected review updates remain");
+  await expect(status).toBeFocused();
+  await expect(retry).toBeEnabled();
+  expect(await page.evaluate(() => (
+    document.documentElement.dataset.batchRefreshRenderFailures
+  ))).toBe("2");
+  expect(await preparedReviewProbe(page)).toEqual({ commands: [], randomIds: [] });
+  expect(await page.evaluate(() => (
+    document.documentElement.dataset.batchCommitMapReads
+  ))).toBe("0");
+
+  await retry.click();
+  await expect(recovery).toHaveCount(0);
+  await expect(page.locator("#screen")).toBeFocused();
+  await expect(page.locator("#route-announcer")).toHaveText(
+    "Earnings day added to 2 trades in one atomic review batch.",
+  );
+  expect(await preparedReviewProbe(page)).toEqual({ commands: [], randomIds: [] });
+  expect(await page.evaluate(() => (
+    document.documentElement.dataset.batchCommitMapReads
+  ))).toBe("0");
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  await expect(page.locator("#screen")).not.toHaveAttribute("aria-hidden", "true");
+
+  const data = reviewArchiveData(await exportJournal(page));
+  expect({
+    activeExecutions: data.activeExecutions,
+    inactiveExecutions: data.inactiveExecutions,
+    receipts: data.receipts,
+    receiptByRevision: data.receiptByRevision,
+    manualSubmissions: data.manualSubmissions,
+    nextExecutionSequence: data.counters.nextExecutionSequence,
+    nextReceiptOrdinal: data.counters.nextReceiptOrdinal,
+  }).toEqual(executionStateBefore);
+  expect(data.reviewVersions).toHaveLength(2);
+  const reviewsBySubject = new Map(data.reviewVersions.map((review) => (
+    [review.tradeSubjectId, review] as const
+  )));
+  expect([...reviewsBySubject.keys()].sort()).toEqual([...selectedSubjectIds].sort());
+  const heads = new Map(data.reviewHeads);
+  expect([...heads.keys()].sort()).toEqual([...selectedSubjectIds].sort());
+  for (const tradeSubjectId of selectedSubjectIds) {
+    const review = reviewsBySubject.get(tradeSubjectId);
+    expect(review).toMatchObject({
+      tradeSubjectId,
+      version: 1,
+      state: "draft",
+      tags: ["Earnings day"],
+    });
+    if (review === undefined) throw new Error(`Missing review for ${tradeSubjectId}.`);
+    expect(review.tags).toEqual(["Earnings day"]);
+    expect(heads.get(tradeSubjectId)).toBe(review.id);
+    const submissions = data.reviewSubmissions.filter(([, receipt]) => (
+      receipt.reviewId === review.id
+    ));
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0]?.[0]).toMatch(/^[a-f0-9]{64}$/u);
+    expect(submissions[0]?.[1].revision).toBe(review.revision);
+  }
+  expect(data.reviewSubmissions).toHaveLength(2);
+  expect(externalRequests).toEqual([]);
 });
 
 test("trade review contains reverse focus from its initially focused title", async ({ page }) => {

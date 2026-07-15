@@ -434,6 +434,17 @@ accessibility evidence. Atomic batch exact recovery remains a human-gated HIGH
 because it needs a durable batch receipt plus migration/export/restore
 decisions.
 
+Batch Tag Known-Commit Refresh-Only Recovery v1 adds no persistence contract.
+The UI prevalidates a modal recovery surface, owns focus and background
+inertness across save and redraw, and treats the resolved state as one-way.
+Direct `committed` output retains the atomic result wording; reconciled
+`duplicate` output says only that exact member revisions are present because
+there is no durable batch receipt. Redraw failure exposes refresh only, never a
+second batch action. Chromium instruments the production store path to prove
+zero repeat commit calls and exact two-member heads/submission receipts while
+execution provenance remains byte-equivalent. Unknown batch-result recovery
+still requires the separately approved receipt/schema design.
+
 The fifth increment is Trade Browser Scope v1. It is a derived-only projection
 over stable ledger account IDs and exact calendar contributions: all accounts
 or one account, optional inclusive workspace-local allocation/activity dates,
@@ -635,8 +646,9 @@ individual Trade Review sheet now has its own exact-command recovery boundary;
 Individual Trade Review Stale-Head Recovery v1 now adds complete-form
 comparison, consent, fresh identity, completed-state monotonicity, and repeated
 race handling at the trade-review head boundary introduced in schema v3. It
-does not include atomic
-batch ambiguous recovery, whose durable receipt requires a separately approved
+now composes with Batch Tag Known-Commit Refresh-Only Recovery v1, which closes
+only the resolved-save/redraw boundary. It does not include atomic batch
+ambiguous recovery, whose durable receipt requires a separately approved
 schema/migration. The
 Linux CI handoff now verifies the ignored iOS
 public copy byte-for-byte and validates selected generated-registration fields

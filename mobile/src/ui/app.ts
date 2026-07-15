@@ -542,12 +542,83 @@ function bindRollbacks(
 function bindBatchReviewTagging(
   root: HTMLElement,
   application: JournalApplication,
+  setBackgroundInert: (inert: boolean) => void,
   refresh: (announcement: string) => Promise<void>,
 ): void {
   const form = root.querySelector<HTMLFormElement>("#batch-review-form");
   if (form === null) return;
+  const batchControls = Array.from(root.querySelectorAll<
+    HTMLButtonElement | HTMLInputElement
+  >(
+    "#batch-review-form button, #batch-review-form input, [data-batch-review-subject]",
+  ));
+  const initiallyDisabled = new Map(batchControls.map((control) => (
+    [control, control.disabled] as const
+  )));
+  let commitState: "ready" | "saving" | "committed" = "ready";
+  let refreshing = false;
+
+  const setBatchControlsLocked = (locked: boolean) => {
+    batchControls.forEach((control) => {
+      control.disabled = locked || (initiallyDisabled.get(control) ?? false);
+    });
+  };
+
+  const createRefreshRecovery = () => {
+    if (root.querySelector("#batch-review-refresh-recovery") !== null) {
+      throw new Error("Another saved batch refresh is already active.");
+    }
+    (root.querySelector(".app-shell") ?? root).insertAdjacentHTML(
+      "beforeend",
+      `<div class="sheet-backdrop" id="batch-review-refresh-recovery" hidden>
+        <section class="settings-sheet batch-review-refresh-sheet" role="alertdialog" aria-modal="true" aria-labelledby="batch-review-refresh-title" aria-describedby="batch-review-refresh-copy batch-review-refresh-status" tabindex="-1">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <div class="sheet-heading">
+            <div><p class="eyebrow">ATOMIC BATCH ACTION</p><h2 id="batch-review-refresh-title">Saving batch tag</h2></div>
+          </div>
+          <p id="batch-review-refresh-copy">Hermes is saving the selected review successors together. Keep this screen open.</p>
+          <p class="form-error" id="batch-review-refresh-status" role="alert" tabindex="-1"></p>
+          <button class="primary-button" id="batch-review-refresh-retry" type="button" hidden disabled>Retry journal refresh</button>
+        </section>
+      </div>`,
+    );
+    const backdrop = root.querySelector<HTMLElement>("#batch-review-refresh-recovery");
+    const sheet = backdrop?.querySelector<HTMLElement>(".batch-review-refresh-sheet");
+    const title = backdrop?.querySelector<HTMLElement>("#batch-review-refresh-title");
+    const copy = backdrop?.querySelector<HTMLElement>("#batch-review-refresh-copy");
+    const status = backdrop?.querySelector<HTMLElement>("#batch-review-refresh-status");
+    const retry = backdrop?.querySelector<HTMLButtonElement>("#batch-review-refresh-retry");
+    if (
+      backdrop === null
+      || sheet === undefined
+      || sheet === null
+      || title === undefined
+      || title === null
+      || copy === undefined
+      || copy === null
+      || status === undefined
+      || status === null
+      || retry === undefined
+      || retry === null
+    ) {
+      backdrop?.remove();
+      throw new Error("The saved batch refresh recovery surface is unavailable.");
+    }
+    sheet.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") event.preventDefault();
+      if (event.key === "Tab" && (retry.hidden || retry.disabled)) {
+        event.preventDefault();
+        sheet.focus({ preventScroll: true });
+        return;
+      }
+      trapModalFocus(sheet, event);
+    });
+    return { backdrop, sheet, title, copy, status, retry };
+  };
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (commitState !== "ready") return;
     const selected = Array.from(
       root.querySelectorAll<HTMLInputElement>("[data-batch-review-subject]:checked"),
     ).map((input) => input.value);
@@ -560,27 +631,76 @@ function bindBatchReviewTagging(
       error.textContent = "Select at least one queued trade.";
       return;
     }
-    submit.disabled = true;
+    let recovery: ReturnType<typeof createRefreshRecovery>;
+    try {
+      recovery = createRefreshRecovery();
+    } catch {
+      error.hidden = false;
+      error.textContent = "Hermes cannot safely start this batch because refresh recovery is unavailable.";
+      error.focus();
+      return;
+    }
+    commitState = "saving";
+    setBatchControlsLocked(true);
     form.setAttribute("aria-busy", "true");
     error.hidden = true;
+    recovery.backdrop.hidden = false;
+    recovery.status.textContent = "Saving one atomic review batch on this device.";
+    setBackgroundInert(true);
+    recovery.sheet.focus({ preventScroll: true });
+    let commitOutcome: "committed" | "duplicate";
     try {
-      await application.addTagToTrades(selected, tag);
+      const result = await application.addTagToTrades(selected, tag);
+      commitOutcome = result.outcome;
     } catch (caught) {
-      submit.disabled = false;
+      commitState = "ready";
+      setBatchControlsLocked(false);
+      recovery.backdrop.remove();
+      setBackgroundInert(false);
       form.setAttribute("aria-busy", "false");
       error.hidden = false;
       error.textContent = caught instanceof Error ? caught.message : "The batch tag was not saved.";
       error.focus();
       return;
     }
-    try {
-      await refresh(`${tag.trim()} added to ${countNoun(selected.length, "trade")} in one atomic review batch.`);
-    } catch (caught) {
-      submit.disabled = false;
-      form.setAttribute("aria-busy", "false");
-      const detail = caught instanceof Error ? ` ${caught.message}` : "";
-      window.alert(`The batch tag was saved, but the screen could not refresh.${detail}`);
-    }
+    commitState = "committed";
+    form.setAttribute("aria-busy", "false");
+    const directlyCommitted = commitOutcome === "committed";
+    recovery.title.textContent = directlyCommitted
+      ? "Batch tag saved"
+      : "Review updates already present";
+    recovery.copy.textContent = directlyCommitted
+      ? "Hermes received a committed result for the selected atomic review batch. Do not apply the tag again. Only the journal screen still needs to reload."
+      : "Hermes reconciled the selected review revisions, but no durable receipt proves one atomic batch identity. Do not apply the tag again. Only the journal screen still needs to reload.";
+    const announcement = directlyCommitted
+      ? `${tag.trim()} added to ${countNoun(selected.length, "trade")} in one atomic review batch.`
+      : "The selected review updates were already present. Hermes did not submit them again.";
+    const retryRefresh = async () => {
+      if (commitState !== "committed" || refreshing) return;
+      refreshing = true;
+      recovery.sheet.focus({ preventScroll: true });
+      recovery.retry.disabled = true;
+      recovery.retry.hidden = true;
+      recovery.status.textContent = "Reloading the journal without submitting the saved batch again.";
+      try {
+        await refresh(announcement);
+      } catch {
+        refreshing = false;
+        recovery.backdrop.hidden = false;
+        setBackgroundInert(true);
+        recovery.retry.hidden = false;
+        recovery.retry.disabled = false;
+        recovery.status.textContent = "Hermes could not redraw the journal. The selected review updates remain on this device; retry only the journal refresh.";
+        recovery.status.focus({ preventScroll: true });
+        return;
+      }
+      refreshing = false;
+      recovery.backdrop.remove();
+      setBackgroundInert(false);
+      root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+    };
+    recovery.retry.addEventListener("click", () => { void retryRefresh(); });
+    await retryRefresh();
   });
 }
 
@@ -865,7 +985,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         },
       );
     }
-    bindBatchReviewTagging(root, application, async (announcement) => {
+    bindBatchReviewTagging(root, application, setBackgroundInert, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
       announceStatus(announcement);

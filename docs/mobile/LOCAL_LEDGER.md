@@ -180,6 +180,19 @@ changed. Atomic batch exact-command recovery remains HIGH and human-gated:
 member receipts cannot prove exact batch identity, so truthful atomic recovery
 requires a durable batch receipt with migration/export/restore decisions.
 
+Batch Tag Known-Commit Refresh-Only Recovery v1 narrows only the UI boundary
+after `addTagToTrades` resolves. Hermes validates and mounts a modal recovery
+surface before persistence, locks the tag, selected subjects, submit, and
+background interactions, and never calls persistence from that UI state again.
+A direct `committed` result is an atomic store result. A `duplicate` result
+means the exact member revisions reconciled, but copy explicitly withholds an
+atomic-batch claim because no durable batch receipt exists. A failed redraw
+therefore offers only **Retry journal refresh**; repeated activation performs
+no preparation, ID generation, or store commit. Deterministic pre-commit
+failure removes the modal and restores the original controls. This changes no
+schema, review digest, store algorithm, archive, or governed metric, and it
+does not close unknown batch-result recovery.
+
 ## Daily-journal sequence
 
 ```text
@@ -498,7 +511,10 @@ escaped v2 evidence, explicit complete-form consent, a hidden v3 race, a
 second stale rejection/consent, completed-state monotonicity, and final v4 with
 one head/four successful receipts. SQLite independently proves the v1→v4
 supersedes chain, unchanged state digests across both stale attempts, and no
-stale submission rows. This remains browser
+stale submission rows. Batch known-commit refresh coverage adds a direct
+commit-store tripwire, double-submit and double-refresh activation, two failed
+redraws, exact per-subject head/revision receipt checks, unchanged execution
+provenance, modal cleanup, and 320px/200% focus/reflow evidence. This remains browser
 SessionJournalStore evidence, not native SQLite bridge, multi-scene, relaunch,
 VoiceOver, or Dynamic Type evidence. Browser composition additionally covers a
 real

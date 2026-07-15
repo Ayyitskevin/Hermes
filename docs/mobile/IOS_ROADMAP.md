@@ -221,6 +221,14 @@ Delivered in the current vertical slice:
   device accessibility remain open. Atomic batch ambiguous recovery is a
   separate human-gated HIGH because it requires a durable batch receipt and
   schema/migration/export/restore decisions.
+- Batch Tag Known-Commit Refresh-Only Recovery v1 now makes the resolved-result
+  UI one-way: its modal owns focus and background inertness before save, a
+  direct committed result retains its atomic claim, a reconciled duplicate
+  result explicitly withholds batch identity, and redraw retries perform zero
+  persistence. Chromium proves pre-commit cleanup, repeated activation,
+  privacy-safe copy, exact member heads/receipts, unchanged execution
+  provenance, and 320px/200% layout. Unknown-result exact replay and native
+  acceptance remain open.
 - SQLite v4 immutable daily-reflection versions and one optimistic head per
   workspace-local date. Trading and no-trade days support explicit draft or
   completed saves, optional headline/note/emotion/tags/self-reported process
@@ -433,7 +441,9 @@ Single-Trade Review Exact-Command Recovery v1 closes only the individual
 review-sheet unknown-save gap. Individual Trade Review Stale-Head Recovery v1
 now closes its deterministic browser conflict/consent gap without changing
 schema or strengthening any native claim. Atomic batch ambiguous recovery
-remains a human-gated HIGH pending a durable batch-receipt design.
+remains a human-gated HIGH pending a durable batch-receipt design; the narrower
+Batch Tag Known-Commit Refresh-Only Recovery v1 now prevents resolved saves
+from being submitted again after redraw failure.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,
