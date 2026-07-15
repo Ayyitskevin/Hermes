@@ -102,7 +102,7 @@ describe("setup-performance presentation", () => {
     expect(html).toContain(
       '<section class="card plan-check-card setup-performance-card" aria-labelledby="setup-performance-title" data-setup-performance>',
     );
-    expect(html).toContain('<h2 id="setup-performance-title">Setup breakdown</h2>');
+    expect(html).toContain('<h2 id="setup-performance-title" class="report-target" tabindex="-1">Setup breakdown</h2>');
     expect(html).toContain("FICTIONAL DEMO");
     expect(html).toContain("setup-performance-report-v1");
     expect(html).toContain(
@@ -208,7 +208,7 @@ describe("setup-performance presentation", () => {
       trades: [],
     });
 
-    expect(html).toContain('<h2 id="setup-performance-title">Setup breakdown</h2>');
+    expect(html).toContain('<h2 id="setup-performance-title" class="report-target" tabindex="-1">Setup breakdown</h2>');
     expect(html).toContain("NEW");
     expect(html).toContain("0 of 0 trades");
     expect(html).toContain(

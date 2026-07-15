@@ -1,9 +1,142 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Dynamic Review Facets v1 ·
+Status: verified Reports Navigator v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver Reports Navigator v1: make the full governed Reports workspace
+practical to traverse on an iPhone without changing report inputs, formulas,
+evidence, persistence, or archive truth.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/ui/reports-view.ts` adds a semantic **Report sections** landmark
+  with ordered jump paths for Performance summary, Journal curve, Plan check,
+  and Setup breakdown. Stable focus targets and return-to-menu paths make each
+  report section keyboard- and screen-reader-navigable without URL, store, or
+  snapshot state.
+- The cumulative Journal curve now follows the summary and precedes the two
+  evidence-heavy breakdowns. It still consumes the same governed
+  `snapshot.performance` and `snapshot.equityCurve`; Plan and Setup builders,
+  evidence identifiers, checksums, totals, and eligibility rules are unchanged.
+- Report navigation measures the rendered top bar before scrolling, focuses the
+  destination without a second scroll, and keeps report links and disclosure
+  controls above the fixed tab bar when they fit. The listener belongs to the
+  transient Reports screen and also covers Setup groups appended after a
+  disclosure opens.
+- The Dashboard **Open plan check** path now opens Reports directly at the Plan
+  target. Expanded Plan and Setup disclosures remain expanded while navigating,
+  and no report rerender occurs for an in-screen jump.
+- At 480px and below the top bar participates in document flow, preserving usable
+  review space at 200% browser text while the bottom navigation remains fixed.
+  Menu labels wrap, the index becomes one column, and new controls retain the
+  44-point touch-target contract without horizontal overflow.
+- Unit coverage protects semantic order, focus targets, return paths, measured
+  offset ordering, unsupported-target failure, and navigation without rerender.
+  Production-browser coverage protects pointer and keyboard paths, direct
+  Dashboard entry, governed report fingerprints, disclosure and DOM continuity,
+  storage immutability, offline behavior, strict 320×568/200% visibility, and
+  genuine Tab traversal at the 421×568/200% breakpoint edge.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  record the delivered information architecture while keeping VoiceOver,
+  native Dynamic Type, hardware-keyboard, multi-scene, lifecycle, and physical-
+  device proof explicitly open.
+- No schema, migration, ledger/store/archive shape, execution fact, financial
+  formula/version, governed report input or checksum, native source, security
+  credential, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 444 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 55 production-browser journeys
+  passed, including the three Reports Navigator journeys and 11 focused Reports
+  and mobile-shell compatibility journeys.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0;
+  Vite transformed 64 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `70ce055719bac643d8ba7880ddec62087cbd77353a353d755fffa9b7c096670a`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Three independent final reviews found no functional, formula, scope,
+  persistence, security, listener-lifetime, documentation-truth, iPhone-layout,
+  accessibility, or test-quality blocker after the active handoff and a
+  421px/200% control-visibility finding were addressed. These reviews are
+  advisory; the rerunnable commands above are authoritative.
+- Legacy Python `ruff` / `pytest` — NOT RUN locally: this checkout has no
+  project venv, and the offline dependency set is incomplete. The hosted
+  Legacy Python safety job must provide that independent evidence after
+  publication.
+
+assumptions:
+
+- Reports intentionally receives the reconciled full-workspace snapshot. The
+  Trade Browser's session-only filters do not scope governed report truth.
+- Jump state is transient DOM focus/scroll state. It is intentionally absent
+  from URLs, local storage, archives, exports, and report checksums.
+- Browser evidence uses production Chromium and the in-memory
+  `SessionJournalStore`. It is not a native bridge, SQLCipher transaction,
+  second scene, relaunch, VoiceOver, hardware-keyboard, or physical-iPhone
+  result.
+- Making the top bar non-sticky through 480 CSS pixels is intentional: at
+  320×568 the sticky header consumed most of the 200% text viewport, and an
+  independent audit reproduced the same control-visibility cliff at 421×568.
+
+open:
+
+- HOLD native Reports Navigator acceptance: repeat VoiceOver, 200% native
+  Dynamic Type, hardware keyboard, direct Dashboard entry, every jump/return,
+  expanded disclosure visibility, multi-scene, background/foreground, relaunch,
+  and physical-device layout on a current Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft omits
+  current-review-head source and draft/completed eligibility from its proposed
+  evidence/checksum definition. Resolve that definition before approving or
+  publishing the report.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before claiming
+  ETF/options/futures/crypto file coverage; the current generic adapter records
+  rows as stock.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- MED — next autonomous candidate: continue from a report evidence row to its
+  existing trade using the stable subject identifier, with duplicate-symbol,
+  progressive-append, focus, and no-formula-change coverage.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Attachments, verified Delete All Data, saved presets, persistent/report scope,
+  fuller account/vocabulary/playbook management, remaining report families,
+  and native restore/backup acceptance remain separate governed work.
+- Fleet guard-layer screening was not evidenced for this slice; do not treat
+  this handoff as guard approval.
+- Do not claim native readiness, native backup completeness, broader CSV asset
+  support, or start broker sync, execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, pricing, or public comparative
+  positioning from this milestone.
+
+## Prior milestone — Dynamic Review Facets v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Reports Navigator v1 handoff above.
+
+Status: verified Dynamic Review Facets v1 ·
+updated 2026-07-15
+
+### Historical handoff
 
 task: Deliver Dynamic Review Facets v1: add exact current Mistake, Emotion, and
 Tag controls to scoped Trades without changing ledger, financial, calendar, or

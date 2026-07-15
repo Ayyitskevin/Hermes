@@ -331,6 +331,18 @@ Dashboard headline metrics, equity, review progress, Plan Check, and Setup
 Breakdown continue to consume the full workspace snapshot. This slice changes
 no schema, migration, store, archive, or governed report definition/version.
 
+Reports Navigator v1 remains inside that same derived boundary. It adds no
+scope or result state: semantic in-page links target the existing Performance
+Summary, Journal Curve, Plan Check, and Setup Breakdown markup, while the
+Dashboard shortcut may enter Plan Check directly. Activating a link scrolls and
+focuses current DOM only; open disclosure state survives because no report is
+rebuilt. The responsive top-bar position and clipped-control focus correction
+are presentation behavior only. No navigation value enters SQLite, browser
+journal state, local preferences, export/restore, archive digests, report-input
+digests, or governed definitions. Both report builders still receive the full
+workspace snapshot and retain the same checksums, cohorts, exact values,
+ordering, and progressive limits.
+
 Search and all seven facet selects share the same session boundary. Clear
 search and filters resets only those visibility controls and retains account/
 date/day scope; Clear all resets scope and visibility together. Neither action
@@ -552,7 +564,13 @@ adds current-assignment-only option derivation across the whole workspace,
 saved-review normalization/limit enforcement, stable deeply frozen choices,
 seven-facet/search/scope AND composition, multi-valued mistake/tag matching,
 and a retained stale selection that yields zero visible cards without changing
-exact evidence, totals, or calendar state. Native Files selection, lifecycle/
+exact evidence, totals, or calendar state. Reports Navigator coverage adds an
+ordered navigation landmark, direct Dashboard entry, return paths, live-header
+offset focus, preserved disclosure/DOM state, governed metric/curve/report
+fingerprints, preference neutrality, 44-point controls, and fully visible
+keyboard focus with no internal or document overflow at 320px/200% text and at
+the 421px/200% breakpoint edge.
+Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit
 memory, VoiceOver, and physical-device SQLCipher behavior remain unverified.
 

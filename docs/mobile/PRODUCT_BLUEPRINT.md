@@ -315,7 +315,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Six bounded Slice D increments are implemented in the current workspace. The
+Eight bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -494,6 +494,20 @@ session-only, reset on mode switch or reload, and add no schema, migration,
 store, archive, or governed report-definition change. Saved presets, persistent
 or report scope, and vocabulary/playbook management remain separate work.
 
+An eighth increment, Reports Navigator v1, reorganizes only the existing
+Reports presentation. A semantic menu follows DOM order—Performance Summary,
+Journal Curve, Plan Check, then Setup Breakdown—and every destination has a
+stable focusable heading plus a return path. Dashboard's existing Plan Check
+shortcut now lands on that heading. In-page jumps measure the live top chrome,
+scroll without animation, then focus without a second scroll; opened report
+disclosures and DOM identity survive every jump. At widths through 480 CSS
+pixels the top bar enters normal document flow, leaving the fixed primary tabs
+as navigation and enough unobscured height for large controls at 200% text.
+This state is transient and performs no journal-store operation. Headline
+metrics, curve points, report builders, versions, checksums, cohorts,
+exclusions, exact values, ordering, pagination, archive inputs, and state/report
+digests are unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -647,11 +661,12 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The seven
+empty-journal-only restore and idempotent exact-retry reconciliation. The eight
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
 calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, and
-Structured Trades Facets v1 plus Dynamic Review Facets v1. The six increments
-other than Daily Journal remain derived-only; Daily Journal
+Structured Trades Facets v1, Dynamic Review Facets v1, and Reports Navigator
+v1. The seven increments other than Daily Journal remain derived-only; Daily
+Journal
 adds checksum-pinned schema v4 and browser payload v2 while preserving the
 outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this

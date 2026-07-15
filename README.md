@@ -171,6 +171,15 @@ submission-ready product:
   setup-name code-unit order rather than performance rank, and progressively
   renders pages of five setup groups and 25 contributors per group without
   claiming causation, prediction, or advice.
+- Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
+  Plan Check, and Setup Breakdown in one semantic, DOM-ordered report menu.
+  Dashboard opens Plan Check directly; every section returns to the menu; jumps
+  preserve open evidence disclosures and move visible focus below live chrome.
+  At iPhone widths the redundant top bar scrolls with content so 200% text and
+  large report summaries can remain fully visible above the fixed primary tabs.
+  This is transient presentation over the unchanged full-workspace snapshot:
+  it performs no store write and changes no metric, curve input, report
+  checksum, cohort, evidence order, archive, or digest.
 - Trade Browser Scope v1 uses stable account IDs plus optional inclusive
   workspace-local allocation/activity dates to derive exact scoped P&L, trade,
   allocation, and activity-day evidence. Dashboard month navigation visits

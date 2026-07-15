@@ -360,6 +360,19 @@ and an App Store disclosure.
   an 8-of-8 cohort, five followed trades at +106 USD cash expectancy, three
   broken trades at -73.333333333333 USD cash expectancy, and the
   +179.333333333333 USD followed-minus-broken observational difference.
+- From Dashboard, activate **Open plan check** and confirm focus lands on the
+  visible Plan Check heading rather than the generic Reports container. In the
+  Report sections landmark, verify VoiceOver and hardware-keyboard order is
+  Performance Summary, Journal Curve, Plan Check, then Setup Breakdown. Open a
+  Plan and Setup disclosure, visit all four targets, and use every **Back to
+  report menu** link; focus must remain visible and both disclosures must stay
+  open. At 320 CSS pixels and again in the 421–440 CSS-pixel device class with
+  200% Dynamic Type, confirm the top bar scrolls
+  away, the fixed primary tabs remain available, every menu/return/summary
+  control is at least 44 points and can be fully visible between viewport edges
+  and the tab bar, and there is no internal or document overflow. Repeat with
+  Reduce Motion and inspect the network log. This native row remains NOT RUN
+  until observed on the Mac/iPhone candidate.
 - Open both Plan Check groups with VoiceOver and reconcile their disjoint
   trades, current saved rule evidence, exact net/win/R coverage, 44-point
   summaries, exclusion/threshold/rounding copy, and non-causal/non-advisory

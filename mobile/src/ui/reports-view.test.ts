@@ -4,7 +4,9 @@ import { deriveTradeMetricsV1 } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
+  bindReportNavigation,
   bindReportsView,
+  focusReportSection,
   PLAN_CHECK_EVIDENCE_PAGE_SIZE,
   planAdherenceDashboardCard,
   reportsView,
@@ -143,11 +145,101 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
 }
 
 describe("reports presentation", () => {
+  it("renders one ordered report menu with stable focus targets and return paths", () => {
+    const html = reportsView(DEMO_WORKSPACE);
+    const targetIds = [
+      "reports-navigation-title",
+      "performance-summary-title",
+      "cumulative-result-title",
+      "plan-check-title",
+      "setup-performance-title",
+    ] as const;
+
+    expect(html).toContain(
+      '<nav class="card report-navigation" aria-labelledby="reports-navigation-title" data-report-navigation>',
+    );
+    for (const targetId of targetIds) {
+      expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
+      expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
+    }
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(4);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(4);
+    expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
+      html.indexOf('href="#cumulative-result-title"'),
+    );
+    expect(html.indexOf('href="#cumulative-result-title"')).toBeLessThan(
+      html.indexOf('href="#plan-check-title"'),
+    );
+    expect(html.indexOf('href="#plan-check-title"')).toBeLessThan(
+      html.indexOf('href="#setup-performance-title"'),
+    );
+    expect(html.indexOf("data-report-overview")).toBeLessThan(
+      html.indexOf("data-plan-check"),
+    );
+    expect(html.indexOf("data-plan-check")).toBeLessThan(
+      html.indexOf("data-setup-performance"),
+    );
+  });
+
+  it("binds report jumps without rerendering and offsets focus below the live header", () => {
+    const order: string[] = [];
+    let prevented = false;
+    let activate: ((event: { preventDefault(): void }) => void) | undefined;
+    const target = {
+      style: { scrollMarginTop: "" },
+      scrollIntoView(options: ScrollIntoViewOptions): void {
+        expect(options).toEqual({ behavior: "auto", block: "start" });
+        order.push("scroll");
+      },
+      focus(options: FocusOptions): void {
+        expect(options).toEqual({ preventScroll: true });
+        order.push("focus");
+      },
+    };
+    const link = {
+      dataset: { reportTarget: "plan-check-title" },
+      addEventListener(
+        event: string,
+        listener: (event: { preventDefault(): void }) => void,
+      ): void {
+        expect(event).toBe("click");
+        activate = listener;
+      },
+    };
+    const root = {
+      innerHTML: "unchanged",
+      querySelector(selector: string): unknown {
+        if (selector === "[data-report-navigation]") return {};
+        if (selector === ".topbar") {
+          return { getBoundingClientRect: () => ({ bottom: 268 }) };
+        }
+        if (selector === "#plan-check-title") return target;
+        return null;
+      },
+      querySelectorAll(selector: string): readonly unknown[] {
+        expect(selector).toBe("a[data-report-target]");
+        return [link];
+      },
+    };
+
+    bindReportNavigation(root as unknown as HTMLElement);
+    if (activate === undefined) throw new Error("Missing report jump listener.");
+    activate({ preventDefault: () => { prevented = true; } });
+
+    expect(prevented).toBe(true);
+    expect(target.style.scrollMarginTop).toBe("284px");
+    expect(order).toEqual(["scroll", "focus"]);
+    expect(root.innerHTML).toBe("unchanged");
+    expect(() => (
+      focusReportSection(root as unknown as HTMLElement, "unknown-report")
+    )).toThrow("The report navigation target unknown-report is unsupported.");
+  });
+
   it("renders both versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain('<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>');
-    expect(html).toContain('<h2 id="plan-check-title">Plan check</h2>');
+    expect(html).toContain('<h2 id="plan-check-title" class="report-target" tabindex="-1">Plan check</h2>');
     expect(html).toContain("FICTIONAL DEMO");
     expect(html).toContain("plan-adherence-report-v1");
     expect(html).toContain("0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85");
@@ -174,7 +266,7 @@ describe("reports presentation", () => {
     expect(html).toContain("PROFIT FACTOR");
     expect(html).toContain("AVG R");
     expect(html).toContain('data-setup-performance');
-    expect(html).toContain('<h2 id="setup-performance-title">Setup breakdown</h2>');
+    expect(html).toContain('<h2 id="setup-performance-title" class="report-target" tabindex="-1">Setup breakdown</h2>');
     expect(html).toContain("setup-performance-report-v1");
     expect(html).toContain("5779276cbbc4278136f96bbaca167216c60b395cdad4a8bb4cf9c3b5f272601b");
     expect(html).toContain("stable setup-name code-unit order");
@@ -200,7 +292,9 @@ describe("reports presentation", () => {
     expect(dashboard).toContain("+106 USD");
     expect(dashboard).toContain("Rule broken · 3 trades");
     expect(dashboard).toContain("-73.333333333333 USD");
-    expect(dashboard).toContain('data-route="reports">Open plan check</button>');
+    expect(dashboard).toContain(
+      'data-route="reports" data-report-target="plan-check-title">Open plan check</button>',
+    );
     expect(report).toContain("+179.333333333333 USD");
     expect(report).toContain("does not establish cause or predict an outcome");
     expect(report).toContain('data-plan-check-trade="demo-subject-qqq"');
@@ -336,6 +430,7 @@ describe("reports presentation", () => {
     };
     const root = {
       querySelector(selector: string): unknown {
+        if (selector === "[data-report-navigation]") return null;
         if (selector === "[data-setup-performance]") return null;
         expect(selector).toBe("[data-plan-check]");
         return planCheck;

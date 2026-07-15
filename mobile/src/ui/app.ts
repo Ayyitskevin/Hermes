@@ -30,6 +30,7 @@ import {
 } from "./trade-review-sheet";
 import {
   bindReportsView,
+  focusReportSection,
   planAdherenceDashboardCard,
   reportsView,
 } from "./reports-view";
@@ -1037,7 +1038,12 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     });
     root.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
-        render((button.dataset.route as TabId | undefined) ?? currentTab);
+        const destination = (button.dataset.route as TabId | undefined) ?? currentTab;
+        const reportTarget = button.dataset.reportTarget;
+        render(destination);
+        if (destination === "reports" && reportTarget !== undefined) {
+          focusReportSection(root, reportTarget);
+        }
       });
     });
     root.querySelectorAll<HTMLButtonElement>("[data-explore-demo]").forEach((button) => {

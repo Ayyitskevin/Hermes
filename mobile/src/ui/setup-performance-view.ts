@@ -134,7 +134,7 @@ export function setupPerformanceSection(
     : `<p class="plan-check-showing" data-setup-performance-groups-showing role="status" aria-live="polite" tabindex="-1">${groupShowingText(initialGroupCount, report.groups.length)}</p>
       <button class="secondary-button plan-check-more" type="button" data-setup-performance-groups-more aria-controls="setup-performance-groups"${initialGroupCount >= report.groups.length ? " hidden" : ""}>${initialGroupCount >= report.groups.length ? "All setup groups shown" : showMoreGroupsText(initialGroupCount, report.groups.length)}</button>`;
   return `<section class="card plan-check-card setup-performance-card" aria-labelledby="setup-performance-title" data-setup-performance>
-    <div class="section-title"><div><p class="card-label">SETUP, WITH EVIDENCE</p><h2 id="setup-performance-title">Setup breakdown</h2></div><span>${modeLabel(snapshot)}</span></div>
+    <div class="section-title"><div><p class="card-label">SETUP, WITH EVIDENCE</p><h2 id="setup-performance-title" class="report-target" tabindex="-1">Setup breakdown</h2></div><div class="report-section-actions"><span>${modeLabel(snapshot)}</span><a class="report-menu-link" href="#reports-navigation-title" data-report-target="reports-navigation-title">Back to report menu</a></div></div>
     <p>Completed reviewed closed trades use stable setup-name code-unit order. This is descriptive context, not a performance ranking or recommendation.</p>
     <dl class="plan-check-meta setup-performance-meta">
       <div><dt>Definition</dt><dd>${escapeHtml(report.metadata.version)}</dd></div>

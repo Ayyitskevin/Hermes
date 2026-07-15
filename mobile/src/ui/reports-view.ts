@@ -16,6 +16,108 @@ type PlanAdherenceEvidence = PlanAdherenceGroup["evidence"][number];
 
 export const PLAN_CHECK_EVIDENCE_PAGE_SIZE = 25 as const;
 
+const REPORT_TARGET_IDS = Object.freeze([
+  "reports-navigation-title",
+  "performance-summary-title",
+  "plan-check-title",
+  "setup-performance-title",
+  "cumulative-result-title",
+] as const);
+
+function reportNavigation(): string {
+  return `<nav class="card report-navigation" aria-labelledby="reports-navigation-title" data-report-navigation>
+    <div><p class="card-label">REPORT MENU</p><h2 id="reports-navigation-title" class="report-target" tabindex="-1">Report sections</h2></div>
+    <p>Move directly between the summary and evidence-backed reports. Each section names its own scope, cohort, and exclusions.</p>
+    <ul class="report-navigation-list">
+      <li><a class="report-navigation-link" href="#performance-summary-title" data-report-target="performance-summary-title">Performance summary</a></li>
+      <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
+      <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
+      <li><a class="report-navigation-link" href="#setup-performance-title" data-report-target="setup-performance-title">Setup breakdown</a></li>
+    </ul>
+  </nav>`;
+}
+
+function reportMenuLink(): string {
+  return `<a class="report-menu-link" href="#reports-navigation-title" data-report-target="reports-navigation-title">Back to report menu</a>`;
+}
+
+export function focusReportSection(root: HTMLElement, targetId: string): void {
+  if (!(REPORT_TARGET_IDS as readonly string[]).includes(targetId)) {
+    throw new Error(`The report navigation target ${targetId} is unsupported.`);
+  }
+  const target = root.querySelector<HTMLElement>(`#${targetId}`);
+  if (target === null) {
+    throw new Error(`The report navigation target ${targetId} is missing.`);
+  }
+  const topbarBottom = root.querySelector<HTMLElement>(".topbar")
+    ?.getBoundingClientRect().bottom ?? 0;
+  target.style.scrollMarginTop = `${Math.ceil(Math.max(0, topbarBottom) + 16)}px`;
+  target.scrollIntoView({ behavior: "auto", block: "start" });
+  target.focus({ preventScroll: true });
+}
+
+function keepReportControlVisible(root: HTMLElement, control: HTMLElement): void {
+  const topbar = root.querySelector<HTMLElement>(".topbar");
+  const topbarRect = topbar?.getBoundingClientRect();
+  const topbarPosition = topbar === null
+    ? "static"
+    : window.getComputedStyle(topbar).position;
+  const topBoundary = (
+    (topbarPosition === "sticky" || topbarPosition === "fixed")
+    && topbarRect !== undefined
+    && topbarRect.bottom > 0
+  )
+    ? topbarRect.bottom
+    : 0;
+  const tabbarTop = root.querySelector<HTMLElement>(".tabbar")
+    ?.getBoundingClientRect().top ?? window.innerHeight;
+  const bottomBoundary = Math.min(window.innerHeight, tabbarTop);
+  const margin = 8;
+  const minimumTop = topBoundary + margin;
+  const maximumBottom = bottomBoundary - margin;
+  const rect = control.getBoundingClientRect();
+  if (rect.height > maximumBottom - minimumTop) return;
+
+  let desiredTop = rect.top;
+  if (desiredTop < minimumTop) desiredTop = minimumTop;
+  if (desiredTop + rect.height > maximumBottom) {
+    desiredTop = maximumBottom - rect.height;
+  }
+  const delta = rect.top - desiredTop;
+  if (Math.abs(delta) <= 1) return;
+  window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+}
+
+export function bindReportNavigation(root: HTMLElement): void {
+  const navigation = root.querySelector<HTMLElement>("[data-report-navigation]");
+  if (navigation === null) return;
+
+  for (const link of root.querySelectorAll<HTMLAnchorElement>("a[data-report-target]")) {
+    const targetId = link.dataset.reportTarget;
+    if (targetId === undefined) {
+      throw new Error("A report navigation control has no target.");
+    }
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      focusReportSection(root, targetId);
+    });
+  }
+
+  root.querySelector<HTMLElement>('[aria-labelledby="reports-title"]')
+    ?.addEventListener("focusin", (event) => {
+      if (
+        event.target instanceof HTMLElement
+        && event.target.matches([
+          ".report-navigation-link",
+          ".report-menu-link",
+          ".plan-check-group > summary",
+        ].join(", "))
+      ) {
+        keepReportControlVisible(root, event.target);
+      }
+    });
+}
+
 function signedCurrency(value: number | null, currency: string): string {
   if (value === null) return "Open";
   return new Intl.NumberFormat("en-US", {
@@ -186,7 +288,7 @@ function planCheckSection(snapshot: JournalWorkspaceSnapshot): string {
     throw new Error("The plan-adherence report definition is unsupported.");
   }
   return `<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>
-    <div class="section-title"><div><p class="card-label">PROCESS, WITH EVIDENCE</p><h2 id="plan-check-title">Plan check</h2></div><span>${modeLabel(snapshot)}</span></div>
+    <div class="section-title"><div><p class="card-label">PROCESS, WITH EVIDENCE</p><h2 id="plan-check-title" class="report-target" tabindex="-1">Plan check</h2></div><div class="report-section-actions"><span>${modeLabel(snapshot)}</span>${reportMenuLink()}</div></div>
     <p>${escapeHtml(reportInsight(report))}</p>
     <dl class="plan-check-meta">
       <div><dt>Definition</dt><dd>${escapeHtml(report.metadata.version)}</dd></div>
@@ -225,7 +327,7 @@ export function planAdherenceDashboardCard(snapshot: JournalWorkspaceSnapshot): 
       <div><span>Rules followed · ${countNoun(followed.tradeCount, "trade")}</span><strong>${escapeHtml(exactSigned(followed.cashExpectancyExact, ` ${report.metadata.currencyCode}`))}</strong></div>
       <div><span>Rule broken · ${countNoun(broken.tradeCount, "trade")}</span><strong>${escapeHtml(exactSigned(broken.cashExpectancyExact, ` ${report.metadata.currencyCode}`))}</strong></div>
     </div>
-    <button class="secondary-button" type="button" data-route="reports">Open plan check</button>
+    <button class="secondary-button" type="button" data-route="reports" data-report-target="plan-check-title">Open plan check</button>
   </article>`;
 }
 
@@ -234,15 +336,19 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
   const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
   return `<section class="screen-stack" aria-labelledby="reports-title">
     <div class="screen-heading"><div><p class="eyebrow">PERFORMANCE ANALYTICS</p><h1 id="reports-title">Reports</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
-    <div class="metric-grid">
-      <article class="card"><p class="card-label">NET P&amp;L</p><strong class="metric ${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong><span>${escapeHtml(signedR(performance.netR, "—"))}${hasInterimResults ? " · includes interim partial exits" : ""}</span></article>
-      <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>${countNoun(performance.tradeCount, "trade")} with realized P&amp;L</span></article>
-      <article class="card"><p class="card-label">PROFIT FACTOR</p><strong class="metric">${performance.profitFactor?.toFixed(2) ?? "—"}</strong><span>profit relative to loss</span></article>
-      <article class="card"><p class="card-label">AVG R</p><strong class="metric">${escapeHtml(signedR(performance.averageR, "—"))}</strong><span>${performance.rTradeCount} of ${performance.tradeCount} with defined risk</span></article>
-    </div>
+    ${reportNavigation()}
+    <section class="report-overview" aria-labelledby="performance-summary-title" data-report-overview>
+      <div class="section-title"><div><p class="card-label">AT A GLANCE</p><h2 id="performance-summary-title" class="report-target" tabindex="-1">Performance summary</h2></div>${reportMenuLink()}</div>
+      <div class="metric-grid">
+        <article class="card"><p class="card-label">NET P&amp;L</p><strong class="metric ${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong><span>${escapeHtml(signedR(performance.netR, "—"))}${hasInterimResults ? " · includes interim partial exits" : ""}</span></article>
+        <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>${countNoun(performance.tradeCount, "trade")} with realized P&amp;L</span></article>
+        <article class="card"><p class="card-label">PROFIT FACTOR</p><strong class="metric">${performance.profitFactor?.toFixed(2) ?? "—"}</strong><span>profit relative to loss</span></article>
+        <article class="card"><p class="card-label">AVG R</p><strong class="metric">${escapeHtml(signedR(performance.averageR, "—"))}</strong><span>${performance.rTradeCount} of ${performance.tradeCount} with defined risk</span></article>
+      </div>
+      <article class="card chart-card" aria-labelledby="cumulative-result-title"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2 id="cumulative-result-title" class="report-target" tabindex="-1">Cumulative result</h2></div><div class="report-section-actions"><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>${reportMenuLink()}</div></div>${equityChart(snapshot)}</article>
+    </section>
     ${planCheckSection(snapshot)}
     ${setupPerformanceSection(snapshot)}
-    <article class="card chart-card"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2>Cumulative result</h2></div><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong></div>${equityChart(snapshot)}</article>
   </section>`;
 }
 
@@ -250,6 +356,7 @@ export function bindReportsView(
   root: HTMLElement,
   snapshot: JournalWorkspaceSnapshot,
 ): void {
+  bindReportNavigation(root);
   bindSetupPerformanceView(root, snapshot);
   const planCheck = root.querySelector<HTMLElement>("[data-plan-check]");
   if (planCheck === null) return;
