@@ -187,6 +187,15 @@ submission-ready product:
   the calendar, Dashboard, or governed Reports. Clear search and filters
   preserves scope, Clear all resets both layers, and mode switches or reload
   reset the ephemeral state.
+- Dynamic Review Facets v1 adds exact Mistake, Emotion, and Tag selects derived
+  from current `TradePreview` assignments across the whole workspace. Choices
+  use the saved-review normalization and limit contract, are stable code-unit
+  ordered, detached, and deeply frozen, and never come from unused vocabulary.
+  The three selects AND with the four fixed facets, normalized search, and the
+  existing account/date/day scope while changing visible cards only. If a valid
+  selected value loses its final current assignment, it remains visibly selected
+  as not currently assigned and produces zero cards instead of broadening the
+  view. Refresh retains valid session state; mode switches and reload reset it.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production
@@ -212,7 +221,8 @@ lifecycle behavior remains unverified. The current build deliberately rejects
 older browser payloads and pre-v4 native table sets; a pre-release legacy file
 must first be restored by its exact old runtime, then opened/migrated and
 exported again with the current build. Attachments, Delete All Data, saved scope
-presets, persistent/report scoping, full account management, and the remaining
+presets, persistent/report scoping, full account and vocabulary/playbook
+management, human-gated generic-CSV asset-class semantics, and the remaining
 report families remain Phase 1 work. Native v3→v4 migration, Daily Journal
 relaunch/Files export/restore/continued writes, VoiceOver, and small-screen
 behavior still require Mac/iPhone evidence.

@@ -41,27 +41,93 @@ describe("trades view", () => {
     const browser = buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
       assetClass: "etf",
-      direction: "short",
+      direction: "long",
       positionState: "closed",
       reviewState: "completed",
+      mistake: "Chased entry",
+      emotion: "Impatient",
+      tag: "Stopped on plan",
     });
     const html = tradesView(DEMO_WORKSPACE, browser);
 
     expect(html).toContain('id="trade-filter-asset-class"');
     expect(html).toContain('<option value="etf" selected>ETF</option>');
-    expect(html).toContain('<option value="short" selected>Short</option>');
+    expect(html).toContain('<option value="long" selected>Long</option>');
     expect(html).toContain('<option value="closed" selected>Closed</option>');
     expect(html).toContain('<option value="completed" selected>Completed</option>');
+    expect(html).toContain('id="trade-filter-mistake"');
+    expect(html).toContain('<option value="Chased entry" selected>Chased entry</option>');
+    expect(html).toContain('id="trade-filter-emotion"');
+    expect(html).toContain('<option value="Impatient" selected>Impatient</option>');
+    expect(html).toContain('id="trade-filter-tag"');
+    expect(html).toContain('<option value="Stopped on plan" selected>Stopped on plan</option>');
     expect(html).toContain("change visible cards and search results");
     expect(html).toContain("never change allocation scope");
     expect(html).toContain("Showing 1 of 8 trades");
-    expect(html).toMatch(/data-trade-subject="demo-subject-qqq" >/);
-    expect(html).toMatch(/data-trade-subject="demo-subject-spy" hidden>/);
+    expect(html).toMatch(/data-trade-subject="demo-subject-spy" >/);
+    expect(html).toMatch(/data-trade-subject="demo-subject-qqq" hidden>/);
     expect(html).toContain('<span class="status-chip">ETF</span>');
     expect(html).toContain("+$310.00");
     expect(html).toContain("8 contributing trades · 16 allocations · 6 activity days");
     expect(html).toContain("data-trade-view-clear");
     expect(html).not.toContain("data-trade-view-clear disabled");
+  });
+
+  it("escapes current review labels and preserves a selected stale value", () => {
+    const escapedTrade = {
+      ...DEMO_WORKSPACE.trades[0]!,
+      mistakes: ['Late <scale-out> & "hesitation"'],
+      emotion: "Focused & calm",
+      tags: ["A+ <setup>"],
+    };
+    const snapshot = {
+      ...DEMO_WORKSPACE,
+      trades: [escapedTrade, ...DEMO_WORKSPACE.trades.slice(1)],
+    };
+    const browser = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      mistake: "Retired <mistake>",
+    });
+    const html = tradesView(snapshot, browser);
+
+    expect(html).toContain(
+      'value="Late &lt;scale-out&gt; &amp; &quot;hesitation&quot;"',
+    );
+    expect(html).toContain("Late &lt;scale-out&gt; &amp; &quot;hesitation&quot;");
+    expect(html).toContain(
+      'value="Focused &amp; calm"',
+    );
+    expect(html).toContain('value="A+ &lt;setup&gt;"');
+    expect(html).toContain(
+      '<option value="Retired &lt;mistake&gt;" selected>Retired &lt;mistake&gt; (not currently assigned)</option>',
+    );
+    expect(html).toContain("Showing 0 of 8 trades");
+  });
+
+  it("disables empty review facet categories without disabling a stale selection", () => {
+    const snapshot = {
+      ...DEMO_WORKSPACE,
+      trades: DEMO_WORKSPACE.trades.map((trade) => ({
+        ...trade,
+        mistakes: [],
+        emotion: null,
+        tags: [],
+      })),
+    };
+    const emptyHtml = tradesView(snapshot, buildTradeBrowser(snapshot));
+
+    expect(emptyHtml).toMatch(/id="trade-filter-mistake"[^>]* disabled/);
+    expect(emptyHtml).toMatch(/id="trade-filter-emotion"[^>]* disabled/);
+    expect(emptyHtml).toMatch(/id="trade-filter-tag"[^>]* disabled/);
+
+    const staleHtml = tradesView(snapshot, buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      tag: "Retired tag",
+    }));
+    expect(staleHtml).not.toMatch(/id="trade-filter-tag"[^>]* disabled/);
+    expect(staleHtml).toContain(
+      '<option value="Retired tag" selected>Retired tag (not currently assigned)</option>',
+    );
   });
 
   it("qualifies same-symbol card headings and review actions by asset class", () => {

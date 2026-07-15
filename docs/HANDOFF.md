@@ -1,9 +1,136 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Batch Tag Known-Commit Refresh-Only Recovery v1 ·
+Status: verified Dynamic Review Facets v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver Dynamic Review Facets v1: add exact current Mistake, Emotion, and
+Tag controls to scoped Trades without changing ledger, financial, calendar, or
+governed-report truth.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `mobile/src/application/trade-browser.ts` adds session-only exact
+  `mistake`, `emotion`, and `tag` state. The predicates AND with the four
+  fixed facets, normalized search, and account/date/day scope while exact
+  evidence, contribution P&L, allocation/day counts, calendar state, Dashboard,
+  and governed Reports remain unchanged.
+- Dynamic choices derive only from current `TradePreview` assignments across
+  the whole workspace, independent of active scope and unused `reviewOptions`
+  vocabulary. Current labels are revalidated against the saved-review
+  normalization and limit contract. Choice arrays use stable code-unit order,
+  detach from source objects, and are deeply frozen.
+- A well-formed selected value may outlive its final current assignment. The
+  browser retains it, the UI labels it **not currently assigned**, and the exact
+  predicate returns zero cards rather than silently clearing or broadening.
+  Malformed retained state or incoherent current trade labels fail closed.
+- `mobile/src/ui/trades-view.ts` renders native Mistake, Emotion, and Tag
+  selects alongside the four fixed controls. Empty categories are disabled,
+  values are escaped, all seven controls refresh from the current workspace,
+  Clear search and filters preserves scope, Clear all resets both layers, and
+  navigation/valid refresh retains session state. Mode switches and reload
+  discard it.
+- Unit coverage independently protects each dynamic predicate, pairwise AND
+  behavior with near-matches, multi-valued membership, whole-workspace option
+  ownership, normalization/limits, stale values, escaping, empty categories,
+  detachment, and deep freezing.
+- The production-browser suite composes all seven facets with search and
+  account/day scope, proves Reports and exact totals remain whole, saves and
+  replaces a real local review offline, retains all three stale selections, and
+  verifies seven selects plus touch targets and no horizontal overflow at
+  320px/200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  record the delivered browser boundary and keep VoiceOver, native Dynamic
+  Type, hardware keyboard, multi-scene, lifecycle, and physical-device proof
+  explicitly open.
+- No schema, migration, review digest, store/archive shape, execution fact,
+  financial formula/version, native source, security credential, destructive
+  workflow, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 442 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 52 production-browser
+  journeys passed, including the three Trade Browser facet journeys.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0;
+  Vite transformed 64 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `ef2bbbda3b54b96d6b1840ce3b6e905df6f77dfae1eec23149ae087b79acadc2`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Legacy Python `ruff` / `pytest` — NOT RUN locally: this checkout has no
+  project venv, and the offline dependency set is incomplete. The hosted
+  Legacy Python safety job must provide that independent evidence after
+  publication.
+
+assumptions:
+
+- Current `TradePreview` review projections are the reconciled read model for
+  current assignments. Historical/day vocabulary intentionally does not create
+  a selectable value.
+- Stale well-formed values deliberately remain exact zero-result predicates;
+  clearing them is an explicit user action.
+- Browser evidence uses production Chromium and the in-memory
+  `SessionJournalStore`. It is not a native bridge, SQLCipher transaction,
+  second scene, relaunch, VoiceOver, hardware-keyboard, or physical-iPhone
+  result.
+- Two independent final reviews found no implementation, financial-scope,
+  iPhone-layout, accessibility-copy, or documentation-truth blocker after an
+  initial test-isolation gap and stale active-handoff finding were addressed.
+  These advisory reviews are claims; the rerunnable commands above remain the
+  authoritative evidence.
+
+open:
+
+- HOLD native seven-facet acceptance: repeat VoiceOver, 200% Dynamic Type,
+  hardware keyboard, review refresh/stale choice, account/day invalidation,
+  multi-scene, background/foreground, relaunch, and physical-device layout on a
+  current Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft omits
+  current-review-head source and draft/completed eligibility from its proposed
+  evidence/checksum definition. Resolve that definition before approving or
+  publishing the report.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before claiming
+  ETF/options/futures/crypto file coverage; the current generic adapter records
+  rows as stock.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- MED — next autonomous candidate: improve the Reports information architecture
+  with an accessible index/jump path while keeping report inputs and formulas
+  unchanged.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Attachments, verified Delete All Data, saved presets, persistent/report scope,
+  fuller account/vocabulary/playbook management, remaining report families,
+  and native restore/backup acceptance remain separate governed work.
+- Fleet guard-layer screening was not evidenced for this slice; do not treat
+  this handoff as guard approval.
+- Do not claim native readiness, native backup completeness, broader CSV asset
+  support, or start broker sync, execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, pricing, or public comparative
+  positioning from this milestone.
+
+## Prior milestone — Batch Tag Known-Commit Refresh-Only Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Dynamic Review Facets v1 handoff above.
 
 task: Deliver Batch Tag Known-Commit Refresh-Only Recovery v1: once a batch
 tag result resolves, make redraw recovery one-way and prove it cannot prepare
@@ -126,8 +253,8 @@ open:
 
 ## Prior milestone — Individual Trade Review Stale-Head Recovery v1
 
-> Historical snapshot; current status and open items are superseded by the
-> active Batch Tag Known-Commit Refresh-Only Recovery handoff above.
+> Historical snapshot; superseded first by Batch Tag Known-Commit Refresh-Only
+> Recovery v1 and now by the active Dynamic Review Facets v1 handoff above.
 
 task: Deliver Individual Trade Review Stale-Head Recovery v1: preserve one
 complete unsaved review after deterministic optimistic-concurrency rejection,

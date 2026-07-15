@@ -165,6 +165,206 @@ describe("trade browser", () => {
     expect(visible({ reviewState: "completed" })).toHaveLength(6);
   });
 
+  it("ANDs exact review facets with fixed facets, search, and scope without changing totals", () => {
+    const browser = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      activityFrom: "2026-07-02",
+      activityThrough: "2026-07-02",
+      query: "tsla",
+      assetClass: "stock",
+      direction: "short",
+      positionState: "closed",
+      reviewState: "completed",
+      mistake: "Early entry",
+      emotion: "Impatient",
+      tag: "Invalidation respected",
+    });
+
+    expect(browser.state).toMatchObject({
+      mistake: "Early entry",
+      emotion: "Impatient",
+      tag: "Invalidation respected",
+    });
+    expect(browser.hasViewFilters).toBe(true);
+    expect(browser.evidence.map(({ trade }) => trade.symbol)).toEqual(["NVDA", "TSLA"]);
+    expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["TSLA"]);
+    expect(browser.contributionPnlExact).toBe("150");
+    expect(browser.allocationCount).toBe(4);
+    expect(browser.activityDayCount).toBe(1);
+    expect(browser.calendar).toEqual(buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      activityFrom: "2026-07-02",
+      activityThrough: "2026-07-02",
+    }).calendar);
+  });
+
+  it("filters each dynamic predicate independently and ANDs pairwise near-matches", () => {
+    const visibleSymbols = (
+      snapshot: JournalWorkspaceSnapshot,
+      filters: {
+        readonly mistake?: string;
+        readonly emotion?: string;
+        readonly tag?: string;
+      },
+    ) => buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      ...filters,
+    }).visibleEvidence.map(({ trade }) => trade.symbol).sort();
+
+    expect(visibleSymbols(DEMO_WORKSPACE, {
+      mistake: "Early entry",
+    })).toEqual(["TSLA"]);
+    expect(visibleSymbols(DEMO_WORKSPACE, {
+      emotion: "Impatient",
+    })).toEqual(["SPY", "TSLA"]);
+    expect(visibleSymbols(DEMO_WORKSPACE, {
+      tag: "Plan followed",
+    })).toEqual(["AAPL", "AMD", "META", "MSFT", "NVDA"]);
+
+    const nearMatches: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: DEMO_WORKSPACE.trades.map((trade) => {
+        if (trade.symbol === "AAPL") {
+          return {
+            ...trade,
+            mistakes: ["Shared mistake"],
+            emotion: "Calm",
+            tags: ["Shared tag"],
+          };
+        }
+        if (trade.symbol === "TSLA") {
+          return {
+            ...trade,
+            mistakes: ["Shared mistake"],
+            emotion: "Impatient",
+            tags: ["Shared tag"],
+          };
+        }
+        if (trade.symbol === "SPY") {
+          return {
+            ...trade,
+            mistakes: ["Other mistake"],
+            emotion: "Impatient",
+            tags: ["Other tag"],
+          };
+        }
+        return trade;
+      }),
+    };
+
+    expect(visibleSymbols(nearMatches, {
+      mistake: "Shared mistake",
+      emotion: "Impatient",
+    })).toEqual(["TSLA"]);
+    expect(visibleSymbols(nearMatches, {
+      emotion: "Impatient",
+      tag: "Shared tag",
+    })).toEqual(["TSLA"]);
+  });
+
+  it("matches any exact member of multi-valued mistake and tag assignments", () => {
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: DEMO_WORKSPACE.trades.map((trade) => (
+        trade.symbol === "TSLA"
+          ? {
+              ...trade,
+              mistakes: ["First mistake", "Early entry"],
+              tags: ["Invalidation respected", "Secondary tag"],
+            }
+          : trade
+      )),
+    };
+
+    const browser = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      mistake: "Early entry",
+      emotion: "Impatient",
+      tag: "Secondary tag",
+    });
+    expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["TSLA"]);
+  });
+
+  it("derives globally sorted exact review options from current trade assignments only", () => {
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      reviewOptions: Object.freeze({
+        setups: Object.freeze([]),
+        mistakes: Object.freeze(["Historical mistake"]),
+        emotions: Object.freeze(["Day-only emotion"]),
+        tags: Object.freeze(["Archived tag"]),
+        playbooks: Object.freeze([]),
+      }),
+    };
+    const browser = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-primary",
+      activityFrom: "2026-07-08",
+      activityThrough: "2026-07-08",
+    });
+
+    expect(browser.reviewFacetOptions).toEqual({
+      mistakes: ["Chased entry", "Early entry"],
+      emotions: ["Calm", "Focused", "Hesitant", "Impatient", "Patient"],
+      tags: [
+        "Chased entry",
+        "Early entry",
+        "Early exit",
+        "Invalidation respected",
+        "Opening range",
+        "Patient entry",
+        "Plan followed",
+        "Protected remainder",
+        "Risk reduced",
+        "Stop respected",
+        "Stopped on plan",
+        "Target held",
+      ],
+    });
+    expect(browser.reviewFacetOptions.mistakes).toContain("Chased entry");
+    expect(browser.reviewFacetOptions.tags).not.toContain("Archived tag");
+    expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["META"]);
+  });
+
+  it("retains well-formed stale review selections and yields zero visible matches", () => {
+    const browser = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      mistake: "No longer assigned mistake",
+      emotion: "No longer assigned emotion",
+      tag: "No longer assigned tag",
+    });
+
+    expect(browser.state).toMatchObject({
+      mistake: "No longer assigned mistake",
+      emotion: "No longer assigned emotion",
+      tag: "No longer assigned tag",
+    });
+    expect(browser.reviewFacetOptions.mistakes).not.toContain(browser.state.mistake);
+    expect(browser.reviewFacetOptions.emotions).not.toContain(browser.state.emotion);
+    expect(browser.reviewFacetOptions.tags).not.toContain(browser.state.tag);
+    expect(browser.evidence).toHaveLength(8);
+    expect(browser.visibleEvidence).toEqual([]);
+    expect(browser.contributionPnlExact).toBe("310");
+    expect(browser.allocationCount).toBe(16);
+    expect(browser.activityDayCount).toBe(6);
+  });
+
+  it("normalizes selected review labels with the saved-review label contract", () => {
+    const browser = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      mistake: "  Early   entry  ",
+      emotion: " Impatient ",
+      tag: " Invalidation   respected ",
+    });
+
+    expect(browser.state).toMatchObject({
+      mistake: "Early entry",
+      emotion: "Impatient",
+      tag: "Invalidation respected",
+    });
+    expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["TSLA"]);
+  });
+
   it("aggregates multi-day and zero-P&L activity without double-counting a trade", () => {
     const primary = { ...demoTrade("AAPL"), resultPnl: 180, resultPnlExact: "180" };
     const swing = { ...demoTrade("QQQ"), resultPnl: -50, resultPnlExact: "-50" };
@@ -349,6 +549,36 @@ describe("trade browser", () => {
     expect(Object.isFrozen(evidence.trade.executions[0])).toBe(true);
   });
 
+  it("deeply freezes and detaches review facet options from mutable trade labels", () => {
+    const source = demoTrade("AAPL");
+    const mutableTrade = {
+      ...source,
+      mistakes: ["Detached mistake"],
+      emotion: "Detached emotion",
+      tags: ["Detached tag"],
+    };
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: [mutableTrade, ...DEMO_WORKSPACE.trades.slice(1)],
+    };
+    const browser = buildTradeBrowser(snapshot);
+
+    mutableTrade.mistakes.push("Mutated mistake");
+    mutableTrade.emotion = "Mutated emotion";
+    mutableTrade.tags.push("Mutated tag");
+
+    expect(browser.reviewFacetOptions.mistakes).toContain("Detached mistake");
+    expect(browser.reviewFacetOptions.emotions).toContain("Detached emotion");
+    expect(browser.reviewFacetOptions.tags).toContain("Detached tag");
+    expect(browser.reviewFacetOptions.mistakes).not.toContain("Mutated mistake");
+    expect(browser.reviewFacetOptions.emotions).not.toContain("Mutated emotion");
+    expect(browser.reviewFacetOptions.tags).not.toContain("Mutated tag");
+    expect(Object.isFrozen(browser.reviewFacetOptions)).toBe(true);
+    expect(Object.isFrozen(browser.reviewFacetOptions.mistakes)).toBe(true);
+    expect(Object.isFrozen(browser.reviewFacetOptions.emotions)).toBe(true);
+    expect(Object.isFrozen(browser.reviewFacetOptions.tags)).toBe(true);
+  });
+
   it("fails closed when a retained selected day is no longer in scope", () => {
     const browser = buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
@@ -405,6 +635,26 @@ describe("trade browser", () => {
       ...EMPTY_TRADE_BROWSER_STATE,
       reviewState: undefined as never,
     })).toThrow(/Review state.*not a supported/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      mistake: 7 as never,
+    })).toThrow(/Mistake filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      emotion: "",
+    })).toThrow(/Emotion filter.*1-120/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      tag: "line\nbreak",
+    })).toThrow(/Tag filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      tag: "x".repeat(121),
+    })).toThrow(/Tag filter.*1-120/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      emotion: "İ".repeat(120),
+    })).toThrow(/Emotion filter.*1-120/i);
 
     for (const [field, value, label] of [
       ["assetClass", "option", "asset class"],
@@ -421,6 +671,26 @@ describe("trade browser", () => {
       expect(() => buildTradeBrowser(malformed)).toThrow(
         new RegExp(`Trade .* ${label}.*not a supported`, "i"),
       );
+    }
+
+    for (const [field, value, expected] of [
+      ["mistakes", "not-a-list", /mistakes.*at most 20/i],
+      ["mistakes", [" Early entry "], /mistakes value.*not normalized/i],
+      ["emotion", ["Calm"], /emotion.*single-line/i],
+      ["tags", ["line\nbreak"], /tags value.*single-line/i],
+      [
+        "tags",
+        Array.from({ length: 21 }, (_, index) => `Tag ${index}`),
+        /tags.*at most 20/i,
+      ],
+    ] as const) {
+      const malformed = {
+        ...DEMO_WORKSPACE,
+        trades: DEMO_WORKSPACE.trades.map((trade, index) => (
+          index === 0 ? { ...trade, [field]: value } : trade
+        )),
+      } as unknown as JournalWorkspaceSnapshot;
+      expect(() => buildTradeBrowser(malformed)).toThrow(expected);
     }
 
     const firstDay = DEMO_WORKSPACE.calendar[0];

@@ -8,6 +8,10 @@ import type {
   JournalWorkspaceSnapshot,
   TradePreview,
 } from "../core/types";
+import {
+  TRADE_REVIEW_LABEL_LIMIT,
+  TRADE_REVIEW_LIST_LIMIT,
+} from "./prepare-trade-review";
 
 export const TRADE_BROWSER_SEARCH_MAX_CODE_POINTS = 200;
 
@@ -34,6 +38,10 @@ export interface TradeBrowserState {
   readonly direction: TradeBrowserDirectionFilter;
   readonly positionState: TradeBrowserPositionFilter;
   readonly reviewState: TradeBrowserReviewFilter;
+  /** Exact current trade-review labels, or null for every assigned value. */
+  readonly mistake: string | null;
+  readonly emotion: string | null;
+  readonly tag: string | null;
 }
 
 export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
@@ -47,6 +55,9 @@ export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
   direction: "all",
   positionState: "all",
   reviewState: "all",
+  mistake: null,
+  emotion: null,
+  tag: null,
 });
 
 export interface TradeBrowserEvidence {
@@ -67,6 +78,12 @@ export interface TradeBrowserCalendar {
   readonly scopedSessionCount: number;
 }
 
+export interface TradeBrowserReviewFacetOptions {
+  readonly mistakes: readonly string[];
+  readonly emotions: readonly string[];
+  readonly tags: readonly string[];
+}
+
 export interface TradeBrowserResult {
   readonly state: TradeBrowserState;
   /** A stale day request is reported with empty evidence so callers cannot broaden silently. */
@@ -81,6 +98,8 @@ export interface TradeBrowserResult {
   readonly scopedCalendar: readonly CalendarSession[];
   readonly calendar: TradeBrowserCalendar;
   readonly selectedSession: CalendarSession | null;
+  /** Exact current trade assignments across the whole workspace, independent of scope. */
+  readonly reviewFacetOptions: TradeBrowserReviewFacetOptions;
   /** Account/date/day scoped trades before text search. */
   readonly evidence: readonly TradeBrowserEvidence[];
   /** Search/facet result. Visibility filters never change the exact scope summary. */
@@ -159,6 +178,79 @@ function canonicalFacet<Value extends string>(
     throw new Error(`${label} is not a supported trade-card filter.`);
   }
   return raw as Value;
+}
+
+function characterCount(value: string): number {
+  return [...value].length;
+}
+
+function hasControlCharacter(value: string): boolean {
+  return [...value].some((character) => {
+    const codePoint = character.codePointAt(0);
+    return codePoint !== undefined
+      && (codePoint < 32 || (codePoint >= 127 && codePoint <= 159));
+  });
+}
+
+/** Mirrors the normalized label contract used by prepareTradeReview. */
+function normalizedReviewLabel(raw: unknown, label: string): string {
+  if (typeof raw !== "string" || hasControlCharacter(raw)) {
+    throw new Error(`${label} must use visible single-line text.`);
+  }
+  const normalized = raw.normalize("NFC").trim().replace(/\s+/gu, " ");
+  if (
+    normalized.length === 0
+    || characterCount(normalized) > TRADE_REVIEW_LABEL_LIMIT
+    || characterCount(normalized.toLocaleLowerCase("en-US")) > TRADE_REVIEW_LABEL_LIMIT
+  ) {
+    throw new Error(
+      `${label} must contain 1-${TRADE_REVIEW_LABEL_LIMIT} visible characters.`,
+    );
+  }
+  return normalized;
+}
+
+function canonicalReviewFacet(raw: unknown, label: string): string | null {
+  return raw === null ? null : normalizedReviewLabel(raw, label);
+}
+
+function validateCurrentReviewLabels(
+  raw: unknown,
+  label: string,
+  tradeSubjectId: string,
+): void {
+  if (!Array.isArray(raw) || raw.length > TRADE_REVIEW_LIST_LIMIT) {
+    throw new Error(
+      `Trade ${tradeSubjectId} ${label} must contain at most ${TRADE_REVIEW_LIST_LIMIT} labels.`,
+    );
+  }
+  const identities = new Set<string>();
+  for (const value of raw) {
+    const normalized = normalizedReviewLabel(
+      value,
+      `Trade ${tradeSubjectId} ${label} value`,
+    );
+    if (normalized !== value) {
+      throw new Error(`Trade ${tradeSubjectId} ${label} value is not normalized.`);
+    }
+    const identity = normalized.toLocaleLowerCase("en-US");
+    if (identities.has(identity)) {
+      throw new Error(`Trade ${tradeSubjectId} ${label} repeats a label.`);
+    }
+    identities.add(identity);
+  }
+}
+
+function validateCurrentOptionalReviewLabel(
+  raw: unknown,
+  label: string,
+  tradeSubjectId: string,
+): void {
+  if (raw === null) return;
+  const normalized = normalizedReviewLabel(raw, `Trade ${tradeSubjectId} ${label}`);
+  if (normalized !== raw) {
+    throw new Error(`Trade ${tradeSubjectId} ${label} is not normalized.`);
+  }
 }
 
 function freezeMetricEvidence(
@@ -257,6 +349,9 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
       ["pending", "draft", "completed"] as const,
       `Trade ${trade.tradeSubjectId} review state`,
     );
+    validateCurrentReviewLabels(trade.mistakes, "mistakes", trade.tradeSubjectId);
+    validateCurrentOptionalReviewLabel(trade.emotion, "emotion", trade.tradeSubjectId);
+    validateCurrentReviewLabels(trade.tags, "tags", trade.tradeSubjectId);
     trades.set(trade.tradeSubjectId, freezeTradePreview(trade));
     counts.set(trade.accountId, (counts.get(trade.accountId) ?? 0) + 1);
   }
@@ -266,6 +361,24 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
     }
   }
   return trades;
+}
+
+function reviewFacetOptions(
+  trades: ReadonlyMap<string, TradePreview>,
+): TradeBrowserReviewFacetOptions {
+  const mistakes = new Set<string>();
+  const emotions = new Set<string>();
+  const tags = new Set<string>();
+  for (const trade of trades.values()) {
+    for (const mistake of trade.mistakes) mistakes.add(mistake);
+    if (trade.emotion !== null) emotions.add(trade.emotion);
+    for (const tag of trade.tags) tags.add(tag);
+  }
+  return Object.freeze({
+    mistakes: Object.freeze([...mistakes].sort(stableCompare)),
+    emotions: Object.freeze([...emotions].sort(stableCompare)),
+    tags: Object.freeze([...tags].sort(stableCompare)),
+  });
 }
 
 function validateSession(
@@ -425,14 +538,23 @@ function matchesFacets(
   evidence: TradeBrowserEvidence,
   facets: Pick<
     TradeBrowserState,
-    "assetClass" | "direction" | "positionState" | "reviewState"
+    | "assetClass"
+    | "direction"
+    | "positionState"
+    | "reviewState"
+    | "mistake"
+    | "emotion"
+    | "tag"
   >,
 ): boolean {
   const trade = evidence.trade;
   return (facets.assetClass === "all" || trade.assetClass === facets.assetClass)
     && (facets.direction === "all" || trade.side === facets.direction)
     && (facets.positionState === "all" || trade.status === facets.positionState)
-    && (facets.reviewState === "all" || trade.reviewStatus === facets.reviewState);
+    && (facets.reviewState === "all" || trade.reviewStatus === facets.reviewState)
+    && (facets.mistake === null || trade.mistakes.includes(facets.mistake))
+    && (facets.emotion === null || trade.emotion === facets.emotion)
+    && (facets.tag === null || trade.tags.includes(facets.tag));
 }
 
 function dateLabel(from: string | null, through: string | null): string {
@@ -452,6 +574,7 @@ export function buildTradeBrowser(
   input: TradeBrowserState = EMPTY_TRADE_BROWSER_STATE,
 ): TradeBrowserResult {
   const trades = validateSnapshotIdentity(snapshot);
+  const availableReviewFacets = reviewFacetOptions(trades);
   const activityFrom = canonicalIsoDate(input.activityFrom, "Activity start");
   const activityThrough = canonicalIsoDate(input.activityThrough, "Activity end");
   if (
@@ -488,6 +611,9 @@ export function buildTradeBrowser(
     ["all", "pending", "draft", "completed"] as const,
     "Review state",
   );
+  const mistake = canonicalReviewFacet(input.mistake, "Mistake filter");
+  const emotion = canonicalReviewFacet(input.emotion, "Emotion filter");
+  const tag = canonicalReviewFacet(input.tag, "Tag filter");
   const requestedDay = canonicalIsoDate(input.selectedDay, "Selected activity day");
   const requestedMonth = canonicalMonth(input.calendarMonth);
 
@@ -526,7 +652,15 @@ export function buildTradeBrowser(
   const evidence = evidenceForSessions(evidenceSessions, trades);
   const visibleEvidence = Object.freeze(
     evidence.filter((item) => (
-      matchesFacets(item, { assetClass, direction, positionState, reviewState })
+      matchesFacets(item, {
+        assetClass,
+        direction,
+        positionState,
+        reviewState,
+        mistake,
+        emotion,
+        tag,
+      })
       && matchesSearch(item, query)
     )),
   );
@@ -570,6 +704,9 @@ export function buildTradeBrowser(
     direction,
     positionState,
     reviewState,
+    mistake,
+    emotion,
+    tag,
   });
 
   return Object.freeze({
@@ -580,7 +717,10 @@ export function buildTradeBrowser(
       || assetClass !== "all"
       || direction !== "all"
       || positionState !== "all"
-      || reviewState !== "all",
+      || reviewState !== "all"
+      || mistake !== null
+      || emotion !== null
+      || tag !== null,
     accountLabel,
     dateLabel: scopeDateLabel,
     scopeLabel: `${accountLabel} · ${scopeDateLabel}`,
@@ -596,6 +736,7 @@ export function buildTradeBrowser(
       scopedSessionCount: scopedCalendar.length,
     }),
     selectedSession,
+    reviewFacetOptions: availableReviewFacets,
     evidence,
     visibleEvidence,
     contributionPnlExact,

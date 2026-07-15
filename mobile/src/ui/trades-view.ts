@@ -27,6 +27,9 @@ export interface TradeViewFilterInput {
   readonly direction: TradeBrowserDirectionFilter;
   readonly positionState: TradeBrowserPositionFilter;
   readonly reviewState: TradeBrowserReviewFilter;
+  readonly mistake: string | null;
+  readonly emotion: string | null;
+  readonly tag: string | null;
 }
 
 export interface TradesViewHandlers {
@@ -157,6 +160,25 @@ function selected(current: string, candidate: string): string {
   return current === candidate ? "selected" : "";
 }
 
+function reviewFacetOptions(
+  current: string | null,
+  available: readonly string[],
+  allLabel: string,
+): string {
+  const stale = current !== null && !available.includes(current)
+    ? `<option value="${escapeHtml(current)}" selected>${escapeHtml(current)} (not currently assigned)</option>`
+    : "";
+  return `<option value="" ${current === null ? "selected" : ""}>${escapeHtml(allLabel)}</option>
+    ${stale}
+    ${available.map((value) => (
+      `<option value="${escapeHtml(value)}" ${current === value ? "selected" : ""}>${escapeHtml(value)}</option>`
+    )).join("")}`;
+}
+
+function disabledWithoutOptions(current: string | null, available: readonly string[]): string {
+  return current === null && available.length === 0 ? "disabled" : "";
+}
+
 function viewFilters(browser: TradeBrowserResult): string {
   const controls = "trade-card-list trade-count trade-empty";
   const describedBy = "trade-view-filter-boundary trade-view-filter-error";
@@ -194,6 +216,21 @@ function viewFilters(browser: TradeBrowserResult): string {
           <option value="pending" ${selected(browser.state.reviewState, "pending")}>Pending</option>
           <option value="draft" ${selected(browser.state.reviewState, "draft")}>Draft</option>
           <option value="completed" ${selected(browser.state.reviewState, "completed")}>Completed</option>
+        </select>
+      </label>
+      <label>Mistake
+        <select id="trade-filter-mistake" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes)}>
+          ${reviewFacetOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes, "All mistakes")}
+        </select>
+      </label>
+      <label>Emotion
+        <select id="trade-filter-emotion" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.emotion, browser.reviewFacetOptions.emotions)}>
+          ${reviewFacetOptions(browser.state.emotion, browser.reviewFacetOptions.emotions, "All emotions")}
+        </select>
+      </label>
+      <label>Tag
+        <select id="trade-filter-tag" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.tag, browser.reviewFacetOptions.tags)}>
+          ${reviewFacetOptions(browser.state.tag, browser.reviewFacetOptions.tags, "All tags")}
         </select>
       </label>
     </div>
@@ -254,7 +291,10 @@ function hasExactViewFacet(browser: TradeBrowserResult): boolean {
   return browser.state.assetClass !== "all"
     || browser.state.direction !== "all"
     || browser.state.positionState !== "all"
-    || browser.state.reviewState !== "all";
+    || browser.state.reviewState !== "all"
+    || browser.state.mistake !== null
+    || browser.state.emotion !== null
+    || browser.state.tag !== null;
 }
 
 function noMatchTitle(browser: TradeBrowserResult): string {
@@ -383,7 +423,7 @@ export function bindTradesView(
   );
 
   const facetControls = Array.from(root.querySelectorAll<HTMLSelectElement>(
-    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review",
+    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review, #trade-filter-mistake, #trade-filter-emotion, #trade-filter-tag",
   ));
   const filterError = root.querySelector<HTMLElement>("#trade-view-filter-error");
   const applyViewFilters = () => {
@@ -397,6 +437,9 @@ export function bindTradesView(
           ?.value as TradeBrowserPositionFilter ?? "all",
         reviewState: root.querySelector<HTMLSelectElement>("#trade-filter-review")
           ?.value as TradeBrowserReviewFilter ?? "all",
+        mistake: root.querySelector<HTMLSelectElement>("#trade-filter-mistake")?.value || null,
+        emotion: root.querySelector<HTMLSelectElement>("#trade-filter-emotion")?.value || null,
+        tag: root.querySelector<HTMLSelectElement>("#trade-filter-tag")?.value || null,
       });
       facetControls.forEach((control) => control.removeAttribute("aria-invalid"));
       if (filterError !== null) {

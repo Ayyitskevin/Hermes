@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + exact-command recovery + derived trade-browser scope + local restore · 2026-07-14
+Status: implemented execution + versioned trade/day review + exact-command recovery + derived trade-browser scope/facets + local restore · 2026-07-15
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -304,17 +304,37 @@ coerced into a broader view. Browser construction also detaches and freezes
 trade evidence so later mutation of a local source object cannot change an
 already-reconciled exact result.
 
-Scope state is session-only: it is not stored in SQLite, browser journal state,
-exports, restores, or report archives. It survives internal navigation and
-valid ledger refreshes, resets on local/demo mode changes or reload, and affects
-Trades plus the Dashboard calendar only. Dashboard headline metrics, equity,
-review progress, Plan Check, and Setup Breakdown continue to consume the full
-workspace snapshot. This slice changes no schema, migration, store, archive,
-or governed report definition/version.
+Dynamic Review Facets v1 adds exact Mistake, Emotion, and Tag values to that
+visibility layer. Options derive from current `TradePreview` assignments across
+the complete workspace rather than `reviewOptions` vocabulary or the current
+account/date/day/search/facet result. Each trade's labels are revalidated against
+the saved-review contract: NFC normalization, trimmed and collapsed whitespace,
+visible single-line text, a 120-code-point bound before and after the fixed
+`en-US` identity fold, case-folded uniqueness within each trade's multivalued
+field, and at most 20 mistake or tag assignments per trade. Available values use
+stable code-unit order, are detached from source objects, and are deeply frozen
+with the enclosing result.
 
-Search and facet state share the same session boundary. Clear search and filters
-resets only those visibility controls and retains account/date/day scope; Clear
-all resets scope and visibility together. Neither action mutates ledger state.
+The three dynamic facets AND with the four fixed facets, normalized search, and
+existing scope. A well-formed retained selection need not be present in the new
+option set: if refresh removes its last current assignment, the UI keeps the
+exact selected value visible as **not currently assigned** and shows zero cards
+instead of clearing it or broadening. Unsupported or malformed labels fail
+closed. Dynamic facets do not trim or recompute exact scope evidence, totals,
+calendar, Dashboard, or governed report inputs.
+
+Scope and visibility state are session-only: they are not stored in SQLite,
+browser journal state, exports, restores, or report archives. It survives
+internal navigation and valid ledger refreshes, resets on local/demo mode
+changes or reload, and affects Trades plus the Dashboard calendar only.
+Dashboard headline metrics, equity, review progress, Plan Check, and Setup
+Breakdown continue to consume the full workspace snapshot. This slice changes
+no schema, migration, store, archive, or governed report definition/version.
+
+Search and all seven facet selects share the same session boundary. Clear
+search and filters resets only those visibility controls and retains account/
+date/day scope; Clear all resets scope and visibility together. Neither action
+mutates ledger state.
 
 ## Rollback
 
@@ -527,10 +547,14 @@ exact sums and counts, stale-day fail-closed handling, tampered-evidence
 rejection, report isolation, real activity-month navigation, invalid-range
 recovery, focus visibility, fixed-facet/search AND
 composition, scope/report isolation under facets, distinct clear semantics,
-session retention/reset, and 320px/200% reflow.
-Native Files selection, lifecycle/interruption,
-Daily Journal relaunch and migration, low-storage, near-limit memory, VoiceOver,
-and physical-device SQLCipher behavior remain unverified.
+session retention/reset, and 320px/200% reflow. Dynamic Review Facets coverage
+adds current-assignment-only option derivation across the whole workspace,
+saved-review normalization/limit enforcement, stable deeply frozen choices,
+seven-facet/search/scope AND composition, multi-valued mistake/tag matching,
+and a retained stale selection that yields zero visible cards without changing
+exact evidence, totals, or calendar state. Native Files selection, lifecycle/
+interruption, Daily Journal relaunch and migration, low-storage, near-limit
+memory, VoiceOver, and physical-device SQLCipher behavior remain unverified.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

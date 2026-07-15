@@ -163,24 +163,36 @@ and an App Store disclosure.
 - Search scoped trades by symbol, account, setup, side, status, review state,
   mistake, emotion, or tag. Confirm search changes visible cards only and never
   the exact scope summary.
-- Apply asset-class, direction, position-state, and review-state facets in
-  combination with search. Confirm they AND against canonical trade fields,
-  change visible cards only, expose the asset-class chip, and leave exact scope
-  P&L/counts, the calendar, Dashboard, Plan Check, and Setup Breakdown unchanged.
+- Apply asset-class, direction, position-state, review-state, Mistake, Emotion,
+  and Tag facets in combination with normalized search and account/date/day
+  scope. Confirm all seven AND against exact current trade fields, change visible
+  cards only, expose the asset-class chip, and leave exact scope P&L/counts, the
+  calendar, Dashboard, Plan Check, and Setup Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
+- Assign review labels inside and outside the active account/date/day scope.
+  Confirm Mistake, Emotion, and Tag choices come from current `TradePreview`
+  assignments across the whole workspace—not unused vocabulary—use stable
+  code-unit order, and preserve saved-review normalization and limits. Confirm
+  multi-valued mistake and tag assignments match any exact selected member.
+- With VoiceOver and a hardware keyboard, retain a well-formed Mistake, Emotion,
+  or Tag selection while another review removes its last current assignment and
+  refresh the Trades view. The selected option must remain visible as **not
+  currently assigned**, focus and the exact value must remain understandable,
+  and the result must contain zero cards without broadening account/date/day
+  evidence, totals, or calendar state. Repeat separately for all three selects.
 - With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
   state survives tab navigation and valid ledger refreshes. Clearing a selected
   day must retain account/range and card filters; Clear search and filters must
   retain account/range/day while clearing search/facets; Clear all must reset
-  both layers. Switching local/demo mode or reloading must reset session-only state.
-  If an account or day disappears after refresh, confirm Hermes announces the
-  recovery instead of silently broadening or trapping the app.
+  both layers. Switching local/demo mode or reloading must reset session-only
+  state. If an account or day disappears after refresh, confirm Hermes announces
+  the recovery instead of silently broadening or trapping the app.
 - Confirm Dashboard headline P&L, equity, and review progress plus Plan Check
   and Setup Breakdown remain whole-workspace while only Trades and the
   Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
-  inputs, four facet selects, month controls, day tiles, scope summary,
+  inputs, seven facet selects, month controls, day tiles, scope summary,
   contribution evidence, and focused destinations have no horizontal overflow
   or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
@@ -468,12 +480,15 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   iCloud backup inclusion—and whether the matching Keychain item restores—remain
   unresolved until measured and reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Plan Check and Setup Breakdown,
-  Trade Browser Scope v1, export generation, and Slice C-B local restore still
-  need persistence, response-loss, migration, accessibility, and lifecycle
-  checks above. Native Web Share/Files cancellation, save, reopen, custom MIME
-  behavior, restore preview rollback, atomic commit, post-commit
-  reconciliation, interruption retry, and near-64-MiB memory behavior have not
-  been observed.
+  export generation, and Slice C-B local restore still need the applicable
+  persistence, response-loss, migration, accessibility, and lifecycle checks
+  above. Trade Browser Scope v1, Structured Trades Facets v1, and Dynamic Review
+  Facets v1 intentionally remain session-only; they still need native
+  accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
+  and hardware-keyboard checks. Browser evidence does not prove those native
+  behaviors. Native Web Share/Files cancellation, save, reopen, custom MIME
+  behavior, restore preview rollback, atomic commit, post-commit reconciliation,
+  interruption retry, and near-64-MiB memory behavior have not been observed.
 - Current matching-runtime archives remain incomplete native backups:
   attachment catalog v1 is empty and archives containing attachments are
   rejected. Attachments and Delete All Data remain incomplete Phase 1 work.

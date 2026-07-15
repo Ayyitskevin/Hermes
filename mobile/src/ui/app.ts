@@ -87,7 +87,10 @@ function viewFilterAnnouncement(browser: TradeBrowserResult): string {
   const hasFacet = browser.state.assetClass !== "all"
     || browser.state.direction !== "all"
     || browser.state.positionState !== "all"
-    || browser.state.reviewState !== "all";
+    || browser.state.reviewState !== "all"
+    || browser.state.mistake !== null
+    || browser.state.emotion !== null
+    || browser.state.tag !== null;
   return hasFacet && hasSearch
     ? ` Search and card filters show ${browser.visibleEvidence.length} of ${browser.evidence.length} trades.`
     : hasFacet
@@ -919,6 +922,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             direction: "all",
             positionState: "all",
             reviewState: "all",
+            mistake: null,
+            emotion: null,
+            tag: null,
           });
           tradeBrowserState = next.state;
           render("trades", false);

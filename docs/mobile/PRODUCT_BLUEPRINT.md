@@ -1,6 +1,6 @@
 # Hermes Journal product and technical blueprint
 
-Status: authoritative mobile product blueprint · 2026-07-13
+Status: authoritative mobile product blueprint · 2026-07-15
 
 ## Executive decision
 
@@ -473,8 +473,29 @@ resets on a local/demo switch or reload. Fixed options deliberately avoid
 inventing dynamic vocabulary semantics. No schema, migration, store, archive,
 or governed report-definition version changed.
 
+A seventh increment, Dynamic Review Facets v1, adds exact Mistake, Emotion, and
+Tag selects to the same card-visibility layer. Their choices derive from current
+`TradePreview` assignments across the whole workspace, independent of account,
+date, selected-day, search, and fixed-facet scope; unused saved vocabulary is not
+offered. Values reuse the saved-review contract: NFC normalization, trimmed and
+collapsed whitespace, visible single-line text, 120-code-point limits before and
+after the fixed `en-US` identity fold, no duplicate folded identities within
+each trade's multivalued field, and at most 20 mistake or tag assignments per
+trade. Choice arrays use stable code-unit order, detach from mutable inputs, and
+are deeply frozen.
+
+Mistake, Emotion, and Tag AND with the four fixed facets, normalized search, and
+the existing account/date/day scope. A well-formed selected value that loses its
+last current assignment stays visible as **not currently assigned** and returns
+zero cards; refresh never silently broadens the view. Like the fixed facets,
+these controls do not change exact scope evidence, contribution P&L, trade/
+allocation/day totals, the calendar, Dashboard, or governed Reports. They remain
+session-only, reset on mode switch or reload, and add no schema, migration,
+store, archive, or governed report-definition change. Saved presets, persistent
+or report scope, and vocabulary/playbook management remain separate work.
+
 A recovery-continuity hardening milestone composes the fourth increment with
-Slice C-B rather than adding a seventh product increment. In the browser
+Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
 export, offline empty-session restore, continued immutable writing, re-export,
 and a second restore. The continued payload proves two versions, one head, and
@@ -488,12 +509,13 @@ Still open in Slice D:
 
 - Drawdown, streak, time/day, symbol, direction, tag, mistake, emotion, and
   remaining report families with reconciled drill-down, plus saved scope
-  presets, saved view presets, dynamic vocabulary facets, persistent/report
-  scope, and fuller account management.
+  presets, saved view presets, persistent/report scope, fuller account
+  management, and fuller vocabulary/playbook management.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
-- Prioritized CSV packs for the brokers the beta cohort actually uses.
+- Human-gated generic-CSV asset-class semantics and prioritized CSV packs for the
+  brokers the beta cohort actually uses.
 
 Exit: every report reconciles to golden fixtures and every native integration
 passes privacy, accessibility, lifecycle, and failure-path tests.
@@ -625,11 +647,11 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The six
+empty-journal-only restore and idempotent exact-retry reconciliation. The seven
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
 calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, and
-Structured Trades Facets v1. The five increments other than Daily Journal
-remain derived-only; Daily Journal
+Structured Trades Facets v1 plus Dynamic Review Facets v1. The six increments
+other than Daily Journal remain derived-only; Daily Journal
 adds checksum-pinned schema v4 and browser payload v2 while preserving the
 outer archive version. Final integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this

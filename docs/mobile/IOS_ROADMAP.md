@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-14
+Status: active delivery roadmap · updated 2026-07-15
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -48,13 +48,13 @@ under the provisional identifier until that gate is cleared.
   have continuing costs.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
-  Scope v1, Structured Trades Facets v1, export, and matching-runtime local
-  restore are implemented. Browser Recovery Continuity proves a restored
-  daily draft can append and survive a second restore; Exact-Command Recovery
-  proves an ambiguous daily save retains and replays only its original command.
-  However,
-  native restore acceptance, verified deletion, deeper reports, attachments,
-  and Mac/device evidence remain incomplete.
+  Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, export, and
+  matching-runtime local restore are implemented. Browser Recovery
+  Continuity proves a restored daily draft can append and survive a second
+  restore; Exact-Command Recovery proves an ambiguous daily save retains and
+  replays only its original command. However, native restore acceptance,
+  verified deletion, deeper reports, attachments, and Mac/device evidence
+  remain incomplete.
 
 TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
 prices. That gives Hermes a large price wedge, but price alone is not the product:
@@ -328,6 +328,17 @@ Delivered in the current vertical slice:
   session-only, survives internal navigation and valid refresh, and resets on a
   mode switch or reload. This derived layer changes no schema, store, archive,
   or report definition.
+- Dynamic Review Facets v1 adds exact Mistake, Emotion, and Tag selects derived
+  from current `TradePreview` assignments across the whole workspace, not
+  unused saved vocabulary. Values reuse the saved-review normalization and
+  limits; choices are stable code-unit ordered, detached, and deeply frozen.
+  The three selects AND with the four fixed facets, normalized search, and
+  existing account/date/day scope. A well-formed selection that loses its final
+  current assignment remains visible as not currently assigned and yields zero
+  cards rather than a silently broadened view. These session-only filters retain
+  valid refresh state, reset on mode switch or reload, and never change exact
+  scope evidence/totals, the calendar, Dashboard, governed Reports, schema,
+  store, archive, or report definitions.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -346,11 +357,10 @@ Still required in Phase 1:
   requires a full app relaunch at 320 CSS pixels and 200% Dynamic Type.
 - Deepen the delivered Trades review detail and scope with saved presets,
   optional persistent/report scope, fuller account management,
-  dynamic tag/mistake/emotion facets, vocabulary/playbook management, and the
-  remaining reconciled report families.
-- Add a generic-CSV asset-class contract before claiming ETF/options/futures/
-  crypto file coverage; the current generic CSV adapter intentionally records
-  rows as stock.
+  vocabulary/playbook management, and the remaining reconciled report families.
+- Add a human-gated generic-CSV asset-class contract before claiming ETF/
+  options/futures/crypto file coverage; the current generic CSV adapter
+  intentionally records rows as stock.
 - Prove native export and restore Files/share/cancel/save/reopen behavior on a
   Mac and iPhone, including empty-state preview rollback, atomic commit, exact
   response-loss retry, asynchronous file replacement, continued Daily Journal
@@ -372,9 +382,9 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add prioritized broker-specific CSV adapters behind the generic mapping core.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
-- Add templates, reminders, saved view presets, dynamic vocabulary facets,
-  drawdown/streak/time-of-day/tag reports, deeper setup comparisons, and
-  explainable report drill-down.
+- Add templates, reminders, saved view presets, fuller vocabulary/playbook
+  management, drawdown/streak/time-of-day/tag reports, deeper setup comparisons,
+  and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
 
@@ -430,11 +440,12 @@ tier-by-tier claim. Reverify before public comparative positioning.
 4. Human review of financial, privacy, and comparative claims.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
-Durable trade/day annotations, Trade Browser Scope v1, matching-runtime local
-restore, and the governed evidence-linked Plan Check and Setup Breakdown
-increments are implemented. Startup Recovery v1 and the Linux-to-Mac evidence
-boundary harden application initialization and CI handoff without changing a
-schema, migration, financial definition, or native readiness claim.
+Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
+v1, Dynamic Review Facets v1, matching-runtime local restore, and the governed
+evidence-linked Plan Check and Setup Breakdown increments are implemented.
+Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
+initialization and CI handoff without changing a schema, migration, financial
+definition, or native readiness claim.
 Daily Journal Exact-Command Recovery v1 closes the browser unknown-save gap
 without strengthening any native claim.
 Single-Trade Review Exact-Command Recovery v1 closes only the individual
