@@ -39,6 +39,10 @@ produced:
   CSS pixels with 200% text.
 - README, product blueprint, roadmap, local-ledger contract, and Mac handoff
   record this presentation boundary without claiming native acceptance.
+- Follow-up CI maintenance selects the official Node 24 action majors:
+  `actions/checkout@v7`, `actions/setup-node@v7`, and
+  `actions/setup-python@v6`. Triggers, permissions, inputs, jobs, and commands
+  are unchanged; exact-head hosted CI remains the execution authority.
 
 verified:
 
@@ -66,6 +70,10 @@ verified:
 - `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
 - `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
   --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- Official GitHub refs resolve `actions/checkout@v7`, `actions/setup-node@v7`,
+  and `actions/setup-python@v6`; each action metadata declares `node24`. The
+  existing job inputs remain supported. Exact-head hosted CI is the execution
+  and annotation authority for this workflow-only change.
 - Legacy Python Ruff/Pytest — NOT RUN locally because this presentation-only
   mobile diff does not touch legacy Python and this checkout has no complete
   project venv. The hosted Legacy Python safety job must provide independent
@@ -99,7 +107,6 @@ open:
 - MED — re-audit the next autonomous product slice after publication. Emotion
   Patterns remains a safe technical reuse only if it adds enough review value
   to justify another report family.
-- LOW — upgrade GitHub Action runtimes in a separate maintenance slice.
 - Attachments, verified Delete All Data, saved presets, persistent/report
   scope, fuller management, remaining reports, and native restore/backup
   acceptance remain separate.
