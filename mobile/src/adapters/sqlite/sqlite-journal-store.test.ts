@@ -504,6 +504,19 @@ describe("SqliteJournalStore", () => {
           tags: ["Patient", "No trade"],
         }),
       ]);
+      const beforeHistoricalReplay = await source.store.exportUserData();
+      expect(await source.store.commitDailyJournalEntry(firstCommand)).toMatchObject({
+        outcome: "duplicate",
+        entryVersionId: first.entryVersionId,
+        ledger: {
+          dailyEntries: [expect.objectContaining({
+            id: edit.entryVersionId,
+            version: 2,
+          })],
+        },
+      });
+      expect((await source.store.exportUserData()).archive.stateSha256)
+        .toBe(beforeHistoricalReplay.archive.stateSha256);
       expect(await count(source.database, "daily_journal_entry_versions")).toBe(2);
       expect(await count(source.database, "daily_journal_entry_heads")).toBe(1);
       expect(await count(source.database, "daily_journal_entry_term_assignments")).toBe(5);

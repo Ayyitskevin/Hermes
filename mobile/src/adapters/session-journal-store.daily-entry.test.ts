@@ -97,6 +97,19 @@ describe("browser-session durable daily journal", () => {
           completedAtUs: expect.any(String),
         }),
       ]);
+      const beforeHistoricalReplay = await store.exportUserData();
+      expect(await store.commitDailyJournalEntry(firstCommand)).toMatchObject({
+        outcome: "duplicate",
+        entryVersionId: first.entryVersionId,
+        ledger: {
+          dailyEntries: [expect.objectContaining({
+            id: edit.entryVersionId,
+            version: 2,
+          })],
+        },
+      });
+      expect((await store.exportUserData()).archive.stateSha256)
+        .toBe(beforeHistoricalReplay.archive.stateSha256);
       const beforeStale = await store.exportUserData();
       await expect(store.commitDailyJournalEntry(daily("d", {
         expectedPreviousEntryId: first.entryVersionId,

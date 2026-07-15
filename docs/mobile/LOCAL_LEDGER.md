@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + derived trade-browser scope + local restore · 2026-07-14
+Status: implemented execution + versioned trade/day review + exact-command recovery + derived trade-browser scope + local restore · 2026-07-14
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -183,11 +183,23 @@ performs the append. A reload error, absent/unchanged head, or second race keeps
 the draft visible and saving blocked or re-enters the same flow. No automatic
 merge, null-head fallback, overwrite, or commit occurs during reconciliation.
 
-Open UI debt remains separate from deterministic stale-head recovery: after an
-unknown commit outcome, the current reload action treats any readable ledger as
-reconciliation evidence. A readable empty ledger does not prove the prepared
-revision was saved, so exact-command retry or equivalent receipt proof is still
-required before that action may safely close the only in-memory draft.
+Daily Journal Exact-Command Recovery v1 closes the unknown-outcome UI gap
+without changing persistence. Before the first commit call, the editor retains
+the exact frozen prepared command—including submission ID, optimistic
+predecessor, normalized content, and revision. If two safe attempts plus the
+fallback read cannot prove an outcome, every authored control and close path
+stays locked and **Retry this exact save** is the only enabled action. That
+action never rereads the form or creates a new submission identity.
+
+Both stores resolve an exact saved submission receipt before comparing the
+current head, so replay returns the original version as a duplicate even when a
+later successor is now projected. Only positive committed/duplicate evidence
+may clear the retained command and refresh. A deterministic `entry_changed`
+enters the preserve-review-consent stale flow; every other error remains
+ambiguous because workspace, clock, or bridge failure can precede receipt
+lookup. Repeated ambiguity keeps the same command and draft frozen. Once commit
+is positively proven, a later render failure changes the sole action to
+**Retry journal refresh** and never invokes persistence again.
 
 ## Projection semantics
 
@@ -431,7 +443,14 @@ displayed before consent, and the next explicit save exports exactly three
 versions, one head, and three receipts while offline. A one-shot render failure
 also leaves the writing intact, evidence/consent hidden, and saves blocked.
 The comparison covers focus, inert background, 44-point actions, long tokens,
-and 320px/200% reflow. Browser composition additionally covers a real
+and 320px/200% reflow. Exact-command UI coverage composes an unknown Daily
+Journal outcome through two exact attempts, repeated ambiguity without form
+reread or ID generation, a later competing head, deterministic stale recovery,
+and an explicit successor. Export evidence proves one immutable version and one
+receipt per accepted submission; a separate one-shot render failure proves a
+positively committed save exposes refresh only. This is production-bundle
+browser evidence, not native bridge or lifecycle acceptance. Browser
+composition additionally covers a real
 Daily Journal draft through export, offline empty-session restore, continued
 immutable writing, re-export, second restore, exact version/head/submission
 evidence, post-restore focus, and asynchronous file-replacement invalidation.

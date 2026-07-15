@@ -501,6 +501,120 @@ describe("JournalApplication daily-journal recovery", () => {
     }
   });
 
+  it("recovers the exact committed submission by receipt after a newer head advances", async () => {
+    class ReceiptRecoveryDailyStore extends SessionJournalStore {
+      commitCalls = 0;
+      blockLoads = false;
+
+      override async load(): ReturnType<SessionJournalStore["load"]> {
+        if (this.blockLoads) throw new Error("Native read response is unavailable.");
+        return super.load();
+      }
+
+      override async commitDailyJournalEntry(
+        command: PreparedDailyJournalEntry,
+      ): Promise<DailyJournalCommitResult> {
+        this.commitCalls += 1;
+        return super.commitDailyJournalEntry(command);
+      }
+    }
+
+    const store = new ReceiptRecoveryDailyStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await openTrade(store, "AAPL", "8", 10);
+      const exactCommand = preparedDaily();
+      expect(Object.isFrozen(exactCommand)).toBe(true);
+      expect(Object.isFrozen(exactCommand.tags)).toBe(true);
+
+      store.blockLoads = true;
+      await expect(application.commitDailyJournalSafely(exactCommand))
+        .rejects.toBeInstanceOf(DailyJournalCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+
+      store.blockLoads = false;
+      const committedHead = (await store.load()).dailyEntries[0];
+      if (committedHead === undefined) throw new Error("Expected the uncertain save to have committed.");
+      const competing = prepareDailyJournalEntry({
+        submissionId: "8".repeat(64),
+        isoDate: exactCommand.isoDate,
+        expectedPreviousEntryId: committedHead.id,
+        state: "draft",
+        title: "Saved after the lost response",
+        note: "A later writer advanced the current head.",
+        emotion: "Calm",
+        processScorePct: 80,
+        tags: ["Later"],
+      });
+      await store.commitDailyJournalEntry(competing);
+
+      const recovered = await application.commitDailyJournalSafely(exactCommand);
+      expect(recovered).toMatchObject({
+        outcome: "duplicate",
+        entryVersionId: committedHead.id,
+      });
+      expect(recovered.ledger.dailyEntries).toEqual([
+        expect.objectContaining({
+          version: 2,
+          revision: competing.revision,
+          title: "Saved after the lost response",
+        }),
+      ]);
+      expect(store.commitCalls).toBe(4);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("does not reconcile identical authored content from a different submission", async () => {
+    class SameContentDifferentSubmissionStore extends SessionJournalStore {
+      commitCalls = 0;
+
+      seed(command: PreparedDailyJournalEntry): Promise<DailyJournalCommitResult> {
+        return super.commitDailyJournalEntry(command);
+      }
+
+      override async commitDailyJournalEntry(
+        _command: PreparedDailyJournalEntry,
+      ): Promise<DailyJournalCommitResult> {
+        this.commitCalls += 1;
+        throw new Error("Native bridge is unavailable.");
+      }
+    }
+
+    const store = new SameContentDifferentSubmissionStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await openTrade(store, "AAPL", "8", 10);
+      const exactCommand = preparedDaily();
+      const differentSubmission = prepareDailyJournalEntry({
+        submissionId: "7".repeat(64),
+        isoDate: exactCommand.isoDate,
+        expectedPreviousEntryId: exactCommand.expectedPreviousEntryId,
+        state: exactCommand.state,
+        title: exactCommand.title,
+        note: exactCommand.note,
+        emotion: exactCommand.emotion,
+        processScorePct: exactCommand.processScorePct,
+        tags: exactCommand.tags,
+      });
+      expect(differentSubmission.revision).not.toBe(exactCommand.revision);
+      await store.seed(differentSubmission);
+
+      await expect(application.commitDailyJournalSafely(exactCommand))
+        .rejects.toBeInstanceOf(DailyJournalCommitStatusUncertainError);
+      expect(store.commitCalls).toBe(2);
+      expect((await store.load()).dailyEntries).toEqual([
+        expect.objectContaining({
+          revision: differentSubmission.revision,
+          note: exactCommand.note,
+        }),
+      ]);
+    } finally {
+      await application.close();
+    }
+  });
+
   it("keeps an unqueryable daily-reflection save explicitly uncertain", async () => {
     class UnavailableDailyStore extends SessionJournalStore {
       commitCalls = 0;

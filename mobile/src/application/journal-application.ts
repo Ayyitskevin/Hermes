@@ -80,7 +80,7 @@ export class TradeReviewCommitStatusUncertainError extends Error {
 export class DailyJournalCommitStatusUncertainError extends Error {
   constructor(cause: unknown) {
     super(
-      "Hermes could not confirm whether this daily reflection was saved. Reload the journal before editing this date again.",
+      "Hermes could not confirm whether this exact daily reflection save committed. Keep this sheet open and retry the same save; do not create another reflection for this date.",
       { cause },
     );
     this.name = "DailyJournalCommitStatusUncertainError";

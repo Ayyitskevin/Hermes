@@ -391,6 +391,20 @@ remains fail-closed. Chromium proves the composed three-version flow through a
 deterministic retained-editor race in one application/store, but not native
 multi-scene, WKWebView lifecycle, SQLCipher, or device accessibility.
 
+Daily Journal Exact-Command Recovery v1 hardens the ambiguous boundary without
+changing persistence. The sheet retains the original immutable prepared
+command before its first save attempt and freezes every authored control and
+close path when commit status cannot be proven. The only action replays that
+exact command: it does not reread raw form values or create another submission
+ID. Store receipt identity resolves before current-head comparison, so the
+original committed version remains provable after a later successor advances;
+identical content under a different submission is not evidence. Positive
+commit/duplicate proof may refresh, deterministic stale enters the preserve/
+review/consent flow, every other result stays frozen, and a proven commit
+followed by render failure offers refresh only. Chromium proves this state
+machine offline in the production bundle, not native bridge loss, multi-scene
+lifecycle, relaunch, or device accessibility.
+
 The fifth increment is Trade Browser Scope v1. It is a derived-only projection
 over stable ledger account IDs and exact calendar contributions: all accounts
 or one account, optional inclusive workspace-local allocation/activity dates,
@@ -586,14 +600,16 @@ Recovery v1 adds a semantic opening/failure path, application teardown before
 full-document retry, privacy-safe rendered copy, and deterministic Chromium
 accessibility evidence. Daily Journal Stale-Head Recovery v1 adds
 preserve-review-consent-resubmit behavior at the existing optimistic head
-boundary. The Linux CI handoff now verifies the ignored iOS
+boundary, and Exact-Command Recovery v1 closes the browser unknown-save gap
+with receipt-first replay and refresh-only handling after proven commit. The
+Linux CI handoff now verifies the ignored iOS
 public copy byte-for-byte and validates selected generated-registration fields
 while explicitly leaving all native rows NOT RUN. None of these reliability
 milestones changes a schema, migration, formula, archive, or financial
 definition. Native restore
 acceptance on
 a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device
-acceptance, exact-command uncertain-save recovery, verified Delete All Data,
+acceptance (including native exact-command recovery), verified Delete All Data,
 the remaining reports, and later
 attachment round-trip remain open—not broker connectivity, hosted sync, Android,
 recurring AI, or legacy cockpit extraction.

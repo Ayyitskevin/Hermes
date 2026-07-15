@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-13
+Status: active delivery roadmap · updated 2026-07-14
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -49,8 +49,10 @@ under the provisional identifier until that gate is cleared.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, export, and matching-runtime local
-  restore are implemented. Browser Recovery Continuity also proves a restored
-  daily draft can append and survive a second restore, but
+  restore are implemented. Browser Recovery Continuity proves a restored
+  daily draft can append and survive a second restore; Exact-Command Recovery
+  proves an ambiguous daily save retains and replays only its original command.
+  However,
   native restore acceptance, verified deletion, deeper reports, attachments,
   and Mac/device evidence remain incomplete.
 
@@ -213,10 +215,15 @@ Delivered in the current vertical slice:
   stays blocked. Chromium proves this state machine offline, including three
   immutable versions, one head, three receipts, focus, 320px/200% reflow, and
   long-token wrapping. Native multi-scene/lifecycle acceptance remains open.
-- Open Daily Journal reliability debt: the separate uncertain-commit reload
-  action still treats a readable ledger as proof and can close a draft whose
-  prepared revision is absent. Replace it with exact-command retry/status
-  proof before calling unknown-outcome recovery complete.
+- Daily Journal Exact-Command Recovery v1 retains the frozen prepared command
+  across an unknown outcome and enables only exact replay. Receipt identity is
+  checked before the current head, so a committed command still reconciles
+  after a successor advances; identical text under another submission is not
+  proof. Deterministic stale enters the preserve/review/consent flow, repeated
+  ambiguity stays locked, and a proven commit with failed rendering offers
+  refresh only. Chromium proves offline focus containment, generic copy,
+  320px/200% reflow, no form reread/new ID, immutable history, and no external
+  request. Native bridge/lifecycle acceptance remains open.
 - Exact, versioned result-R and stock/ETF percent-return definitions with pinned
   rounding, inspectable numerator/denominator evidence, partial-exit labeling,
   incompatible-input null reasons, and fee/short/repeating-ratio fixtures.
@@ -321,6 +328,11 @@ Still required in Phase 1:
   Mac and iPhone, including empty-state preview rollback, atomic commit, exact
   response-loss retry, asynchronous file replacement, continued Daily Journal
   writes, interruption, relaunch, low storage, and near-limit memory behavior.
+- Repeat Daily Journal exact-command recovery against native SQLite with lost
+  bridge responses before and after commit, repeated unknown results, a later
+  head from a second scene, refresh failure after proven commit,
+  background/foreground, force quit/relaunch, and device accessibility. Never
+  accept readable-ledger content or matching authored text as receipt proof.
 - After native restore acceptance, add verified Delete All Data with database,
   Keychain, attachment, interruption, response-loss, and receipt behavior.
 
@@ -396,6 +408,8 @@ restore, and the governed evidence-linked Plan Check and Setup Breakdown
 increments are implemented. Startup Recovery v1 and the Linux-to-Mac evidence
 boundary harden application initialization and CI handoff without changing a
 schema, migration, financial definition, or native readiness claim.
+Daily Journal Exact-Command Recovery v1 closes the browser unknown-save gap
+without strengthening any native claim.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,

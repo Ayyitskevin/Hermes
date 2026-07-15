@@ -2,6 +2,10 @@ import {
   DailyJournalCommitStatusUncertainError,
   JournalApplication,
 } from "../application/journal-application";
+import {
+  DailyJournalPreparationError,
+  type PreparedDailyJournalEntry,
+} from "../application/prepare-daily-journal";
 import { JournalDailyEntryError } from "../application/journal-store";
 import { escapeHtml } from "../core/html";
 import type { DailyJournalPreview, JournalWorkspaceSnapshot } from "../core/types";
@@ -179,7 +183,7 @@ export function dailyJournalSheetTemplate(
         <p class="privacy-copy" id="daily-entry-score-hint">The process score is your own reflection and is excluded from performance and Plan Check analytics.</p>
         <p class="form-error" id="daily-entry-error" role="alert" tabindex="-1" hidden></p>
         <p id="daily-entry-status" class="sr-only" role="status" aria-live="polite"></p>
-        <button class="secondary-button" id="daily-entry-reconcile" type="button" hidden>Reload journal and reconcile</button>
+        <button class="secondary-button" id="daily-entry-reconcile" type="button" hidden>Retry this exact save</button>
         <section class="daily-entry-conflict" id="daily-entry-conflict" aria-labelledby="daily-entry-conflict-title" hidden>
           <h3 id="daily-entry-conflict-title" tabindex="-1">Review the saved version before continuing</h3>
           <p id="daily-entry-conflict-copy">Hermes rejected the prepared save. Your unsaved changes remain in the form, and nothing was overwritten. Review the latest saved version before choosing whether to append your changes as its successor.</p>
@@ -203,7 +207,11 @@ export function dailyJournalSheetTemplate(
 function focusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(
     'button:not([disabled]):not([hidden]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-  )).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+  )).filter((element) => (
+    !element.hidden
+    && element.getAttribute("aria-hidden") !== "true"
+    && element.getClientRects().length > 0
+  ));
 }
 
 function trapFocus(container: HTMLElement, event: KeyboardEvent): void {
@@ -305,6 +313,7 @@ export function bindDailyJournalActions(
       let reconciledDraftPending = false;
       let conflictIsoDate: string | null = null;
       let latestCandidate: DailyJournalPreview | null = null;
+      let uncertainPrepared: PreparedDailyJournalEntry | null = null;
       let attemptedState: "draft" | "completed" = entry?.state ?? "draft";
       setBackgroundInert(true);
       heading.focus({ preventScroll: true });
@@ -325,6 +334,74 @@ export function bindDailyJournalActions(
         if (!busy && (conflictPending || saveBlocked)) {
           submitButtons.forEach((button) => { button.disabled = true; });
         }
+      };
+      const showUncertainSave = (message: string) => {
+        uncertain = true;
+        saving = false;
+        form.setAttribute("aria-busy", "false");
+        reconcile.textContent = "Retry this exact save";
+        reconcile.hidden = false;
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = message;
+        status.textContent = "Daily reflection save status is still uncertain";
+        error.focus({ preventScroll: true });
+      };
+      const showCommittedRefreshFailure = () => {
+        uncertain = true;
+        saving = false;
+        form.setAttribute("aria-busy", "false");
+        reconcile.textContent = "Retry journal refresh";
+        reconcile.hidden = false;
+        reconcile.disabled = false;
+        error.hidden = false;
+        error.textContent = "This daily reflection is saved on this device, but the journal screen could not refresh. Do not save it again. Retry the journal refresh or restart Hermes before editing this date.";
+        status.textContent = "Daily reflection saved but journal refresh still failed";
+        error.focus({ preventScroll: true });
+      };
+      const showStaleConflict = (isoDate: string) => {
+        committed = false;
+        uncertain = false;
+        uncertainPrepared = null;
+        conflictPending = true;
+        reconciledDraftPending = false;
+        conflictIsoDate = isoDate;
+        latestCandidate = null;
+        latestEvidence.replaceChildren();
+        latestEvidence.hidden = true;
+        rebaseStatus.hidden = true;
+        reviewLatest.hidden = false;
+        acceptLatest.hidden = true;
+        reconcile.hidden = true;
+        const dateInput = form.querySelector<HTMLInputElement>("#daily-entry-date");
+        if (dateInput !== null) {
+          dateInput.readOnly = true;
+          const descriptions = new Set(
+            (dateInput.getAttribute("aria-describedby") ?? "")
+              .split(/\s+/u)
+              .filter((value) => value.length > 0),
+          );
+          descriptions.add("daily-entry-conflict-copy");
+          dateInput.setAttribute("aria-describedby", [...descriptions].join(" "));
+        }
+        conflict.hidden = false;
+        setBusy(false);
+        error.hidden = false;
+        error.textContent = "Hermes did not apply this exact save because its expected saved version no longer matches. Nothing was overwritten, and your unsaved changes are still here. Review the latest saved version before saving again.";
+        status.textContent = "Daily reflection was not saved because its expected version did not match";
+        error.focus({ preventScroll: true });
+      };
+      const showBlockedSave = () => {
+        committed = false;
+        uncertain = false;
+        uncertainPrepared = null;
+        saveBlocked = true;
+        reconcile.hidden = true;
+        setBusy(false);
+        error.hidden = false;
+        error.textContent = "Hermes could not safely apply this prepared save to the current journal. Your unsaved changes are still here. Cancel and reopen the reflection before trying again.";
+        status.textContent = "Daily reflection was not saved; reopen it before retrying";
+        error.focus({ preventScroll: true });
       };
       backdrop.querySelectorAll<HTMLElement>("[data-daily-count]").forEach((counter) => {
         const inputId = counter.dataset.dailyCount;
@@ -373,28 +450,60 @@ export function bindDailyJournalActions(
         trapFocus(sheet, event);
       });
       reconcile.addEventListener("click", async () => {
-        reconcile.disabled = true;
-        status.textContent = committed
-          ? "Reloading the saved daily reflection"
-          : "Reconciling uncertain daily reflection save";
+        if (saving) return;
+        sheet.focus({ preventScroll: true });
+        setBusy(true);
+        error.hidden = true;
+        if (committed) {
+          status.textContent = "Reloading the confirmed saved daily reflection";
+          try {
+            await refresh("Journal reloaded after the saved daily reflection could not refresh.");
+            backdrop.remove();
+            setBackgroundInert(false);
+            root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          } catch {
+            showCommittedRefreshFailure();
+          }
+          return;
+        }
+
+        const prepared = uncertainPrepared;
+        if (prepared === null) {
+          saving = false;
+          form.setAttribute("aria-busy", "false");
+          reconcile.disabled = true;
+          error.hidden = false;
+          error.textContent = "Hermes cannot safely retry this save because its exact prepared command is unavailable. Your draft remains frozen here. Keep this sheet open and do not create another reflection for this date.";
+          status.textContent = "Exact daily reflection save command is unavailable";
+          error.focus({ preventScroll: true });
+          return;
+        }
+
+        status.textContent = "Retrying the exact daily reflection save on device";
         try {
-          await refresh(committed
-            ? "Journal reloaded after the saved daily reflection could not refresh."
-            : "Journal reloaded after reconciling an uncertain daily reflection save.");
+          await application.commitDailyJournalSafely(prepared);
+          committed = true;
+          uncertainPrepared = null;
+        } catch (caught) {
+          const failureKind = dailyJournalSaveFailureKind(caught);
+          if (failureKind === "stale") {
+            showStaleConflict(prepared.isoDate);
+            return;
+          }
+          showUncertainSave(failureKind === "blocked"
+            ? "Hermes could not safely prove whether this exact save committed. The form remains locked and the outcome is still unknown. Keep this sheet open and retry the same save when the device is ready."
+            : "Hermes still could not confirm this exact save. The form remains locked and the outcome is still unknown. Keep this sheet open and retry the same save when the device is ready.");
+          return;
+        }
+
+        status.textContent = "Exact daily reflection save confirmed; refreshing journal";
+        try {
+          await refresh("Journal reloaded after confirming the exact daily reflection save.");
           backdrop.remove();
           setBackgroundInert(false);
           root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
-        } catch (caught) {
-          reconcile.disabled = false;
-          const detail = caught instanceof Error ? ` ${caught.message}` : "";
-          error.hidden = false;
-          error.textContent = committed
-            ? `The daily reflection is saved, but the journal still could not reload. Retry reload or restart Hermes before editing again.${detail}`
-            : `Daily reflection status is still uncertain. Retry reload or restart Hermes; do not re-enter it.${detail}`;
-          status.textContent = committed
-            ? "Daily reflection saved but journal reload still failed"
-            : "Daily reflection save status is still uncertain";
-          error.focus();
+        } catch {
+          showCommittedRefreshFailure();
         }
       });
       reviewLatest.addEventListener("click", async () => {
@@ -485,6 +594,7 @@ export function bindDailyJournalActions(
           : "draft" as const;
         attemptedState = state;
         error.hidden = true;
+        uncertainPrepared = null;
         const scoreText = inputValue(form, "daily-entry-score").trim();
         try {
           const prepared = application.prepareDailyJournal({
@@ -498,25 +608,18 @@ export function bindDailyJournalActions(
             processScorePct: scoreText.length === 0 ? null : Number(scoreText),
             tags: parseDailyJournalTags(inputValue(form, "daily-entry-tags")),
           });
+          uncertainPrepared = prepared;
           sheet.focus({ preventScroll: true });
           setBusy(true);
           status.textContent = "Saving daily reflection on device";
           await application.commitDailyJournalSafely(prepared);
           committed = true;
+          uncertainPrepared = null;
           status.textContent = "Daily reflection saved; refreshing journal";
           try {
             await refresh(`Daily reflection for ${longDateLabel(prepared.isoDate)} saved on device.`);
-          } catch (refreshError) {
-            uncertain = true;
-            saving = false;
-            form.setAttribute("aria-busy", "false");
-            reconcile.hidden = false;
-            reconcile.disabled = false;
-            error.hidden = false;
-            const detail = refreshError instanceof Error ? ` ${refreshError.message}` : "";
-            error.textContent = `The daily reflection was saved, but the screen could not refresh. Reload the journal before continuing.${detail}`;
-            status.textContent = "Daily reflection saved but journal refresh failed";
-            error.focus();
+          } catch {
+            showCommittedRefreshFailure();
             return;
           }
           saving = false;
@@ -526,62 +629,25 @@ export function bindDailyJournalActions(
         } catch (caught) {
           const failureKind = dailyJournalSaveFailureKind(caught);
           if (failureKind === "uncertain") {
-            uncertain = true;
-            saving = false;
-            form.setAttribute("aria-busy", "false");
-            reconcile.hidden = false;
-            reconcile.disabled = false;
-            error.hidden = false;
-            error.textContent = caught instanceof Error
+            showUncertainSave(caught instanceof DailyJournalCommitStatusUncertainError
               ? caught.message
-              : "Daily reflection save status is uncertain.";
-            status.textContent = "Daily reflection save status is uncertain";
-            error.focus();
+              : "Hermes could not confirm whether this exact daily reflection save committed. The form is locked here. Retry this exact save to reuse the same save identity; do not create another reflection for this date.");
             return;
           }
           if (failureKind === "stale") {
-            conflictPending = true;
-            reconciledDraftPending = false;
-            conflictIsoDate = inputValue(form, "daily-entry-date");
-            latestCandidate = null;
-            latestEvidence.replaceChildren();
-            latestEvidence.hidden = true;
-            rebaseStatus.hidden = true;
-            reviewLatest.hidden = false;
-            acceptLatest.hidden = true;
-            const dateInput = form.querySelector<HTMLInputElement>("#daily-entry-date");
-            if (dateInput !== null) {
-              dateInput.readOnly = true;
-              const descriptions = new Set(
-                (dateInput.getAttribute("aria-describedby") ?? "")
-                  .split(/\s+/u)
-                  .filter((value) => value.length > 0),
-              );
-              descriptions.add("daily-entry-conflict-copy");
-              dateInput.setAttribute("aria-describedby", [...descriptions].join(" "));
-            }
-            conflict.hidden = false;
-            setBusy(false);
-            error.hidden = false;
-            error.textContent = "Hermes rejected this daily reflection because its saved-version state did not match the prepared save. Nothing was overwritten, and your unsaved changes are still here. Review the latest saved version before saving again.";
-            status.textContent = "Daily reflection was not saved because its expected version did not match";
-            error.focus({ preventScroll: true });
+            showStaleConflict(inputValue(form, "daily-entry-date"));
             return;
           }
           if (failureKind === "blocked") {
-            saveBlocked = true;
-            setBusy(false);
-            error.hidden = false;
-            error.textContent = "Hermes could not safely apply this prepared save to the current journal. Your unsaved changes are still here. Cancel and reopen the reflection before trying again.";
-            status.textContent = "Daily reflection was not saved; reopen it before retrying";
-            error.focus({ preventScroll: true });
+            showBlockedSave();
             return;
           }
+          uncertainPrepared = null;
           setBusy(false);
           error.hidden = false;
-          error.textContent = caught instanceof Error
+          error.textContent = caught instanceof DailyJournalPreparationError
             ? caught.message
-            : "Daily reflection could not be saved.";
+            : "Hermes could not prepare or save this daily reflection. Your unsaved changes are still here. Review the form and try again.";
           status.textContent = "Daily reflection was not saved";
           error.focus();
         }

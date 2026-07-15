@@ -53,6 +53,7 @@ describe("daily journal sheet", () => {
     expect(html).toContain('max="2026-07-13"');
     expect(html).toContain("Save draft");
     expect(html).toContain("Complete reflection");
+    expect(html).toContain("Retry this exact save");
     expect(html).toContain("Review latest saved version");
     expect(html).toContain("Continue with my unsaved changes");
     expect(html).toContain("&lt;Focused&gt;");
@@ -94,9 +95,10 @@ describe("daily journal sheet", () => {
   });
 
   it("distinguishes uncertain persistence from retryable validation failures", () => {
-    expect(dailyJournalSaveFailureKind(
-      new DailyJournalCommitStatusUncertainError(new Error("lost response")),
-    )).toBe("uncertain");
+    const uncertain = new DailyJournalCommitStatusUncertainError(new Error("private path"));
+    expect(dailyJournalSaveFailureKind(uncertain)).toBe("uncertain");
+    expect(uncertain.message).toContain("retry the same save");
+    expect(uncertain.message).not.toContain("private path");
     expect(dailyJournalSaveFailureKind(new JournalDailyEntryError({
       code: "entry_changed",
       message: "A newer head exists.",

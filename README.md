@@ -96,6 +96,12 @@ submission-ready product:
   before another explicit save can append a successor. It never auto-merges or
   overwrites either version. This is a browser-tested retained-editor race in
   one application/store, not native multi-scene or lifecycle evidence.
+- Daily Journal Exact-Command Recovery v1 keeps an ambiguous save frozen with
+  its original prepared command and exposes only **Retry this exact save**.
+  A matching receipt remains valid proof even after a newer head advances;
+  deterministic stale recovery uses the flow above, repeated ambiguity stays
+  locked, and a proven commit followed by render failure exposes refresh only.
+  Production-browser evidence is not native bridge, relaunch, or device proof.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

@@ -204,10 +204,16 @@ and an App Store disclosure.
   the newest unused date, an edited entry's date is immutable, and each explicit
   draft/completed save appends one version while one current head remains per
   date. No autosave may occur after accepting discard.
-- Retry an exact Daily Journal submission after a simulated lost bridge response
-  and confirm no duplicate version. Exercise a stale head and changed submission
-  and confirm each fails without partial vocabulary/version/head state. A known
-  committed save followed by refresh failure must remain labeled saved.
+- Retry an exact Daily Journal submission after simulated bridge loss before
+  and after commit. Confirm the sheet retains the same submission ID,
+  predecessor, normalized content, and revision; exposes no close or second
+  save path; and creates no duplicate version. Repeat the unknown result, then
+  commit a later head from a second scene and confirm exact replay either
+  returns the original receipt or enters deterministic stale recovery—matching
+  authored text under a different submission is never proof. A known committed
+  save followed by refresh failure must remain labeled saved and expose refresh
+  only. Exercise a changed submission and confirm it fails without partial
+  vocabulary/version/head state.
 - For a stale head, leave every authored field and the intended draft/completed
   action in the first scene, commit a different successor from a second scene,
   and confirm the first scene says nothing was overwritten, blocks both old
@@ -223,12 +229,15 @@ and an App Store disclosure.
   dirty-close confirmation, all-controls-disabled busy state, character-count
   feedback, 44-point targets, long-token wrapping, and truthful reconcile copy.
   Demo and empty workspaces must expose no Daily Journal write control.
-- Chromium already proves a deterministic retained-editor race in one
-  application/store offline, including v1 → competing v2 → explicit v3, one
-  head/three receipts, a failed refresh retry, focus, inerting, 44-point
-  actions, long-token wrapping, and 320px/200% reflow. Treat this only as a
-  browser analogue: repeat it with native SQLite, two real scenes/screens,
-  VoiceOver, Dynamic Type, background/foreground, and force-quit behavior.
+- Chromium already proves deterministic stale and unknown-outcome retained-
+  editor races in one application/store offline. Exact replay does not reread
+  form values or generate an ID, repeated ambiguity stays locked, a later head
+  enters stale recovery, and a proven commit/render failure exposes refresh
+  only. Export proves one receipt per accepted immutable version alongside
+  focus, inerting, 44-point actions, long-token wrapping, and 320px/200%
+  reflow. Treat this only as a browser analogue: repeat it with native SQLite,
+  two real scenes/screens, VoiceOver, Dynamic Type, background/foreground,
+  bridge loss, and force-quit behavior.
 - Linux/Chromium Recovery Continuity now composes a UI-authored draft through
   export, offline empty-session restore, continued writing, re-export, and a
   second restore. It also delays one browser `File.text()`, replaces the file,
@@ -405,10 +414,11 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 - Native plugin diagnostics and error logging have not been audited on device.
   Do not claim that journal paths or technical failure details stay out of the
   Xcode/device console until that dependency/runtime audit has recorded evidence.
-- The separate Daily Journal uncertain-commit reload action is not accepted:
-  it can close after a readable ledger without proving the prepared revision
-  exists. Replace it with exact-command retry/status proof and retest lost
-  response, confirmed-not-saved, stale-after-unknown, and refresh-failure paths.
+- Browser Daily Journal exact-command recovery is implemented and covered, but
+  native acceptance is NOT RUN. Record lost responses before/after commit,
+  confirmed-not-saved ambiguity, repeated unknown results, stale-after-unknown,
+  successor receipt lookup, refresh failure after proven commit, multi-scene
+  lifecycle, relaunch, and accessibility before accepting this path on iOS.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

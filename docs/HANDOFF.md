@@ -1,9 +1,156 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Daily Journal Stale-Head Recovery v1 ·
+Status: verified Daily Journal Exact-Command Recovery v1 ·
 updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Daily Journal Exact-Command Recovery v1: retain the immutable
+prepared command across an unknown save outcome, permit only exact replay,
+route deterministic stale into the existing preserve/review/consent flow, and
+separate proven-commit refresh failure from any persistence retry.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/daily-journal-sheet.ts retains the frozen
+  PreparedDailyJournalEntry before its first commit call. An unknown outcome
+  leaves all six authored controls and every close path locked; **Retry this
+  exact save** is the only enabled action and reuses the same submission ID,
+  predecessor, normalized content, tags, and revision without rereading the
+  form or generating another identity.
+- Exact replay accepts only positive committed/duplicate evidence. Both stores
+  already resolve an exact saved submission receipt before current-head
+  comparison, so replay can return the original version after a later successor
+  advances while projecting the newer head. Browser-session and SQLite
+  regressions prove this historical replay leaves the state hash, two-version
+  chain, one head, and receipt counts unchanged. Identical authored content
+  under a different submission is explicitly not accepted as proof.
+- A deterministic `entry_changed` during exact replay enters Daily Journal
+  Stale-Head Recovery with the raw draft intact. Every other retry error,
+  including a non-head JournalDailyEntryError, remains ambiguous because
+  workspace, clock, bridge, or receipt-read failure may occur before positive
+  receipt proof. Repeated ambiguity keeps the same command and sheet frozen.
+- Once committed/duplicate is proven, the retained command is cleared. A later
+  screen-render failure displays generic saved-state copy and exposes only
+  **Retry journal refresh**; that branch never invokes persistence. Raw caught
+  bridge/database/path detail is no longer rendered. Unexpected non-domain
+  save failures also use generic copy; only the bounded
+  DailyJournalPreparationError remains user-visible.
+- Focus moves inside the dialog before controls are disabled. Hidden conflict
+  descendants are excluded from the focus trap by rendered geometry, the
+  uncertain sheet contains forward/reverse Tab, and Escape/backdrop cannot
+  discard the only in-memory command. Long error text wraps at 320 CSS pixels
+  and 200% text.
+- The production-bound Playwright journey injects four commit-stack clock
+  failures to prove initial and repeated ambiguity, zero product form rereads
+  and zero submission-ID generation, only-action/busy/focus semantics,
+  Escape/backdrop containment, and 320px/200% layout. A second real editor then
+  commits the same date; exact replay enters stale recovery and the explicit
+  successor exports exactly two versions, one current head, and two one-to-one
+  receipts with no external HTTP(S) request.
+- A separate production-bound conflict journey gives different content the
+  retained command's submission identity after initial ambiguity. Exact replay
+  receives the real non-head `submission_changed` error but keeps the original
+  fields and command frozen, renders no domain/path detail, enables only exact
+  retry, generates no new identity, and leaves the competing one-version ledger
+  unchanged across repeated attempts.
+- A separate production-bound journey commits successfully, injects a one-shot
+  #screen render failure, proves refresh is the only action, and exports exactly
+  one immutable version, one head, and one receipt after refresh succeeds.
+- README, the ledger contract, iOS roadmap, product blueprint, and Mac handoff
+  describe the browser boundary and retain native bridge-loss, multi-scene,
+  relaunch, SQLCipher/Keychain, VoiceOver, Dynamic Type, and physical-device
+  acceptance as NOT RUN.
+- No schema, migration, archive shape, store algorithm, execution fact,
+  governed formula, report definition, financial definition, security
+  credential, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 422 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 46 Playwright journeys passed.
+- Focused final `cd mobile && npm run test:e2e --
+  e2e/daily-journal.spec.ts --grep "uncertain daily reflection|non-head
+  submission conflict|proven daily reflection commit|stale daily reflection"`
+  — exit 0; all 4 exact/non-head/stale/refresh-only production journeys passed
+  together.
+- `cd mobile && npm run build` — exit 0; Vite transformed 64 modules and
+  emitted the production bundle.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  `5e77541904298b0d63cfc8e11ce829be014b436cdc9de49d6ceee01725c2264a`;
+  selected generated identity/SQLite registration and git drift passed; every
+  native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Independent read-only core, UI/accessibility, and integration audits cleared
+  the final slice after adding real non-head interaction coverage, immutable
+  archive assertions, zero-persistence refresh instrumentation, generic error
+  copy, hidden-descendant focus filtering, and native-evidence limits.
+
+assumptions:
+
+- Browser evidence uses one real production application and its in-memory
+  SessionJournalStore. Detaching and reattaching an editor is deterministic UI
+  concurrency evidence, not a second WKWebView scene, native SQLite bridge,
+  SQLCipher transaction, relaunch, or device lifecycle result.
+- The clock fault is scoped to production daily-entry commit stacks so
+  Playwright's own actionability clock is not modified. It represents a generic
+  pre-mutation store outage and proves the UI's retained-command boundary;
+  application units separately prove post-commit response-loss reconciliation,
+  and neither is native bridge evidence.
+- A raw Daily Journal draft and its retained command remain in memory only.
+  Reloading or force-quitting during ambiguity can lose them, so the browser
+  copy requires the sheet to stay open and does not recommend restart until
+  commit is positively proven.
+- No schema, migration, archive, formula, financial, destructive, security-
+  credential, or public-positioning decision is inferred from this reliability
+  slice.
+
+open:
+
+- HIGH next reliability slice: Trade Review still exposes its older uncertain-
+  save **Reload journal and reconcile** action. Audit and, if confirmed,
+  replace readable-ledger closure with retained exact batch-command replay,
+  receipt/status proof, deterministic stale handling, and refresh-only behavior
+  after proven commit. Keep that editor/store contract separate from Daily
+  Journal rather than generalizing prematurely.
+- HOLD native Daily Journal acceptance: repeat bridge loss before/after commit,
+  repeated ambiguity, a later head from a second real scene, receipt-first
+  replay, stale-after-unknown, proven-commit refresh failure, background/
+  foreground, force quit/relaunch, SQLCipher/Keychain, VoiceOver, Dynamic Type,
+  and physical-device 320px behavior on a current Mac/iPhone.
+- `submission_changed` and `workspace_changed` remain intentionally
+  fail-closed without a dedicated interaction recovery. Trade Review stale-head
+  recovery remains a separate editor slice.
+- Upgrade GitHub Action runtimes in a separate low-risk maintenance slice;
+  current checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices; deletion requires its dedicated human
+  gate.
+- Do not claim native backup readiness or start broker sync, trade execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Daily Journal Stale-Head Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Daily Journal Exact-Command Recovery handoff above.
 
 task: Deliver Daily Journal Stale-Head Recovery v1: preserve unsaved authored
 changes after a deterministic optimistic conflict, prove and display the
