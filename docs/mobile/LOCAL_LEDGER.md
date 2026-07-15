@@ -343,6 +343,23 @@ digests, or governed definitions. Both report builders still receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
+Report Trade Continuation v1 keeps its report-origin state in derived UI while
+reusing the existing review-persistence path. A contributor's stable
+trade-subject ID must resolve to exactly one trade in the reconciled full
+snapshot before Hermes renders an **Open trade** control, and activation repeats
+that exact validation against the current render snapshot. Symbols, visible
+labels, DOM position, and Trade Browser search are never identity fallback.
+The allowlisted Plan/Setup source and captured trigger node live only in the
+current sheet closure and DOM attributes. They do not enter SQLite, browser
+journal state, Trade Browser state, preferences, URLs, exports, restores,
+digests, report definitions, or archives. Opening and closing perform no store
+operations. A review save uses the existing stable-subject review command and may
+legitimately rebuild report membership; focus then returns to the originating
+heading instead of treating a replacement row as the same DOM node. Report
+builders, progressive limits, and exact-total derivation and ownership remain
+unchanged; account/date/day/search/facets stay independently owned and
+untouched by opening or closing the continuation.
+
 Search and all seven facet selects share the same session boundary. Clear
 search and filters resets only those visibility controls and retains account/
 date/day scope; Clear all resets scope and visibility together. Neither action
@@ -570,6 +587,13 @@ offset focus, preserved disclosure/DOM state, governed metric/curve/report
 fingerprints, preference neutrality, 44-point controls, and fully visible
 keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
+Report Trade Continuation coverage adds exact render/activation identity,
+escaped source/action metadata, progressive Plan and Setup row/group actions,
+nested-child post-bind delegation, exact-ID-over-visible-label selection,
+fail-closed unknown identity before inert state, offline read-only inspection,
+retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
+trigger return, source-heading return after moving Plan/Setup evidence, focus
+trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit
 memory, VoiceOver, and physical-device SQLCipher behavior remain unverified.

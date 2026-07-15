@@ -29,8 +29,35 @@ function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
 
 export function reviewTradeAction(trade: TradePreview, label?: string): string {
   const action = label ?? (trade.reviewStatus === "pending" ? "Review trade" : "Edit review");
-  const accessibleName = `${action} for ${trade.symbol} ${assetClassLabel(trade)}, ${trade.sessionLabel}`;
-  return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
+  const accessibleName = `${action} for ${trade.symbol} ${assetClassLabel(trade)}, ${trade.accountLabel}, ${trade.sessionLabel}`;
+  return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
+}
+
+export type TradeReviewReportSource = "plan-check" | "setup-performance";
+
+function reportSourceLabel(source: TradeReviewReportSource): string {
+  return source === "plan-check" ? "Plan check" : "Setup breakdown";
+}
+
+export function reportTradeAction(
+  snapshot: JournalWorkspaceSnapshot,
+  tradeSubjectId: string,
+  source: TradeReviewReportSource,
+): string {
+  const matches = snapshot.trades.filter((trade) => (
+    trade.tradeSubjectId === tradeSubjectId
+  ));
+  if (matches.length !== 1) {
+    throw new Error(
+      `The ${reportSourceLabel(source)} contributor must resolve to exactly one trade.`,
+    );
+  }
+  const trade = matches[0];
+  if (trade === undefined) {
+    throw new Error(`The ${reportSourceLabel(source)} contributor trade is missing.`);
+  }
+  const accessibleName = `Open ${trade.symbol} trade — ${assetClassLabel(trade)}, ${trade.accountLabel}, ${trade.sessionLabel}`;
+  return `<button class="secondary-button report-trade-action" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" data-trade-review-report-source="${source}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">Open trade</button>`;
 }
 
 export function parseReviewList(value: string): readonly string[] {
@@ -243,8 +270,12 @@ function options(values: readonly string[]): string {
 export function tradeReviewSheetTemplate(
   trade: TradePreview,
   snapshot: JournalWorkspaceSnapshot,
+  reportSource?: TradeReviewReportSource,
 ): string {
   const demoReadOnly = snapshot.provenance === "demo";
+  const reportContext = reportSource === undefined
+    ? ""
+    : `<p class="helper-text trade-review-report-context" data-trade-review-report-context="${reportSource}">Opened from ${reportSourceLabel(reportSource)}. This full-workspace report does not use or change your Trades filters.</p>`;
   const invalidReviewIdentity = trade.reviewStatus === "pending"
     ? trade.reviewId !== null || trade.reviewVersion !== null
     : trade.reviewId === null
@@ -270,9 +301,10 @@ export function tradeReviewSheetTemplate(
     <section class="settings-sheet trade-review-sheet" role="dialog" aria-modal="true" aria-labelledby="trade-review-title" tabindex="-1">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-heading">
-        <div><p class="eyebrow">${escapeHtml(reviewLabel)}</p><h2 id="trade-review-title" tabindex="-1">${escapeHtml(trade.symbol)} trade review · ${assetClassLabel(trade)}</h2></div>
+        <div><p class="eyebrow">${escapeHtml(reviewLabel)}</p><h2 id="trade-review-title" tabindex="-1">${escapeHtml(trade.symbol)} trade review · ${assetClassLabel(trade)} · ${escapeHtml(trade.accountLabel)} · ${escapeHtml(trade.sessionLabel)}</h2></div>
         <button class="icon-button" type="button" data-trade-review-close aria-label="Close trade review">×</button>
       </div>
+      ${reportContext}
       ${demoReadOnly
         ? `<p class="helper-text">This fictional demo review is read-only. Return to your local journal to save reviews.</p>`
         : invalidReviewIdentity
@@ -403,6 +435,65 @@ function bindRuleRemoval(container: HTMLElement): void {
   });
 }
 
+const tradeReviewActionBindings = new WeakMap<HTMLElement, AbortController>();
+
+function tradeReviewReportSource(
+  trigger: HTMLButtonElement,
+): TradeReviewReportSource | null | undefined {
+  const source = trigger.dataset.tradeReviewReportSource;
+  if (source === undefined) return undefined;
+  if (source === "plan-check" || source === "setup-performance") return source;
+  return null;
+}
+
+function showTradeReviewOpenError(
+  root: HTMLElement,
+  trigger: HTMLButtonElement,
+): void {
+  root.querySelector("[data-trade-review-open-error]")?.remove();
+  const error = document.createElement("p");
+  error.className = "form-error";
+  error.dataset.tradeReviewOpenError = "true";
+  error.setAttribute("role", "alert");
+  error.tabIndex = -1;
+  error.textContent = "Hermes could not open this exact trade because its stable local identity is unavailable.";
+  trigger.insertAdjacentElement("afterend", error);
+  error.focus({ preventScroll: true });
+}
+
+function focusAfterTradeReviewRefresh(
+  root: HTMLElement,
+  reportSource: TradeReviewReportSource | undefined,
+): void {
+  if (reportSource !== undefined) {
+    const targetId = reportSource === "plan-check"
+      ? "plan-check-title"
+      : "setup-performance-title";
+    const target = root.querySelector<HTMLElement>(`#${targetId}`);
+    if (target !== null) {
+      const topbarBottom = root.querySelector<HTMLElement>(".topbar")
+        ?.getBoundingClientRect().bottom ?? 0;
+      target.style.scrollMarginTop = `${Math.ceil(Math.max(0, topbarBottom) + 16)}px`;
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+      target.focus({ preventScroll: true });
+      return;
+    }
+  }
+  root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+}
+
+function resolveTradeReviewTrigger(
+  snapshot: JournalWorkspaceSnapshot,
+  trigger: HTMLButtonElement,
+): TradePreview | null {
+  const tradeSubjectId = trigger.dataset.reviewTrade;
+  if (tradeSubjectId === undefined || tradeSubjectId.length === 0) return null;
+  const candidates = snapshot.trades.filter((candidate) => (
+    candidate.tradeSubjectId === tradeSubjectId
+  ));
+  return candidates.length === 1 ? candidates[0] ?? null : null;
+}
+
 export function bindTradeReviewActions(
   root: HTMLElement,
   application: JournalApplication,
@@ -410,16 +501,26 @@ export function bindTradeReviewActions(
   setBackgroundInert: (inert: boolean) => void,
   refresh: (announcement: string) => Promise<JournalWorkspaceSnapshot>,
 ): void {
-  root.querySelectorAll<HTMLButtonElement>("[data-review-trade]").forEach((trigger) => {
-    trigger.addEventListener("click", () => {
-      const trade = snapshot.trades.find((candidate) => (
-        candidate.tradeSubjectId === trigger.dataset.reviewTrade
-      ));
-      if (trade === undefined) return;
+  tradeReviewActionBindings.get(root)?.abort();
+  const binding = new AbortController();
+  tradeReviewActionBindings.set(root, binding);
+  root.addEventListener("click", (event) => {
+      const eventTarget = event.target;
+      const trigger = eventTarget instanceof Element
+        ? eventTarget.closest<HTMLButtonElement>("button[data-review-trade]")
+        : null;
+      if (trigger === null || !root.contains(trigger)) return;
+      const reportSource = tradeReviewReportSource(trigger);
+      const trade = resolveTradeReviewTrigger(snapshot, trigger);
+      if (reportSource === null || trade === null) {
+        showTradeReviewOpenError(root, trigger);
+        return;
+      }
+      root.querySelector("[data-trade-review-open-error]")?.remove();
       root.querySelector("#trade-review")?.remove();
       (root.querySelector(".app-shell") ?? root).insertAdjacentHTML(
         "beforeend",
-        tradeReviewSheetTemplate(trade, snapshot),
+        tradeReviewSheetTemplate(trade, snapshot, reportSource),
       );
       const backdrop = root.querySelector<HTMLElement>("#trade-review");
       const sheet = backdrop?.querySelector<HTMLElement>(".trade-review-sheet");
@@ -601,7 +702,7 @@ export function bindTradeReviewActions(
         uncertain = false;
         backdrop.remove();
         setBackgroundInert(false);
-        root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+        focusAfterTradeReviewRefresh(root, reportSource);
       };
 
       const close = (force = false) => {
@@ -613,8 +714,8 @@ export function bindTradeReviewActions(
         if (!force && dirty && !window.confirm("Discard the unsaved trade review?")) return;
         backdrop.remove();
         setBackgroundInert(false);
-        if (returnFocus.isConnected) returnFocus.focus();
-        else root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+        if (returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
+        else focusAfterTradeReviewRefresh(root, reportSource);
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
         button.addEventListener("click", () => close());
@@ -655,7 +756,7 @@ export function bindTradeReviewActions(
             uncertain = false;
             backdrop.remove();
             setBackgroundInert(false);
-            root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+            focusAfterTradeReviewRefresh(root, reportSource);
           } catch {
             showCommittedRefreshFailure();
           }
@@ -957,6 +1058,5 @@ export function bindTradeReviewActions(
         }
       });
       backdrop.querySelector<HTMLElement>("#trade-review-title")?.focus();
-    });
-  });
+  }, { signal: binding.signal });
 }

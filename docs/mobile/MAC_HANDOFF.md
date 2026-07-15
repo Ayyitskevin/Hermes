@@ -373,6 +373,23 @@ and an App Store disclosure.
   and the tab bar, and there is no internal or document overflow. Repeat with
   Reduce Motion and inspect the network log. This native row remains NOT RUN
   until observed on the Mac/iPhone candidate.
+- With VoiceOver and a hardware keyboard, open **Open trade** from a Plan Check
+  contributor and a Setup Breakdown contributor. Confirm the action and sheet
+  heading announce symbol, asset class, account, and session; duplicate symbols
+  in different accounts/sessions open the stable-ID-matched trade, never the
+  first symbol match. Close, Cancel, Escape, and backdrop dismissal must return
+  visible focus to the exact trigger without changing the opened disclosures,
+  loaded contributor/group pages, scroll, report evidence, or retained Trades
+  account/date/day/search/facets.
+- Repeat after revealing Plan contributors 26 and 51, Setup contributors 26 and
+  51, and a Setup group appended after the initial five. Activate nested button
+  content with pointer, keyboard, and VoiceOver. Unknown/tampered identity or
+  source data must show a focused error without opening a sheet or making the
+  background inert.
+- In a local journal, save a review change that moves a Plan classification and
+  then a Setup group. Confirm the rebuilt report is announced and focus lands
+  on the originating report heading, not a disconnected row. Repeat at 320 and
+  421 CSS pixels with 200% Dynamic Type, offline, and during lifecycle changes.
 - Open both Plan Check groups with VoiceOver and reconcile their disjoint
   trades, current saved rule evidence, exact net/win/R coverage, 44-point
   summaries, exclusion/threshold/rounding copy, and non-causal/non-advisory
@@ -499,7 +516,11 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   Facets v1 intentionally remain session-only; they still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
-  behaviors. Native Web Share/Files cancellation, save, reopen, custom MIME
+  behaviors. Report Trade Continuation v1 is browser-verified only; native
+  stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
+  activation, exact-trigger return, post-save heading fallback, offline
+  lifecycle, Dynamic Type, and hardware-keyboard acceptance remain NOT RUN.
+  Native Web Share/Files cancellation, save, reopen, custom MIME
   behavior, restore preview rollback, atomic commit, post-commit reconciliation,
   interruption retry, and near-64-MiB memory behavior have not been observed.
 - Current matching-runtime archives remain incomplete native backups:

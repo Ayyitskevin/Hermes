@@ -1,9 +1,153 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Reports Navigator v1 ·
+Status: verified Report Trade Continuation v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver Report Trade Continuation v1: open the exact existing trade from
+Plan Check and Setup Breakdown evidence on iPhone without routing through
+Trades or changing governed report, review-persistence, or archive contracts.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Every Plan Check and Setup Breakdown contributor now exposes **Open trade**
+  only when its stable `tradeSubjectId` resolves to exactly one current trade.
+  Symbol text, DOM order, and retained Trade Browser search are never identity
+  fallbacks.
+- The existing review/detail sheet opens in place over Reports. Its action and
+  heading qualify the symbol with asset class, account, and session, and the
+  sheet names the full-workspace report source without using or clearing Trades
+  account/date/day/search/facet state.
+- One replaceable root-level delegated listener covers initially rendered and
+  progressively appended Plan rows, Setup evidence, and Setup groups without
+  duplicate bindings. Activation revalidates exact identity and an allowlisted
+  Plan/Setup source against the current render snapshot.
+- Missing or duplicate identity aborts an incoherent report render. Blank,
+  unknown, duplicate, or tampered activation identity/source displays a focused
+  inline error before any modal, inert state, or store operation.
+- Ordinary close restores the exact surviving trigger and scroll position. A
+  confirmed save or reconciliation refresh may move the contributor between
+  governed cohorts, so refresh returns focus to the originating Plan or Setup
+  heading instead of treating a replacement row as the same DOM node.
+- Demo inspection remains read-only. Local saves reuse the existing immutable,
+  stable-subject review command and its exact-command recovery paths; no new
+  selected-trade/report-origin state or persistence contract was introduced.
+- Unit and production-browser coverage protects initial/progressive actions,
+  duplicate symbols, hostile IDs, exact render matching, invalid source and
+  identity, retained conflicting Trades state, disclosures/DOM/scroll/storage
+  continuity, offline operation, sequential Tab access, an explicit focus trap,
+  44-point controls, and no overflow at 320 and 421 CSS pixels with 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  record the delivered continuation while keeping VoiceOver, native Dynamic
+  Type, hardware-keyboard, lifecycle, and physical-device acceptance open.
+- No schema, migration, report builder/input, formula/version, checksum, cohort
+  definition or eligibility rule, ordering, pagination, archive/export shape,
+  native source, security credential, destructive workflow, or public
+  comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 446 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e -- e2e/reports-navigation.spec.ts` — exit 0;
+  all 6 Reports journeys passed after adding invalid-source, sequential-Tab,
+  and outside-sentinel focus-trap evidence.
+- `cd mobile && npm run test:e2e` — exit 0; all 59 production-browser
+  journeys passed in 34.0 seconds, including existing ambiguous-save, stale-
+  head, receipt-recovery, report-save, and mobile-layout journeys.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; Vite
+  transformed 64 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `02f103eeb9d54243cae21e17753e8217ef043e12e070a850d64729ca0394b872`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+- Three independent read-only reviews found no implementation or scope blocker.
+  Their documentation-truth findings were corrected, and both medium
+  mutation-coverage findings were added before the final 446-unit/59-browser
+  gate. These reviews are advisory; the rerunnable commands above are
+  authoritative.
+- Legacy Python `ruff` / `pytest` — NOT RUN locally: this checkout has no
+  project venv, and the offline dependency set is incomplete. The hosted
+  Legacy Python safety job must provide that independent evidence after
+  publication.
+
+assumptions:
+
+- Plan Check and Setup Breakdown intentionally consume the reconciled
+  full-workspace snapshot. Trade Browser session state does not scope governed
+  report truth.
+- `tradeSubjectId` is the only continuation identity and must have exactly one
+  current match. The Plan/Setup source and captured trigger remain transient DOM
+  state and are absent from URLs, storage, exports, archives, and digests.
+- Browser evidence uses production Chromium and the in-memory
+  `SessionJournalStore`. It is not a native bridge, SQLCipher transaction,
+  second scene, relaunch, VoiceOver, hardware-keyboard, or physical-iPhone
+  result.
+- An explicit local save can legitimately move report membership and totals;
+  only their definitions, derivation, ownership, and persistence contracts are
+  claimed unchanged.
+
+open:
+
+- HOLD native Report Trade Continuation acceptance: repeat Plan and Setup open,
+  duplicate-symbol disambiguation, exact close return, save-and-refresh heading
+  return, invalid-source/identity handling, progressive contributors,
+  VoiceOver, 200% native Dynamic Type, hardware keyboard, multi-scene,
+  background/foreground, relaunch, and physical-device layout on a current
+  Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft omits
+  current-review-head source and draft/completed eligibility from its proposed
+  evidence/checksum definition. Resolve that definition before approving or
+  publishing the report.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before claiming
+  ETF/options/futures/crypto file coverage; the current generic adapter records
+  rows as stock.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- MED — next autonomous candidate: Mistake Patterns v1, count-and-evidence
+  only, derived from exact labels on current completed review heads. Reconcile
+  unique included trades separately from multi-mistake assignment counts, reuse
+  exact `tradeSubjectId` continuation, and exclude P&L, win rate, R,
+  expectancy, ranking, causation, advice, persistence, and the held Symbol
+  Breakdown definition.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Attachments, verified Delete All Data, saved presets, persistent/report scope,
+  fuller account/vocabulary/playbook management, remaining report families,
+  and native restore/backup acceptance remain separate governed work.
+- Fleet guard-layer screening was not evidenced for this slice; do not treat
+  this handoff as guard approval.
+- Do not claim native readiness, native backup completeness, broader CSV asset
+  support, or start broker sync, execution, hosted Connect, Android, recurring
+  AI, TestFlight, App Store submission, pricing, or public comparative
+  positioning from this milestone.
+
+## Prior milestone — Reports Navigator v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Report Trade Continuation v1 handoff above.
+
+Status: verified Reports Navigator v1 ·
+updated 2026-07-15
+
+### Historical handoff
+
 
 task: Deliver Reports Navigator v1: make the full governed Reports workspace
 practical to traverse on an iPhone without changing report inputs, formulas,

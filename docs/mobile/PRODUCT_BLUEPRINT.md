@@ -315,7 +315,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Eight bounded Slice D increments are implemented in the current workspace. The
+Nine bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -508,6 +508,24 @@ metrics, curve points, report builders, versions, checksums, cohorts,
 exclusions, exact values, ordering, pagination, archive inputs, and state/report
 digests are unchanged.
 
+A ninth increment, Report Trade Continuation v1, completes the explainable
+pattern-to-trade loop without adding a route or detail surface. Every Plan Check
+and Setup Breakdown contributor emits **Open trade** only after its stable
+trade-subject ID resolves to exactly one current trade. The existing review
+sheet opens in place with an allowlisted transient report source; its action and
+heading qualify duplicate symbols by asset class, account, and session.
+One replaceable delegated listener covers initially rendered and progressively
+appended contributors and setup groups. Rendering requires exactly one stable-ID
+match and aborts an incoherent report; activation-time blank, unknown,
+duplicate, or tampered identity/source data shows a focused error before inert
+state or persistence. Close returns to the exact connected trigger; a save or
+reconciliation refresh that rebuilds Reports focuses the originating Plan or
+Setup heading because the contributor may have moved or left its cohort. The
+full-workspace reports do not consume or change Trade Browser
+account/date/day/search/facet state. No URL, selected-trade state, schema,
+migration, store, archive, digest input, formula, definition, checksum, cohort
+definition or eligibility rule, ordering, or pagination changes.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -661,14 +679,16 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The eight
+empty-journal-only restore and idempotent exact-retry reconciliation. The nine
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
-calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, and
-Structured Trades Facets v1, Dynamic Review Facets v1, and Reports Navigator
-v1. The seven increments other than Daily Journal remain derived-only; Daily
-Journal
-adds checksum-pinned schema v4 and browser payload v2 while preserving the
-outer archive version. Final integration
+calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, Structured
+Trades Facets v1, Dynamic Review Facets v1, Reports Navigator v1, and Report
+Trade Continuation v1. The seven presentation/projection increments other than
+Daily Journal and Report Trade Continuation remain derived-only. Report Trade
+Continuation reuses the existing versioned review save path without changing
+its persistence contract; Daily Journal adds checksum-pinned schema v4 and
+browser payload v2 while preserving the outer archive version. Final
+integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Recovery Continuity adds
 browser composition and stale-selection evidence across existing C-B/Daily

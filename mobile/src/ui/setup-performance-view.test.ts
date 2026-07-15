@@ -160,6 +160,9 @@ describe("setup-performance presentation", () => {
       "demo-subject-qqq",
       "demo-subject-tsla",
     ]);
+    expect(html.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(8);
+    expect(html).toContain('aria-label="Open QQQ trade — ETF, Demo Swing, Jul 9 · Morning"');
 
     expect(html).toContain("How this report works");
     expect(html).toContain(
@@ -185,6 +188,9 @@ describe("setup-performance presentation", () => {
     expect(html).toContain("&lt;all accounts &amp; &quot;scope&quot;&gt;");
     expect(html).toContain(
       'data-setup-performance-trade="subject-&quot; onclick=&quot;&lt;hostile&gt;&amp;&#039;"',
+    );
+    expect(html).toContain(
+      'data-review-trade="subject-&quot; onclick=&quot;&lt;hostile&gt;&amp;&#039;"',
     );
     expect(html).not.toContain(`<AAPL & "friends">`);
     expect(html).not.toContain(`<Breakout & "fast">`);
@@ -219,6 +225,7 @@ describe("setup-performance presentation", () => {
     );
     expect(html).not.toContain("data-setup-performance-group-index=");
     expect(html).not.toContain("data-setup-performance-trade=");
+    expect(html).not.toContain("data-review-trade=");
     expect(html).not.toContain("data-setup-performance-more=");
   });
 
@@ -307,6 +314,8 @@ describe("setup-performance presentation", () => {
     click();
     expect(inserted[0]?.match(/data-setup-performance-group-index=/g)).toHaveLength(5);
     expect(inserted[0]?.match(/data-setup-performance-trade=/g)).toHaveLength(5);
+    expect(inserted[0]?.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(5);
     expect(inserted[0]).toContain('data-setup-performance-group-index="5"');
     expect(inserted[0]).toContain('data-setup-performance-group-index="9"');
     expect(inserted[0]).not.toContain('data-setup-performance-group-index="10"');
@@ -320,6 +329,8 @@ describe("setup-performance presentation", () => {
     click();
     expect(inserted[1]?.match(/data-setup-performance-group-index=/g)).toHaveLength(2);
     expect(inserted[1]?.match(/data-setup-performance-trade=/g)).toHaveLength(2);
+    expect(inserted[1]?.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(2);
     expect(inserted[1]).toContain('data-setup-performance-group-index="10"');
     expect(inserted[1]).toContain('data-setup-performance-group-index="11"');
     expect(groupStatus.textContent).toBe("Showing 12 of 12 setup groups");
@@ -337,6 +348,8 @@ describe("setup-performance presentation", () => {
     expect(SETUP_BREAKDOWN_EVIDENCE_PAGE_SIZE).toBe(25);
     expect(bindSetupPerformanceView).toBeTypeOf("function");
     expect(html.match(/data-setup-performance-trade=/g)).toHaveLength(25);
+    expect(html.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(25);
     expect(html).toContain("Showing 25 of 56 contributing trades");
     expect(html).toContain(
       'data-setup-performance-more="0" aria-controls="setup-performance-evidence-0">Show 25 more</button>',
@@ -393,8 +406,13 @@ describe("setup-performance presentation", () => {
 
     click();
     expect(inserted[0]?.match(/data-setup-performance-trade=/g)).toHaveLength(25);
+    expect(inserted[0]?.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(25);
     expect(inserted[0]).toContain(
       'data-setup-performance-trade="demo-subject-aapl-bulk-25"',
+    );
+    expect(inserted[0]).toContain(
+      'data-review-trade="demo-subject-aapl-bulk-25"',
     );
     expect(inserted[0]).toContain(
       'data-setup-performance-trade="demo-subject-aapl-bulk-49"',
@@ -409,8 +427,13 @@ describe("setup-performance presentation", () => {
 
     click();
     expect(inserted[1]?.match(/data-setup-performance-trade=/g)).toHaveLength(6);
+    expect(inserted[1]?.match(/data-trade-review-report-source="setup-performance"/g))
+      .toHaveLength(6);
     expect(inserted[1]).toContain(
       'data-setup-performance-trade="demo-subject-aapl-bulk-50"',
+    );
+    expect(inserted[1]).toContain(
+      'data-review-trade="demo-subject-aapl-bulk-50"',
     );
     expect(inserted[1]).toContain(
       'data-setup-performance-trade="demo-subject-aapl-bulk-55"',

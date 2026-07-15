@@ -7,6 +7,7 @@ import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
   parseReviewList,
+  reportTradeAction,
   reviewTradeAction,
   tradeReviewLatestVersionTemplate,
   tradeReviewReconciliationHead,
@@ -86,6 +87,19 @@ describe("trade review sheet", () => {
     expect(html).toMatch(/class="settings-sheet trade-review-sheet"[^>]*tabindex="-1"/u);
     expect(html).not.toContain("Reload journal and reconcile");
     expect(html).not.toMatch(/place order|execute trade|send order/iu);
+  });
+
+  it("labels exact report origins without changing the trade or browser scope", () => {
+    const html = tradeReviewSheetTemplate(trade(), localWorkspace(), "plan-check");
+
+    expect(html).toContain(
+      "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
+    );
+    expect(html).toContain('data-trade-review-report-context="plan-check"');
+    expect(html).toContain("Opened from Plan check.");
+    expect(html).toContain(
+      "This full-workspace report does not use or change your Trades filters.",
+    );
   });
 
   it("renders complete escaped evidence for one coherent saved review", () => {
@@ -315,9 +329,11 @@ describe("trade review sheet", () => {
       "Early entry",
       "A+",
     ]);
-    expect(reviewTradeAction(trade())).toContain('data-review-trade="subject-1"');
-    expect(reviewTradeAction(trade())).toContain(
-      'aria-label="Edit review for &lt;AAPL&gt; Stock, Jul 1 · Morning"',
+    const action = reviewTradeAction(trade());
+    expect(action).toContain('data-review-trade="subject-1"');
+    expect(action).toContain('aria-haspopup="dialog"');
+    expect(action).toContain(
+      'aria-label="Edit review for &lt;AAPL&gt; Stock, Demo Brokerage, Jul 1 · Morning"',
     );
     expect(reviewTradeAction(trade(), "Open <review>")).toContain("Open &lt;review&gt;");
     expect(tradeReviewSaveFailureKind(new Error("preparation failed"))).toBe("retryable");
@@ -336,5 +352,39 @@ describe("trade review sheet", () => {
       code: "trade_changed",
       message: "missing trade",
     }))).toBe("blocked");
+  });
+
+  it("renders report actions by one exact stable ID and fails closed otherwise", () => {
+    const primary = trade();
+    const secondary = {
+      ...trade(),
+      id: "subject-2",
+      tradeSubjectId: "subject-2",
+      accountLabel: "Secondary & retirement",
+      sessionLabel: "Jul 2 · Afternoon",
+    };
+    const snapshot = {
+      ...localWorkspace(),
+      trades: [primary, secondary],
+    };
+    const action = reportTradeAction(snapshot, "subject-2", "setup-performance");
+
+    expect(action).toContain('data-review-trade="subject-2"');
+    expect(action).toContain(
+      'data-trade-review-report-source="setup-performance"',
+    );
+    expect(action).toContain('aria-haspopup="dialog"');
+    expect(action).toContain(
+      "Open &lt;AAPL&gt; trade — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+    expect(action).not.toContain('data-review-trade="subject-1"');
+
+    expect(() => reportTradeAction(snapshot, "missing", "plan-check")).toThrow(
+      /exactly one trade/u,
+    );
+    expect(() => reportTradeAction({
+      ...snapshot,
+      trades: [primary, { ...secondary, tradeSubjectId: "subject-1" }],
+    }, "subject-1", "plan-check")).toThrow(/exactly one trade/u);
   });
 });

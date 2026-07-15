@@ -109,6 +109,38 @@ async function reportFingerprint(page: Page): Promise<unknown> {
   });
 }
 
+async function tradeBrowserFingerprint(page: Page): Promise<unknown> {
+  return page.evaluate(() => {
+    const controlIds = [
+      "trade-scope-account",
+      "trade-scope-from",
+      "trade-scope-through",
+      "trade-search",
+      "trade-filter-asset-class",
+      "trade-filter-direction",
+      "trade-filter-position",
+      "trade-filter-review",
+      "trade-filter-mistake",
+      "trade-filter-emotion",
+      "trade-filter-tag",
+    ] as const;
+    return {
+      controls: Object.fromEntries(controlIds.map((id) => {
+        const control = document.querySelector<
+          HTMLInputElement | HTMLSelectElement
+        >(`#${id}`);
+        return [id, control?.value ?? null];
+      })),
+      cards: Array.from(document.querySelectorAll<HTMLElement>(".trade-card"))
+        .map((card) => [card.dataset.tradeSubject, card.hidden]),
+      count: document.querySelector("#trade-count")?.textContent,
+      scope: document.querySelector("#trade-scope-summary")?.textContent
+        ?.replace(/\s+/gu, " ")
+        .trim(),
+    };
+  });
+}
+
 async function expectUnobscured(locator: Locator): Promise<void> {
   const geometry = await locator.evaluate((element) => {
     const target = element.getBoundingClientRect();
@@ -344,11 +376,15 @@ test(
 
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".topbar")).toHaveCSS("position", "static");
+    const followedGroup = page.locator('[data-plan-check-group="followed"]');
+    await followedGroup.locator(":scope > summary").click();
+    await expect(followedGroup).toHaveAttribute("open", "");
 
     const controls = page.locator([
       "a[data-report-target]",
       "[data-plan-check-group] > summary",
       "[data-setup-performance-group-index] > summary",
+      '[data-plan-check-group="followed"][open] .report-trade-action',
     ].join(", "));
     const controlCount = await controls.count();
     expect(controlCount).toBeGreaterThanOrEqual(10);
@@ -392,3 +428,255 @@ test(
     expect(externalRequests).toEqual([]);
   },
 );
+
+test(
+  "report trade inspection preserves reports and conflicting Trades state",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    await page.getByRole("combobox", { name: "Account" })
+      .selectOption("demo-account-swing");
+    await page.getByRole("textbox", { name: "Activity from" }).fill("2026-07-07");
+    await page.getByRole("textbox", { name: "Activity through" }).fill("2026-07-09");
+    await page.getByRole("button", { name: "Apply scope" }).click();
+    await page.getByRole("combobox", { name: "Asset class" }).selectOption("etf");
+    await page.getByRole("combobox", { name: "Direction" }).selectOption("short");
+    await page.getByRole("combobox", { name: "Position state" }).selectOption("closed");
+    await page.getByRole("combobox", { name: "Review state" }).selectOption("completed");
+    await page.getByRole("searchbox", { name: "Search scoped trades" }).fill("qqq");
+    const browserBefore = await tradeBrowserFingerprint(page);
+
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    const planGroup = page.locator('[data-plan-check-group="followed"]');
+    const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
+    await planGroup.locator("summary").click();
+    await setupGroup.locator("summary").click();
+    await expect(planGroup).toHaveAttribute("open", "");
+    await expect(setupGroup).toHaveAttribute("open", "");
+    await page.locator("[data-plan-check]").evaluate((element) => {
+      element.dataset.tradeContinuationSentinel = "preserved";
+    });
+
+    const action = page.locator(
+      '[data-plan-check-trade="demo-subject-aapl"] .report-trade-action',
+    );
+    await expect(action).toHaveAccessibleName(
+      "Open AAPL trade — Stock, Demo Brokerage, Jul 1 · Morning",
+    );
+    await expect(action).toHaveAttribute("aria-haspopup", "dialog");
+    await action.scrollIntoViewIfNeeded();
+    await action.focus();
+    await expectUnobscured(action);
+
+    const reportBefore = await reportFingerprint(page);
+    const storageBefore = await localStorageSnapshot(page);
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    await context.setOffline(true);
+    await action.click();
+
+    const dialog = page.getByRole("dialog", {
+      name: /AAPL trade review · Stock · Demo Brokerage · Jul 1 · Morning/u,
+    });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("#trade-review-title")).toBeFocused();
+    await expect(page.locator("#screen")).toHaveAttribute("inert", "");
+    await expect(dialog.locator("[data-trade-review-report-context]")).toHaveText(
+      "Opened from Plan check. This full-workspace report does not use or change your Trades filters.",
+    );
+    await expect(dialog.getByRole("button", { name: "Save review changes" }))
+      .toHaveCount(0);
+    await expect(
+      page.locator('button[data-tab="reports"]'),
+    ).toHaveAttribute("aria-current", "page");
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(action).toBeFocused();
+    await expectUnobscured(action);
+    expect(Math.abs(await page.evaluate(() => window.scrollY) - scrollBefore))
+      .toBeLessThanOrEqual(1);
+
+    await action.evaluate((element) => {
+      const clone = element.cloneNode(true) as HTMLButtonElement;
+      clone.id = "appended-report-trade";
+      clone.innerHTML = "<span>Open appended trade</span>";
+      element.insertAdjacentElement("afterend", clone);
+    });
+    const appended = page.locator("#appended-report-trade");
+    await appended.locator("span").click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(appended).toBeFocused();
+
+    await appended.evaluate((element) => {
+      element.dataset.reviewTrade = "demo-subject-qqq";
+    });
+    await appended.locator("span").click();
+    const exactIdDialog = page.getByRole("dialog", {
+      name: /QQQ trade review · ETF · Demo Swing · Jul 9 · Morning/u,
+    });
+    await expect(exactIdDialog).toBeVisible();
+    await expect(exactIdDialog.locator("#trade-review-title")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(appended).toBeFocused();
+
+    await appended.evaluate((element) => {
+      element.dataset.tradeReviewReportSource = "unknown-report";
+    });
+    await appended.locator("span").click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const invalidSourceError = page.locator(
+      "[data-trade-review-open-error]",
+    );
+    await expect(invalidSourceError).toHaveText(
+      "Hermes could not open this exact trade because its stable local identity is unavailable.",
+    );
+    await expect(invalidSourceError).toBeFocused();
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    await appended.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.dataset.tradeReviewReportSource = "plan-check";
+    });
+
+    await appended.evaluate((element) => {
+      element.dataset.reviewTrade = "missing-subject";
+    });
+    await appended.locator("span").click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("[data-trade-review-open-error]")).toHaveText(
+      "Hermes could not open this exact trade because its stable local identity is unavailable.",
+    );
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    await appended.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.remove();
+    });
+
+    await expect(planGroup).toHaveAttribute("open", "");
+    await expect(setupGroup).toHaveAttribute("open", "");
+    await expect(page.locator("[data-plan-check]")).toHaveAttribute(
+      "data-trade-continuation-sentinel",
+      "preserved",
+    );
+    expect(await reportFingerprint(page)).toEqual(reportBefore);
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    expect(await tradeBrowserFingerprint(page)).toEqual(browserBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 421, height: 568 },
+] as const) {
+  test(
+    `report trade action and sheet remain operable at ${viewport.width}px and 200% text`,
+    async ({ page, context }) => {
+      const externalRequests = logExternalRequests(page);
+      await page.setViewportSize(viewport);
+      await startDemo(page);
+      await page.evaluate(() => {
+        document.documentElement.dataset.testTextScale = "200";
+      });
+      await context.setOffline(true);
+      const storageBefore = await localStorageSnapshot(page);
+      await page.getByRole("button", { name: "Reports", exact: true }).click();
+      await page.locator('[data-plan-check-group="followed"] > summary').click();
+
+      const action = page.locator(
+        '[data-plan-check-trade="demo-subject-aapl"] .report-trade-action',
+      );
+      await action.focus();
+      await expect(action).toBeFocused();
+      await expectUnobscured(action);
+      await expectTouchTarget(action);
+      await expect(action).toHaveAccessibleName(
+        "Open AAPL trade — Stock, Demo Brokerage, Jul 1 · Morning",
+      );
+      await action.click();
+
+      const dialog = page.getByRole("dialog", {
+        name: /AAPL trade review · Stock · Demo Brokerage · Jul 1 · Morning/u,
+      });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator("#trade-review-title")).toBeFocused();
+      const overflow = await dialog.evaluate((element) => ({
+        document: document.documentElement.scrollWidth - window.innerWidth,
+        dialog: element.scrollWidth - element.clientWidth,
+        offenders: Array.from(element.querySelectorAll<HTMLElement>("*"))
+          .map((candidate) => ({
+            label: `${candidate.tagName.toLowerCase()}#${candidate.id}.${String(candidate.className)}`,
+            rendered: candidate.getClientRects().length > 0,
+            left: Math.floor(
+              candidate.getBoundingClientRect().left
+              - element.getBoundingClientRect().left,
+            ),
+            right: Math.ceil(
+              candidate.getBoundingClientRect().right
+              - element.getBoundingClientRect().right,
+            ),
+          }))
+          .filter((candidate) => (
+            candidate.rendered
+            && (candidate.left < -1 || candidate.right > 1)
+          ))
+          .slice(0, 20),
+      }));
+      expect(
+        overflow.document,
+        `Overflow evidence: ${JSON.stringify(overflow.offenders)}`,
+      ).toBeLessThanOrEqual(1);
+      expect(overflow.dialog).toBeLessThanOrEqual(1);
+      expect(overflow.offenders).toEqual([]);
+
+      await dialog.evaluate((element) => {
+        const backdrop = element.closest<HTMLElement>(
+          "[data-trade-review-backdrop]",
+        );
+        if (backdrop === null) {
+          throw new Error("Missing trade-review backdrop.");
+        }
+        const before = document.createElement("button");
+        before.type = "button";
+        before.id = "trade-review-focus-before";
+        before.textContent = "Before dialog";
+        backdrop.insertAdjacentElement("beforebegin", before);
+        const after = document.createElement("button");
+        after.type = "button";
+        after.id = "trade-review-focus-after";
+        after.textContent = "After dialog";
+        backdrop.insertAdjacentElement("afterend", after);
+      });
+      const beforeSentinel = page.locator("#trade-review-focus-before");
+      const afterSentinel = page.locator("#trade-review-focus-after");
+      await expect(beforeSentinel).toBeAttached();
+      await expect(afterSentinel).toBeAttached();
+      const firstClose = dialog.getByRole("button", {
+        name: "Close trade review",
+      });
+      const lastClose = dialog.getByRole("button", {
+        name: "Close",
+        exact: true,
+      });
+      await firstClose.focus();
+      await page.keyboard.press("Shift+Tab");
+      await expect(lastClose).toBeFocused();
+      await expect(beforeSentinel).not.toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(firstClose).toBeFocused();
+      await expect(afterSentinel).not.toBeFocused();
+      await beforeSentinel.evaluate((element) => element.remove());
+      await afterSentinel.evaluate((element) => element.remove());
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(action).toBeFocused();
+      await expectUnobscured(action);
+      await expectTouchTarget(action);
+      expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+      expect(externalRequests).toEqual([]);
+    },
+  );
+}

@@ -180,6 +180,16 @@ submission-ready product:
   This is transient presentation over the unchanged full-workspace snapshot:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
+- Report Trade Continuation v1 adds an **Open trade** action to every Plan Check
+  and Setup Breakdown contributor. It resolves exactly one current trade by the
+  stable subject ID and reuses the existing review/detail sheet in place, so
+  duplicate symbols are qualified by asset class, account, and session without
+  routing through or clearing Trades. Delegated activation covers contributors
+  and setup groups appended after binding. Ordinary close returns to the exact
+  row; a save or refresh that rebuilds evidence returns to the originating
+  report heading. The report source is transient DOM context. No report-origin
+  or selected-trade state is persisted; Trades state and the report,
+  review-persistence, checksum, and archive contracts remain unchanged.
 - Trade Browser Scope v1 uses stable account IDs plus optional inclusive
   workspace-local allocation/activity dates to derive exact scoped P&L, trade,
   allocation, and activity-day evidence. Dashboard month navigation visits

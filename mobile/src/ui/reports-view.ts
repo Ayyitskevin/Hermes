@@ -10,6 +10,7 @@ import {
   bindSetupPerformanceView,
   setupPerformanceSection,
 } from "./setup-performance-view";
+import { reportTradeAction } from "./trade-review-sheet";
 
 type PlanAdherenceGroup = PlanAdherenceReport["groups"][number];
 type PlanAdherenceEvidence = PlanAdherenceGroup["evidence"][number];
@@ -111,6 +112,7 @@ export function bindReportNavigation(root: HTMLElement): void {
           ".report-navigation-link",
           ".report-menu-link",
           ".plan-check-group > summary",
+          ".report-trade-action",
         ].join(", "))
       ) {
         keepReportControlVisible(root, event.target);
@@ -205,6 +207,7 @@ function evidenceTemplate(
     </div>
     <p>Current saved rule outcomes</p>
     <ul class="issue-list">${rules}</ul>
+    ${reportTradeAction(snapshot, evidence.tradeSubjectId, "plan-check")}
   </article>`;
 }
 

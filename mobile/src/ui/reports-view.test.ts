@@ -272,7 +272,11 @@ describe("reports presentation", () => {
     expect(html).toContain("stable setup-name code-unit order");
     expect(html).toContain("not a performance ranking or recommendation");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html).not.toContain("data-review-trade=");
+    expect(html.match(/data-review-trade=/g)).toHaveLength(16);
+    expect(html).toContain('data-trade-review-report-source="plan-check"');
+    expect(html).toContain(
+      'data-trade-review-report-source="setup-performance"',
+    );
 
     for (const trade of DEMO_WORKSPACE.trades) {
       expect(html).toContain(`data-plan-check-trade="${trade.tradeSubjectId}"`);
@@ -298,7 +302,12 @@ describe("reports presentation", () => {
     expect(report).toContain("+179.333333333333 USD");
     expect(report).toContain("does not establish cause or predict an outcome");
     expect(report).toContain('data-plan-check-trade="demo-subject-qqq"');
-    expect(report).not.toContain("data-review-trade=");
+    expect(report).toContain(
+      'data-review-trade="demo-subject-qqq" data-trade-review-report-source="plan-check"',
+    );
+    expect(report).toContain(
+      'aria-label="Open QQQ trade — ETF, Demo Swing, Jul 9 · Morning"',
+    );
     expect(report).not.toContain("Hermes waits for 3 classified");
   });
 
@@ -365,6 +374,7 @@ describe("reports presentation", () => {
     expect(PLAN_CHECK_EVIDENCE_PAGE_SIZE).toBe(25);
     expect(bindReportsView).toBeTypeOf("function");
     expect(html.match(/data-plan-check-trade=/g)).toHaveLength(28);
+    expect(html.match(/data-trade-review-report-source="plan-check"/g)).toHaveLength(28);
     expect(html).toContain("Showing 25 of 31 contributing trades");
     expect(html).toContain('data-plan-check-more="followed" aria-controls="plan-check-evidence-followed">Show 6 more</button>');
     expect(html).toContain("Showing 3 of 3 contributing trades");
@@ -443,7 +453,9 @@ describe("reports presentation", () => {
     if (click === undefined) throw new Error("Missing progressive disclosure listener.");
     click();
     expect(inserted[0]?.match(/data-plan-check-trade=/g)).toHaveLength(25);
+    expect(inserted[0]?.match(/data-trade-review-report-source="plan-check"/g)).toHaveLength(25);
     expect(inserted[0]).toContain('data-plan-check-trade="demo-subject-aapl-bulk-49"');
+    expect(inserted[0]).toContain('data-review-trade="demo-subject-aapl-bulk-49"');
     expect(inserted[0]).not.toContain('data-plan-check-trade="demo-subject-aapl-bulk-50"');
     expect(followedStatus.textContent).toBe("Showing 50 of 56 contributing trades");
     expect(followedButton.textContent).toBe("Show 6 more");
@@ -451,7 +463,9 @@ describe("reports presentation", () => {
 
     click();
     expect(inserted[1]?.match(/data-plan-check-trade=/g)).toHaveLength(6);
+    expect(inserted[1]?.match(/data-trade-review-report-source="plan-check"/g)).toHaveLength(6);
     expect(inserted[1]).toContain('data-plan-check-trade="demo-subject-aapl-bulk-50"');
+    expect(inserted[1]).toContain('data-review-trade="demo-subject-aapl-bulk-50"');
     expect(inserted[1]).toContain('data-plan-check-trade="demo-subject-aapl-bulk-55"');
     expect(followedStatus.textContent).toBe("Showing 56 of 56 contributing trades");
     expect(followedButton.hidden).toBe(true);

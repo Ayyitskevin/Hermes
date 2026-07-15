@@ -7,6 +7,7 @@ import {
 } from "../core/setup-performance-report";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot } from "../core/types";
+import { reportTradeAction } from "./trade-review-sheet";
 
 export const SETUP_BREAKDOWN_EVIDENCE_PAGE_SIZE = 25 as const;
 export const SETUP_BREAKDOWN_GROUP_PAGE_SIZE = 5 as const;
@@ -36,6 +37,7 @@ function evidenceTemplate(
       <strong>${escapeHtml(exactSigned(evidence.resultPnlExact, ` ${snapshot.currencyCode}`))} · ${escapeHtml(exactSigned(evidence.resultRExact, "R"))}</strong>
     </div>
     <p>Current saved setup · <strong>${escapeHtml(evidence.setup)}</strong> · ${escapeHtml(evidence.tradedOn)}</p>
+    ${reportTradeAction(snapshot, evidence.tradeSubjectId, "setup-performance")}
   </article>`;
 }
 

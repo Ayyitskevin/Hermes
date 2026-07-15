@@ -49,7 +49,8 @@ under the provisional identifier until that gate is cleared.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
-  Navigator v1, export, and matching-runtime local restore are implemented.
+  Navigator v1, Report Trade Continuation v1, export, and matching-runtime local
+  restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
   restore; Exact-Command Recovery proves an ambiguous daily save retains and
@@ -353,6 +354,22 @@ Delivered in the current vertical slice:
   identity, and unchanged governed metric/curve/metadata/group/evidence
   fingerprints. This adds no schema, store, archive, digest input, formula,
   checksum, cohort, evidence-order, or pagination change.
+- Report Trade Continuation v1 opens the existing exact trade review/detail
+  sheet in place from every Plan Check and Setup Breakdown contributor. Stable
+  subject IDs are validated at render and activation; asset class, account, and
+  session disambiguate duplicate symbols; a replaceable delegated listener
+  covers progressively appended rows and groups. A missing or duplicate
+  render-time match aborts an incoherent report; activation-time invalid
+  identity/source data shows a focused error without inert state or a store
+  call. Close returns to the exact row, while a save or reconciliation refresh
+  that rebuilds the report returns to the allowlisted source heading.
+  Production Chromium proves offline demo inspection, exact-ID-over-label
+  behavior, conflicting retained Trade Browser scope/search/facets,
+  disclosure/DOM/scroll/report/storage continuity, dynamic post-bind
+  activation, fail-closed unknown identity, 44-point controls, focus trapping,
+  and no overflow at 320 and 421 CSS pixels with 200% text. No route,
+  browser-state, schema, store, archive, formula, checksum, cohort definition
+  or eligibility rule, order, or pagination change.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -455,7 +472,8 @@ tier-by-tier claim. Reverify before public comparative positioning.
 5. Written rights review before any broker sync, market-data, chart, replay, or backtest integration.
 
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
-v1, Dynamic Review Facets v1, Reports Navigator v1, matching-runtime local
+v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
+v1, matching-runtime local
 restore, and the governed Plan Check and Setup Breakdown are implemented.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial

@@ -379,6 +379,64 @@ test("trade reviews persist exact risk metrics, edit immutably, and clear an ato
   await expect(page.getByRole("heading", { name: "Review queue clear" })).toBeVisible();
 });
 
+test("report review saves return to the source heading when evidence moves", async ({ page }) => {
+  await importTwoClosedTrades(page);
+  await page.getByRole("button", { name: "Trades", exact: true }).click();
+  await completeReview(page, "AAPL", "5");
+  await completeReview(page, "MSFT", "10");
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+  const followed = page.locator('[data-plan-check-group="followed"]');
+  await followed.locator("summary").click();
+  const planAction = followed.getByRole("button", {
+    name: /Open AAPL trade/u,
+  });
+  await planAction.click();
+  const planDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(planDialog.locator("[data-trade-review-report-context]")).toHaveText(
+    "Opened from Plan check. This full-workspace report does not use or change your Trades filters.",
+  );
+  await planDialog.locator('select[name="review-rule-outcome"]')
+    .selectOption("broken");
+  await planDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(planDialog).toHaveCount(0);
+  await expect(page.locator("#plan-check-title")).toBeFocused();
+  await expect(
+    page.locator(
+      '[data-plan-check-group="broken"] [data-plan-check-trade] .report-trade-action',
+    ).filter({ hasText: "Open trade" }),
+  ).toHaveCount(1);
+
+  const setupGroup = page.locator("[data-setup-performance-group-index]")
+    .filter({ hasText: "Opening range breakout" });
+  await setupGroup.locator("summary").click();
+  const setupAction = setupGroup.getByRole("button", {
+    name: /Open AAPL trade/u,
+  });
+  await setupAction.click();
+  const setupDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(setupDialog.locator("[data-trade-review-report-context]")).toHaveText(
+    "Opened from Setup breakdown. This full-workspace report does not use or change your Trades filters.",
+  );
+  await setupDialog.locator("#review-setup").fill("Reversal");
+  await setupDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(setupDialog).toHaveCount(0);
+  await expect(page.locator("#setup-performance-title")).toBeFocused();
+  const reversalGroup = page.locator("[data-setup-performance-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Reversal" }) });
+  const movedAction = reversalGroup.locator(
+    "[data-setup-performance-trade] .report-trade-action",
+  );
+  await expect(movedAction).toHaveCount(1);
+  await expect(movedAction).toHaveAttribute("aria-label", /Open AAPL trade/u);
+});
+
 test("a proven batch tag commit retries only the failed journal refresh", async ({ page, context }) => {
   const externalRequests = logExternalRequests(page);
   await page.setViewportSize({ width: 320, height: 568 });
