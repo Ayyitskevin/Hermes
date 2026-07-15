@@ -323,6 +323,17 @@ instead of clearing it or broadening. Unsupported or malformed labels fail
 closed. Dynamic facets do not trim or recompute exact scope evidence, totals,
 calendar, Dashboard, or governed report inputs.
 
+Compact Trades Filters v1 changes only how those seven exact controls are
+revealed. Its active count derives from the existing four fixed and three
+dynamic facet values. The native disclosure renders closed at zero and open for
+any active value, including a valid stale dynamic selection; search and
+account/date/day scope are excluded. In-place selection changes update the
+count, and returning the last facet to its default collapses with focus on the
+summary. The combined clear control remains outside the disclosure so a
+search-only state stays recoverable. No disclosure boolean or count is added to
+the session model, journal store, preferences, SQLite, export/restore, archive,
+digest, or report input.
+
 Scope and visibility state are session-only: they are not stored in SQLite,
 browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
@@ -603,7 +614,11 @@ adds current-assignment-only option derivation across the whole workspace,
 saved-review normalization/limit enforcement, stable deeply frozen choices,
 seven-facet/search/scope AND composition, multi-valued mistake/tag matching,
 and a retained stale selection that yields zero visible cards without changing
-exact evidence, totals, or calendar state. Reports Navigator coverage adds an
+exact evidence, totals, or calendar state. Compact Trades Filters coverage adds
+zero-to-seven counts, native pointer/keyboard disclosure behavior, query-only
+clear access, final-facet collapse/focus, retained stale-value opening,
+report/storage neutrality, 44-point controls, and 320/421px 200% reflow.
+Reports Navigator coverage adds an
 ordered navigation landmark, direct Dashboard entry, return paths, live-header
 offset focus, preserved disclosure/DOM state, governed metric/curve/report
 fingerprints, preference neutrality, 44-point controls, and fully visible

@@ -930,7 +930,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           tradeBrowserState = next.state;
           render("trades", false);
           announceStatus(`Search and trade card filters cleared. Showing ${countNoun(next.evidence.length, "scoped trade")}.`);
-          root.querySelector<HTMLSelectElement>("#trade-filter-asset-class")?.focus();
+          root.querySelector<HTMLElement>("#trade-view-filter-summary")?.focus();
         },
         updateViewFilters: (input) => {
           const next = buildTradeBrowser(snapshot, {

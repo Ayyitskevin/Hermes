@@ -51,6 +51,8 @@ describe("trades view", () => {
     const html = tradesView(DEMO_WORKSPACE, browser);
 
     expect(html).toContain('id="trade-filter-asset-class"');
+    expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
+    expect(html).toContain("· 7 active filters");
     expect(html).toContain('<option value="etf" selected>ETF</option>');
     expect(html).toContain('<option value="long" selected>Long</option>');
     expect(html).toContain('<option value="closed" selected>Closed</option>');
@@ -101,7 +103,37 @@ describe("trades view", () => {
     expect(html).toContain(
       '<option value="Retired &lt;mistake&gt;" selected>Retired &lt;mistake&gt; (not currently assigned)</option>',
     );
+    expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
+    expect(html).toContain("· 1 active filter");
     expect(html).toContain("Showing 0 of 8 trades");
+  });
+
+  it("collapses exact facets by default without counting search or allocation scope", () => {
+    const defaultHtml = tradesView(DEMO_WORKSPACE, buildTradeBrowser(DEMO_WORKSPACE));
+    const scopeOnlyHtml = tradesView(DEMO_WORKSPACE, buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-swing",
+    }));
+    const searchAndScopeHtml = tradesView(DEMO_WORKSPACE, buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-swing",
+      query: "qqq",
+    }));
+
+    expect(defaultHtml).not.toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
+    expect(defaultHtml).toContain("· none active");
+    expect(scopeOnlyHtml).not.toMatch(
+      /<details[^>]*data-trade-filter-disclosure[^>]* open>/,
+    );
+    expect(searchAndScopeHtml).not.toMatch(
+      /<details[^>]*data-trade-filter-disclosure[^>]* open>/,
+    );
+    expect(searchAndScopeHtml).toContain("· none active");
+    expect(searchAndScopeHtml).toContain("Showing 1 of 3 trades");
+    expect(searchAndScopeHtml).toContain("data-trade-view-clear >Clear search and filters");
+    expect(searchAndScopeHtml.indexOf("</details>")).toBeLessThan(
+      searchAndScopeHtml.indexOf("data-trade-view-clear"),
+    );
   });
 
   it("disables empty review facet categories without disabling a stale selection", () => {
@@ -125,6 +157,7 @@ describe("trades view", () => {
       tag: "Retired tag",
     }));
     expect(staleHtml).not.toMatch(/id="trade-filter-tag"[^>]* disabled/);
+    expect(staleHtml).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
     expect(staleHtml).toContain(
       '<option value="Retired tag" selected>Retired tag (not currently assigned)</option>',
     );

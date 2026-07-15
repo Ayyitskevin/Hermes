@@ -517,6 +517,7 @@ test(
     await page.getByRole("textbox", { name: "Activity from" }).fill("2026-07-07");
     await page.getByRole("textbox", { name: "Activity through" }).fill("2026-07-09");
     await page.getByRole("button", { name: "Apply scope" }).click();
+    await page.locator("#trade-view-filter-summary").click();
     await page.getByRole("combobox", { name: "Asset class" }).selectOption("etf");
     await page.getByRole("combobox", { name: "Direction" }).selectOption("short");
     await page.getByRole("combobox", { name: "Position state" }).selectOption("closed");

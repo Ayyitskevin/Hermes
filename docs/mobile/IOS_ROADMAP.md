@@ -49,8 +49,8 @@ under the provisional identifier until that gate is cleared.
 - **5/10 current readiness**: the execution ledger, generic CSV loop, manual
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
-  Navigator v1, Report Trade Continuation v1, export, and matching-runtime local
-  restore are implemented.
+  Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Compact
+  Trades Filters v1, export, and matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
   restore; Exact-Command Recovery proves an ambiguous daily save retains and
@@ -352,6 +352,15 @@ Delivered in the current vertical slice:
   valid refresh state, reset on mode switch or reload, and never change exact
   scope evidence/totals, the calendar, Dashboard, governed Reports, schema,
   store, archive, or report definitions.
+- Compact Trades Filters v1 puts only those seven exact controls and their
+  error region in a native disclosure. Zero exact facets render collapsed; any
+  fixed, dynamic, or retained stale facet renders open; the summary count
+  updates from zero through seven without counting query or account/date/day
+  scope. Search-only clear stays visible outside the disclosure. Resetting the
+  final facet or using the combined clear action collapses and focuses the
+  summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
+  stale refresh, report/storage neutrality, 44-point controls, and no overflow
+  at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
 - Reports Navigator v1 exposes Performance Summary, Journal Curve, Plan Check,
   Mistake Patterns, and Setup Breakdown in semantic DOM order. Dashboard enters
   Plan Check directly, every section returns to the menu, and jumps preserve
@@ -485,8 +494,8 @@ tier-by-tier claim. Reverify before public comparative positioning.
 
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
-v1, Mistake Patterns v1, matching-runtime local restore, and all three governed
-reports are implemented.
+v1, Mistake Patterns v1, Compact Trades Filters v1, matching-runtime local
+restore, and all three governed reports are implemented.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

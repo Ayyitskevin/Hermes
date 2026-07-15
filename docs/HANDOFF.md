@@ -1,9 +1,123 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Mistake Patterns v1 ·
+Status: verified Compact Trades Filters v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver Compact Trades Filters v1: shorten the primary iPhone Trades path
+without changing exact card-filter behavior, scope, persistence, reports, or
+financial truth.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Only the existing seven exact card-filter selects and their validation alert
+  now live inside a native `details` disclosure. Boundary copy and **Clear
+  search and filters** stay outside, so query-only state remains visible and
+  recoverable.
+- The summary derives an exact zero-to-seven active-filter count from the four
+  fixed and three dynamic facet values. Search plus account/date/day scope are
+  deliberately excluded.
+- A clean or scope/query-only render starts collapsed. Any fixed, dynamic, or
+  retained stale review facet renders open. Search input preserves a user's
+  current manual disclosure choice until a later render.
+- Resetting the final exact facet closes the disclosure and returns focus to
+  its summary. The combined clear action rebuilds the view with the same closed,
+  summary-focused state while retaining account/date/day scope; **Clear all**
+  still resets both layers through its existing path.
+- Disclosure state is presentation-only. No preference, session model field,
+  store, SQLite row, schema, archive/export shape, digest input, report input,
+  formula, URL, or native source was added.
+- Production-browser coverage now protects query-only recovery, pointer/Enter/
+  Space disclosure behavior, sequential Tab order, exact counts from zero to
+  seven, final-facet focus/collapse, retained stale selections, local refresh,
+  report/storage neutrality, and 44-point/no-overflow behavior at 320 and 421
+  CSS pixels with 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  record this presentation boundary without claiming native acceptance.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0 after the locked install.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 43 files, 479 tests passed.
+- `cd mobile && npx vitest run src/ui/trades-view.test.ts` — exit 0; all 10
+  render/count/stale/escaping cases passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e -- e2e/trade-browser-facets.spec.ts` — exit 0;
+  all 3 focused production-browser journeys passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 60 production-browser journeys
+  passed, including existing scope, report, review, restore, and recovery paths.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; Vite
+  transformed 66 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `5df1e6d57774c0aaa80475c95b3d2b867864fb2357fb2164f5ad2fdb796ef7ca`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this presentation-only
+  mobile diff does not touch legacy Python and this checkout has no complete
+  project venv. The hosted Legacy Python safety job must provide independent
+  evidence after publication.
+
+assumptions:
+
+- The validated `TradeBrowserResult.state` remains the sole source for exact
+  facet values and current review options. A separate disclosure boolean would
+  create a second, unnecessary state owner.
+- A retained stale Mistake, Emotion, or Tag remains an active exact facet even
+  when its current option set loses the final assignment; it therefore counts,
+  opens the disclosure on render, and continues to produce zero cards.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, or
+  physical-iPhone evidence.
+
+open:
+
+- HOLD native Compact Trades Filters acceptance: repeat zero/seven counts,
+  query/scope exclusion, stale refresh, pointer/VoiceOver/Enter/Space, sequential
+  keyboard order, final-facet and combined-clear focus return, 200% Dynamic
+  Type, lifecycle/relaunch, and 320/421-width layout on a current Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- MED — re-audit the next autonomous product slice after publication. Emotion
+  Patterns remains a safe technical reuse only if it adds enough review value
+  to justify another report family.
+- LOW — upgrade GitHub Action runtimes in a separate maintenance slice.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining reports, and native restore/backup
+  acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Mistake Patterns v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Compact Trades Filters v1 handoff above.
+
+Status: verified Mistake Patterns v1 ·
+updated 2026-07-15
+
+### Historical handoff
 
 task: Deliver governed Mistake Patterns v1: show count-only exact saved-mistake
 patterns with stable trade evidence on iPhone, without adding performance

@@ -315,7 +315,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Nine bounded Slice D increments are implemented in the current workspace. The
+Eleven bounded Slice D increments are implemented in the current workspace. The
 first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -552,6 +552,19 @@ returns to the Mistake Patterns heading after the report rebuild. The source is
 allowlisted transient DOM context and does not consume or change Trades scope,
 search, facets, URLs, persistence, archives, or digests.
 
+An eleventh increment, Compact Trades Filters v1, shortens the primary iPhone
+Trades path without changing the seven-facet projection. Only the selects and
+their validation error live inside a native `details` disclosure; the boundary
+copy and combined clear action remain exposed so search retains its description
+and a search-only view can still clear. The summary shows the exact number of
+active facets. Zero-facet renders are collapsed; any fixed, dynamic, or retained
+stale facet renders open. In-place facet changes update that count, selecting
+the final facet back to its default collapses and returns focus to the summary,
+and search never overrides a manual disclosure choice. Account/date/day scope
+and query do not count. No disclosure value enters Trade Browser state,
+preferences, stores, SQLite, URLs, exports/restores, archives, report inputs,
+digests, or governed formulas/definitions.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -705,11 +718,11 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The ten
+empty-journal-only restore and idempotent exact-retry reconciliation. The eleven
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
 calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, Structured
 Trades Facets v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade
-Continuation v1, and Mistake Patterns v1. The eight presentation/projection
+Continuation v1, Mistake Patterns v1, and Compact Trades Filters v1. The nine presentation/projection
 increments other than
 Daily Journal and Report Trade Continuation remain derived-only. Report Trade
 Continuation reuses the existing versioned review save path without changing

@@ -170,6 +170,15 @@ and an App Store disclosure.
   calendar, Dashboard, Plan Check, and Setup Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
+- Confirm the exact-filter disclosure starts collapsed with **none active**,
+  leaves all seven selects out of the keyboard/VoiceOver order, and keeps the
+  search description plus **Clear search and filters** reachable. A query or
+  account/date/day scope alone must not open or increment it. Toggle with
+  pointer, VoiceOver, Enter, and Space; then activate each facet and confirm the
+  exact count reaches seven. Reset the final facet and use the combined clear
+  action separately: each must collapse and return visible focus to the
+  summary while preserving the documented scope boundary. Repeat a rerender
+  with a retained stale Mistake, Emotion, and Tag; each must count and open.
 - Assign review labels inside and outside the active account/date/day scope.
   Confirm Mistake, Emotion, and Tag choices come from current `TradePreview`
   assignments across the whole workspace—not unused vocabulary—use stable
@@ -529,7 +538,8 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   export generation, and Slice C-B local restore still need the applicable
   persistence, response-loss, migration, accessibility, and lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, and Dynamic Review
-  Facets v1 intentionally remain session-only; they still need native
+  Facets v1 intentionally remain session-only; Compact Trades Filters v1 adds
+  no persisted disclosure state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
   behaviors. Mistake Patterns and Report Trade Continuation are browser-verified

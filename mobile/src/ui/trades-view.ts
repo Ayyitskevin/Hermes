@@ -179,62 +179,85 @@ function disabledWithoutOptions(current: string | null, available: readonly stri
   return current === null && available.length === 0 ? "disabled" : "";
 }
 
+function exactViewFacetCount(browser: TradeBrowserResult): number {
+  return Number(browser.state.assetClass !== "all")
+    + Number(browser.state.direction !== "all")
+    + Number(browser.state.positionState !== "all")
+    + Number(browser.state.reviewState !== "all")
+    + Number(browser.state.mistake !== null)
+    + Number(browser.state.emotion !== null)
+    + Number(browser.state.tag !== null);
+}
+
+function exactViewFacetCountLabel(count: number): string {
+  return count === 0 ? "none active" : countNoun(count, "active filter");
+}
+
 function viewFilters(browser: TradeBrowserResult): string {
   const controls = "trade-card-list trade-count trade-empty";
   const describedBy = "trade-view-filter-boundary trade-view-filter-error";
+  const activeFilterCount = exactViewFacetCount(browser);
   return `<section class="card trade-view-filters" aria-labelledby="trade-view-filter-title">
     <div>
       <p class="card-label">VISIBLE CARDS</p>
       <h2 id="trade-view-filter-title">Exact trade filters</h2>
       <p id="trade-view-filter-boundary">These session-only filters change visible cards and search results. They never change allocation scope, P&amp;L totals, the calendar, Dashboard metrics, or Reports.</p>
     </div>
-    <div class="trade-scope-fields">
-      <label>Asset class
-        <select id="trade-filter-asset-class" aria-controls="${controls}" aria-describedby="${describedBy}">
-          <option value="all" ${selected(browser.state.assetClass, "all")}>All asset classes</option>
-          <option value="stock" ${selected(browser.state.assetClass, "stock")}>Stock</option>
-          <option value="etf" ${selected(browser.state.assetClass, "etf")}>ETF</option>
-        </select>
-      </label>
-      <label>Direction
-        <select id="trade-filter-direction" aria-controls="${controls}" aria-describedby="${describedBy}">
-          <option value="all" ${selected(browser.state.direction, "all")}>All directions</option>
-          <option value="long" ${selected(browser.state.direction, "long")}>Long</option>
-          <option value="short" ${selected(browser.state.direction, "short")}>Short</option>
-        </select>
-      </label>
-      <label>Position state
-        <select id="trade-filter-position" aria-controls="${controls}" aria-describedby="${describedBy}">
-          <option value="all" ${selected(browser.state.positionState, "all")}>Open and closed</option>
-          <option value="open" ${selected(browser.state.positionState, "open")}>Open</option>
-          <option value="closed" ${selected(browser.state.positionState, "closed")}>Closed</option>
-        </select>
-      </label>
-      <label>Review state
-        <select id="trade-filter-review" aria-controls="${controls}" aria-describedby="${describedBy}">
-          <option value="all" ${selected(browser.state.reviewState, "all")}>All review states</option>
-          <option value="pending" ${selected(browser.state.reviewState, "pending")}>Pending</option>
-          <option value="draft" ${selected(browser.state.reviewState, "draft")}>Draft</option>
-          <option value="completed" ${selected(browser.state.reviewState, "completed")}>Completed</option>
-        </select>
-      </label>
-      <label>Mistake
-        <select id="trade-filter-mistake" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes)}>
-          ${reviewFacetOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes, "All mistakes")}
-        </select>
-      </label>
-      <label>Emotion
-        <select id="trade-filter-emotion" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.emotion, browser.reviewFacetOptions.emotions)}>
-          ${reviewFacetOptions(browser.state.emotion, browser.reviewFacetOptions.emotions, "All emotions")}
-        </select>
-      </label>
-      <label>Tag
-        <select id="trade-filter-tag" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.tag, browser.reviewFacetOptions.tags)}>
-          ${reviewFacetOptions(browser.state.tag, browser.reviewFacetOptions.tags, "All tags")}
-        </select>
-      </label>
-    </div>
-    <p class="form-error" id="trade-view-filter-error" role="alert" hidden></p>
+    <details class="trade-view-filter-disclosure" data-trade-filter-disclosure ${activeFilterCount > 0 ? "open" : ""}>
+      <summary id="trade-view-filter-summary">
+        <strong>Filter controls</strong>
+        <span data-trade-view-filter-count>· ${exactViewFacetCountLabel(activeFilterCount)}</span>
+      </summary>
+      <div class="trade-view-filter-body">
+        <div class="trade-scope-fields">
+          <label>Asset class
+            <select id="trade-filter-asset-class" aria-controls="${controls}" aria-describedby="${describedBy}">
+              <option value="all" ${selected(browser.state.assetClass, "all")}>All asset classes</option>
+              <option value="stock" ${selected(browser.state.assetClass, "stock")}>Stock</option>
+              <option value="etf" ${selected(browser.state.assetClass, "etf")}>ETF</option>
+            </select>
+          </label>
+          <label>Direction
+            <select id="trade-filter-direction" aria-controls="${controls}" aria-describedby="${describedBy}">
+              <option value="all" ${selected(browser.state.direction, "all")}>All directions</option>
+              <option value="long" ${selected(browser.state.direction, "long")}>Long</option>
+              <option value="short" ${selected(browser.state.direction, "short")}>Short</option>
+            </select>
+          </label>
+          <label>Position state
+            <select id="trade-filter-position" aria-controls="${controls}" aria-describedby="${describedBy}">
+              <option value="all" ${selected(browser.state.positionState, "all")}>Open and closed</option>
+              <option value="open" ${selected(browser.state.positionState, "open")}>Open</option>
+              <option value="closed" ${selected(browser.state.positionState, "closed")}>Closed</option>
+            </select>
+          </label>
+          <label>Review state
+            <select id="trade-filter-review" aria-controls="${controls}" aria-describedby="${describedBy}">
+              <option value="all" ${selected(browser.state.reviewState, "all")}>All review states</option>
+              <option value="pending" ${selected(browser.state.reviewState, "pending")}>Pending</option>
+              <option value="draft" ${selected(browser.state.reviewState, "draft")}>Draft</option>
+              <option value="completed" ${selected(browser.state.reviewState, "completed")}>Completed</option>
+            </select>
+          </label>
+          <label>Mistake
+            <select id="trade-filter-mistake" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes)}>
+              ${reviewFacetOptions(browser.state.mistake, browser.reviewFacetOptions.mistakes, "All mistakes")}
+            </select>
+          </label>
+          <label>Emotion
+            <select id="trade-filter-emotion" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.emotion, browser.reviewFacetOptions.emotions)}>
+              ${reviewFacetOptions(browser.state.emotion, browser.reviewFacetOptions.emotions, "All emotions")}
+            </select>
+          </label>
+          <label>Tag
+            <select id="trade-filter-tag" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.tag, browser.reviewFacetOptions.tags)}>
+              ${reviewFacetOptions(browser.state.tag, browser.reviewFacetOptions.tags, "All tags")}
+            </select>
+          </label>
+        </div>
+        <p class="form-error" id="trade-view-filter-error" role="alert" hidden></p>
+      </div>
+    </details>
     <div class="quick-actions">
       <button class="secondary-button" type="button" data-trade-view-clear ${browser.hasViewFilters ? "" : "disabled"}>Clear search and filters</button>
     </div>
@@ -288,13 +311,7 @@ function scopeSummary(browser: TradeBrowserResult, currency: string): string {
 }
 
 function hasExactViewFacet(browser: TradeBrowserResult): boolean {
-  return browser.state.assetClass !== "all"
-    || browser.state.direction !== "all"
-    || browser.state.positionState !== "all"
-    || browser.state.reviewState !== "all"
-    || browser.state.mistake !== null
-    || browser.state.emotion !== null
-    || browser.state.tag !== null;
+  return exactViewFacetCount(browser) > 0;
 }
 
 function noMatchTitle(browser: TradeBrowserResult): string {
@@ -377,6 +394,11 @@ function updateSearchResult(root: HTMLElement, browser: TradeBrowserResult): voi
   }
   const clear = root.querySelector<HTMLButtonElement>("[data-trade-view-clear]");
   if (clear !== null) clear.disabled = !browser.hasViewFilters;
+  const activeFilterCount = exactViewFacetCount(browser);
+  const filterCount = root.querySelector<HTMLElement>("[data-trade-view-filter-count]");
+  if (filterCount !== null) {
+    filterCount.textContent = `· ${exactViewFacetCountLabel(activeFilterCount)}`;
+  }
 }
 
 export function bindTradesView(
@@ -447,6 +469,15 @@ export function bindTradesView(
         filterError.textContent = "";
       }
       updateSearchResult(root, result);
+      const filterDisclosure = root.querySelector<HTMLDetailsElement>(
+        "[data-trade-filter-disclosure]",
+      );
+      if (filterDisclosure !== null) {
+        filterDisclosure.open = hasExactViewFacet(result);
+        if (!filterDisclosure.open) {
+          root.querySelector<HTMLElement>("#trade-view-filter-summary")?.focus();
+        }
+      }
     } catch (caught) {
       facetControls.forEach((control) => control.setAttribute("aria-invalid", "true"));
       if (filterError !== null) {
