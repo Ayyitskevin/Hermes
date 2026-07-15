@@ -90,13 +90,12 @@ verified:
 - `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
   `git diff --check` — exit 0; no tracked native/lock drift or whitespace
   errors.
-- Independent read-only application/store, UI/accessibility, and integration
-  audits are CLEAN after the final refresh-before-dismissal gate. Reverification
-  covered typecheck, 61 focused application/store tests, 9 UI tests, and both
-  stale/direct production recovery journeys.
-
 assumptions:
 
+- Independent read-only application/store, UI/accessibility, and integration
+  audits reported CLEAN after the final refresh-before-dismissal gate. These
+  advisory reports are not cold-rerunnable evidence; the command-backed gates
+  above remain authoritative.
 - Browser evidence uses one production application and its in-memory
   SessionJournalStore. Multiple retained editors are deterministic UI
   concurrency evidence, not a second WKWebView scene, native SQLite bridge,
