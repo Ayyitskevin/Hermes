@@ -860,6 +860,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           snapshot = await application.loadWorkspace();
           render(currentTab, false);
           announceStatus(announcement);
+          return snapshot;
         },
       );
     }

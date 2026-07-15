@@ -208,11 +208,27 @@ and an App Store disclosure.
   and confirm no duplicate version. Exercise a stale head and changed submission
   and confirm each fails without partial vocabulary/version/head state. A known
   committed save followed by refresh failure must remain labeled saved.
+- For a stale head, leave every authored field and the intended draft/completed
+  action in the first scene, commit a different successor from a second scene,
+  and confirm the first scene says nothing was overwritten, blocks both old
+  save actions, and keeps Cancel/Escape behind dirty-discard confirmation.
+  **Review latest saved version** must load and visibly compare the exact newer
+  head without replacing the local form. Only
+  **Continue with my unsaved changes** may enable saving against that head, and
+  a separate save must append one successor with a new receipt. Repeat with
+  another intervening head and
+  with reload failure; both must fail closed with the writing retained.
 - With VoiceOver, a hardware keyboard, 320 CSS pixels, and 200% Dynamic Type,
   verify heading focus, reverse/forward focus containment, background inerting,
   dirty-close confirmation, all-controls-disabled busy state, character-count
   feedback, 44-point targets, long-token wrapping, and truthful reconcile copy.
   Demo and empty workspaces must expose no Daily Journal write control.
+- Chromium already proves a deterministic retained-editor race in one
+  application/store offline, including v1 → competing v2 → explicit v3, one
+  head/three receipts, a failed refresh retry, focus, inerting, 44-point
+  actions, long-token wrapping, and 320px/200% reflow. Treat this only as a
+  browser analogue: repeat it with native SQLite, two real scenes/screens,
+  VoiceOver, Dynamic Type, background/foreground, and force-quit behavior.
 - Linux/Chromium Recovery Continuity now composes a UI-authored draft through
   export, offline empty-session restore, continued writing, re-export, and a
   second restore. It also delays one browser `File.text()`, replaces the file,
@@ -389,6 +405,10 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 - Native plugin diagnostics and error logging have not been audited on device.
   Do not claim that journal paths or technical failure details stay out of the
   Xcode/device console until that dependency/runtime audit has recorded evidence.
+- The separate Daily Journal uncertain-commit reload action is not accepted:
+  it can close after a readable ledger without proving the prepared revision
+  exists. Replace it with exact-command retry/status proof and retest lost
+  response, confirmed-not-saved, stale-after-unknown, and refresh-failure paths.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

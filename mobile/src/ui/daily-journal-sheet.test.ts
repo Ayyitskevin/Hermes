@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { DailyJournalCommitStatusUncertainError } from "../application/journal-application";
+import { JournalDailyEntryError } from "../application/journal-store";
 import type { DailyJournalPreview, JournalWorkspaceSnapshot } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
   dailyJournalAction,
+  dailyJournalLatestVersionTemplate,
+  dailyJournalReconciliationHead,
   dailyJournalSaveFailureKind,
   dailyJournalSheetTemplate,
   newestAvailableDailyJournalDate,
@@ -50,6 +53,8 @@ describe("daily journal sheet", () => {
     expect(html).toContain('max="2026-07-13"');
     expect(html).toContain("Save draft");
     expect(html).toContain("Complete reflection");
+    expect(html).toContain("Review latest saved version");
+    expect(html).toContain("Continue with my unsaved changes");
     expect(html).toContain("&lt;Focused&gt;");
     expect(html).not.toContain("<Focused>");
     expect(html).toContain("never places or routes a trade");
@@ -92,6 +97,74 @@ describe("daily journal sheet", () => {
     expect(dailyJournalSaveFailureKind(
       new DailyJournalCommitStatusUncertainError(new Error("lost response")),
     )).toBe("uncertain");
+    expect(dailyJournalSaveFailureKind(new JournalDailyEntryError({
+      code: "entry_changed",
+      message: "A newer head exists.",
+    }))).toBe("stale");
+    expect(dailyJournalSaveFailureKind(new JournalDailyEntryError({
+      code: "submission_changed",
+      message: "The receipt belongs to different values.",
+    }))).toBe("blocked");
     expect(dailyJournalSaveFailureKind(new Error("invalid note"))).toBe("retryable");
+  });
+
+  it("renders every latest-version comparison value as escaped read-only evidence", () => {
+    const entry: DailyJournalPreview = {
+      ...DEMO_WORKSPACE.dailyJournal[0]!,
+      dateLabel: "<July 9>",
+      version: 7,
+      state: "completed",
+      title: "<newer headline>",
+      note: "<script>alert('newer')</script>\nsecond line",
+      emotion: "<steady>",
+      processScorePct: 91,
+      tags: ["<patient>", "A&B"],
+    };
+    const html = dailyJournalLatestVersionTemplate(entry);
+    expect(html).toContain('data-daily-entry-latest-version="7"');
+    expect(html).toContain('id="daily-entry-latest-title"');
+    expect(html).toContain("Version 7 · completed");
+    expect(html).toContain("&lt;July 9&gt;");
+    expect(html).toContain("&lt;newer headline&gt;");
+    expect(html).toContain("&lt;script&gt;alert(&#039;newer&#039;)&lt;/script&gt;\nsecond line");
+    expect(html).toContain("&lt;steady&gt;");
+    expect(html).toContain("91%");
+    expect(html).toContain("&lt;patient&gt;, A&amp;B");
+    expect(html).not.toContain("<script>");
+  });
+
+  it("accepts only a different newer local head for the exact conflicted date", () => {
+    const current = DEMO_WORKSPACE.dailyJournal[0]!;
+    const snapshot = localWorkspace();
+    expect(dailyJournalReconciliationHead(
+      snapshot,
+      current.isoDate,
+      "obsolete-head",
+      current.version - 1,
+    )).toBe(current);
+    expect(dailyJournalReconciliationHead(
+      snapshot,
+      current.isoDate,
+      current.entryVersionId,
+      current.version - 1,
+    )).toBeNull();
+    expect(dailyJournalReconciliationHead(
+      snapshot,
+      current.isoDate,
+      "different-head",
+      current.version,
+    )).toBeNull();
+    expect(dailyJournalReconciliationHead(
+      snapshot,
+      "2026-01-01",
+      "obsolete-head",
+      0,
+    )).toBeNull();
+    expect(dailyJournalReconciliationHead(
+      DEMO_WORKSPACE,
+      current.isoDate,
+      "obsolete-head",
+      current.version - 1,
+    )).toBeNull();
   });
 });

@@ -1,9 +1,145 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Startup Recovery v1 and pre-native iOS handoff gate ·
+Status: verified Daily Journal Stale-Head Recovery v1 ·
 updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Daily Journal Stale-Head Recovery v1: preserve unsaved authored
+changes after a deterministic optimistic conflict, prove and display the
+different newer local head from one fresh snapshot, and require explicit
+consent plus a separate save before appending a successor.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/daily-journal-sheet.ts now classifies deterministic
+  daily-entry conflicts separately from uncertain persistence and editable
+  validation. An expected-version mismatch keeps all six raw controls in the
+  open sheet, locks/describes the conflicted date, disables both obsolete save
+  actions, uses neutral pre-proof copy, and leaves Cancel/Escape behind the
+  existing dirty-discard confirmation.
+- **Review latest saved version** reloads one workspace snapshot through the
+  same callback that installs the background view. Reconciliation proceeds
+  only when that exact local snapshot proves a different, newer head for the
+  same date. Missing, unchanged, nonlocal, non-newer, or failed-refresh evidence
+  stays blocked with the draft intact.
+- The escaped comparison shows the saved date, version, state, headline,
+  reflection, emotion, self-reported score, and tags in a labeled focusable
+  region with a visible focus ring. The user must choose **Continue with my
+  unsaved changes**, which rotates to a fresh submission ID and accepts the
+  displayed head as the base, then separately choose draft/completed save.
+  There is no auto-merge, overwrite, null-head fallback, or reconciliation
+  commit. A second race re-enters the same guarded path.
+- Other deterministic JournalDailyEntryError variants now block the prepared
+  save with neutral copy instead of re-enabling an identity that cannot safely
+  apply. Ordinary preparation validation stays editable/retryable; uncertain
+  persistence remains a separate frozen path.
+- mobile/src/ui/app.ts returns the same freshly loaded snapshot that it renders,
+  preventing display/base identity from coming from separate reads. Pending
+  save focus stays inside the focusable dialog before every control is
+  disabled; disconnected-trigger close falls back to #screen.
+- Unit coverage proves error classification, escaped comparison output, and
+  rejection of same/missing/non-newer/nonlocal reconciliation heads.
+  Application coverage proves a deterministic stale domain error passes
+  through after one attempt and a fresh read exposes only the competing head.
+- The Playwright journey creates v1, retains and detaches its production-bound
+  editor, saves competing v2 through a second production editor in the same
+  browser application/store, and reattaches v1 to trigger the real stale path.
+  A one-shot #screen render failure preserves date plus every authored field,
+  keeps both submits blocked, hides evidence/consent, and renders generic
+  focused copy; retry then shows v2, visible evidence focus, Tab-to-consent, and
+  explicit v3. Offline export proves exactly three immutable versions, one v3
+  head, three one-to-one receipts, and no external HTTP(S) request.
+- README, iOS roadmap, product blueprint, local-ledger contract, and Mac handoff
+  document this as a deterministic retained-editor race in one browser
+  application/store. They do not claim native multi-scene, lifecycle, SQLCipher,
+  VoiceOver, Dynamic Type, or physical-device acceptance.
+- No schema, migration, archive shape, store projection, execution fact,
+  governed formula, report definition, financial definition, security
+  credential, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 420 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 43 Playwright journeys passed.
+- Final post-review `cd mobile && npm run test:e2e --
+  e2e/daily-journal.spec.ts --grep stale` — exit 0; 1/1 passed with all six
+  raw controls retained after injected refresh failure, blocked evidence/
+  consent, visible 2px evidence focus, Tab-to-consent, 320px/200% reflow,
+  immutable archive history, and offline/no-external-request assertions.
+- `cd mobile && npm run build` — exit 0; Vite transformed 64 modules and
+  emitted the production bundle.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  `3b946309eba4d6b9f665b861fed0ba1bb11fc38b9d200464b739cb9c3e0a3033`;
+  selected generated identity/SQLite registration and git drift passed; every
+  native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no native/lock drift or whitespace errors.
+- Three independent read-only core, UI/accessibility, and integration reviews
+  cleared the final stale-head slice after the negative-path, neutral-copy,
+  focus-ring, and documentation fixes.
+
+assumptions:
+
+- The browser race retains two real production editor instances bound to one
+  in-memory SessionJournalStore. It is deterministic concurrency evidence for
+  the UI state machine, not a second window, WKWebView scene, native bridge,
+  SQLCipher transaction, relaunch, or device lifecycle result.
+- The one-shot test makes the next #screen render throw after the fresh read.
+  It proves the UI catch path and privacy-safe rendered copy. Pure helper tests
+  independently prove missing, same-ID, non-newer, and nonlocal snapshots do
+  not become rebase-ready.
+- JournalDailyEntryError `entry_changed` also covers malformed prepared
+  commands and range exhaustion, so the initial copy is deliberately neutral;
+  only a different newer head from the fresh snapshot earns latest-version
+  consent.
+- No schema, migration, archive, formula, financial, destructive, security, or
+  public-positioning decision is inferred from this reliability slice.
+
+open:
+
+- HIGH next reliability slice: the pre-existing uncertain-save **Reload journal
+  and reconcile** action still closes after any readable ledger without proving
+  the exact prepared revision exists. Retain and retry the exact immutable
+  command (or prove its receipt); committed/duplicate may refresh and close,
+  deterministic stale must enter the new flow, and another unknown outcome must
+  keep the only in-memory draft frozen.
+- HOLD native stale-head acceptance: repeat create/edit collisions, a second
+  intervening head, refresh failure, two real scenes/screens, background/
+  foreground, force quit, SQLCipher/Keychain, VoiceOver, Dynamic Type, and
+  physical-device 320px behavior on a current Mac/iPhone.
+- Browser create-collision and repeat-race UI composition remain unproved.
+  `submission_changed` and `workspace_changed` now fail closed but do not
+  have dedicated interaction recovery. Trade Review stale-head recovery remains
+  a separate editor slice.
+- Upgrade GitHub Action runtimes in a separate low-risk maintenance slice;
+  current checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices; deletion requires its dedicated human
+  gate.
+- Do not claim native backup readiness or start broker sync, trade execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+
+## Prior milestone — Startup Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Daily Journal Stale-Head Recovery handoff above.
 
 task: Deliver Startup Recovery v1 and a truthful pre-native iOS evidence gate:
 fail closed when the first application open/read cannot establish safe

@@ -1,5 +1,10 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test, type Page } from "@playwright/test";
 
+import { parseJournalArchive } from "../src/application/journal-archive";
+
+const BASE_ORIGIN = "http://127.0.0.1:4173";
 const ONBOARDING_KEY = "hermes.journal.onboarding.v2";
 
 async function establishLocalJournal(page: Page): Promise<void> {
@@ -82,9 +87,11 @@ test("daily reflection creates, validates, completes, and returns focus without 
     return {
       busy: form?.getAttribute("aria-busy"),
       enabled: controls.filter((control) => !control.disabled).length,
+      focusInDialog: document.querySelector(".daily-journal-sheet")
+        ?.contains(document.activeElement) ?? false,
     };
   });
-  expect(pending).toEqual({ busy: "true", enabled: 0 });
+  expect(pending).toEqual({ busy: "true", enabled: 0, focusInDialog: true });
   await expect(dialog).toHaveCount(0);
   await expect(page.locator("#route-announcer")).toContainText(
     `Daily reflection for ${firstDateLabel} saved on device.`,
@@ -148,6 +155,244 @@ test("empty and fictional journals keep daily reflection controls read-only", as
   await expect(page.getByText(/Fictional examples are read-only/i)).toBeVisible();
   await expect(page.locator(".journal-note")).not.toHaveCount(0);
   await expect(page.locator("[data-daily-entry-new], [data-daily-entry-edit]")).toHaveCount(0);
+});
+
+test("a stale daily reflection preserves local text, proves the latest head, and appends only after consent", async ({ page, context }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      (url.protocol === "http:" || url.protocol === "https:")
+      && url.origin !== BASE_ORIGIN
+    ) externalRequests.push(request.url());
+  });
+  await establishLocalJournal(page);
+  await context.setOffline(true);
+
+  await page.getByRole("button", { name: "Write daily reflection" }).click();
+  let dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const isoDate = await dialog.locator("#daily-entry-date").inputValue();
+  await dialog.locator("#daily-entry-headline").fill("Original saved headline");
+  await dialog.locator("#daily-entry-note").fill("Original immutable version.");
+  await dialog.locator("#daily-entry-emotion").fill("Focused");
+  await dialog.locator("#daily-entry-score").fill("70");
+  await dialog.locator("#daily-entry-tags").fill("Original");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+
+  const originalCard = page.locator(".journal-note").filter({
+    hasText: "Original saved headline",
+  });
+  await originalCard.getByRole("button", { name: /Edit daily reflection/u }).click();
+  dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  const localDraft = {
+    headline: "My preserved headline",
+    note: "My unsaved reflection stays intact.",
+    emotion: "Patient",
+    score: "93",
+    tags: "My draft, Keep this",
+  };
+  await dialog.locator("#daily-entry-headline").fill(localDraft.headline);
+  await dialog.locator("#daily-entry-note").fill(localDraft.note);
+  await dialog.locator("#daily-entry-emotion").fill(localDraft.emotion);
+  await dialog.locator("#daily-entry-score").fill(localDraft.score);
+  await dialog.locator("#daily-entry-tags").fill(localDraft.tags);
+
+  const staleBackdrop = await page.locator("[data-daily-entry-backdrop]").elementHandle();
+  if (staleBackdrop === null) throw new Error("Expected the first daily-reflection backdrop.");
+  await staleBackdrop.evaluate((element) => {
+    element.remove();
+    document.body.classList.remove("modal-open");
+    document.querySelectorAll(".skip-link, .topbar, #screen, .tabbar").forEach((background) => {
+      background.removeAttribute("inert");
+      background.removeAttribute("aria-hidden");
+    });
+  });
+
+  await originalCard.getByRole("button", { name: /Edit daily reflection/u }).click();
+  const competingDialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  const latestNote = `Second screen saved ${"longtoken".repeat(20)}`;
+  const latestTag = `newer-tag-${"x".repeat(40)}`;
+  await competingDialog.locator("#daily-entry-headline").fill("Newer saved headline");
+  await competingDialog.locator("#daily-entry-note").fill(latestNote);
+  await competingDialog.locator("#daily-entry-emotion").fill("Calm");
+  await competingDialog.locator("#daily-entry-score").fill("81");
+  await competingDialog.locator("#daily-entry-tags").fill(latestTag);
+  await competingDialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(competingDialog).toHaveCount(0);
+
+  await staleBackdrop.evaluate((element) => {
+    const root = document.querySelector("#app");
+    if (root === null) throw new Error("Hermes root is unavailable.");
+    root.append(element);
+    document.body.classList.add("modal-open");
+    document.querySelectorAll(".skip-link, .topbar, #screen, .tabbar").forEach((background) => {
+      background.setAttribute("inert", "");
+      background.setAttribute("aria-hidden", "true");
+    });
+    element.querySelector<HTMLElement>("#daily-entry-title")?.focus();
+  });
+
+  dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  await dialog.getByRole("button", { name: "Complete reflection" }).click();
+  const error = dialog.locator("#daily-entry-error");
+  await expect(error).toContainText("Nothing was overwritten");
+  await expect(error).toContainText("unsaved changes are still here");
+  await expect(error).toBeFocused();
+  await expect(dialog.locator("#daily-entry-headline")).toHaveValue(localDraft.headline);
+  await expect(dialog.locator("#daily-entry-note")).toHaveValue(localDraft.note);
+  await expect(dialog.locator("#daily-entry-emotion")).toHaveValue(localDraft.emotion);
+  await expect(dialog.locator("#daily-entry-score")).toHaveValue(localDraft.score);
+  await expect(dialog.locator("#daily-entry-tags")).toHaveValue(localDraft.tags);
+  await expect(dialog.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Complete reflection" })).toBeDisabled();
+  await expect(page.locator("#screen")).toHaveAttribute("inert", "");
+
+  await page.evaluate(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        if (this.id === "screen") {
+          Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+          throw new Error("Injected one-shot journal refresh failure.");
+        }
+        setter.call(this, value);
+      },
+    });
+  });
+  await dialog.getByRole("button", { name: "Review latest saved version" }).click();
+  await expect(error).toContainText("could not prove a different newer saved version");
+  await expect(error).not.toContainText("Injected one-shot");
+  await expect(error).toBeFocused();
+  await expect(dialog.locator("#daily-entry-date")).toHaveValue(isoDate);
+  await expect(dialog.locator("#daily-entry-headline")).toHaveValue(localDraft.headline);
+  await expect(dialog.locator("#daily-entry-note")).toHaveValue(localDraft.note);
+  await expect(dialog.locator("#daily-entry-emotion")).toHaveValue(localDraft.emotion);
+  await expect(dialog.locator("#daily-entry-score")).toHaveValue(localDraft.score);
+  await expect(dialog.locator("#daily-entry-tags")).toHaveValue(localDraft.tags);
+  await expect(dialog.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Complete reflection" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Review latest saved version" })).toBeEnabled();
+  await expect(dialog.locator("#daily-entry-latest")).toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Continue with my unsaved changes" }))
+    .toBeHidden();
+
+  await dialog.getByRole("button", { name: "Review latest saved version" }).click();
+  const accept = dialog.getByRole("button", { name: "Continue with my unsaved changes" });
+  const latest = dialog.locator("#daily-entry-latest");
+  await expect(latest).toBeFocused();
+  await expect(latest).toHaveCSS("outline-style", "solid");
+  await expect(latest).toHaveCSS("outline-width", "2px");
+  await expect(latest).toContainText("Version 2 · draft");
+  await expect(latest).toContainText("Newer saved headline");
+  await expect(latest).toContainText(latestNote);
+  await expect(latest).toContainText("Calm");
+  await expect(latest).toContainText("81%");
+  await expect(latest).toContainText(latestTag);
+  await expect(dialog.locator("#daily-entry-note")).toHaveValue(localDraft.note);
+  await expect(dialog.getByRole("button", { name: "Complete reflection" })).toBeDisabled();
+  await expect(page.locator(".journal-note").filter({ hasText: "Newer saved headline" }))
+    .toContainText(latestNote);
+  await page.keyboard.press("Tab");
+  await expect(accept).toBeFocused();
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  const conflictDimensions = await dialog.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+  }));
+  expect(conflictDimensions.scrollWidth, JSON.stringify(conflictDimensions))
+    .toBeLessThanOrEqual(conflictDimensions.clientWidth);
+  expect(conflictDimensions.documentOverflow, JSON.stringify(conflictDimensions))
+    .toBeLessThanOrEqual(1);
+  for (const control of await dialog.locator("#daily-entry-conflict button:visible").all()) {
+    const box = await control.boundingBox();
+    expect(box, "visible conflict action should have a layout box").not.toBeNull();
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+
+  await accept.click();
+  await expect(dialog.locator("#daily-entry-rebase-status"))
+    .toContainText("Version 2 is now the base");
+  const complete = dialog.getByRole("button", { name: "Complete reflection" });
+  await expect(complete).toBeEnabled();
+  await expect(complete).toBeFocused();
+  await expect(page.locator(".journal-note").filter({ hasText: "Newer saved headline" }))
+    .toHaveCount(1);
+
+  await complete.click();
+  await expect(dialog).toHaveCount(0);
+  const finalCard = page.locator(".journal-note").filter({ hasText: localDraft.headline });
+  await expect(finalCard).toContainText(localDraft.note);
+  await expect(finalCard).toContainText("completed");
+  await expect(finalCard).toContainText("93% process");
+
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const exportAction = page.locator("#user-data-export");
+  await exportAction.click();
+  await expect(exportAction).toHaveText("Share or save export");
+  const downloadPromise = page.waitForEvent("download");
+  await exportAction.click();
+  const download = await downloadPromise;
+  const path = await download.path();
+  if (path === null) throw new Error("The stale-recovery export has no local path.");
+  const archive = parseJournalArchive(await readFile(path, "utf8"));
+  const data = archive.payload.data as unknown as {
+    readonly dailyEntryVersions: readonly {
+      readonly id: string;
+      readonly isoDate: string;
+      readonly version: number;
+      readonly state: "draft" | "completed";
+      readonly title: string | null;
+      readonly note: string;
+    }[];
+    readonly dailyEntryHeads: readonly (readonly [string, string])[];
+    readonly dailyEntrySubmissions: readonly (readonly [
+      string,
+      { readonly entryVersionId: string },
+    ])[];
+  };
+  const versions = [...data.dailyEntryVersions]
+    .filter((entry) => entry.isoDate === isoDate)
+    .sort((left, right) => left.version - right.version);
+  expect(versions).toHaveLength(3);
+  expect(versions[0]).toMatchObject({
+    version: 1,
+    state: "draft",
+    title: "Original saved headline",
+    note: "Original immutable version.",
+  });
+  expect(versions[1]).toMatchObject({
+    version: 2,
+    state: "draft",
+    title: "Newer saved headline",
+    note: latestNote,
+  });
+  expect(versions[2]).toMatchObject({
+    version: 3,
+    state: "completed",
+    title: localDraft.headline,
+    note: localDraft.note,
+  });
+  const finalVersion = versions[2];
+  if (finalVersion === undefined) throw new Error("Expected the reconciled version.");
+  expect(data.dailyEntryHeads).toEqual([[isoDate, finalVersion.id]]);
+  expect(data.dailyEntrySubmissions).toHaveLength(3);
+  expect(data.dailyEntrySubmissions.map(([, receipt]) => receipt.entryVersionId).sort())
+    .toEqual(versions.map((entry) => entry.id).sort());
+  expect(externalRequests).toEqual([]);
 });
 
 test("daily reflection reflows at 320px and 200% text without horizontal escape", async ({ page }) => {

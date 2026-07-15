@@ -9,7 +9,11 @@ import type {
   PreparedTradeReviewBatch,
   TradeReviewCommitResult,
 } from "./journal-store";
-import { JournalRestoreError, JournalTradeReviewError } from "./journal-store";
+import {
+  JournalDailyEntryError,
+  JournalRestoreError,
+  JournalTradeReviewError,
+} from "./journal-store";
 import {
   DailyJournalCommitStatusUncertainError,
   JournalApplication,
@@ -411,6 +415,59 @@ describe("JournalApplication daily-journal recovery", () => {
       tags: ["Patient"],
     });
   }
+
+  it("passes through one deterministic stale-head failure and exposes only the competing head", async () => {
+    class ConcurrentDailyStore extends SessionJournalStore {
+      commitCalls = 0;
+      private injectConcurrentHead = true;
+
+      override async commitDailyJournalEntry(
+        command: PreparedDailyJournalEntry,
+      ): Promise<DailyJournalCommitResult> {
+        this.commitCalls += 1;
+        if (!this.injectConcurrentHead) return super.commitDailyJournalEntry(command);
+        this.injectConcurrentHead = false;
+        const competing = prepareDailyJournalEntry({
+          submissionId: "8".repeat(64),
+          isoDate: command.isoDate,
+          expectedPreviousEntryId: command.expectedPreviousEntryId,
+          state: "draft",
+          title: "Saved on another screen",
+          note: "The newer immutable daily reflection.",
+          emotion: "Calm",
+          processScorePct: 80,
+          tags: ["Concurrent"],
+        });
+        await super.commitDailyJournalEntry(competing);
+        return super.commitDailyJournalEntry(command);
+      }
+    }
+
+    const store = new ConcurrentDailyStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      await openTrade(store, "AAPL", "7", 11);
+      const conflict = await application.commitDailyJournalSafely(preparedDaily()).then(
+        () => { throw new Error("Expected the stale daily reflection to fail."); },
+        (error: unknown) => error,
+      );
+
+      expect(conflict).toBeInstanceOf(JournalDailyEntryError);
+      expect((conflict as JournalDailyEntryError).conflict.code).toBe("entry_changed");
+      expect(store.commitCalls).toBe(1);
+      const fresh = await application.loadWorkspace();
+      expect(fresh.dailyJournal).toEqual([
+        expect.objectContaining({
+          isoDate: "2026-07-13",
+          version: 1,
+          title: "Saved on another screen",
+          note: "The newer immutable daily reflection.",
+        }),
+      ]);
+    } finally {
+      await application.close();
+    }
+  });
 
   it("reconciles a committed daily reflection after both bridge responses are lost", async () => {
     class LostDailyResponseStore extends SessionJournalStore {

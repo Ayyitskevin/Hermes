@@ -205,6 +205,18 @@ Delivered in the current vertical slice:
   completed saves, optional headline/note/emotion/tags/self-reported process
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from analytics.
+- Daily Journal Stale-Head Recovery v1 preserves the raw form after a
+  deterministic optimistic conflict, disables the obsolete submission, loads
+  one fresh local snapshot, and displays its different newer head before the
+  user may accept that head as the base. A fresh submission ID plus a second
+  explicit save appends the successor; missing/unchanged/reload-failed evidence
+  stays blocked. Chromium proves this state machine offline, including three
+  immutable versions, one head, three receipts, focus, 320px/200% reflow, and
+  long-token wrapping. Native multi-scene/lifecycle acceptance remains open.
+- Open Daily Journal reliability debt: the separate uncertain-commit reload
+  action still treats a readable ledger as proof and can close a draft whose
+  prepared revision is absent. Replace it with exact-command retry/status
+  proof before calling unknown-outcome recovery complete.
 - Exact, versioned result-R and stock/ETF percent-return definitions with pinned
   rounding, inspectable numerator/denominator evidence, partial-exit labeling,
   incompatible-input null reasons, and fee/short/repeating-ratio fixtures.

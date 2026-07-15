@@ -2,15 +2,20 @@ import {
   DailyJournalCommitStatusUncertainError,
   JournalApplication,
 } from "../application/journal-application";
+import { JournalDailyEntryError } from "../application/journal-store";
 import { escapeHtml } from "../core/html";
 import type { DailyJournalPreview, JournalWorkspaceSnapshot } from "../core/types";
 
-type SaveFailureKind = "uncertain" | "retryable";
+type SaveFailureKind = "uncertain" | "stale" | "blocked" | "retryable";
 
 export function dailyJournalSaveFailureKind(error: unknown): SaveFailureKind {
-  return error instanceof DailyJournalCommitStatusUncertainError
-    ? "uncertain"
-    : "retryable";
+  if (error instanceof DailyJournalCommitStatusUncertainError) return "uncertain";
+  if (
+    error instanceof JournalDailyEntryError
+    && error.conflict.code === "entry_changed"
+  ) return "stale";
+  if (error instanceof JournalDailyEntryError) return "blocked";
+  return "retryable";
 }
 
 export function parseDailyJournalTags(value: string): readonly string[] {
@@ -73,6 +78,43 @@ export function dailyJournalAction(
   return `<button class="secondary-button" type="button" data-daily-entry-edit="${escapeHtml(entry.isoDate)}" aria-label="Edit daily reflection for ${escapeHtml(longDateLabel(entry.isoDate))}">${escapeHtml(label ?? "Edit reflection")}</button>`;
 }
 
+export function dailyJournalLatestVersionTemplate(
+  entry: DailyJournalPreview,
+): string {
+  const title = entry.title ?? "No headline";
+  const emotion = entry.emotion ?? "Not recorded";
+  const score = entry.processScorePct === null
+    ? "Not recorded"
+    : `${entry.processScorePct}%`;
+  const tags = entry.tags.length === 0 ? "None" : entry.tags.join(", ");
+  return `<h4 id="daily-entry-latest-title">Latest saved version</h4>
+  <dl class="daily-entry-latest-grid" data-daily-entry-latest-version="${entry.version}">
+    <div><dt>Saved version</dt><dd>Version ${entry.version} · ${escapeHtml(entry.state)}</dd></div>
+    <div><dt>Date</dt><dd>${escapeHtml(entry.dateLabel)}</dd></div>
+    <div><dt>Headline</dt><dd>${escapeHtml(title)}</dd></div>
+    <div><dt>Reflection</dt><dd class="daily-entry-latest-note">${escapeHtml(entry.note)}</dd></div>
+    <div><dt>Emotion</dt><dd>${escapeHtml(emotion)}</dd></div>
+    <div><dt>Self-reported process score</dt><dd>${escapeHtml(score)}</dd></div>
+    <div><dt>Tags</dt><dd>${escapeHtml(tags)}</dd></div>
+  </dl>`;
+}
+
+export function dailyJournalReconciliationHead(
+  snapshot: JournalWorkspaceSnapshot,
+  isoDate: string,
+  expectedPreviousEntryId: string | null,
+  expectedPreviousVersion: number,
+): DailyJournalPreview | null {
+  if (snapshot.provenance !== "local") return null;
+  const latest = snapshot.dailyJournal.find((entry) => entry.isoDate === isoDate) ?? null;
+  if (
+    latest === null
+    || latest.entryVersionId === expectedPreviousEntryId
+    || latest.version <= expectedPreviousVersion
+  ) return null;
+  return latest;
+}
+
 export function dailyJournalSheetTemplate(
   entry: DailyJournalPreview | null,
   snapshot: JournalWorkspaceSnapshot,
@@ -89,7 +131,7 @@ export function dailyJournalSheetTemplate(
     : String(entry.processScorePct);
   const tags = entry?.tags.join(", ") ?? "";
   return `<div class="sheet-backdrop daily-journal-backdrop" data-daily-entry-backdrop>
-    <section class="settings-sheet daily-journal-sheet" role="dialog" aria-modal="true" aria-labelledby="daily-entry-title">
+    <section class="settings-sheet daily-journal-sheet" role="dialog" aria-modal="true" aria-labelledby="daily-entry-title" tabindex="-1">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-heading">
         <div>
@@ -138,6 +180,16 @@ export function dailyJournalSheetTemplate(
         <p class="form-error" id="daily-entry-error" role="alert" tabindex="-1" hidden></p>
         <p id="daily-entry-status" class="sr-only" role="status" aria-live="polite"></p>
         <button class="secondary-button" id="daily-entry-reconcile" type="button" hidden>Reload journal and reconcile</button>
+        <section class="daily-entry-conflict" id="daily-entry-conflict" aria-labelledby="daily-entry-conflict-title" hidden>
+          <h3 id="daily-entry-conflict-title" tabindex="-1">Review the saved version before continuing</h3>
+          <p id="daily-entry-conflict-copy">Hermes rejected the prepared save. Your unsaved changes remain in the form, and nothing was overwritten. Review the latest saved version before choosing whether to append your changes as its successor.</p>
+          <div id="daily-entry-latest" role="region" aria-labelledby="daily-entry-latest-title" tabindex="0" hidden></div>
+          <p class="privacy-copy" id="daily-entry-rebase-status" hidden></p>
+          <div class="quick-actions daily-entry-conflict-actions">
+            <button class="secondary-button" id="daily-entry-review-latest" type="button">Review latest saved version</button>
+            <button class="primary-button" id="daily-entry-accept-latest" type="button" hidden>Continue with my unsaved changes</button>
+          </div>
+        </section>
         <div class="quick-actions daily-entry-actions">
           <button class="text-button" type="button" data-daily-entry-close>Cancel</button>
           <button class="secondary-button" type="submit" data-daily-entry-state="draft">Save draft</button>
@@ -189,7 +241,7 @@ export function bindDailyJournalActions(
   application: JournalApplication,
   snapshot: JournalWorkspaceSnapshot,
   setBackgroundInert: (inert: boolean) => void,
-  refresh: (announcement: string) => Promise<void>,
+  refresh: (announcement: string) => Promise<JournalWorkspaceSnapshot>,
 ): void {
   if (snapshot.provenance !== "local") return;
   const triggers = root.querySelectorAll<HTMLButtonElement>(
@@ -216,6 +268,12 @@ export function bindDailyJournalActions(
       const error = backdrop?.querySelector<HTMLElement>("#daily-entry-error");
       const status = backdrop?.querySelector<HTMLElement>("#daily-entry-status");
       const reconcile = backdrop?.querySelector<HTMLButtonElement>("#daily-entry-reconcile");
+      const conflict = backdrop?.querySelector<HTMLElement>("#daily-entry-conflict");
+      const conflictHeading = backdrop?.querySelector<HTMLElement>("#daily-entry-conflict-title");
+      const latestEvidence = backdrop?.querySelector<HTMLElement>("#daily-entry-latest");
+      const rebaseStatus = backdrop?.querySelector<HTMLElement>("#daily-entry-rebase-status");
+      const reviewLatest = backdrop?.querySelector<HTMLButtonElement>("#daily-entry-review-latest");
+      const acceptLatest = backdrop?.querySelector<HTMLButtonElement>("#daily-entry-accept-latest");
       const heading = backdrop?.querySelector<HTMLElement>("#daily-entry-title");
       if (
         backdrop === null || backdrop === undefined
@@ -224,16 +282,30 @@ export function bindDailyJournalActions(
         || error === null || error === undefined
         || status === null || status === undefined
         || reconcile === null || reconcile === undefined
+        || conflict === null || conflict === undefined
+        || conflictHeading === null || conflictHeading === undefined
+        || latestEvidence === null || latestEvidence === undefined
+        || rebaseStatus === null || rebaseStatus === undefined
+        || reviewLatest === null || reviewLatest === undefined
+        || acceptLatest === null || acceptLatest === undefined
         || heading === null || heading === undefined
       ) {
         backdrop?.remove();
         throw new Error("Daily reflection sheet could not be initialized.");
       }
-      const submissionId = application.createDailyJournalSubmissionId();
+      let submissionId = application.createDailyJournalSubmissionId();
+      let expectedPreviousEntryId = entry?.entryVersionId ?? null;
+      let expectedPreviousVersion = entry?.version ?? 0;
       const initialFingerprint = formFingerprint(form);
       let saving = false;
       let uncertain = false;
       let committed = false;
+      let conflictPending = false;
+      let saveBlocked = false;
+      let reconciledDraftPending = false;
+      let conflictIsoDate: string | null = null;
+      let latestCandidate: DailyJournalPreview | null = null;
+      let attemptedState: "draft" | "completed" = entry?.state ?? "draft";
       setBackgroundInert(true);
       heading.focus({ preventScroll: true });
 
@@ -241,12 +313,18 @@ export function bindDailyJournalActions(
         HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement
       >("input, textarea, button"));
       const initiallyDisabled = new Map(controls.map((control) => [control, control.disabled]));
+      const submitButtons = Array.from(form.querySelectorAll<HTMLButtonElement>(
+        "button[type=submit][data-daily-entry-state]",
+      ));
       const setBusy = (busy: boolean) => {
         saving = busy;
         form.setAttribute("aria-busy", String(busy));
         controls.forEach((control) => {
           control.disabled = busy || (initiallyDisabled.get(control) ?? false);
         });
+        if (!busy && (conflictPending || saveBlocked)) {
+          submitButtons.forEach((button) => { button.disabled = true; });
+        }
       };
       backdrop.querySelectorAll<HTMLElement>("[data-daily-count]").forEach((counter) => {
         const inputId = counter.dataset.dailyCount;
@@ -267,12 +345,18 @@ export function bindDailyJournalActions(
         if (saving || uncertain) return;
         if (
           !force
-          && formFingerprint(form) !== initialFingerprint
+          && (
+            formFingerprint(form) !== initialFingerprint
+            || conflictPending
+            || saveBlocked
+            || reconciledDraftPending
+          )
           && !window.confirm("Discard the unsaved daily reflection?")
         ) return;
         backdrop.remove();
         setBackgroundInert(false);
-        trigger.focus();
+        if (trigger.isConnected) trigger.focus();
+        else root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
       };
 
       backdrop.querySelectorAll<HTMLButtonElement>("[data-daily-entry-close]")
@@ -313,21 +397,100 @@ export function bindDailyJournalActions(
           error.focus();
         }
       });
+      reviewLatest.addEventListener("click", async () => {
+        if (!conflictPending || conflictIsoDate === null || uncertain || saving) return;
+        const preservedValues = new Map([
+          "daily-entry-date",
+          "daily-entry-headline",
+          "daily-entry-note",
+          "daily-entry-emotion",
+          "daily-entry-score",
+          "daily-entry-tags",
+        ].map((id) => [id, inputValue(form, id)]));
+        const restorePreservedValues = () => {
+          preservedValues.forEach((value, id) => {
+            const control = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
+            if (control === null) return;
+            control.value = value;
+            control.dispatchEvent(new Event("input"));
+          });
+        };
+        conflictHeading.focus({ preventScroll: true });
+        setBusy(true);
+        status.textContent = "Loading the latest saved daily reflection for comparison";
+        error.hidden = true;
+        try {
+          const fresh = await refresh(
+            "Journal refreshed; checking the latest saved daily reflection.",
+          );
+          restorePreservedValues();
+          const latest = dailyJournalReconciliationHead(
+            fresh,
+            conflictIsoDate,
+            expectedPreviousEntryId,
+            expectedPreviousVersion,
+          );
+          if (latest === null) {
+            throw new Error("A different newer local head was not available.");
+          }
+          latestEvidence.innerHTML = dailyJournalLatestVersionTemplate(latest);
+          latestEvidence.hidden = false;
+          latestCandidate = latest;
+          reviewLatest.hidden = true;
+          acceptLatest.hidden = false;
+          rebaseStatus.hidden = true;
+          setBusy(false);
+          status.textContent = `Latest saved version ${latest.version} loaded; your unsaved text is unchanged`;
+          latestEvidence.focus({ preventScroll: true });
+        } catch {
+          restorePreservedValues();
+          latestCandidate = null;
+          latestEvidence.replaceChildren();
+          latestEvidence.hidden = true;
+          reviewLatest.hidden = false;
+          acceptLatest.hidden = true;
+          setBusy(false);
+          error.hidden = false;
+          error.textContent = "Hermes could not prove a different newer saved version for this date. Your unsaved changes are still here. Keep this sheet open and retry the review. Cancel discards this draft.";
+          status.textContent = "Latest saved daily reflection could not be verified";
+          error.focus({ preventScroll: true });
+        }
+      });
+      acceptLatest.addEventListener("click", () => {
+        if (!conflictPending || latestCandidate === null || saving || uncertain) return;
+        expectedPreviousEntryId = latestCandidate.entryVersionId;
+        expectedPreviousVersion = latestCandidate.version;
+        submissionId = application.createDailyJournalSubmissionId();
+        conflictPending = false;
+        reconciledDraftPending = true;
+        reviewLatest.hidden = true;
+        acceptLatest.hidden = true;
+        rebaseStatus.hidden = false;
+        rebaseStatus.textContent = `Version ${expectedPreviousVersion} is now the base. Your form still contains your unsaved changes. Choose a save action to append version ${expectedPreviousVersion + 1}.`;
+        error.hidden = true;
+        setBusy(false);
+        status.textContent = `Latest saved version ${expectedPreviousVersion} accepted as the base; choose a save action`;
+        const intendedSubmit = submitButtons.find((button) => (
+          button.dataset.dailyEntryState === attemptedState
+        ));
+        intendedSubmit?.focus({ preventScroll: true });
+      });
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (saving || uncertain) return;
+        if (saving || uncertain || conflictPending || saveBlocked) return;
         const submitter = (event as SubmitEvent).submitter;
         const state = submitter instanceof HTMLButtonElement
           && submitter.dataset.dailyEntryState === "completed"
           ? "completed" as const
           : "draft" as const;
+        attemptedState = state;
         error.hidden = true;
         const scoreText = inputValue(form, "daily-entry-score").trim();
         try {
           const prepared = application.prepareDailyJournal({
             submissionId,
             isoDate: inputValue(form, "daily-entry-date"),
-            expectedPreviousEntryId: entry?.entryVersionId ?? null,
+            expectedPreviousEntryId,
             state,
             title: inputValue(form, "daily-entry-headline"),
             note: inputValue(form, "daily-entry-note"),
@@ -335,6 +498,7 @@ export function bindDailyJournalActions(
             processScorePct: scoreText.length === 0 ? null : Number(scoreText),
             tags: parseDailyJournalTags(inputValue(form, "daily-entry-tags")),
           });
+          sheet.focus({ preventScroll: true });
           setBusy(true);
           status.textContent = "Saving daily reflection on device";
           await application.commitDailyJournalSafely(prepared);
@@ -360,7 +524,8 @@ export function bindDailyJournalActions(
           setBackgroundInert(false);
           root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
         } catch (caught) {
-          if (dailyJournalSaveFailureKind(caught) === "uncertain") {
+          const failureKind = dailyJournalSaveFailureKind(caught);
+          if (failureKind === "uncertain") {
             uncertain = true;
             saving = false;
             form.setAttribute("aria-busy", "false");
@@ -372,6 +537,44 @@ export function bindDailyJournalActions(
               : "Daily reflection save status is uncertain.";
             status.textContent = "Daily reflection save status is uncertain";
             error.focus();
+            return;
+          }
+          if (failureKind === "stale") {
+            conflictPending = true;
+            reconciledDraftPending = false;
+            conflictIsoDate = inputValue(form, "daily-entry-date");
+            latestCandidate = null;
+            latestEvidence.replaceChildren();
+            latestEvidence.hidden = true;
+            rebaseStatus.hidden = true;
+            reviewLatest.hidden = false;
+            acceptLatest.hidden = true;
+            const dateInput = form.querySelector<HTMLInputElement>("#daily-entry-date");
+            if (dateInput !== null) {
+              dateInput.readOnly = true;
+              const descriptions = new Set(
+                (dateInput.getAttribute("aria-describedby") ?? "")
+                  .split(/\s+/u)
+                  .filter((value) => value.length > 0),
+              );
+              descriptions.add("daily-entry-conflict-copy");
+              dateInput.setAttribute("aria-describedby", [...descriptions].join(" "));
+            }
+            conflict.hidden = false;
+            setBusy(false);
+            error.hidden = false;
+            error.textContent = "Hermes rejected this daily reflection because its saved-version state did not match the prepared save. Nothing was overwritten, and your unsaved changes are still here. Review the latest saved version before saving again.";
+            status.textContent = "Daily reflection was not saved because its expected version did not match";
+            error.focus({ preventScroll: true });
+            return;
+          }
+          if (failureKind === "blocked") {
+            saveBlocked = true;
+            setBusy(false);
+            error.hidden = false;
+            error.textContent = "Hermes could not safely apply this prepared save to the current journal. Your unsaved changes are still here. Cancel and reopen the reflection before trying again.";
+            status.textContent = "Daily reflection was not saved; reopen it before retrying";
+            error.focus({ preventScroll: true });
             return;
           }
           setBusy(false);

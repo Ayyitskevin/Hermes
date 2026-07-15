@@ -380,6 +380,17 @@ the content-bound revision, and reject legacy payloads rather than guessing at
 conversion. Demo examples remain fictional and read-only, and the editor states
 that Hermes never places or routes a trade.
 
+Daily Journal Stale-Head Recovery v1 hardens that optimistic boundary without
+changing persistence. A definite `entry_changed` keeps the user's raw form
+values in memory and disables the obsolete submission. Hermes loads one fresh
+local workspace snapshot, proves and displays a different newer head for the
+same date, then requires explicit consent to use it as the base and a separate
+save action to append the successor with a fresh submission identity. It never
+auto-merges or auto-submits; missing, unchanged, or unreadable head evidence
+remains fail-closed. Chromium proves the composed three-version flow through a
+deterministic retained-editor race in one application/store, but not native
+multi-scene, WKWebView lifecycle, SQLCipher, or device accessibility.
+
 The fifth increment is Trade Browser Scope v1. It is a derived-only projection
 over stable ledger account IDs and exact calendar contributions: all accounts
 or one account, optional inclusive workspace-local allocation/activity dates,
@@ -573,13 +584,17 @@ browser composition and stale-selection evidence across existing C-B/Daily
 Journal boundaries without changing their versioned contracts. Startup
 Recovery v1 adds a semantic opening/failure path, application teardown before
 full-document retry, privacy-safe rendered copy, and deterministic Chromium
-accessibility evidence. The Linux CI handoff now verifies the ignored iOS
+accessibility evidence. Daily Journal Stale-Head Recovery v1 adds
+preserve-review-consent-resubmit behavior at the existing optimistic head
+boundary. The Linux CI handoff now verifies the ignored iOS
 public copy byte-for-byte and validates selected generated-registration fields
-while explicitly leaving all native rows NOT RUN. Neither reliability milestone changes a schema,
-migration, formula, archive, or financial definition. Native restore
+while explicitly leaving all native rows NOT RUN. None of these reliability
+milestones changes a schema, migration, formula, archive, or financial
+definition. Native restore
 acceptance on
 a Mac/iPhone, v3→v4 retained-data migration and Daily Journal lifecycle/device
-acceptance, verified Delete All Data, the remaining reports, and later
+acceptance, exact-command uncertain-save recovery, verified Delete All Data,
+the remaining reports, and later
 attachment round-trip remain open—not broker connectivity, hosted sync, Android,
 recurring AI, or legacy cockpit extraction.
 

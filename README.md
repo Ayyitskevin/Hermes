@@ -90,6 +90,12 @@ submission-ready product:
   days, edit only through an optimistic successor version, and optionally add a
   headline, note, emotion, tags, and a clearly self-reported process score that
   never enters performance or Plan Check analytics.
+- Daily Journal Stale-Head Recovery v1 keeps the unsaved form intact after a
+  deterministic optimistic conflict, blocks the obsolete save, loads and shows
+  the newer local head, and requires separate consent to use it as the base
+  before another explicit save can append a successor. It never auto-merges or
+  overwrites either version. This is a browser-tested retained-editor race in
+  one application/store, not native multi-scene or lifecycle evidence.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

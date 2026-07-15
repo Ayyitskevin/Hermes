@@ -170,6 +170,25 @@ Demo entries are fictional and read-only. The daily process score is descriptive
 self-report evidence only; performance, Plan Check, and Setup Breakdown do not
 consume it.
 
+The editor treats a deterministic `entry_changed` separately from uncertain
+persistence. It retains the raw date/headline/note/emotion/score/tag form,
+locks the conflicted date, disables both obsolete save actions, and reloads one
+workspace snapshot. Rebase becomes available only when that same snapshot is
+local and proves a different newer head for the exact date; all saved authored
+content plus date, version, and state are escaped and shown read-only
+while the user's form remains unchanged. Only a separate
+**Continue with my unsaved changes** action moves the local optimistic
+base and rotates the submission ID, and a later explicit draft/completed save
+performs the append. A reload error, absent/unchanged head, or second race keeps
+the draft visible and saving blocked or re-enters the same flow. No automatic
+merge, null-head fallback, overwrite, or commit occurs during reconciliation.
+
+Open UI debt remains separate from deterministic stale-head recovery: after an
+unknown commit outcome, the current reload action treats any readable ledger as
+reconciliation evidence. A readable empty ledger does not prove the prepared
+revision was saved, so exact-command retry or equivalent receipt proof is still
+required before that action may safely close the only in-memory draft.
+
 ## Projection semantics
 
 Executions sort by microsecond timestamp, an immutable workspace-global ledger
@@ -405,7 +424,14 @@ dates/version chains, submission idempotency, optimistic conflicts, atomic
 session/SQLite commits, lost-response reconciliation, v3→v4 migration,
 content-bound native/browser restore validation, trading/no-trade display,
 explicit draft/completed saves, demo isolation, focus/busy/error behavior, and
-320px/200% browser reflow. Browser composition additionally covers a real
+320px/200% browser reflow. Stale-head UI coverage composes two production
+editor instances in one browser application/store: version 2 makes version 1's
+command stale, all local inputs remain intact and blocked, the newer head is
+displayed before consent, and the next explicit save exports exactly three
+versions, one head, and three receipts while offline. A one-shot render failure
+also leaves the writing intact, evidence/consent hidden, and saves blocked.
+The comparison covers focus, inert background, 44-point actions, long tokens,
+and 320px/200% reflow. Browser composition additionally covers a real
 Daily Journal draft through export, offline empty-session restore, continued
 immutable writing, re-export, second restore, exact version/head/submission
 evidence, post-restore focus, and asynchronous file-replacement invalidation.
