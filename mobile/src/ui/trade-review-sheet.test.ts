@@ -8,6 +8,8 @@ import { DEMO_WORKSPACE } from "../data/demo";
 import {
   parseReviewList,
   reviewTradeAction,
+  tradeReviewLatestVersionTemplate,
+  tradeReviewReconciliationHead,
   tradeReviewSaveFailureKind,
   tradeReviewSheetTemplate,
 } from "./trade-review-sheet";
@@ -78,9 +80,124 @@ describe("trade review sheet", () => {
     expect(html).toContain('id="trade-review-reconcile"');
     expect(html).toMatch(/id="trade-review-reconcile"[^>]*hidden/u);
     expect(html).toContain("Retry this exact save");
+    expect(html).toContain('id="trade-review-conflict"');
+    expect(html).toContain("Hermes does not merge fields");
+    expect(html).toContain('id="trade-review-status" role="status"');
     expect(html).toMatch(/class="settings-sheet trade-review-sheet"[^>]*tabindex="-1"/u);
     expect(html).not.toContain("Reload journal and reconcile");
     expect(html).not.toMatch(/place order|execute trade|send order/iu);
+  });
+
+  it("renders complete escaped evidence for one coherent saved review", () => {
+    const latest = {
+      ...trade(),
+      accountLabel: "<Primary & account>",
+      sessionLabel: "<Morning>",
+      setup: "<script>setup</script>",
+      hasClassifiedSetup: true,
+      note: "<img src=x onerror=alert(1)>",
+      mistakes: ["<mistake>"],
+      emotion: "<emotion>",
+      tags: ["<tag>"],
+      playbook: "<playbook>",
+      rules: [{
+        ruleId: "rule-1",
+        text: "<rule>",
+        outcome: "broken" as const,
+      }],
+      initialRisk: { amount: "<100>", currency: "<USD>" },
+      plannedStop: "<95>",
+      reviewStatus: "completed" as const,
+      reviewId: "opaque-review-id-should-not-render",
+      reviewVersion: 3,
+    } satisfies TradePreview;
+
+    const html = tradeReviewLatestVersionTemplate(latest);
+
+    expect(html).toContain('data-trade-review-latest-version="3"');
+    expect(html).toContain("Version 3 · completed");
+    expect(html).toContain("&lt;Primary &amp; account&gt;");
+    expect(html).toContain("&lt;script&gt;setup&lt;/script&gt;");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).toContain("&lt;rule&gt; — Broken");
+    expect(html).toContain("&lt;100&gt; &lt;USD&gt;");
+    expect(html).toContain("<div><dt>Execution allocations</dt><dd>1</dd></div>");
+    expect(html).toContain("<div><dt>Result R</dt><dd>1.98R</dd></div>");
+    expect(html).toContain("<div><dt>Percent return</dt><dd>9.9%</dd></div>");
+    expect(html).not.toContain("opaque-review-id-should-not-render");
+    expect(html).not.toContain("<script>setup</script>");
+    expect(html).not.toContain("<img src=x");
+  });
+
+  it("selects only the sole coherent different newer local review head", () => {
+    const latest = trade();
+    const workspace = { ...localWorkspace(), trades: [latest] };
+
+    expect(tradeReviewReconciliationHead(
+      workspace,
+      latest.tradeSubjectId,
+      "review-previous",
+      1,
+    )).toBe(latest);
+    expect(tradeReviewReconciliationHead(
+      { ...workspace, provenance: "demo" },
+      latest.tradeSubjectId,
+      "review-previous",
+      1,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      workspace,
+      latest.tradeSubjectId,
+      latest.reviewId,
+      1,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      workspace,
+      latest.tradeSubjectId,
+      "review-previous",
+      latest.reviewVersion ?? 0,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      { ...workspace, trades: [] },
+      latest.tradeSubjectId,
+      "review-previous",
+      1,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      { ...workspace, trades: [latest, { ...latest }] },
+      latest.tradeSubjectId,
+      "review-previous",
+      1,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      {
+        ...workspace,
+        trades: [{
+          ...latest,
+          reviewStatus: "pending",
+          reviewId: null,
+          reviewVersion: null,
+        }],
+      },
+      latest.tradeSubjectId,
+      "review-previous",
+      1,
+    )).toBeNull();
+    expect(tradeReviewReconciliationHead(
+      workspace,
+      latest.tradeSubjectId,
+      "review-previous",
+      -1,
+    )).toBeNull();
+  });
+
+  it("refuses to render comparison evidence without a coherent saved identity", () => {
+    expect(() => tradeReviewLatestVersionTemplate({
+      ...trade(),
+      reviewStatus: "pending",
+      reviewId: null,
+      reviewVersion: null,
+    })).toThrow(/coherent saved version/u);
   });
 
   it("keeps saved Unclassified text editable while blanking an absent setup", () => {

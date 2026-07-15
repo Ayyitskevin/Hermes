@@ -39,6 +39,18 @@ interface ReviewArchiveData {
   ])[];
 }
 
+interface PreparedReviewObservation {
+  readonly submissionId: string;
+  readonly expectedPreviousReviewId: string | null;
+  readonly note: string;
+  readonly revision: string;
+}
+
+interface PreparedReviewProbe {
+  readonly commands: readonly PreparedReviewObservation[];
+  readonly randomIds: readonly string[];
+}
+
 function logExternalRequests(page: Page): string[] {
   const requests: string[] = [];
   page.on("request", (request) => {
@@ -71,6 +83,17 @@ function reviewArchiveData(archive: JournalArchive): ReviewArchiveData {
 async function installPreparedReviewCounters(page: Page): Promise<void> {
   await page.evaluate(() => {
     const root = document.documentElement;
+    const observed = window as typeof window & {
+      __hermesPreparedReviews?: {
+        submissionId: string;
+        expectedPreviousReviewId: string | null;
+        note: string;
+        revision: string;
+      }[];
+      __hermesReviewRandomIds?: string[];
+    };
+    observed.__hermesPreparedReviews = [];
+    observed.__hermesReviewRandomIds = [];
     root.dataset.reviewPreparedValueReads = "0";
     root.dataset.reviewRandomIdCalls = "0";
     const incrementValueReads = () => {
@@ -107,16 +130,85 @@ async function installPreparedReviewCounters(page: Page): Promise<void> {
     instrumentValue(HTMLInputElement.prototype, "Input");
     instrumentValue(HTMLTextAreaElement.prototype, "Textarea");
     instrumentValue(HTMLSelectElement.prototype, "Select");
+    const originalFreeze = Object.freeze.bind(Object);
+    Object.defineProperty(Object, "freeze", {
+      configurable: true,
+      writable: true,
+      value: (candidate: object) => {
+        if (typeof candidate === "object" && candidate !== null) {
+          const record = candidate as Record<string, unknown>;
+          if (
+            typeof record.submissionId === "string"
+            && typeof record.tradeSubjectId === "string"
+            && Object.prototype.hasOwnProperty.call(record, "expectedPreviousReviewId")
+            && (
+              record.expectedPreviousReviewId === null
+              || typeof record.expectedPreviousReviewId === "string"
+            )
+            && typeof record.note === "string"
+            && typeof record.revision === "string"
+            && record.resultRVersion === 1
+            && record.percentReturnVersion === 1
+          ) {
+            observed.__hermesPreparedReviews?.push({
+              submissionId: record.submissionId,
+              expectedPreviousReviewId: record.expectedPreviousReviewId,
+              note: record.note,
+              revision: record.revision,
+            });
+          }
+        }
+        return originalFreeze(candidate);
+      },
+    });
     const originalGetRandomValues = crypto.getRandomValues.bind(crypto);
     Object.defineProperty(crypto, "getRandomValues", {
       configurable: true,
       value: (array: Uint8Array) => {
         const calls = Number(root.dataset.reviewRandomIdCalls ?? "0") + 1;
         root.dataset.reviewRandomIdCalls = String(calls);
-        return originalGetRandomValues(array);
+        const result = originalGetRandomValues(array);
+        observed.__hermesReviewRandomIds?.push(
+          Array.from(result, (value) => value.toString(16).padStart(2, "0")).join(""),
+        );
+        return result;
       },
     });
   });
+}
+
+async function resetPreparedReviewProbe(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const observed = window as typeof window & {
+      __hermesPreparedReviews?: PreparedReviewObservation[];
+      __hermesReviewRandomIds?: string[];
+    };
+    observed.__hermesPreparedReviews = [];
+    observed.__hermesReviewRandomIds = [];
+    document.documentElement.dataset.reviewPreparedValueReads = "0";
+    document.documentElement.dataset.reviewRandomIdCalls = "0";
+  });
+}
+
+async function preparedReviewProbe(page: Page): Promise<PreparedReviewProbe> {
+  const observed = await page.evaluate(() => {
+    const probe = window as typeof window & {
+      __hermesPreparedReviews?: PreparedReviewObservation[];
+      __hermesReviewRandomIds?: string[];
+    };
+    return {
+      commands: probe.__hermesPreparedReviews ?? [],
+      randomIds: probe.__hermesReviewRandomIds ?? [],
+    };
+  });
+  const unique = new Map<string, PreparedReviewObservation>();
+  observed.commands.forEach((command) => {
+    unique.set(`${command.submissionId}:${command.revision}`, command);
+  });
+  return {
+    commands: [...unique.values()],
+    randomIds: observed.randomIds,
+  };
 }
 
 async function preparedReviewCounters(
@@ -607,26 +699,63 @@ test("an uncertain trade review replays only its exact frozen batch until commit
   expect(externalRequests).toEqual([]);
 });
 
-test("an exact review retry preserves local fields and blocks obsolete submits when another head wins", async ({ page, context }) => {
+test("a stale review proves exact newer heads and appends the complete local form only after each consent", async ({ page, context }) => {
   const externalRequests = logExternalRequests(page);
   await importTwoClosedTrades(page);
   await context.setOffline(true);
   await page.getByRole("button", { name: "Trades", exact: true }).click();
+
   let dialog = await openTradeReview(page, "AAPL");
+  await dialog.locator("#review-setup").fill("Original saved setup");
+  await dialog.locator("#review-tags").fill("Original");
+  await dialog.locator("#review-note").fill("Original immutable review version.");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await installPreparedReviewCounters(page);
+  dialog = await openTradeReview(page, "AAPL");
   const localDraft = {
     setup: "Preserve this local setup",
     emotion: "Focused",
+    mistakes: "Entered early, Chased",
     tags: "Local only, Do not overwrite",
-    rule: "Keep the original rule",
+    risk: "125.50",
+    stop: "94.25",
+    playbook: "Local recovery plan",
+    firstRule: "Keep the original rule",
     note: "This raw review must survive a deterministic newer head.",
+  };
+  const expectCompleteRawLocalDraft = async (target: Locator) => {
+    await expect(target.locator("#review-setup")).toHaveValue(localDraft.setup);
+    await expect(target.locator("#review-emotion")).toHaveValue(localDraft.emotion);
+    await expect(target.locator("#review-mistakes")).toHaveValue(localDraft.mistakes);
+    await expect(target.locator("#review-tags")).toHaveValue(localDraft.tags);
+    await expect(target.locator("#review-risk")).toHaveValue(localDraft.risk);
+    await expect(target.locator("#review-risk-currency")).toHaveValue("USD");
+    await expect(target.locator("#review-stop")).toHaveValue(localDraft.stop);
+    await expect(target.locator("#review-playbook")).toHaveValue(localDraft.playbook);
+    await expect(target.locator('input[name="review-rule-name"]')).toHaveCount(2);
+    await expect(target.locator('input[name="review-rule-name"]').nth(0))
+      .toHaveValue(localDraft.firstRule);
+    await expect(target.locator('select[name="review-rule-outcome"]').nth(0))
+      .toHaveValue("broken");
+    await expect(target.locator('input[name="review-rule-name"]').nth(1)).toHaveValue("");
+    await expect(target.locator('select[name="review-rule-outcome"]').nth(1))
+      .toHaveValue("unreviewed");
+    await expect(target.locator("#review-note")).toHaveValue(localDraft.note);
   };
   await dialog.locator("#review-setup").fill(localDraft.setup);
   await dialog.locator("#review-emotion").fill(localDraft.emotion);
+  await dialog.locator("#review-mistakes").fill(localDraft.mistakes);
   await dialog.locator("#review-tags").fill(localDraft.tags);
-  await dialog.locator("#review-playbook").fill("Local recovery plan");
+  await dialog.locator("#review-risk").fill(localDraft.risk);
+  await dialog.locator("#review-risk-currency").selectOption("USD");
+  await dialog.locator("#review-stop").fill(localDraft.stop);
+  await dialog.locator("#review-playbook").fill(localDraft.playbook);
   await dialog.getByRole("button", { name: "Add rule" }).click();
-  await dialog.locator('input[name="review-rule-name"]').last().fill(localDraft.rule);
+  await dialog.locator('input[name="review-rule-name"]').last().fill(localDraft.firstRule);
   await dialog.locator('select[name="review-rule-outcome"]').last().selectOption("broken");
+  await dialog.getByRole("button", { name: "Add rule" }).click();
   await dialog.locator("#review-note").fill(localDraft.note);
 
   const privateDetail = "/private/journals/kevin.db pre-mutation review failure";
@@ -660,6 +789,17 @@ test("an exact review retry preserves local fields and blocks obsolete submits w
   await expect.poll(() => page.evaluate(() => (
     document.documentElement.dataset.reviewClockFailures
   ))).toBe("2");
+  const initialPreparedProbe = await preparedReviewProbe(page);
+  const initialPreparedCommands = initialPreparedProbe.commands.filter((command) => (
+    command.note === localDraft.note
+  ));
+  expect(initialPreparedCommands).toHaveLength(1);
+  const initialPrepared = initialPreparedCommands[0];
+  if (initialPrepared === undefined) {
+    throw new Error("Expected the original retained prepared review.");
+  }
+  expect(initialPreparedProbe.randomIds).toHaveLength(2);
+  expect(initialPrepared.submissionId).toBe(initialPreparedProbe.randomIds[0]);
 
   const uncertainBackdrop = await page.locator("[data-trade-review-backdrop]")
     .elementHandle();
@@ -674,15 +814,33 @@ test("an exact review retry preserves local fields and blocks obsolete submits w
   });
 
   const competingDialog = await openTradeReview(page, "AAPL");
-  await competingDialog.locator("#review-setup").fill("Competing saved setup");
+  const competingVersionTwo = {
+    setup: "Competing <saved> setup",
+    emotion: "Calm",
+    mistakes: "Ignored volume",
+    tags: "Competing, Saved elsewhere",
+    risk: "200",
+    stop: "92",
+    playbook: "Competing plan",
+    rule: "Wait for <volume>",
+    note: "Another editor committed the completed second immutable review.",
+  };
+  await competingDialog.locator("#review-setup").fill(competingVersionTwo.setup);
   await competingDialog.locator("#review-emotion").fill("Calm");
-  await competingDialog.locator("#review-tags").fill("Competing");
-  await competingDialog.locator("#review-note").fill(
-    "Another editor committed the first immutable review head.",
-  );
-  await competingDialog.getByRole("button", { name: "Save draft" }).click();
+  await competingDialog.locator("#review-mistakes").fill(competingVersionTwo.mistakes);
+  await competingDialog.locator("#review-tags").fill(competingVersionTwo.tags);
+  await competingDialog.locator("#review-risk").fill(competingVersionTwo.risk);
+  await competingDialog.locator("#review-stop").fill(competingVersionTwo.stop);
+  await competingDialog.locator("#review-playbook").fill(competingVersionTwo.playbook);
+  await competingDialog.getByRole("button", { name: "Add rule" }).click();
+  await competingDialog.locator('input[name="review-rule-name"]')
+    .last().fill(competingVersionTwo.rule);
+  await competingDialog.locator('select[name="review-rule-outcome"]')
+    .last().selectOption("followed");
+  await competingDialog.locator("#review-note").fill(competingVersionTwo.note);
+  await competingDialog.getByRole("button", { name: "Mark reviewed" }).click();
   await expect(competingDialog).toHaveCount(0);
-  await installPreparedReviewCounters(page);
+  await resetPreparedReviewProbe(page);
 
   await uncertainBackdrop.evaluate((element) => {
     const root = document.querySelector("#app");
@@ -700,28 +858,36 @@ test("an exact review retry preserves local fields and blocks obsolete submits w
   await dialog.getByRole("button", { name: "Retry this exact save" }).click();
   await expect(error).toContainText("Nothing was overwritten");
   await expect(error).toContainText("unsaved changes are still here");
-  await expect(error).toContainText("reopening this trade");
+  await expect(error).toContainText("Review the latest saved version");
   await expect(error).not.toContainText(privateDetail);
-  await expect(error).not.toContainText("changed on another screen");
   await expect(error).toBeFocused();
   await expect(dialog.locator("#review-setup")).toHaveValue(localDraft.setup);
   await expect(dialog.locator("#review-emotion")).toHaveValue(localDraft.emotion);
+  await expect(dialog.locator("#review-mistakes")).toHaveValue(localDraft.mistakes);
   await expect(dialog.locator("#review-tags")).toHaveValue(localDraft.tags);
-  await expect(dialog.locator('input[name="review-rule-name"]')).toHaveValue(localDraft.rule);
-  await expect(dialog.locator('select[name="review-rule-outcome"]')).toHaveValue("broken");
-  await expect(dialog.locator('input[name="review-rule-name"]')).toBeEnabled();
-  await expect(dialog.locator('select[name="review-rule-outcome"]')).toBeEnabled();
-  await expect(dialog.locator("[data-review-rule-remove]")).toBeEnabled();
+  await expect(dialog.locator("#review-risk")).toHaveValue(localDraft.risk);
+  await expect(dialog.locator("#review-risk-currency")).toHaveValue("USD");
+  await expect(dialog.locator("#review-stop")).toHaveValue(localDraft.stop);
+  await expect(dialog.locator("#review-playbook")).toHaveValue(localDraft.playbook);
+  await expect(dialog.locator('input[name="review-rule-name"]')).toHaveCount(2);
+  await expect(dialog.locator('input[name="review-rule-name"]').nth(0))
+    .toHaveValue(localDraft.firstRule);
+  await expect(dialog.locator('select[name="review-rule-outcome"]').nth(0))
+    .toHaveValue("broken");
+  await expect(dialog.locator('input[name="review-rule-name"]').nth(1)).toHaveValue("");
+  await expect(dialog.locator('select[name="review-rule-outcome"]').nth(1))
+    .toHaveValue("unreviewed");
+  for (const removeRule of await dialog.locator("[data-review-rule-remove]").all()) {
+    await expect(removeRule).toBeEnabled();
+  }
   await expect(dialog.locator("#review-note")).toHaveValue(localDraft.note);
   await expect(dialog.getByRole("button", { name: "Save draft" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Mark reviewed" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Close trade review" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Retry this exact save" })).toBeHidden();
-  const refreshBeforeReopen = dialog.getByRole("button", {
-    name: "Refresh journal before reopening",
-  });
-  await expect(refreshBeforeReopen).toBeEnabled();
+  const reviewLatest = dialog.getByRole("button", { name: "Review latest saved version" });
+  await expect(reviewLatest).toBeEnabled();
   await dialog.press("Escape");
   await expect(dialog).toBeVisible();
   await page.locator("[data-trade-review-backdrop]").dispatchEvent("click");
@@ -731,45 +897,296 @@ test("an exact review retry preserves local fields and blocks obsolete submits w
     randomIds: "0",
   });
 
-  await refreshBeforeReopen.click();
-  await expect(refreshBeforeReopen).toBeHidden();
-  await expect(error).toContainText("The journal is refreshed");
-  await expect(error).toContainText("Cancel discards this draft");
-  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeEnabled();
-  await expect(dialog.getByRole("button", { name: "Close trade review" })).toBeEnabled();
+  await page.evaluate(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        if (this.id === "screen") {
+          Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+          throw new Error("Injected one-shot trade review refresh failure.");
+        }
+        setter.call(this, value);
+      },
+    });
+  });
+  await reviewLatest.click();
+  await expect(error).toContainText("could not prove one different newer saved review");
+  await expect(error).not.toContainText("Injected one-shot");
+  await expect(error).toBeFocused();
+  await expect(dialog.locator("#trade-review-latest")).toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Continue with my unsaved review" }))
+    .toBeHidden();
+  await expect(reviewLatest).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Close trade review" })).toBeDisabled();
   await expect(dialog.locator("#review-setup")).toHaveValue(localDraft.setup);
   await expect(dialog.locator("#review-emotion")).toHaveValue(localDraft.emotion);
+  await expect(dialog.locator("#review-mistakes")).toHaveValue(localDraft.mistakes);
   await expect(dialog.locator("#review-tags")).toHaveValue(localDraft.tags);
+  await expect(dialog.locator("#review-risk")).toHaveValue(localDraft.risk);
+  await expect(dialog.locator("#review-stop")).toHaveValue(localDraft.stop);
+  await expect(dialog.locator("#review-playbook")).toHaveValue(localDraft.playbook);
   await expect(dialog.locator("#review-note")).toHaveValue(localDraft.note);
-  expect(await preparedReviewCounters(page)).toEqual({
-    valueReads: "0",
-    randomIds: "0",
+  const failedProofCounters = await preparedReviewCounters(page);
+  expect(Number(failedProofCounters.valueReads)).toBeGreaterThan(0);
+  expect(failedProofCounters.randomIds).toBe("0");
+
+  await reviewLatest.click();
+  const latest = dialog.locator("#trade-review-latest");
+  const acceptLatest = dialog.getByRole("button", { name: "Continue with my unsaved review" });
+  await expect(latest).toBeFocused();
+  await expect(latest).toHaveCSS("outline-style", "solid");
+  await expect(latest).toHaveCSS("outline-width", "2px");
+  await expect(latest).toContainText("Version 2 · completed");
+  await expect(latest).toContainText("Primary brokerage");
+  await expect(latest).toContainText(competingVersionTwo.setup);
+  await expect(latest).toContainText(competingVersionTwo.note);
+  await expect(latest).toContainText(competingVersionTwo.mistakes);
+  await expect(latest).toContainText("Competing, Saved elsewhere");
+  await expect(latest).toContainText(competingVersionTwo.playbook);
+  await expect(latest).toContainText(competingVersionTwo.rule);
+  await expect(latest).toContainText("Followed");
+  await expect(latest).toContainText("200 USD");
+  await expect(latest).toContainText("92");
+  const latestValue = (label: string) => latest.locator("dt", {
+    hasText: label,
+  }).locator("xpath=following-sibling::dd");
+  await expect(latestValue("Execution allocations")).toHaveText("2");
+  await expect(latestValue("Result R")).toHaveText("0.05R");
+  await expect(latestValue("Percent return")).toHaveText("10%");
+  const versionTwoEvidenceMarkup = await latest.evaluate((element) => element.innerHTML);
+  expect(versionTwoEvidenceMarkup).not.toContain("session-review:");
+  await expect(dialog.locator("#review-setup")).toHaveValue(localDraft.setup);
+  await expect(dialog.locator("#review-emotion")).toHaveValue(localDraft.emotion);
+  await expect(dialog.locator("#review-mistakes")).toHaveValue(localDraft.mistakes);
+  await expect(dialog.locator("#review-tags")).toHaveValue(localDraft.tags);
+  await expect(dialog.locator("#review-risk")).toHaveValue(localDraft.risk);
+  await expect(dialog.locator("#review-risk-currency")).toHaveValue("USD");
+  await expect(dialog.locator("#review-stop")).toHaveValue(localDraft.stop);
+  await expect(dialog.locator("#review-playbook")).toHaveValue(localDraft.playbook);
+  await expect(dialog.locator('input[name="review-rule-name"]')).toHaveCount(2);
+  await expect(dialog.locator('input[name="review-rule-name"]').nth(0))
+    .toHaveValue(localDraft.firstRule);
+  await expect(dialog.locator('select[name="review-rule-outcome"]').nth(0))
+    .toHaveValue("broken");
+  await expect(dialog.locator('input[name="review-rule-name"]').nth(1)).toHaveValue("");
+  await expect(dialog.locator('select[name="review-rule-outcome"]').nth(1))
+    .toHaveValue("unreviewed");
+  await expect(dialog.locator("#review-note")).toHaveValue(localDraft.note);
+  await expect(dialog.getByRole("button", { name: "Mark reviewed" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Close trade review" })).toBeEnabled();
+  await page.keyboard.press("Tab");
+  await expect(acceptLatest).toBeFocused();
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  const conflictDimensions = await dialog.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+  }));
+  expect(conflictDimensions.scrollWidth, JSON.stringify(conflictDimensions))
+    .toBeLessThanOrEqual(conflictDimensions.clientWidth);
+  expect(conflictDimensions.documentOverflow, JSON.stringify(conflictDimensions))
+    .toBeLessThanOrEqual(1);
+  for (const control of await dialog.locator("#trade-review-conflict button:visible").all()) {
+    const box = await control.boundingBox();
+    expect(box, "visible conflict action should have a layout box").not.toBeNull();
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.testTextScale;
   });
 
-  const confirmationPromise = page.waitForEvent("dialog");
-  const closeAttempt = dialog.getByRole("button", { name: "Cancel" }).click();
-  const confirmation = await confirmationPromise;
-  expect(confirmation.message()).toBe("Discard the unsaved trade review?");
-  await confirmation.accept();
-  await closeAttempt;
+  const provedBackdrop = await page.locator("[data-trade-review-backdrop]").elementHandle();
+  if (provedBackdrop === null) throw new Error("Expected the proved stale review editor.");
+  await provedBackdrop.evaluate((element) => {
+    element.remove();
+    document.body.classList.remove("modal-open");
+    document.querySelectorAll(".skip-link, .topbar, #screen, .tabbar").forEach((background) => {
+      background.removeAttribute("inert");
+      background.removeAttribute("aria-hidden");
+    });
+  });
+
+  const competingVersionThree = {
+    setup: "Third saved setup",
+    emotion: "Patient",
+    tags: "Third writer",
+    note: "A third editor advanced the completed head after version two was displayed.",
+  };
+  const thirdDialog = await openTradeReview(page, "AAPL");
+  await thirdDialog.locator("#review-setup").fill(competingVersionThree.setup);
+  await thirdDialog.locator("#review-emotion").fill(competingVersionThree.emotion);
+  await thirdDialog.locator("#review-tags").fill(competingVersionThree.tags);
+  await thirdDialog.locator("#review-note").fill(competingVersionThree.note);
+  await thirdDialog.getByRole("button", { name: "Save review changes" }).click();
+  await expect(thirdDialog).toHaveCount(0);
+  await resetPreparedReviewProbe(page);
+
+  await provedBackdrop.evaluate((element) => {
+    const root = document.querySelector("#app");
+    if (root === null) throw new Error("Hermes root is unavailable.");
+    root.append(element);
+    document.body.classList.add("modal-open");
+    document.querySelectorAll(".skip-link, .topbar, #screen, .tabbar").forEach((background) => {
+      background.setAttribute("inert", "");
+      background.setAttribute("aria-hidden", "true");
+    });
+  });
+  dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await expect(dialog.locator("#trade-review-latest")).toContainText("Version 2 · completed");
+  await acceptLatest.click();
+  expect(await preparedReviewCounters(page)).toEqual({
+    valueReads: "0",
+    randomIds: "1",
+  });
+  await expect(dialog.locator("#trade-review-rebase-status")).toContainText(
+    "Version 2 is now the base",
+  );
+  await expect(dialog.locator("#trade-review-rebase-status")).toContainText(
+    "not a field merge",
+  );
+  await expect(dialog.locator("#trade-review-rebase-status")).toContainText(
+    "successor will remain completed",
+  );
+  await expect(dialog.getByRole("button", { name: "Save draft" })).toBeHidden();
+  const saveCompleted = dialog.getByRole("button", { name: "Save review changes" });
+  await expect(saveCompleted).toBeEnabled();
+  await expect(saveCompleted).toBeFocused();
+
+  await saveCompleted.click();
+  await expect(error).toContainText("Nothing was overwritten");
+  await expect(error).toContainText("Review the latest saved version");
+  await expect(dialog.locator("#trade-review-latest")).toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Continue with my unsaved review" }))
+    .toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Review latest saved version" }))
+    .toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Close trade review" })).toBeDisabled();
+  expect((await preparedReviewCounters(page)).randomIds).toBe("2");
+  await expectCompleteRawLocalDraft(dialog);
+  const firstRebasedProbe = await preparedReviewProbe(page);
+  expect(firstRebasedProbe.randomIds).toHaveLength(2);
+  const firstRebasedCommands = firstRebasedProbe.commands.filter((command) => (
+    command.note === localDraft.note
+  ));
+  expect(firstRebasedCommands).toHaveLength(1);
+  const firstRebasedPrepared = firstRebasedCommands[0];
+  if (firstRebasedPrepared === undefined) {
+    throw new Error("Expected the first consented prepared review.");
+  }
+  expect(firstRebasedPrepared.submissionId).toBe(firstRebasedProbe.randomIds[0]);
+
+  await dialog.getByRole("button", { name: "Review latest saved version" }).click();
+  await expect(latest).toBeFocused();
+  await expect(latest).toContainText("Version 3 · completed");
+  await expect(latest).toContainText(competingVersionThree.setup);
+  await expect(latest).toContainText(competingVersionThree.note);
+  await expectCompleteRawLocalDraft(dialog);
+  const versionThreeEvidenceMarkup = await latest.evaluate((element) => element.innerHTML);
+  expect(versionThreeEvidenceMarkup).not.toContain("session-review:");
+  expect((await preparedReviewCounters(page)).randomIds).toBe("2");
+  await dialog.getByRole("button", { name: "Continue with my unsaved review" }).click();
+  expect((await preparedReviewCounters(page)).randomIds).toBe("3");
+  await expect(dialog.locator("#trade-review-rebase-status")).toContainText(
+    "Version 3 is now the base",
+  );
+  await expect(saveCompleted).toBeFocused();
+  await saveCompleted.click();
   await expect(dialog).toHaveCount(0);
+  expect((await preparedReviewCounters(page)).randomIds).toBe("4");
+  const finalPreparedProbe = await preparedReviewProbe(page);
+  expect(finalPreparedProbe.randomIds).toHaveLength(4);
+  const finalLocalCommands = finalPreparedProbe.commands.filter((command) => (
+    command.note === localDraft.note
+  ));
+  expect(finalLocalCommands).toHaveLength(2);
+  const finalPrepared = finalLocalCommands.find((command) => (
+    command.submissionId === finalPreparedProbe.randomIds[2]
+  ));
+  if (finalPrepared === undefined) {
+    throw new Error("Expected the second consented prepared review.");
+  }
 
   const data = reviewArchiveData(await exportJournal(page));
-  expect(data.reviewVersions).toEqual([
-    expect.objectContaining({
-      version: 1,
-      state: "draft",
-      note: "Another editor committed the first immutable review head.",
-      setup: "Competing saved setup",
-      tags: ["Competing"],
-    }),
-  ]);
-  const competing = data.reviewVersions[0];
-  if (competing === undefined) throw new Error("Expected one competing review.");
-  expect(data.reviewHeads).toEqual([[competing.tradeSubjectId, competing.id]]);
-  expect(data.reviewSubmissions).toEqual([
-    [expect.any(String), { reviewId: competing.id, revision: expect.any(String) }],
-  ]);
+  const versions = [...data.reviewVersions].sort((left, right) => left.version - right.version);
+  expect(versions).toHaveLength(4);
+  expect(versions[0]).toMatchObject({
+    version: 1,
+    state: "draft",
+    note: "Original immutable review version.",
+    setup: "Original saved setup",
+    tags: ["Original"],
+  });
+  expect(versions[1]).toMatchObject({
+    version: 2,
+    state: "completed",
+    note: competingVersionTwo.note,
+    setup: competingVersionTwo.setup,
+    mistakes: ["Ignored volume"],
+    emotion: "Calm",
+    tags: ["Competing", "Saved elsewhere"],
+    playbookName: competingVersionTwo.playbook,
+    rules: [expect.objectContaining({
+      text: competingVersionTwo.rule,
+      outcome: "followed",
+    })],
+    initialRisk: { amount: competingVersionTwo.risk, currency: "USD" },
+    plannedStop: competingVersionTwo.stop,
+  });
+  expect(versions[2]).toMatchObject({
+    version: 3,
+    state: "completed",
+    note: competingVersionThree.note,
+    setup: competingVersionThree.setup,
+    emotion: competingVersionThree.emotion,
+    tags: ["Third writer"],
+  });
+  expect(versions[3]).toMatchObject({
+    version: 4,
+    state: "completed",
+    note: localDraft.note,
+    setup: localDraft.setup,
+    mistakes: ["Entered early", "Chased"],
+    emotion: localDraft.emotion,
+    tags: ["Local only", "Do not overwrite"],
+    playbookName: localDraft.playbook,
+    rules: [expect.objectContaining({
+      text: localDraft.firstRule,
+      outcome: "broken",
+    })],
+    initialRisk: { amount: "125.5", currency: "USD" },
+    plannedStop: localDraft.stop,
+  });
+  const finalVersion = versions[3];
+  if (finalVersion === undefined) throw new Error("Expected the reconciled review version.");
+  expect(initialPrepared.expectedPreviousReviewId).toBe(versions[0]?.id);
+  expect(firstRebasedPrepared.expectedPreviousReviewId).toBe(versions[1]?.id);
+  expect(finalPrepared.expectedPreviousReviewId).toBe(versions[2]?.id);
+  expect(versionTwoEvidenceMarkup).not.toContain(versions[1]?.id);
+  expect(versionThreeEvidenceMarkup).not.toContain(versions[2]?.id);
+  expect(data.reviewHeads).toEqual([[finalVersion.tradeSubjectId, finalVersion.id]]);
+  expect(data.reviewSubmissions).toHaveLength(4);
+  const successfulSubmissionIds = data.reviewSubmissions.map(([submissionId]) => submissionId);
+  expect(successfulSubmissionIds).not.toContain(initialPrepared.submissionId);
+  expect(successfulSubmissionIds).not.toContain(firstRebasedPrepared.submissionId);
+  expect(successfulSubmissionIds).toContain(finalPrepared.submissionId);
+  expect(data.reviewSubmissions.map(([, receipt]) => receipt.reviewId).sort())
+    .toEqual(versions.map((version) => version.id).sort());
   expect(externalRequests).toEqual([]);
 });
 

@@ -40,6 +40,88 @@ export function parseReviewList(value: string): readonly string[] {
     .filter((item) => item.length > 0);
 }
 
+function reviewOutcomeLabel(
+  outcome: TradePreview["rules"][number]["outcome"],
+): string {
+  if (outcome === "followed") return "Followed";
+  if (outcome === "broken") return "Broken";
+  if (outcome === "not_applicable") return "Not applicable";
+  return "Not reviewed";
+}
+
+export function tradeReviewLatestVersionTemplate(trade: TradePreview): string {
+  if (
+    trade.reviewStatus === "pending"
+    || trade.reviewId === null
+    || trade.reviewVersion === null
+    || !Number.isSafeInteger(trade.reviewVersion)
+    || trade.reviewVersion < 1
+  ) {
+    throw new Error("Trade review comparison evidence requires a coherent saved version.");
+  }
+  const setup = trade.hasClassifiedSetup ? trade.setup : "Not recorded";
+  const mistakes = trade.mistakes.length === 0 ? "None" : trade.mistakes.join(", ");
+  const emotion = trade.emotion ?? "Not recorded";
+  const tags = trade.tags.length === 0 ? "None" : trade.tags.join(", ");
+  const playbook = trade.playbook ?? "Not recorded";
+  const rules = trade.rules.length === 0
+    ? "None"
+    : trade.rules.map((rule) => (
+        `${rule.text} — ${reviewOutcomeLabel(rule.outcome)}`
+      )).join("\n");
+  const risk = trade.initialRisk === null
+    ? "Not recorded"
+    : `${trade.initialRisk.amount} ${trade.initialRisk.currency}`;
+  const plannedStop = trade.plannedStop ?? "Not recorded";
+  return `<h4 id="trade-review-latest-title">Latest saved version</h4>
+  <dl class="trade-review-latest-grid" data-trade-review-latest-version="${trade.reviewVersion}">
+    <div><dt>Saved version</dt><dd>Version ${trade.reviewVersion} · ${escapeHtml(trade.reviewStatus)}</dd></div>
+    <div><dt>Trade</dt><dd>${escapeHtml(trade.symbol)} · ${escapeHtml(trade.sessionLabel)}</dd></div>
+    <div><dt>Account</dt><dd>${escapeHtml(trade.accountLabel)}</dd></div>
+    <div><dt>Setup</dt><dd>${escapeHtml(setup)}</dd></div>
+    <div><dt>Reflection</dt><dd class="trade-review-latest-note">${escapeHtml(trade.note)}</dd></div>
+    <div><dt>Mistakes</dt><dd>${escapeHtml(mistakes)}</dd></div>
+    <div><dt>Emotion</dt><dd>${escapeHtml(emotion)}</dd></div>
+    <div><dt>Tags</dt><dd>${escapeHtml(tags)}</dd></div>
+    <div><dt>Playbook</dt><dd>${escapeHtml(playbook)}</dd></div>
+    <div><dt>Rule outcomes</dt><dd class="trade-review-latest-note">${escapeHtml(rules)}</dd></div>
+    <div><dt>Initial risk</dt><dd>${escapeHtml(risk)}</dd></div>
+    <div><dt>Planned stop</dt><dd>${escapeHtml(plannedStop)}</dd></div>
+    <div><dt>Execution allocations</dt><dd>${trade.executions.length}</dd></div>
+    <div><dt>Result R</dt><dd>${escapeHtml(metricValue(trade.resultRMetric))}</dd></div>
+    <div><dt>Percent return</dt><dd>${escapeHtml(metricValue(trade.percentReturnMetric))}</dd></div>
+  </dl>`;
+}
+
+export function tradeReviewReconciliationHead(
+  snapshot: JournalWorkspaceSnapshot,
+  tradeSubjectId: string,
+  expectedPreviousReviewId: string | null,
+  expectedPreviousVersion: number,
+): TradePreview | null {
+  if (
+    snapshot.provenance !== "local"
+    || !Number.isSafeInteger(expectedPreviousVersion)
+    || expectedPreviousVersion < 0
+  ) return null;
+  const candidates = snapshot.trades.filter((trade) => (
+    trade.tradeSubjectId === tradeSubjectId
+  ));
+  if (candidates.length !== 1) return null;
+  const latest = candidates[0];
+  if (
+    latest === undefined
+    || latest.reviewStatus === "pending"
+    || latest.reviewId === null
+    || latest.reviewVersion === null
+    || !Number.isSafeInteger(latest.reviewVersion)
+    || latest.reviewVersion < 1
+    || latest.reviewId === expectedPreviousReviewId
+    || latest.reviewVersion <= expectedPreviousVersion
+  ) return null;
+  return latest;
+}
+
 export function tradeReviewSaveFailureKind(
   error: unknown,
 ): "uncertain" | "stale" | "blocked" | "retryable" {
@@ -227,8 +309,18 @@ export function tradeReviewSheetTemplate(
         </fieldset>
         <label class="review-note-label">Reflection<textarea id="review-note" rows="5" maxlength="5000" placeholder="What happened, what did you do well, and what changes next time?" ${disabled}>${escapeHtml(note)}</textarea></label>
         <p class="form-error" id="trade-review-error" role="alert" tabindex="-1" hidden></p>
-        <p class="sr-only" id="trade-review-status" aria-live="polite"></p>
+        <p class="sr-only" id="trade-review-status" role="status" aria-live="polite"></p>
         <button class="secondary-button" id="trade-review-reconcile" type="button" hidden>Retry this exact save</button>
+        <section class="trade-review-conflict" id="trade-review-conflict" aria-labelledby="trade-review-conflict-title" hidden>
+          <h3 id="trade-review-conflict-title" tabindex="-1">Review the saved version before continuing</h3>
+          <p id="trade-review-conflict-copy">Hermes rejected the prepared save. Your unsaved review remains in the form, and nothing was overwritten. Review the latest saved version before choosing whether to use this entire form as its successor. Hermes does not merge fields; a saved value absent from your form will be replaced.</p>
+          <div id="trade-review-latest" role="region" aria-labelledby="trade-review-latest-title" tabindex="0" hidden></div>
+          <p class="privacy-copy" id="trade-review-rebase-status" hidden></p>
+          <div class="quick-actions trade-review-conflict-actions">
+            <button class="secondary-button" id="trade-review-review-latest" type="button">Review latest saved version</button>
+            <button class="primary-button" id="trade-review-accept-latest" type="button" hidden>Continue with my unsaved review</button>
+          </div>
+        </section>
         <div class="quick-actions">
           <button class="secondary-button" type="button" data-trade-review-close>${readOnly ? "Close" : "Cancel"}</button>
           ${readOnly ? "" : saveActions}
@@ -316,7 +408,7 @@ export function bindTradeReviewActions(
   application: JournalApplication,
   snapshot: JournalWorkspaceSnapshot,
   setBackgroundInert: (inert: boolean) => void,
-  refresh: (announcement: string) => Promise<void>,
+  refresh: (announcement: string) => Promise<JournalWorkspaceSnapshot>,
 ): void {
   root.querySelectorAll<HTMLButtonElement>("[data-review-trade]").forEach((trigger) => {
     trigger.addEventListener("click", () => {
@@ -335,8 +427,24 @@ export function bindTradeReviewActions(
       const error = backdrop?.querySelector<HTMLElement>("#trade-review-error");
       const status = backdrop?.querySelector<HTMLElement>("#trade-review-status");
       const reconcile = backdrop?.querySelector<HTMLButtonElement>("#trade-review-reconcile");
+      const conflict = backdrop?.querySelector<HTMLElement>("#trade-review-conflict");
+      const conflictHeading = backdrop?.querySelector<HTMLElement>(
+        "#trade-review-conflict-title",
+      );
+      const latestEvidence = backdrop?.querySelector<HTMLElement>("#trade-review-latest");
+      const rebaseStatus = backdrop?.querySelector<HTMLElement>("#trade-review-rebase-status");
+      const reviewLatest = backdrop?.querySelector<HTMLButtonElement>(
+        "#trade-review-review-latest",
+      );
+      const acceptLatest = backdrop?.querySelector<HTMLButtonElement>(
+        "#trade-review-accept-latest",
+      );
       const ruleRows = backdrop?.querySelector<HTMLElement>("#review-rule-rows");
-      if (!backdrop || !sheet || !form || !error || !status || !reconcile || !ruleRows) {
+      if (
+        !backdrop || !sheet || !form || !error || !status || !reconcile
+        || !conflict || !conflictHeading || !latestEvidence || !rebaseStatus
+        || !reviewLatest || !acceptLatest || !ruleRows
+      ) {
         backdrop?.remove();
         return;
       }
@@ -349,14 +457,22 @@ export function bindTradeReviewActions(
           || trade.reviewVersion === null
           || !Number.isSafeInteger(trade.reviewVersion)
           || trade.reviewVersion < 1;
-      const submissionId = snapshot.provenance === "demo" || invalidReviewIdentity
+      let submissionId = snapshot.provenance === "demo" || invalidReviewIdentity
         ? null
         : application.createReviewSubmissionId();
+      let expectedPreviousReviewId = trade.reviewId;
+      let expectedPreviousVersion = trade.reviewVersion ?? 0;
+      let currentSnapshot = snapshot;
+      let baseTrade = trade;
       let saving = false;
       let uncertain = false;
       let committed = false;
+      let conflictPending = false;
       let saveBlocked = false;
       let reopenRefreshPending = false;
+      let reconciledDraftPending = false;
+      let latestCandidate: TradePreview | null = null;
+      let completedBase = trade.reviewStatus === "completed";
       let uncertainPrepared: PreparedTradeReviewBatch | null = null;
       let attemptedState: "draft" | "completed" = trade.reviewStatus === "completed"
         ? "completed"
@@ -385,7 +501,7 @@ export function bindTradeReviewActions(
           }
           control.disabled = busy || (initiallyDisabled.get(control) ?? false);
         });
-        if (!busy && saveBlocked) {
+        if (!busy && (saveBlocked || conflictPending)) {
           submitButtons.forEach((button) => { button.disabled = true; });
         }
         if (reopenRefreshPending) {
@@ -426,23 +542,34 @@ export function bindTradeReviewActions(
         committed = false;
         uncertain = false;
         uncertainPrepared = null;
-        saveBlocked = true;
+        conflictPending = true;
+        saveBlocked = false;
+        reconciledDraftPending = false;
+        latestCandidate = null;
         reopenRefreshPending = true;
-        reconcile.textContent = "Refresh journal before reopening";
-        reconcile.hidden = false;
+        latestEvidence.replaceChildren();
+        latestEvidence.hidden = true;
+        rebaseStatus.hidden = true;
+        reviewLatest.hidden = false;
+        acceptLatest.hidden = true;
+        conflict.hidden = false;
+        reconcile.hidden = true;
         setPersistenceBusy(false);
-        reconcile.disabled = false;
         error.hidden = false;
-        error.textContent = "Hermes did not apply this exact save because its prepared review no longer matches the current journal. Nothing was overwritten, and your unsaved changes are still here. Refresh the journal before reopening this trade.";
-        status.textContent = "Prepared trade review no longer matches; refresh before reopening";
+        error.textContent = "Hermes did not apply this exact save because its expected saved review no longer matches. Nothing was overwritten, and your unsaved changes are still here. Review the latest saved version before saving again.";
+        status.textContent = "Prepared trade review no longer matches; review the latest saved version";
         error.focus({ preventScroll: true });
       };
       const showBlockedSave = () => {
         committed = false;
         uncertain = false;
         uncertainPrepared = null;
+        conflictPending = false;
         saveBlocked = true;
+        reconciledDraftPending = false;
+        latestCandidate = null;
         reopenRefreshPending = true;
+        conflict.hidden = true;
         reconcile.textContent = "Refresh journal before reopening";
         reconcile.hidden = false;
         setPersistenceBusy(false);
@@ -479,7 +606,10 @@ export function bindTradeReviewActions(
 
       const close = (force = false) => {
         if (saving || uncertain || reopenRefreshPending) return;
-        const dirty = formFingerprint(form) !== initialFingerprint || saveBlocked;
+        const dirty = formFingerprint(form) !== initialFingerprint
+          || conflictPending
+          || saveBlocked
+          || reconciledDraftPending;
         if (!force && dirty && !window.confirm("Discard the unsaved trade review?")) return;
         backdrop.remove();
         setBackgroundInert(false);
@@ -595,7 +725,7 @@ export function bindTradeReviewActions(
           input.value = nextName;
           return;
         }
-        const configured = snapshot.reviewOptions.playbooks.find((playbook) => (
+        const configured = currentSnapshot.reviewOptions.playbooks.find((playbook) => (
           playbook.name.toLocaleLowerCase("en-US") === nextName.toLocaleLowerCase("en-US")
         ));
         if (
@@ -611,12 +741,146 @@ export function bindTradeReviewActions(
         bindRuleRemoval(ruleRows);
       });
 
+      reviewLatest.addEventListener("click", async () => {
+        if (!conflictPending || uncertain || saving) return;
+        const preservedValues = new Map([
+          "review-setup",
+          "review-emotion",
+          "review-mistakes",
+          "review-tags",
+          "review-risk",
+          "review-risk-currency",
+          "review-stop",
+          "review-playbook",
+          "review-note",
+        ].map((id) => [id, value(form, id)] as const));
+        const preservedRules = Array.from(
+          ruleRows.querySelectorAll<HTMLElement>("[data-review-rule-row]"),
+        ).map((row) => ({
+          name: row.querySelector<HTMLInputElement>('input[name="review-rule-name"]')
+            ?.value ?? "",
+          outcome: row.querySelector<HTMLSelectElement>('select[name="review-rule-outcome"]')
+            ?.value ?? "unreviewed",
+        }));
+        const restorePreservedDraft = () => {
+          preservedValues.forEach((preserved, id) => {
+            const control = form.querySelector<
+              HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+            >(`#${id}`);
+            if (control === null) return;
+            control.value = preserved;
+            control.dispatchEvent(new Event("input"));
+          });
+          ruleRows.innerHTML = preservedRules.map((rule) => {
+            const outcome = rule.outcome === "followed" || rule.outcome === "broken"
+              || rule.outcome === "not_applicable" ? rule.outcome : "unreviewed";
+            return ruleRow(rule.name, outcome);
+          }).join("");
+          bindRuleRemoval(ruleRows);
+          acceptedPlaybookName = value(form, "review-playbook").trim();
+        };
+
+        conflictHeading.focus({ preventScroll: true });
+        setPersistenceBusy(true);
+        status.textContent = "Loading the latest saved trade review for comparison";
+        error.hidden = true;
+        try {
+          const fresh = await refresh(
+            "Journal refreshed; checking the latest saved trade review.",
+          );
+          restorePreservedDraft();
+          const latest = tradeReviewReconciliationHead(
+            fresh,
+            trade.tradeSubjectId,
+            expectedPreviousReviewId,
+            expectedPreviousVersion,
+          );
+          if (latest === null) {
+            throw new Error("A different newer local review head was not available.");
+          }
+          latestEvidence.innerHTML = tradeReviewLatestVersionTemplate(latest);
+          latestEvidence.hidden = false;
+          latestCandidate = latest;
+          currentSnapshot = fresh;
+          baseTrade = latest;
+          reviewLatest.hidden = true;
+          acceptLatest.hidden = false;
+          rebaseStatus.hidden = true;
+          reopenRefreshPending = false;
+          setPersistenceBusy(false);
+          status.textContent = `Latest saved review version ${latest.reviewVersion} loaded; your complete unsaved form is unchanged`;
+          latestEvidence.focus({ preventScroll: true });
+        } catch {
+          restorePreservedDraft();
+          latestCandidate = null;
+          latestEvidence.replaceChildren();
+          latestEvidence.hidden = true;
+          reviewLatest.hidden = false;
+          acceptLatest.hidden = true;
+          setPersistenceBusy(false);
+          error.hidden = false;
+          error.textContent = "Hermes could not prove one different newer saved review for this trade. Your complete unsaved form is still here. Keep this sheet open and retry the review. Once the journal refresh succeeds, Cancel can discard this form.";
+          status.textContent = "Latest saved trade review could not be verified";
+          error.focus({ preventScroll: true });
+        }
+      });
+      acceptLatest.addEventListener("click", () => {
+        const candidate = latestCandidate;
+        if (
+          !conflictPending
+          || candidate === null
+          || candidate.reviewId === null
+          || candidate.reviewVersion === null
+          || saving
+          || uncertain
+        ) return;
+        expectedPreviousReviewId = candidate.reviewId;
+        expectedPreviousVersion = candidate.reviewVersion;
+        submissionId = application.createReviewSubmissionId();
+        conflictPending = false;
+        reconciledDraftPending = true;
+        completedBase = completedBase || candidate.reviewStatus === "completed";
+        if (completedBase) {
+          attemptedState = "completed";
+          const draftSubmit = submitButtons.find((button) => (
+            button.dataset.reviewState === "draft"
+          ));
+          if (draftSubmit !== undefined) {
+            draftSubmit.hidden = true;
+            draftSubmit.disabled = true;
+            initiallyDisabled.set(draftSubmit, true);
+          }
+          const completedSubmit = submitButtons.find((button) => (
+            button.dataset.reviewState === "completed"
+          ));
+          if (completedSubmit !== undefined) completedSubmit.textContent = "Save review changes";
+        }
+        reviewLatest.hidden = true;
+        acceptLatest.hidden = true;
+        rebaseStatus.hidden = false;
+        rebaseStatus.textContent = `Version ${expectedPreviousVersion} is now the base. This entire form—not a field merge—will become version ${expectedPreviousVersion + 1} if you save.${completedBase ? " The saved base is completed, so its successor will remain completed." : ""}`;
+        error.hidden = true;
+        setPersistenceBusy(false);
+        status.textContent = `Latest saved review version ${expectedPreviousVersion} accepted as the base; choose a save action`;
+        const intendedSubmit = submitButtons.find((button) => (
+          button.dataset.reviewState === attemptedState
+        ));
+        intendedSubmit?.focus({ preventScroll: true });
+      });
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (submissionId === null || saving || uncertain || saveBlocked) return;
+        if (
+          submissionId === null
+          || saving
+          || uncertain
+          || conflictPending
+          || saveBlocked
+        ) return;
         const submitter = (event as SubmitEvent).submitter;
-        const state = submitter instanceof HTMLButtonElement
+        const requestedState = submitter instanceof HTMLButtonElement
           && submitter.dataset.reviewState === "completed" ? "completed" : "draft";
+        const state = completedBase ? "completed" : requestedState;
         attemptedState = state;
         error.hidden = true;
         uncertainPrepared = null;
@@ -638,7 +902,7 @@ export function bindTradeReviewActions(
           const prepared = application.prepareReview({
             submissionId,
             tradeSubjectId: trade.tradeSubjectId,
-            expectedPreviousReviewId: trade.reviewId,
+            expectedPreviousReviewId,
             state,
             note: value(form, "review-note"),
             setup: value(form, "review-setup"),
@@ -651,7 +915,7 @@ export function bindTradeReviewActions(
               : {
                   amount: riskAmount,
                   currency: value(form, "review-risk-currency").trim()
-                    || tradePnlCurrency(trade, snapshot),
+                    || tradePnlCurrency(baseTrade, currentSnapshot),
                 },
             plannedStop: value(form, "review-stop"),
           });
@@ -664,6 +928,7 @@ export function bindTradeReviewActions(
           committed = true;
           uncertain = false;
           uncertainPrepared = null;
+          reconciledDraftPending = false;
           await refreshAfterConfirmedSave(result, false);
         } catch (caught) {
           const failureKind = tradeReviewSaveFailureKind(caught);

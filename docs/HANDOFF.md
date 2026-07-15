@@ -1,9 +1,148 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Single-Trade Review Exact-Command Recovery v1 ·
+Status: verified Individual Trade Review Stale-Head Recovery v1 ·
 updated 2026-07-14
 
 ## Current handoff
+
+task: Deliver Individual Trade Review Stale-Head Recovery v1: preserve one
+complete unsaved review after deterministic optimistic-concurrency rejection,
+prove and display the exact newer local head, require explicit non-merge
+consent and a fresh command identity, and repeat that gate if another writer
+wins.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- mobile/src/ui/trade-review-sheet.ts routes only a deterministic first-result
+  `review_changed` into stale recovery. The obsolete prepared command is
+  cleared; authored controls and every dismissal path remain locked until one
+  fresh local snapshot proves exactly one coherent, different, strictly newer
+  review for the same durable trade subject. Other direct conflicts retain the
+  existing refresh-before-reopen path, and post-unknown conflicts remain
+  ambiguous exact-replay holds.
+- The comparison region escapes and displays the newer review's version/state,
+  trade/account context, setup, reflection, mistakes, emotion, tags, playbook,
+  ordered rule outcomes, risk/currency, planned stop, execution-allocation
+  count, Result R, and percent return. Missing, duplicate, demo, pending,
+  same-identity, equal/older-version, or incoherent candidates fail closed
+  without rendering private error detail.
+- A failed comparison refresh preserves all raw static values and every ordered
+  dynamic rule row, leaves saving and dismissal locked, creates no identity,
+  and exposes only a generic retry. Successful proof keeps the same complete
+  form, focuses the evidence, and makes consent the next action in keyboard
+  order. Cancel then requires the existing dirty-form confirmation.
+- **Continue with my unsaved review** copies only the displayed predecessor
+  identity, rotates the member submission ID once, and performs no save. Copy
+  explicitly says the entire form—not a field merge—will become the next
+  immutable version. A completed base hides draft save and permits only a
+  completed successor. A later competing head clears old evidence, relocks
+  dismissal, and requires a second fresh proof and consent before another
+  command can be prepared.
+- mobile/src/ui/app.ts returns the same freshly loaded workspace snapshot used
+  to rerender the background, binding candidate selection, evidence, playbook
+  lookup, and currency fallback to one read. Existing proven-commit
+  refresh-only behavior is unchanged.
+- Unit/application coverage proves escaped complete evidence, fail-closed
+  candidate selection, one-call stale propagation, and projection of only the
+  competing head. The SQLite algorithm regression proves a v1→v4 supersedes
+  chain, one head, four successful submission receipts, unchanged archive
+  state across both stale attempts, absent stale submissions, and immutable
+  executions.
+- The production-browser journey retains one editor through a failed evidence
+  render, exact v2 comparison, a hidden v3 writer, two explicit consents, and
+  final completed v4 persistence. It proves every prepared predecessor and
+  consent-generated member identity directly, absence of receipts for both
+  rejected commands, full raw-field/rule preservation across both races,
+  exact allocation/R/return evidence without opaque IDs, focus and dismissal
+  containment, 320px/200% reflow, offline behavior, one final head, four
+  successful receipts, and no external requests.
+- README, the ledger contract, product blueprint, iOS roadmap, and Mac handoff
+  describe the browser boundary and native acceptance matrix. Atomic batch
+  exact-command recovery remains a separate HIGH, human-gated persistence
+  design because member receipts cannot prove atomic batch identity; a durable
+  batch receipt requires schema/migration/export/restore decisions.
+- No schema, migration, archive shape, store algorithm, execution fact,
+  governed formula, financial definition, security credential, destructive
+  workflow, native source, or public comparative claim changed.
+
+verified:
+
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 41 files, 433 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; 8 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 51 production-browser
+  journeys passed, including all 13 Trade Review journeys and the retained
+  editor v1→v4 stale race.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; Vite
+  transformed 64 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `a61a09e8d3d629c014e285155a15273ee88619f2d16b07fb021c3bc6a57a092c`,
+  selected generated identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and
+  `git diff --check` — exit 0; no tracked native/lock drift or whitespace
+  errors.
+
+assumptions:
+
+- The final read-only UI/accessibility and documentation audits reported CLEAN.
+  Their advisory reports are not cold-rerunnable evidence; the command-backed
+  gates above remain authoritative. The test audit's initial acceptance-proof
+  findings were addressed with direct command/receipt and repeated raw-form
+  assertions, then rerun.
+- Browser evidence uses one production application and its in-memory
+  SessionJournalStore. Retained editors are deterministic UI concurrency
+  evidence, not a second WKWebView scene, native SQLite bridge, SQLCipher
+  transaction, relaunch, or device lifecycle result.
+- The SQLite regression exercises the production store algorithm through its
+  SQL harness. It is not runtime evidence for the Capacitor plugin, SQLCipher,
+  Keychain, background/foreground behavior, or a physical database on iOS.
+- The complete-form successor intentionally replaces review-owned fields; it
+  does not merge them. Superseded immutable versions remain in history.
+- Existing member receipts are sufficient for the individual sheet but cannot
+  establish exact atomic replay for a multi-member batch. Designing the
+  required durable batch receipt is a human-gated schema/migration/export/
+  restore decision.
+- No schema, migration, archive, formula, financial, destructive, security-
+  credential, native, or public-positioning decision is inferred from this
+  reliability slice.
+
+open:
+
+- HIGH — HUMAN GATE: design atomic batch exact-command recovery around a
+  durable batch receipt. Approve the schema/migration/export/restore contract
+  before implementation; current member receipts must not be presented as
+  exact atomic proof.
+- HOLD native individual-review acceptance: repeat pre/post-commit bridge
+  loss, exact replay, deterministic stale comparison/consent, failed evidence
+  rendering, a later head from a second real scene, repeated race, completed
+  monotonicity, background/foreground, force quit/relaunch, SQLCipher/Keychain,
+  VoiceOver, Dynamic Type, hardware keyboard, and physical-device layout on a
+  current Mac/iPhone.
+- LOW: upgrade GitHub Action runtimes in a separate maintenance slice; current
+  checks pass but hosted logs warn about Node 20 action runtimes.
+- Separate Symbol Breakdown and generic-CSV asset-class WIP remain
+  uncommitted/unpublished and human-gated. Attachments and verified Delete All
+  Data remain separate governed slices; deletion requires its dedicated human
+  gate.
+- Do not claim batch exact recovery, native backup readiness, native
+  multi-scene/device acceptance, or start broker sync, trade execution, hosted
+  Connect, Android, recurring AI, TestFlight, App Store submission, pricing,
+  or public comparative positioning from this milestone.
+
+## Prior milestone — Single-Trade Review Exact-Command Recovery v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Individual Trade Review Stale-Head Recovery handoff above.
 
 task: Deliver Single-Trade Review Exact-Command Recovery v1 for the individual
 Trade Review sheet: retain one immutable prepared command across an unknown

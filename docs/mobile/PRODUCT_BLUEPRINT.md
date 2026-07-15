@@ -414,10 +414,25 @@ unknown, preserves the raw form and blocks obsolete saves on a fresh
 errors observed after an earlier unknown attempt remain ambiguous unless the
 current exact revision is positively proven. Chromium covers repeated
 ambiguity, exact recovery, competing-head and submission-collision paths,
-privacy/focus/reflow, and zero-persistence refresh. Atomic batch tagging and
-the richer Trade Review stale-head evidence/consent flow remain separate HIGH
-work; native bridge, multi-scene, relaunch, and device accessibility remain
-unproven.
+privacy/focus/reflow, and zero-persistence refresh. Atomic batch ambiguous
+recovery remains separate; native bridge, multi-scene, relaunch, and device
+accessibility remain unproven.
+
+Individual Trade Review Stale-Head Recovery v1 completes the deterministic
+`review_changed` interaction above without changing persistence. One fresh
+local snapshot must contain exactly one coherent different newer review for the
+same durable trade subject. Hermes displays escaped evidence for the complete
+saved review and fresh metric/execution context while preserving every raw
+static field and ordered dynamic rule row. Consent is explicit that the whole
+local form—not a field merge—will become the successor, rotates submission
+identity, and still requires a separate save. A completed winner allows only a
+completed successor. If another head wins after consent, the old candidate is
+cleared and the full evidence/consent cycle repeats. Chromium proves the
+v1→v4 race offline; SQLite proves the exact chain and unchanged state across
+both stale commands. This is not native multi-scene, lifecycle, or device
+accessibility evidence. Atomic batch exact recovery remains a human-gated HIGH
+because it needs a durable batch receipt plus migration/export/restore
+decisions.
 
 The fifth increment is Trade Browser Scope v1. It is a derived-only projection
 over stable ledger account IDs and exact calendar contributions: all accounts
@@ -617,7 +632,12 @@ preserve-review-consent-resubmit behavior at the existing optimistic head
 boundary, and Exact-Command Recovery v1 closes the browser unknown-save gap
 with receipt-first replay and refresh-only handling after proven commit. The
 individual Trade Review sheet now has its own exact-command recovery boundary;
-this does not include batch tagging or the full stale-head consent flow. The
+Individual Trade Review Stale-Head Recovery v1 now adds complete-form
+comparison, consent, fresh identity, completed-state monotonicity, and repeated
+race handling at the trade-review head boundary introduced in schema v3. It
+does not include atomic
+batch ambiguous recovery, whose durable receipt requires a separately approved
+schema/migration. The
 Linux CI handoff now verifies the ignored iOS
 public copy byte-for-byte and validates selected generated-registration fields
 while explicitly leaving all native rows NOT RUN. None of these reliability

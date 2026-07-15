@@ -738,6 +738,109 @@ describe("SqliteJournalStore", () => {
     }
   });
 
+  it("keeps repeated stale review predecessors out of a v1-to-v4 immutable chain", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const imported = await store.commitCsvImport(preparedCsv());
+      const tradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      if (tradeSubjectId === undefined) throw new Error("Expected one durable trade subject.");
+      const executionsBefore = imported.ledger.executions;
+
+      const first = await store.commitTradeReviews(preparedReviewBatch("race-v1", [
+        preparedReview(tradeSubjectId, "a", {
+          state: "draft",
+          note: "Original review.",
+        }),
+      ]));
+      const firstId = first.reviewIds[0];
+      if (firstId === undefined) throw new Error("Expected review version one.");
+      const second = await store.commitTradeReviews(preparedReviewBatch("race-v2", [
+        preparedReview(tradeSubjectId, "b", {
+          expectedPreviousReviewId: firstId,
+          note: "First competing completed review.",
+        }),
+      ]));
+      const secondId = second.reviewIds[0];
+      if (secondId === undefined) throw new Error("Expected review version two.");
+
+      const beforeFirstStale = await store.exportUserData();
+      await expect(store.commitTradeReviews(preparedReviewBatch("stale-from-v1", [
+        preparedReview(tradeSubjectId, "c", {
+          expectedPreviousReviewId: firstId,
+          note: "This stale version-one successor must not commit.",
+        }),
+      ]))).rejects.toMatchObject({ conflict: { code: "review_changed" } });
+      expect((await store.exportUserData()).archive.stateSha256)
+        .toBe(beforeFirstStale.archive.stateSha256);
+
+      const third = await store.commitTradeReviews(preparedReviewBatch("race-v3", [
+        preparedReview(tradeSubjectId, "d", {
+          expectedPreviousReviewId: secondId,
+          note: "Second competing completed review.",
+        }),
+      ]));
+      const thirdId = third.reviewIds[0];
+      if (thirdId === undefined) throw new Error("Expected review version three.");
+
+      const beforeSecondStale = await store.exportUserData();
+      await expect(store.commitTradeReviews(preparedReviewBatch("stale-from-v2", [
+        preparedReview(tradeSubjectId, "e", {
+          expectedPreviousReviewId: secondId,
+          note: "This stale version-two successor must not commit.",
+        }),
+      ]))).rejects.toMatchObject({ conflict: { code: "review_changed" } });
+      expect((await store.exportUserData()).archive.stateSha256)
+        .toBe(beforeSecondStale.archive.stateSha256);
+
+      const fourth = await store.commitTradeReviews(preparedReviewBatch("race-v4", [
+        preparedReview(tradeSubjectId, "f", {
+          expectedPreviousReviewId: thirdId,
+          note: "The explicitly reconciled completed review.",
+          setup: "Reconciled setup",
+          tags: ["Local final"],
+        }),
+      ]));
+      const fourthId = fourth.reviewIds[0];
+      if (fourthId === undefined) throw new Error("Expected review version four.");
+      expect(fourth.ledger.tradeReviews).toEqual([
+        expect.objectContaining({
+          id: fourthId,
+          version: 4,
+          state: "completed",
+          note: "The explicitly reconciled completed review.",
+          setup: "Reconciled setup",
+          tags: ["Local final"],
+        }),
+      ]);
+      expect(fourth.ledger.executions).toEqual(executionsBefore);
+      expect(await database.query(
+        `SELECT id, version_number, supersedes_version_id
+           FROM trade_review_versions
+          ORDER BY version_number`,
+      )).toEqual([
+        { id: firstId, version_number: 1, supersedes_version_id: null },
+        { id: secondId, version_number: 2, supersedes_version_id: firstId },
+        { id: thirdId, version_number: 3, supersedes_version_id: secondId },
+        { id: fourthId, version_number: 4, supersedes_version_id: thirdId },
+      ]);
+      expect(await count(database, "trade_review_heads")).toBe(1);
+      expect(await count(database, "trade_review_versions")).toBe(4);
+      expect(await database.query(
+        `SELECT submission_id, id
+           FROM trade_review_versions
+          ORDER BY version_number`,
+      )).toEqual([
+        { submission_id: "a".repeat(64), id: firstId },
+        { submission_id: "b".repeat(64), id: secondId },
+        { submission_id: "d".repeat(64), id: thirdId },
+        { submission_id: "f".repeat(64), id: fourthId },
+      ]);
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
   it("exports complete SQLite facts and history beyond the current read model", async () => {
     const { database, store } = await createHarness();
     try {

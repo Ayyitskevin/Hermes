@@ -106,10 +106,19 @@ submission-ready product:
   sheet the same no-reconstruction boundary while retaining its own frozen
   PreparedTradeReviewBatch. Unknown outcomes expose exact replay only; a
   matching member receipt recovers the original immutable version, a newer head
-  preserves the raw form and blocks obsolete submits, and a proven save with a
-  failed render exposes refresh only. The production-browser evidence does not
-  cover native bridge/lifecycle behavior. Atomic batch tagging and full
-  stale-head comparison/consent remain separate HIGH reliability slices.
+  enters the stale flow below, and a proven save with a failed render exposes
+  refresh only.
+- Individual Trade Review Stale-Head Recovery v1 preserves every raw static and
+  ordered rule field, loads one fresh local snapshot, and displays its sole
+  coherent newer review before consent. Consent explicitly uses the complete
+  local form—not a field merge—as a successor, rotates submission identity, and
+  still requires a separate save. A completed winner cannot regress to draft;
+  another intervening head repeats the proof/consent gate. Production Chromium
+  proves a v1→v4 retained-editor race offline, and SQLite tests prove the exact
+  predecessor chain and absence of stale receipts. This is not native
+  multi-scene/lifecycle evidence. Atomic batch exact-command recovery remains a
+  separate HIGH, human-gated schema/migration slice because exact atomic proof
+  requires a durable batch receipt.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

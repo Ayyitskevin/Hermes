@@ -234,6 +234,90 @@ describe("JournalApplication trade review workflow", () => {
     }
   });
 
+  it("passes through one stale single-review save and exposes only the competing fresh head", async () => {
+    class ConcurrentSingleReviewStore extends SessionJournalStore {
+      commitCalls = 0;
+      private injectConcurrentHead = true;
+
+      override async commitTradeReviews(
+        command: PreparedTradeReviewBatch,
+      ): Promise<TradeReviewCommitResult> {
+        this.commitCalls += 1;
+        if (!this.injectConcurrentHead) return super.commitTradeReviews(command);
+        this.injectConcurrentHead = false;
+        const target = command.reviews[0];
+        if (target === undefined) throw new Error("Expected one target review.");
+        const competing = prepareTradeReview(reviewInput(
+          "8".repeat(64),
+          target.tradeSubjectId,
+          {
+            expectedPreviousReviewId: target.expectedPreviousReviewId,
+            state: "draft",
+            note: "The competing immutable head.",
+            setup: "Competing setup",
+            tags: ["Competing"],
+          },
+        ));
+        await super.commitTradeReviews({
+          batchId: "competing-single-review",
+          revision: tradeReviewBatchRevision(
+            "competing-single-review",
+            [competing],
+          ),
+          reviews: [competing],
+        });
+        return super.commitTradeReviews(command);
+      }
+    }
+
+    const store = new ConcurrentSingleReviewStore();
+    const application = new JournalApplication(store, "browser-session");
+    try {
+      const tradeSubjectId = await openTrade(store, "META", "7", 15);
+      const local = application.prepareReview(reviewInput(
+        "9".repeat(64),
+        tradeSubjectId,
+        { note: "This stale review must not commit." },
+      ));
+      const conflict = await application.commitReviewsSafely(
+        application.prepareReviewBatch([local], "stale-single-review"),
+      ).then(
+        () => { throw new Error("Expected the stale review to fail."); },
+        (error: unknown) => error,
+      );
+
+      expect(conflict).toBeInstanceOf(JournalTradeReviewError);
+      expect((conflict as JournalTradeReviewError).conflict.code).toBe("review_changed");
+      expect(store.commitCalls).toBe(1);
+      const ledger = await store.load();
+      expect(ledger.tradeReviews).toEqual([
+        expect.objectContaining({
+          tradeSubjectId,
+          version: 1,
+          state: "draft",
+          note: "The competing immutable head.",
+          setup: "Competing setup",
+          tags: ["Competing"],
+        }),
+      ]);
+      const competing = ledger.tradeReviews[0];
+      if (competing === undefined) throw new Error("Expected the competing review head.");
+      const fresh = await application.loadWorkspace();
+      expect(fresh.provenance).toBe("local");
+      expect(fresh.trades.find((trade) => trade.tradeSubjectId === tradeSubjectId))
+        .toMatchObject({
+          reviewId: competing.id,
+          reviewVersion: 1,
+          reviewStatus: "draft",
+          note: "The competing immutable head.",
+          setup: "Competing setup",
+          tags: ["Competing"],
+        });
+    } finally {
+      await application.close();
+    }
+  });
+
   it("reconciles current immutable heads after every commit response is lost", async () => {
     class LostReviewResponseStore extends SessionJournalStore {
       override async commitTradeReviews(

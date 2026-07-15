@@ -209,9 +209,18 @@ Delivered in the current vertical slice:
   rejection preserves the form and blocks obsolete submits, and post-proof
   render failure offers refresh only. Production Chromium proves no form
   reread/new ID, privacy/focus, 320px/200% recovery layout, exact archive
-  cardinality, and zero persistence during refresh. Atomic batch tagging,
-  richer stale-head evidence/consent, native bridge/lifecycle, relaunch, and
-  device accessibility remain open.
+  cardinality, and zero persistence during refresh.
+- Individual Trade Review Stale-Head Recovery v1 now proves and displays the
+  sole coherent newer review from one exact fresh local snapshot while
+  retaining every raw form/rule value. Complete-form, non-merge consent rotates
+  identity and requires a separate save; completed heads stay completed and a
+  second race repeats the gate. Chromium proves the offline v1→v4 journey,
+  failed evidence refresh, focus, 320px/200% reflow, one head, and four
+  receipts. SQLite proves the four-link chain and unchanged state across both
+  rejected stale commands. Native bridge/multi-scene/lifecycle, relaunch, and
+  device accessibility remain open. Atomic batch ambiguous recovery is a
+  separate human-gated HIGH because it requires a durable batch receipt and
+  schema/migration/export/restore decisions.
 - SQLite v4 immutable daily-reflection versions and one optimistic head per
   workspace-local date. Trading and no-trade days support explicit draft or
   completed saves, optional headline/note/emotion/tags/self-reported process
@@ -421,8 +430,10 @@ schema, migration, financial definition, or native readiness claim.
 Daily Journal Exact-Command Recovery v1 closes the browser unknown-save gap
 without strengthening any native claim.
 Single-Trade Review Exact-Command Recovery v1 closes only the individual
-review-sheet gap; batch tagging and the full stale-head consent flow remain
-HIGH holds, and no native claim is strengthened.
+review-sheet unknown-save gap. Individual Trade Review Stale-Head Recovery v1
+now closes its deterministic browser conflict/consent gap without changing
+schema or strengthening any native claim. Atomic batch ambiguous recovery
+remains a human-gated HIGH pending a durable batch-receipt design.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
 restore acceptance, verified Delete All Data, remaining report families, and
 later attachment round-trip remain—not broker connectivity, hosted sync,

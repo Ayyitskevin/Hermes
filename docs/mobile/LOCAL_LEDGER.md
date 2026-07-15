@@ -160,13 +160,25 @@ domain error after an earlier unknown response in the same safe-call sequence
 is not treated as proof; only a current exact revision fallback may reconcile
 it. A later user retry starts a fresh exact call: an exact receipt can return
 the original historical version while a newer head stays projected. A
-first-result `review_changed` preserves the raw form, disables obsolete saves,
-and blocks every dismissal path until an explicit background refresh succeeds.
-Other direct first-result receipt conflicts use the same fail-closed refresh
-path. Non-head conflicts after ambiguity stay frozen. Positive
-commit/duplicate proof clears the command; a render failure then exposes
-**Retry journal refresh** with zero persistence. Full newer-head
-evidence/consent and atomic batch-tag recovery are separate HIGH slices.
+first-result `review_changed` enters Individual Trade Review Stale-Head
+Recovery v1. Other direct first-result receipt conflicts use the same
+fail-closed refresh-before-reopen path. Non-head conflicts after ambiguity stay
+frozen. Positive commit/duplicate proof clears the command; a render failure
+then exposes **Retry journal refresh** with zero persistence.
+
+The individual stale flow keeps every raw form value and ordered dynamic rule
+row, disables the obsolete command, and retains the dismissal lock until one
+fresh local snapshot proves exactly one different newer coherent head for the
+same trade subject. Its escaped evidence covers every review-owned field plus
+fresh metric/execution context. Consent copies only that displayed head's
+review ID/version, rotates the member submission ID, and enables a separate
+save against it. The complete local form becomes the successor; fields are not
+merged, so the UI says that a newer saved value absent locally will be
+replaced. A completed base exposes only a completed successor. A second race
+clears old evidence and repeats proof/consent. No schema or store algorithm
+changed. Atomic batch exact-command recovery remains HIGH and human-gated:
+member receipts cannot prove exact batch identity, so truthful atomic recovery
+requires a durable batch receipt with migration/export/restore decisions.
 
 ## Daily-journal sequence
 
@@ -480,7 +492,13 @@ same-submission/different-content receipt collision, and a proven commit with a
 failed render. Instrumented production journeys prove zero form rereads and ID
 generation during exact replay, zero persistence during refresh-only recovery,
 privacy-safe copy, focus/dismiss containment, 320px/200% layout, and exact
-version/head/submission archive cardinality. This remains browser
+version/head/submission archive cardinality. Individual stale-head coverage
+adds a one-shot failed evidence refresh, complete raw static/rule preservation,
+escaped v2 evidence, explicit complete-form consent, a hidden v3 race, a
+second stale rejection/consent, completed-state monotonicity, and final v4 with
+one head/four successful receipts. SQLite independently proves the v1→v4
+supersedes chain, unchanged state digests across both stale attempts, and no
+stale submission rows. This remains browser
 SessionJournalStore evidence, not native SQLite bridge, multi-scene, relaunch,
 VoiceOver, or Dynamic Type evidence. Browser composition additionally covers a
 real

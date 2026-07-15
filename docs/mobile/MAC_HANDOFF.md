@@ -196,6 +196,18 @@ and an App Store disclosure.
   through background/foreground, force quit/relaunch, a second real scene,
   VoiceOver, hardware keyboard, and 200% Dynamic Type before marking native
   acceptance PASS.
+- For a deterministic individual-review stale head, keep every raw static field
+  and ordered rule row in scene one while scene two saves a successor. Confirm
+  dismissal stays locked until one fresh snapshot proves and displays exactly
+  one coherent newer review; no review/submission/revision IDs or native errors
+  may render. Consent must say the entire local form is the next version, not a
+  merge, rotate identity once, and require a separate save. If the winner is
+  completed, only a completed successor may remain. Advance the head again
+  between evidence and save and confirm scene one rejects, clears old evidence,
+  and requires fresh evidence plus second consent before appending. Repeat
+  evidence failure, background/foreground, force quit/relaunch, VoiceOver,
+  hardware keyboard, 200% Dynamic Type, and two real scenes before marking
+  native acceptance PASS.
 - Batch-tag two trades atomically and confirm ordinary success plus mixed
   saved/fresh atomic rejection. Do not mark ambiguous-save recovery PASS:
   current batch-tag UI recreates member and batch identities on a new action and
@@ -432,8 +444,13 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   commit, repeated ambiguity, historical receipt recovery, competing-head and
   submission-collision behavior, refresh-only post-proof recovery,
   multi-scene/lifecycle/relaunch, VoiceOver, hardware keyboard, and Dynamic
-  Type. Atomic batch-tag recovery and full Trade Review stale-head
-  evidence/consent are separate HIGH holds and must not inherit this result.
+  Type. Browser Individual Trade Review stale-head recovery is also implemented:
+  Chromium proves a failed evidence refresh, exact v2 comparison, complete-form
+  consent, a hidden v3 race, second proof/consent, completed-state monotonicity,
+  and final v4/one-head/four-receipt state; SQLite proves the exact chain and
+  stale no-mutation. Native multi-scene/lifecycle/accessibility acceptance is
+  still NOT RUN and must not inherit these results. Atomic batch ambiguous
+  recovery remains a human-gated HIGH pending a durable batch-receipt schema.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

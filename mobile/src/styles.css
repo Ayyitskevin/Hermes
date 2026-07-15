@@ -856,7 +856,8 @@ input[type="file"]::file-selector-button {
 .daily-journal-sheet > p { margin: 0; }
 .daily-journal-sheet form { display: grid; gap: .75rem; }
 .daily-entry-actions { align-items: stretch; }
-.daily-entry-conflict {
+.daily-entry-conflict,
+.trade-review-conflict {
   min-width: 0;
   padding: .85rem;
   border: 1px solid rgb(255 190 92 / 36%);
@@ -867,10 +868,16 @@ input[type="file"]::file-selector-button {
 }
 .daily-entry-conflict h3,
 .daily-entry-conflict h4,
-.daily-entry-conflict p { margin: 0; overflow-wrap: anywhere; }
-.daily-entry-conflict-actions { align-items: stretch; }
-.daily-entry-latest-grid { min-width: 0; margin: 0; display: grid; gap: .55rem; }
-.daily-entry-latest-grid div {
+.daily-entry-conflict p,
+.trade-review-conflict h3,
+.trade-review-conflict h4,
+.trade-review-conflict p { margin: 0; overflow-wrap: anywhere; }
+.daily-entry-conflict-actions,
+.trade-review-conflict-actions { align-items: stretch; }
+.daily-entry-latest-grid,
+.trade-review-latest-grid { min-width: 0; margin: 0; display: grid; gap: .55rem; }
+.daily-entry-latest-grid div,
+.trade-review-latest-grid div {
   min-width: 0;
   padding: .65rem;
   border: 1px solid var(--line);
@@ -879,10 +886,14 @@ input[type="file"]::file-selector-button {
   display: grid;
   gap: .2rem;
 }
-.daily-entry-latest-grid dt { color: var(--muted); font-size: .7rem; }
-.daily-entry-latest-grid dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
-.daily-entry-latest-note { white-space: pre-wrap; }
-#daily-entry-latest:focus { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.daily-entry-latest-grid dt,
+.trade-review-latest-grid dt { color: var(--muted); font-size: .7rem; }
+.daily-entry-latest-grid dd,
+.trade-review-latest-grid dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.daily-entry-latest-note,
+.trade-review-latest-note { white-space: pre-wrap; }
+#daily-entry-latest:focus,
+#trade-review-latest:focus { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .character-count { text-align: right; }
 .limit-exceeded { color: var(--negative); }
 .trade-review-sheet > *,
