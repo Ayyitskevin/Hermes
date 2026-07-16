@@ -12,6 +12,7 @@ import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import {
   calendarDayFilterCard,
+  calendarDayStepper,
   calendarTradeContributionCard,
 } from "./calendar-day-view";
 import {
@@ -425,6 +426,7 @@ export function tradesView(
       snapshot.currencyCode,
       browser.scopeLabel,
       calendarDayReflectionContinuation(snapshot, selected.isoDate),
+      calendarDayStepper(browser),
     )}
     ${snapshot.accountOptions.length === 0 ? "" : scopeSummary(browser, snapshot.currencyCode)}
     ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}

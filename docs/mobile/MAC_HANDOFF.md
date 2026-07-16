@@ -308,6 +308,21 @@ and an App Store disclosure.
   version. Repeat at 320 and 421 CSS pixels with 200% Dynamic Type, VoiceOver,
   hardware keyboard, background/foreground, force-quit/relaunch, and two scenes
   before marking Calendar-Day Reflection Continuation native acceptance PASS.
+- With a selected Trades activity day, confirm **Previous activity day** and
+  **Next activity day** follow only adjacent account/date-scoped activity
+  sessions, skip empty dates, cross month boundaries, and show the exact
+  position/count. Apply a query plus all eight exact facets before stepping in
+  both directions; confirm every filter and date bound survives, the destination
+  month/day is selected on Dashboard, the matching whole-workspace reflection
+  continuation redraws, and the reconciled announcement precedes focus on the
+  unique date-qualified heading. First, last, and single-day cohorts must keep
+  unavailable controls present and natively disabled. Tamper a valid target to
+  a nonadjacent date and separately duplicate a direction control/card; each
+  attempt must focus one fully visible generic error with the old day, storage,
+  reports, and background interaction unchanged. Repeat with VoiceOver, a
+  hardware keyboard, 320/421-width 200% Dynamic Type, sticky chrome,
+  background/foreground, force quit/relaunch, and two scenes before marking
+  Exact Scoped Activity-Day Stepper native acceptance PASS.
 - Retry an exact Daily Journal submission after simulated bridge loss before
   and after commit. Confirm the sheet retains the same submission ID,
   predecessor, normalized content, and revision; exposes no close or second
@@ -647,6 +662,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
+| Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
     open: <every skipped, blocked, failed, or ambiguous item>
 
@@ -730,6 +746,14 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   acceptance held until direct save, exact replay, known-commit refresh-only,
   missing/ambiguous-heading fallback, cancel return, and every unresolved
   recovery state are observed without a repeated write.
+- Exact Scoped Activity-Day Stepper v1 has only Linux/Chromium scoped-adjacency,
+  keyboard, tamper, cross-month, filter-retention, focus, and reflow evidence.
+  Native VoiceOver announcement/order, hardware-keyboard focus,
+  background/foreground, force-quit/relaunch, two-scene refresh, and 320/421
+  Dynamic Type are NOT RUN. Keep native acceptance held until one physical
+  account/date cohort proves boundary disablement, empty-date skipping,
+  cross-month selection, all-eight-facet retention, generic fail-closed error,
+  exact reflection redraw, and no durable write.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

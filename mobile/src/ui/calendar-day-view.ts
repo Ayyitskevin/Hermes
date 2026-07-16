@@ -11,6 +11,7 @@ import type {
 } from "../core/types";
 import {
   buildTradeBrowser,
+  scopedActivityDayNeighbors,
   type TradeBrowserResult,
 } from "../application/trade-browser";
 
@@ -197,15 +198,46 @@ export function calendarDayFilterCard(
   currency: string,
   scopeLabel: string,
   reflectionContinuationHtml = "",
+  activityDayStepperHtml = "",
 ): string {
   validateCalendarSession(session);
   const fullDate = calendarFullDate(session.isoDate);
   return `<article class="card calendar-day-filter" aria-labelledby="calendar-day-filter-title" data-calendar-day-filter="${escapeHtml(session.isoDate)}">
-    <div class="section-title"><div><p class="card-label">CALENDAR DAY</p><h2 id="calendar-day-filter-title" tabindex="-1">${escapeHtml(fullDate)}</h2></div><strong class="${resultClass(session.pnl)}">${escapeHtml(signedCurrency(session.pnl, currency))}</strong></div>
+    <div class="section-title"><div><p class="card-label">CALENDAR DAY</p><h2 id="calendar-day-filter-title" data-calendar-day-filter-title="${escapeHtml(session.isoDate)}" tabindex="-1">${escapeHtml(fullDate)}</h2></div><strong class="${resultClass(session.pnl)}">${escapeHtml(signedCurrency(session.pnl, currency))}</strong></div>
     <p>${countNoun(session.tradeCount, "contributing trade")} · ${countNoun(session.allocationCount, "allocation")} · Trade browser scope: ${escapeHtml(scopeLabel)}. The day total and contribution labels use allocation-day P&amp;L; each card's main result remains the whole trade's realized-to-date result.</p>
+    ${activityDayStepperHtml}
     ${reflectionContinuationHtml}
     <button class="secondary-button" type="button" data-calendar-day-clear>Clear day filter</button>
   </article>`;
+}
+
+export function calendarDayStepper(browser: TradeBrowserResult): string {
+  if (browser.selectedSession === null && browser.state.selectedDay === null) return "";
+  const neighbors = scopedActivityDayNeighbors(browser);
+  const current = neighbors.current.isoDate;
+  const stepButton = (
+    direction: "previous" | "next",
+    target: CalendarSession | null,
+  ) => {
+    const visibleLabel = direction === "previous"
+      ? "← Previous activity day"
+      : "Next activity day →";
+    const accessibleLabel = target === null
+      ? `${direction === "previous" ? "Previous" : "Next"} activity day: none in retained scope`
+      : `${direction === "previous" ? "Previous" : "Next"} activity day: ${calendarFullDate(target.isoDate)}`;
+    const targetAttribute = target === null
+      ? ""
+      : ` data-calendar-day-target="${escapeHtml(target.isoDate)}"`;
+    return `<button class="secondary-button" type="button" data-calendar-day-step="${direction}" data-calendar-day-current="${escapeHtml(current)}"${targetAttribute} aria-label="${escapeHtml(accessibleLabel)}" ${target === null ? "disabled" : ""}>${visibleLabel}</button>`;
+  };
+  return `<div class="calendar-day-stepper" role="group" aria-label="Scoped activity day navigation" data-calendar-day-stepper="${escapeHtml(current)}">
+    <p class="calendar-day-step-position">Activity day ${neighbors.position} of ${neighbors.count} in retained trade-browser scope.</p>
+    <div class="calendar-day-step-actions">
+      ${stepButton("previous", neighbors.previous)}
+      ${stepButton("next", neighbors.next)}
+    </div>
+    <p class="form-error calendar-day-step-error" id="calendar-day-step-error" data-calendar-day-step-error role="alert" tabindex="-1" hidden></p>
+  </div>`;
 }
 
 export function calendarTradeContributionCard(

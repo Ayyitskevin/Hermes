@@ -102,25 +102,185 @@ test("calendar day opens reconciled trade evidence and clears without losing rev
   expect(externalRequests).toEqual([]);
 });
 
-test("calendar drill-down reflows at 320px with 200% text and keeps touch targets", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 568 });
+test("calendar day stepper rejects tampered or ambiguous targets without changing selection", async ({ page }) => {
   await startDemo(page);
-  await page.evaluate(() => {
-    document.documentElement.dataset.testTextScale = "200";
-  });
   await page.getByRole("button", { name: /Open Wednesday, July 1, 2026/ }).click();
-  const scaledHeading = page.getByRole("heading", { name: "Wednesday, July 1, 2026" });
-  await expect(scaledHeading).toBeFocused();
-  await expect(scaledHeading).toBeInViewport();
+  const jul1 = page.getByRole("heading", { name: "Wednesday, July 1, 2026" });
+  const next = page.getByRole("button", {
+    name: "Next activity day: Thursday, July 2, 2026",
+  }).first();
+  const storageBefore = await page.evaluate(() => JSON.stringify(window.localStorage));
 
-  const horizontalOverflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - window.innerWidth,
+  await next.evaluate((button) => {
+    button.setAttribute("data-calendar-day-target", "2026-07-07");
+  });
+  await next.click();
+  const error = page.locator("[data-calendar-day-step-error]");
+  await expect(error).toBeFocused();
+  await expect(error).toHaveText(
+    "Hermes could not safely move to that day. Refresh Trades and try again.",
   );
-  expect(horizontalOverflow).toBeLessThanOrEqual(1);
-  for (const control of await page.locator("button:visible, input:visible, select:visible").all()) {
-    const box = await control.boundingBox();
-    expect(box, "visible control should have a layout box").not.toBeNull();
-    expect(box?.width ?? 0, "control width").toBeGreaterThanOrEqual(44);
-    expect(box?.height ?? 0, "control height").toBeGreaterThanOrEqual(44);
+  await expect(jul1).toBeVisible();
+  await expect(page.locator('[data-calendar-day-filter="2026-07-01"]')).toHaveCount(1);
+  await expect(page.locator('[data-calendar-day-filter="2026-07-07"]')).toHaveCount(0);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  expect(await page.evaluate(() => JSON.stringify(window.localStorage))).toBe(storageBefore);
+
+  const previous = page.getByRole("button", {
+    name: "Previous activity day: none in retained scope",
+  });
+  await next.evaluate((button) => {
+    button.setAttribute("data-calendar-day-target", "2026-07-02");
+  });
+  await previous.evaluate((button) => {
+    button.setAttribute("data-calendar-day-step", "sideways");
+  });
+  await next.click();
+  await expect(page.locator("[data-calendar-day-step-error]")).toBeFocused();
+  await expect(jul1).toBeVisible();
+  expect(await page.evaluate(() => JSON.stringify(window.localStorage))).toBe(storageBefore);
+  await previous.evaluate((button) => {
+    button.setAttribute("data-calendar-day-step", "previous");
+  });
+
+  await next.evaluate((button) => {
+    const clone = button.cloneNode(true);
+    button.parentElement?.append(clone);
+  });
+  await next.click();
+  await expect(page.locator("[data-calendar-day-step-error]")).toBeFocused();
+  await expect(page.locator("[data-calendar-day-step-error]")).toHaveCount(1);
+  await expect(jul1).toBeVisible();
+  expect(await page.evaluate(() => JSON.stringify(window.localStorage))).toBe(storageBefore);
+
+  await next.evaluate((button) => {
+    button.parentElement?.querySelectorAll('[data-calendar-day-step="next"]')
+      .forEach((candidate, index) => {
+        if (index > 0) candidate.remove();
+      });
+  });
+  await next.click();
+  await expect(page.getByRole("heading", {
+    name: "Thursday, July 2, 2026",
+  })).toBeFocused();
+  await expect(page.locator("#route-announcer")).toContainText(
+    "Next activity day. Trades for Thursday, July 2, 2026.",
+  );
+  expect(await page.evaluate(() => JSON.stringify(window.localStorage))).toBe(storageBefore);
+});
+
+test("rebuilt activity-day focus clears sticky chrome at a wide viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 844 });
+  await startDemo(page);
+  await page.getByRole("button", { name: /Open Wednesday, July 1, 2026/ }).click();
+  await page.getByRole("button", {
+    name: "Next activity day: Thursday, July 2, 2026",
+  }).click();
+  const heading = page.getByRole("heading", { name: "Thursday, July 2, 2026" });
+  await expect(heading).toBeFocused();
+  const bounds = await heading.evaluate((element) => {
+    const headingRect = element.getBoundingClientRect();
+    const topbar = document.querySelector<HTMLElement>(".topbar");
+    const topbarRect = topbar?.getBoundingClientRect();
+    const topbarPosition = topbar === null
+      ? ""
+      : window.getComputedStyle(topbar).position;
+    const topBoundary = (
+      (topbarPosition === "sticky" || topbarPosition === "fixed")
+      && topbarRect !== undefined
+      && topbarRect.bottom > 0
+    ) ? topbarRect.bottom : 0;
+    const tabbarTop = document.querySelector<HTMLElement>(".tabbar")
+      ?.getBoundingClientRect().top ?? window.innerHeight;
+    return {
+      headingTop: headingRect.top,
+      headingBottom: headingRect.bottom,
+      topBoundary,
+      bottomBoundary: Math.min(window.innerHeight, tabbarTop),
+    };
+  });
+  expect(bounds.headingTop).toBeGreaterThanOrEqual(bounds.topBoundary - 1);
+  expect(bounds.headingBottom).toBeLessThanOrEqual(bounds.bottomBoundary + 1);
+});
+
+test("calendar drill-down reflows at 320px and 421px with 200% text", async ({ page }) => {
+  for (const width of [320, 421]) {
+    await page.setViewportSize({ width, height: 568 });
+    await startDemo(page);
+    await page.evaluate(() => {
+      document.documentElement.dataset.testTextScale = "200";
+    });
+    await page.getByRole("button", { name: /Open Wednesday, July 1, 2026/ }).click();
+    const next = page.getByRole("button", {
+      name: "Next activity day: Thursday, July 2, 2026",
+    });
+    await next.evaluate((button) => {
+      button.setAttribute("data-calendar-day-target", "2026-07-07");
+    });
+    await next.click();
+    const error = page.locator("[data-calendar-day-step-error]");
+    await expect(error).toBeFocused();
+    const errorBounds = await error.evaluate((element) => {
+      const errorRect = element.getBoundingClientRect();
+      const topbar = document.querySelector<HTMLElement>(".topbar");
+      const topbarRect = topbar?.getBoundingClientRect();
+      const topbarPosition = topbar === null
+        ? ""
+        : window.getComputedStyle(topbar).position;
+      const topBoundary = (
+        (topbarPosition === "sticky" || topbarPosition === "fixed")
+        && topbarRect !== undefined
+        && topbarRect.bottom > 0
+      ) ? topbarRect.bottom : 0;
+      const tabbarTop = document.querySelector<HTMLElement>(".tabbar")
+        ?.getBoundingClientRect().top ?? window.innerHeight;
+      return {
+        top: errorRect.top,
+        bottom: errorRect.bottom,
+        height: errorRect.height,
+        topBoundary,
+        bottomBoundary: Math.min(window.innerHeight, tabbarTop),
+        scrollY: window.scrollY,
+        maxScrollY: document.documentElement.scrollHeight - window.innerHeight,
+      };
+    });
+    expect(errorBounds.top, `${width}px focused error: ${JSON.stringify(errorBounds)}`)
+      .toBeGreaterThanOrEqual(errorBounds.topBoundary - 1);
+    expect(errorBounds.bottom, `${width}px focused error: ${JSON.stringify(errorBounds)}`)
+      .toBeLessThanOrEqual(errorBounds.bottomBoundary + 1);
+    await next.evaluate((button) => {
+      button.setAttribute("data-calendar-day-target", "2026-07-02");
+    });
+    await next.focus();
+    await page.keyboard.press("Enter");
+    const scaledHeading = page.getByRole("heading", { name: "Thursday, July 2, 2026" });
+    await expect(scaledHeading).toBeFocused();
+    await expect(scaledHeading).toBeInViewport();
+
+    const overflow = await page.evaluate(() => {
+      const card = document.querySelector<HTMLElement>("[data-calendar-day-filter]");
+      const stepper = document.querySelector<HTMLElement>("[data-calendar-day-stepper]");
+      return {
+        document: document.documentElement.scrollWidth - window.innerWidth,
+        card: card === null ? Number.POSITIVE_INFINITY : card.scrollWidth - card.clientWidth,
+        stepper: stepper === null
+          ? Number.POSITIVE_INFINITY
+          : stepper.scrollWidth - stepper.clientWidth,
+      };
+    });
+    expect(overflow.document, `${width}px: ${JSON.stringify(overflow)}`)
+      .toBeLessThanOrEqual(1);
+    expect(overflow.card, `${width}px: ${JSON.stringify(overflow)}`)
+      .toBeLessThanOrEqual(1);
+    expect(overflow.stepper, `${width}px: ${JSON.stringify(overflow)}`)
+      .toBeLessThanOrEqual(1);
+    for (const control of await page.locator(
+      "[data-calendar-day-stepper] button:visible",
+    ).all()) {
+      const box = await control.boundingBox();
+      expect(box, `${width}px step control should have a layout box`).not.toBeNull();
+      expect(box?.width ?? 0, "control width").toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0, "control height").toBeGreaterThanOrEqual(44);
+    }
   }
 });

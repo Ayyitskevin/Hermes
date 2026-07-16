@@ -39,6 +39,7 @@ describe("trades view", () => {
     expect(html).toContain("governed report totals");
     expect(html).toContain("remain whole-workspace");
     expect(html).toContain("Emotion Patterns, Tag Patterns, and Setup Breakdown");
+    expect(html).not.toContain("data-calendar-day-stepper");
   });
 
   it("renders exact card facets separately from allocation scope", () => {
@@ -237,6 +238,9 @@ describe("trades view", () => {
     expect(html).toContain("1 ALLOCATION-DAY CONTRIBUTOR");
     expect(html).not.toContain("1 ALLOCATION-DAY CONTRIBUTORS");
     expect(html).toContain("Search Jul 7 scoped trades");
+    expect(html).toContain("Activity day 1 of 2 in retained trade-browser scope.");
+    expect(html).toContain('data-calendar-day-target="2026-07-09"');
+    expect(html).toContain('aria-label="Next activity day: Thursday, July 9, 2026"');
     expect(html).toContain("Clear day filter");
   });
 

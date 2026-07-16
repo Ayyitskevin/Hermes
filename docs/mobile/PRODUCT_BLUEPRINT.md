@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-one bounded Slice D increments are implemented in the current workspace.
+Twenty-two bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -822,6 +822,27 @@ derived-only presentation/projection increment and adds no schema, migration,
 store command, archive or digest input, report or formula, preference,
 dependency, or native source.
 
+A twenty-second increment, Exact Scoped Activity-Day Stepper v1, keeps
+selected-day review moving without widening financial scope. Its previous and
+next controls resolve only the immediate older/newer entries in the validated,
+frozen Trade Browser account/date cohort. They skip no-activity dates, cross
+activity-month boundaries, and never derive from the month-limited calendar,
+raw workspace dates, query, or the eight exact card facets. Both native controls
+remain present at a boundary, with the unavailable direction disabled and the
+selected position shown against the retained activity-day count.
+
+Activation rederives the browser from live session state, proves one exact
+selected card, heading, stepper, direction, current identity, and adjacent
+target, then builds the candidate before assigning it. Account/date range,
+query, and all eight facets must remain exact; only selected day and destination
+calendar month may change. Hermes redraws Trades, announces the reconciled
+activity-day evidence and retained filter result, and focuses the
+date-qualified rebuilt heading. Tampered, missing, duplicate, detached, or
+nonadjacent identity fails visibly without selection, storage, network, or
+persistence work. This is the eighteenth derived-only presentation/projection
+increment and changes no route, preference, preset, schema, store command,
+archive, digest, governed report, formula, dependency, or native source.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -976,15 +997,15 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-twenty-one Slice D increments add Plan Check, governed Setup Breakdown,
+twenty-two Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
-and Daily Reflection Return Focus v1. The seventeen
-presentation/projection increments remain derived-only. Durable
+Daily Reflection Return Focus v1, and Exact Scoped Activity-Day Stepper v1.
+The eighteen presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path, while Calendar-Day Reflection Continuation

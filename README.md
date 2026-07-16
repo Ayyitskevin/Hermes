@@ -183,6 +183,21 @@ submission-ready product:
   Calendar-origin focus, ordinary cancel return, and unresolved recovery
   ownership remain unchanged. No persistence, schema, store command, archive,
   digest, report, formula, preference, dependency, or native source changed.
+- Exact Scoped Activity-Day Stepper v1 is the twenty-second bounded Slice D
+  increment and the eighteenth derived-only presentation/projection increment.
+  A selected Trades day now exposes native previous/next controls over the
+  validated, frozen account/date scoped-calendar cohort—not calendar arithmetic,
+  the displayed month, search results, or exact card facets. Adjacency skips
+  dates with no retained activity and crosses month boundaries; endpoints stay
+  present and disabled with visible position/count context.
+  Activation rebuilds from live session state, retains account/range, query, and
+  all eight facets, changes only the selected day and its displayed month, then
+  announces and focuses the unique rebuilt date-qualified heading. Missing,
+  duplicate, detached, nonadjacent, or tampered DOM/state identity produces one
+  fully visible focused generic error without changing selection or touching
+  storage. No schema, store command, archive, digest, report, formula,
+  preference, dependency, or native source changed; the same four write-capable
+  exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

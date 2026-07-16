@@ -251,5 +251,22 @@ test("activity month controls navigate only months with local allocation evidenc
   await expect(page.locator("#route-announcer")).toHaveText(
     "Showing June 2026 trading activity.",
   );
-  await expect(page.getByRole("button", { name: /Open Tuesday, June 30, 2026/ })).toBeVisible();
+  const june30 = page.getByRole("button", { name: /Open Tuesday, June 30, 2026/ });
+  await expect(june30).toBeVisible();
+  await june30.click();
+  const crossMonthNext = page.getByRole("button", {
+    name: "Next activity day: Wednesday, July 1, 2026",
+  });
+  await crossMonthNext.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", {
+    name: "Wednesday, July 1, 2026",
+  })).toBeFocused();
+  await expect(page.locator("#route-announcer")).toContainText(
+    "Next activity day. Trades for Wednesday, July 1, 2026.",
+  );
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(monthGroup.getByRole("heading", { name: "July 2026" })).toBeVisible();
+  await expect(page.locator('button[data-calendar-day="2026-07-01"]'))
+    .toHaveAttribute("aria-pressed", "true");
 });

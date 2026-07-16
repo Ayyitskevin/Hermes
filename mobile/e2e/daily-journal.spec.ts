@@ -442,7 +442,19 @@ test("calendar day continues the exact workspace reflection without changing tra
   const selectedCard = page.locator('[data-calendar-day-filter="2026-07-09"]');
   const reflection = selectedCard.locator(".calendar-day-reflection");
   const reflectionHeading = reflection.locator("#calendar-day-reflection-title");
+  const activityStepper = selectedCard.getByRole("group", {
+    name: "Scoped activity day navigation",
+  });
   await expect(selectedCard).toBeVisible();
+  await expect(activityStepper).toContainText(
+    "Activity day 1 of 1 in retained trade-browser scope.",
+  );
+  await expect(activityStepper.getByRole("button", {
+    name: "Previous activity day: none in retained scope",
+  })).toBeDisabled();
+  await expect(activityStepper.getByRole("button", {
+    name: "Next activity day: none in retained scope",
+  })).toBeDisabled();
   await expect(reflectionHeading).toHaveText("Daily reflection");
   await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
     "No reflection saved",
@@ -523,6 +535,9 @@ test("calendar day continues the exact workspace reflection without changing tra
   await expect(reflection.getByRole("button", {
     name: "Continue reflection draft — July 9, 2026",
   })).toHaveText("Continue reflection draft");
+  await expect(activityStepper).toContainText(
+    "Activity day 1 of 1 in retained trade-browser scope.",
+  );
 
   await expect(page.getByRole("combobox", { name: "Account" }).locator("option:checked"))
     .toContainText("Primary brokerage");
@@ -561,6 +576,9 @@ test("calendar day continues the exact workspace reflection without changing tra
   await expect(reflection.getByRole("button", {
     name: "Edit completed reflection — July 9, 2026",
   })).toHaveText("Edit completed reflection");
+  await expect(activityStepper.getByRole("button", {
+    name: "Next activity day: none in retained scope",
+  })).toBeDisabled();
 
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   expect(await reviewProgress.evaluate((element) => (

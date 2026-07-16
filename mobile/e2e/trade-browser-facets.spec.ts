@@ -257,10 +257,12 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(activeFilterCount).toHaveText("· 8 active filters");
 
   await page.getByRole("combobox", { name: "Account" }).selectOption("demo-account-swing");
+  await page.getByRole("textbox", { name: "Activity from" }).fill("2026-07-07");
+  await page.getByRole("textbox", { name: "Activity through" }).fill("2026-07-09");
   await page.getByRole("button", { name: "Apply scope" }).click();
-  await expect(scopeSummary).toContainText("Demo Swing · All activity dates");
-  await expect(scopeSummary).toContainText("-$220.00");
-  await expect(count).toHaveText("Showing 1 of 3 trades");
+  await expect(scopeSummary).toContainText("Demo Swing · Jul 7, 2026–Jul 9, 2026");
+  await expect(scopeSummary).toContainText("-$150.00");
+  await expect(count).toHaveText("Showing 1 of 2 trades");
   await expect(assetClass).toHaveValue("etf");
   await expect(direction).toHaveValue("long");
   await expect(setup).toHaveValue("Breakout");
@@ -284,6 +286,58 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(page.locator(".trade-card:visible")).toHaveCount(0);
   await expect(page.locator("#route-announcer")).toHaveText(
     "Trades for Tuesday, July 7, 2026. 1 contributing trade, 2 allocations, -$100.00 allocation-day P&L. Search and card filters show 0 of 1 trades.",
+  );
+  const activityStepper = page.getByRole("group", {
+    name: "Scoped activity day navigation",
+  });
+  await expect(activityStepper).toContainText(
+    "Activity day 1 of 2 in retained trade-browser scope.",
+  );
+  await expect(activityStepper.getByRole("button", {
+    name: "Previous activity day: none in retained scope",
+  })).toBeDisabled();
+  const nextActivityDay = activityStepper.getByRole("button", {
+    name: "Next activity day: Thursday, July 9, 2026",
+  });
+  await nextActivityDay.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", {
+    name: "Thursday, July 9, 2026",
+  })).toBeFocused();
+  await expect(page.getByRole("combobox", { name: "Account" }))
+    .toHaveValue("demo-account-swing");
+  await expect(page.getByRole("textbox", { name: "Activity from" }))
+    .toHaveValue("2026-07-07");
+  await expect(page.getByRole("textbox", { name: "Activity through" }))
+    .toHaveValue("2026-07-09");
+  await expect(search).toHaveValue("qqq");
+  await expect(assetClass).toHaveValue("etf");
+  await expect(direction).toHaveValue("long");
+  await expect(positionState).toHaveValue("closed");
+  await expect(reviewState).toHaveValue("completed");
+  await expect(setup).toHaveValue("Breakout");
+  await expect(mistake).toHaveValue("Chased entry");
+  await expect(emotion).toHaveValue("Impatient");
+  await expect(tag).toHaveValue("Stopped on plan");
+  await expect(count).toHaveText("Showing 0 of 1 trade");
+  await expect(page.locator("#route-announcer")).toHaveText(
+    "Next activity day. Trades for Thursday, July 9, 2026. 1 contributing trade, 2 allocations, -$50.00 allocation-day P&L. Scoped activity day 2 of 2 in retained scope. Search and card filters show 0 of 1 trades.",
+  );
+  const previousActivityDay = page.getByRole("button", {
+    name: "Previous activity day: Tuesday, July 7, 2026",
+  });
+  await expect(page.getByRole("button", {
+    name: "Next activity day: none in retained scope",
+  })).toBeDisabled();
+  await previousActivityDay.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("heading", {
+    name: "Tuesday, July 7, 2026",
+  })).toBeFocused();
+  await expect(search).toHaveValue("qqq");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
+  await expect(page.locator("#route-announcer")).toHaveText(
+    "Previous activity day. Trades for Tuesday, July 7, 2026. 1 contributing trade, 2 allocations, -$100.00 allocation-day P&L. Scoped activity day 1 of 2 in retained scope. Search and card filters show 0 of 1 trades.",
   );
   await search.fill("");
   await expect(page.locator(".trade-card:visible")).toHaveCount(1);
@@ -310,7 +364,7 @@ test("exact card facets compose with search and scope without changing totals or
   await assetClass.selectOption("etf");
   await page.getByRole("button", { name: "Clear day filter" }).click();
   await expect(page.getByRole("combobox", { name: "Asset class" })).toHaveValue("etf");
-  await expect(count).toHaveText("Showing 2 of 3 trades");
+  await expect(count).toHaveText("Showing 2 of 2 trades");
 
   await assetClass.selectOption("all");
   await expect(filterSummary).toBeFocused();
@@ -318,7 +372,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(activeFilterCount).toHaveText("· none active");
   await expect(page.getByRole("combobox", { name: "Account" }))
     .toHaveValue("demo-account-swing");
-  await expect(count).toHaveText("Showing 3 trades");
+  await expect(count).toHaveText("Showing 2 trades");
   await expect(clearView).toBeDisabled();
 
   await filterSummary.click();

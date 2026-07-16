@@ -1,8 +1,173 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Daily Reflection Return Focus v1 · updated 2026-07-16
+Status: verified Exact Scoped Activity-Day Stepper v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Exact Scoped Activity-Day Stepper v1: move a selected Trades day
+to the exact previous or next retained account/date-scoped activity session
+while preserving live query and all eight card facets, crossing month and
+no-activity gaps, and changing no persistence, schema, report, archive, digest,
+preference, or financial definition.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Trade Browser now exposes a pure adjacent-day projection over its validated,
+  frozen, strictly ascending scoped-calendar cohort. The selected state,
+  selected-session object, destination month, cohort count, canonical dates,
+  strict order, uniqueness, and attached selected identity must reconcile.
+  Search, exact card facets, visible cards, raw workspace dates, and the
+  month-limited Dashboard calendar never redefine adjacency or position.
+- The selected Trades day card renders a semantic **Scoped activity day
+  navigation** group with visible position/count context and two native
+  buttons. Previous/next names retain their visible labels and add the exact
+  full destination date. First, last, and one-day cohorts keep unavailable
+  directions present and natively disabled.
+- Activation rebuilds Trade Browser from live session state, so query/facet
+  edits made without a full redraw are retained. It requires exactly one
+  selected card, date-qualified heading, stepper, previous control, and next
+  control; current and target attributes must agree with the one exact adjacent
+  cohort member.
+- The candidate is built before assignment. Account, inclusive date bounds,
+  query, all eight exact facets, and every scoped activity date must remain
+  identical. Only selected day and its destination Dashboard month may change.
+  Any unexpected redraw, announcement, or focus exception rolls state back to
+  the last validated browser before the generic error is shown.
+- A successful step redraws Trades, updates the selected Dashboard month/day,
+  reconciles the exact allocation-day evidence and whole-workspace reflection
+  continuation, announces direction plus cohort position and retained
+  search/facet result, then scrolls and focuses the unique rebuilt
+  date-qualified heading with a unique-screen fallback.
+- A missing, detached, duplicated, malformed, nonadjacent, boundary, or
+  tampered DOM/state identity leaves the old day and session state unchanged.
+  Hermes removes stale error nodes, creates one generic focused alert with a
+  refresh instruction, and explicitly centers its compact text between measured
+  top and bottom chrome. The failure path never opens a modal, inerts the
+  background, generates an ID, calls a store, writes storage, or makes a
+  network request.
+- Production Chromium proves a Jul 7 to Jul 9 gap skip and return with account,
+  date range, query, and all eight exact facets retained; first/last/one-day
+  boundaries; keyboard Enter/Space; cross-month Jun 30 to Jul 1 selection;
+  nonadjacent target, malformed opposite direction, and cloned-control
+  rejection; Daily Reflection refresh coherence; no local-storage/report/
+  network change; 44-point controls; no overflow at 320/421 CSS pixels with
+  200% text; a fully visible focused error above the fixed tab bar; and
+  unobscured rebuilt-heading focus at 844 pixels.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, and
+  this active handoff now cover twenty-two bounded Slice D increments,
+  eighteen derived-only presentation/projection increments, and the same four
+  write-capable exceptions. Schema v4, five tabs, ten report targets, and eight
+  governed reports remain unchanged.
+- No migration, store command, Daily Journal or review write path,
+  export/restore shape, archive or digest input, governed report
+  version/checksum/cohort/formula, route, preference, preset, dependency,
+  credential, native source, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 691 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npx playwright test e2e/calendar-day-drilldown.spec.ts — exit 0;
+  all 4 calendar journeys passed after alert visibility and direction-cardinality
+  hardening.
+- cd mobile && npm run test:e2e — exit 0; all 75 production-Chromium journeys
+  passed after final hardening.
+- cd mobile && npm run build — exit 0; Vite transformed 78 modules. The existing
+  >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  a4d8e45dc314b932e82e8043fb9f8938d8f31e0fe4f3976516add903ab23f5fe.
+  Generated Capacitor identity/SQLite
+  registration and tracked drift passed; every native evidence row remained
+  NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --check and native/lock drift checks — exit 0. The active handoff
+  preserves all twenty-nine historical milestone markers.
+- Independent product, technical/security, and UX/accessibility reviews passed
+  after closing non-actionable error copy, fixed-tabbar alert occlusion,
+  opposite-direction cardinality, and post-assignment rollback gaps. The final
+  reviews found no open P0-P3 issue.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- JournalWorkspaceSnapshot.calendar remains the coherent allocation-day
+  projection. buildTradeBrowser remains the sole owner of account/date scoping,
+  canonical sort, duplicate-date rejection, selected-day refinement, and
+  ephemeral query/facet normalization.
+- scopedCalendar means activity sessions inside the retained account and
+  inclusive date range before optional selected-day refinement. It intentionally
+  excludes dates without retained allocation evidence and is independent of
+  visible-card search/facets and whole-workspace Daily Journal dates.
+- Trade Browser state remains session-only. Changing selected day and displayed
+  month is not a durable ledger or preference write, and governed Reports remain
+  whole-workspace.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, safe-area, SQLCipher, Keychain,
+  or physical-iPhone evidence.
+
+open:
+
+- HOLD native Exact Scoped Activity-Day Stepper acceptance: repeat scoped gap
+  skipping, first/last/one-day boundaries, cross-month selection,
+  account/date/query/all-eight-facet retention, malformed/tampered identity,
+  exact reflection redraw, announcement order, focus visibility, 44-point
+  controls, and zero durable writes with VoiceOver, hardware keyboard,
+  320/421-width 200% Dynamic Type, safe areas, background/foreground,
+  force-quit/relaunch, and two scenes.
+- HOLD native Daily Reflection Return Focus, Calendar-Day Reflection
+  Continuation, Review Queue Focus, Exact Setup Facet, Dashboard Recent Trade
+  Continuation, and Review Session Coverage acceptance; browser evidence does
+  not satisfy their Mac/iPhone rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit current main after publication and choose the next bounded,
+  persistence-neutral product slice; the continuous user goal remains active.
+
+## Prior milestone — Daily Reflection Return Focus v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Exact Scoped Activity-Day Stepper v1 handoff above.
+
+Status: verified Daily Reflection Return Focus v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Daily Reflection Return Focus v1: return post-save Journal focus
 to the exact rebuilt daily-reflection heading identified by the successfully

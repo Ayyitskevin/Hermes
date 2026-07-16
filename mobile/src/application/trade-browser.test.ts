@@ -11,6 +11,7 @@ import {
   EMPTY_TRADE_BROWSER_STATE,
   TRADE_BROWSER_SEARCH_MAX_CODE_POINTS,
   buildTradeBrowser,
+  scopedActivityDayNeighbors,
 } from "./trade-browser";
 
 function demoTrade(symbol: string): TradePreview {
@@ -87,6 +88,108 @@ describe("trade browser", () => {
     expect(day.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["SPY"]);
     expect(day.contributionPnlExact).toBe("-100");
     expect(day.state.calendarMonth).toBe("2026-07");
+  });
+
+  it("resolves exact adjacent scoped activity days without using gaps, months, search, or facets", () => {
+    const first = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-swing",
+      activityFrom: "2026-07-07",
+      activityThrough: "2026-07-09",
+      selectedDay: "2026-07-07",
+      query: "qqq",
+      assetClass: "etf",
+      direction: "long",
+      positionState: "closed",
+      reviewState: "completed",
+      setup: "Breakout",
+      mistake: "Chased entry",
+      emotion: "Impatient",
+      tag: "Stopped on plan",
+    });
+    const firstNeighbors = scopedActivityDayNeighbors(first);
+    expect(firstNeighbors).toMatchObject({
+      position: 1,
+      count: 2,
+      previous: null,
+    });
+    expect(firstNeighbors.current.isoDate).toBe("2026-07-07");
+    expect(firstNeighbors.next?.isoDate).toBe("2026-07-09");
+    expect(first.visibleEvidence).toHaveLength(0);
+    expect(Object.isFrozen(firstNeighbors)).toBe(true);
+
+    const last = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...first.state,
+      selectedDay: "2026-07-09",
+    });
+    expect(scopedActivityDayNeighbors(last)).toMatchObject({
+      position: 2,
+      count: 2,
+      next: null,
+    });
+    expect(scopedActivityDayNeighbors(last).previous?.isoDate).toBe("2026-07-07");
+
+    const single = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      activityFrom: "2026-07-07",
+      activityThrough: "2026-07-07",
+      selectedDay: "2026-07-07",
+    });
+    expect(scopedActivityDayNeighbors(single)).toMatchObject({
+      position: 1,
+      count: 1,
+      previous: null,
+      next: null,
+    });
+    expect(() => scopedActivityDayNeighbors(buildTradeBrowser(DEMO_WORKSPACE))).toThrow(
+      "requires one selected day",
+    );
+  });
+
+  it("fails closed on detached, duplicated, unsorted, invalid, or miscounted activity-day identity", () => {
+    const browser = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-swing",
+      activityFrom: "2026-07-07",
+      activityThrough: "2026-07-09",
+      selectedDay: "2026-07-07",
+    });
+    const selected = browser.selectedSession;
+    if (selected === null) throw new Error("Missing selected test session.");
+
+    expect(() => scopedActivityDayNeighbors({
+      ...browser,
+      selectedSession: { ...selected },
+    })).toThrow("duplicated or detached");
+    expect(() => scopedActivityDayNeighbors({
+      ...browser,
+      scopedCalendar: [selected, { ...selected }, browser.scopedCalendar[1]!],
+      calendar: { ...browser.calendar, scopedSessionCount: 3 },
+    })).toThrow("unique and strictly ascending");
+    expect(() => scopedActivityDayNeighbors({
+      ...browser,
+      scopedCalendar: [browser.scopedCalendar[1]!, selected],
+    })).toThrow("unique and strictly ascending");
+    const invalid = { ...selected, isoDate: "2026-02-30" };
+    expect(() => scopedActivityDayNeighbors({
+      ...browser,
+      state: {
+        ...browser.state,
+        selectedDay: invalid.isoDate,
+        calendarMonth: "2026-02",
+      },
+      selectedSession: invalid,
+      scopedCalendar: [invalid],
+      calendar: {
+        ...browser.calendar,
+        month: "2026-02",
+        scopedSessionCount: 1,
+      },
+    })).toThrow("not a valid Gregorian date");
+    expect(() => scopedActivityDayNeighbors({
+      ...browser,
+      calendar: { ...browser.calendar, scopedSessionCount: 1 },
+    })).toThrow("count does not reconcile");
   });
 
   it("keeps text search separate from the exact account/date scope summary", () => {
@@ -494,6 +597,16 @@ describe("trade browser", () => {
     expect(july.calendar.month).toBe("2026-07");
     expect(july.calendar.previousMonth).toBeNull();
     expect(july.calendar.nextMonth).toBe("2026-08");
+    const julyDay = buildTradeBrowser(snapshot, {
+      ...july.state,
+      selectedDay: "2026-07-31",
+    });
+    expect(scopedActivityDayNeighbors(julyDay).next?.isoDate).toBe("2026-08-01");
+    const augustDay = buildTradeBrowser(snapshot, {
+      ...july.state,
+      selectedDay: "2026-08-01",
+    });
+    expect(scopedActivityDayNeighbors(augustDay).previous?.isoDate).toBe("2026-07-31");
 
     const leapDay = buildTradeBrowser(snapshot, {
       ...EMPTY_TRADE_BROWSER_STATE,

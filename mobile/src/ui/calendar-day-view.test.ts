@@ -3,9 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { CalendarSession, JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
+  EMPTY_TRADE_BROWSER_STATE,
+  buildTradeBrowser,
+} from "../application/trade-browser";
+import {
   calendarDayAnnouncement,
   calendarDayFilterCard,
   calendarDaySection,
+  calendarDayStepper,
   calendarFullDate,
   calendarTradeContributionCard,
   selectCalendarDay,
@@ -49,7 +54,7 @@ describe("calendar day view", () => {
     const selected = selectCalendarDay(DEMO_WORKSPACE, "2026-07-01");
     if (selected === null) throw new Error("Missing Jul 1 demo day.");
     const filter = calendarDayFilterCard(selected.session, "USD", "Demo Brokerage");
-    expect(filter).toContain('id="calendar-day-filter-title" tabindex="-1"');
+    expect(filter).toContain('id="calendar-day-filter-title" data-calendar-day-filter-title="2026-07-01" tabindex="-1"');
     expect(filter).toContain("+$80.00");
     expect(filter).toContain("whole trade's realized-to-date result");
     expect(filter).toContain("data-calendar-day-clear");
@@ -65,6 +70,37 @@ describe("calendar day view", () => {
     expect(contribution).toContain('data-calendar-day-pnl-exact="180"');
     expect(contribution).toContain("+$180.00");
     expect(contribution).toContain("2 allocations on Wednesday, July 1, 2026");
+  });
+
+  it("renders exact scoped activity-day position, full-date targets, and native boundaries", () => {
+    const first = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      accountId: "demo-account-swing",
+      activityFrom: "2026-07-07",
+      activityThrough: "2026-07-09",
+      selectedDay: "2026-07-07",
+    });
+    const firstHtml = calendarDayStepper(first);
+    expect(firstHtml).toContain('role="group" aria-label="Scoped activity day navigation"');
+    expect(firstHtml).toContain('data-calendar-day-stepper="2026-07-07"');
+    expect(firstHtml).toContain("Activity day 1 of 2 in retained trade-browser scope.");
+    expect(firstHtml).toContain('data-calendar-day-step="previous"');
+    expect(firstHtml).toContain('aria-label="Previous activity day: none in retained scope" disabled');
+    expect(firstHtml).toContain('data-calendar-day-step="next" data-calendar-day-current="2026-07-07" data-calendar-day-target="2026-07-09"');
+    expect(firstHtml).toContain('aria-label="Next activity day: Thursday, July 9, 2026"');
+    expect(firstHtml).toContain('id="calendar-day-step-error"');
+    expect(firstHtml.match(/data-calendar-day-step=/g)).toHaveLength(2);
+
+    const last = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...first.state,
+      selectedDay: "2026-07-09",
+    });
+    const lastHtml = calendarDayStepper(last);
+    expect(lastHtml).toContain("Activity day 2 of 2 in retained trade-browser scope.");
+    expect(lastHtml).toContain('aria-label="Previous activity day: Tuesday, July 7, 2026"');
+    expect(lastHtml).toContain('data-calendar-day-target="2026-07-07"');
+    expect(lastHtml).toContain('aria-label="Next activity day: none in retained scope" disabled');
+    expect(calendarDayStepper(buildTradeBrowser(DEMO_WORKSPACE))).toBe("");
   });
 
   it("escapes derived markup and fails loudly for missing or unreconciled evidence", () => {

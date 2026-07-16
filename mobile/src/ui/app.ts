@@ -3,6 +3,8 @@ import { OnboardingPreferences } from "../application/onboarding-preferences";
 import {
   buildTradeBrowser,
   EMPTY_TRADE_BROWSER_STATE,
+  scopedActivityDayNeighbors,
+  type ScopedActivityDayDirection,
   type TradeBrowserResult,
   type TradeBrowserState,
 } from "../application/trade-browser";
@@ -103,6 +105,30 @@ function viewFilterAnnouncement(browser: TradeBrowserResult): string {
     : hasFacet
     ? ` Card filters show ${browser.visibleEvidence.length} of ${browser.evidence.length} trades.`
     : ` Search shows ${browser.visibleEvidence.length} of ${browser.evidence.length} cards.`;
+}
+
+const RETAINED_ACTIVITY_DAY_STATE_KEYS = [
+  "accountId",
+  "activityFrom",
+  "activityThrough",
+  "query",
+  "assetClass",
+  "direction",
+  "positionState",
+  "reviewState",
+  "setup",
+  "mistake",
+  "emotion",
+  "tag",
+] as const satisfies readonly (keyof TradeBrowserState)[];
+
+function retainedActivityDayStateMatches(
+  current: TradeBrowserState,
+  candidate: TradeBrowserState,
+): boolean {
+  return RETAINED_ACTIVITY_DAY_STATE_KEYS.every((key) => (
+    current[key] === candidate[key]
+  ));
 }
 
 function modeLabel(snapshot: JournalWorkspaceSnapshot): string {
@@ -773,6 +799,85 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       : `${message} ${pendingScopeNotice}`;
     pendingScopeNotice = null;
   };
+  const focusExactCalendarDay = (isoDate: string) => {
+    const cards = Array.from(root.querySelectorAll<HTMLElement>(
+      "[data-calendar-day-filter]",
+    )).filter((card) => card.dataset.calendarDayFilter === isoDate);
+    const headings = Array.from(root.querySelectorAll<HTMLElement>(
+      "[data-calendar-day-filter-title]",
+    )).filter((heading) => heading.dataset.calendarDayFilterTitle === isoDate);
+    const card = cards.length === 1 ? cards[0] : undefined;
+    const heading = headings.length === 1 ? headings[0] : undefined;
+    if (
+      card !== undefined
+      && heading !== undefined
+      && card.contains(heading)
+      && heading.id === "calendar-day-filter-title"
+    ) {
+      heading.scrollIntoView({ behavior: "auto", block: "start" });
+      heading.focus({ preventScroll: true });
+      return;
+    }
+    const screens = root.querySelectorAll<HTMLElement>("#screen");
+    if (screens.length === 1) {
+      screens[0]?.focus({ preventScroll: true });
+    }
+  };
+  const showCalendarDayStepError = (trigger: HTMLButtonElement) => {
+    root.querySelectorAll<HTMLElement>("[data-calendar-day-step-error]")
+      .forEach((error) => error.remove());
+    const triggerGroup = trigger.isConnected
+      ? trigger.closest<HTMLElement>("[data-calendar-day-stepper]")
+      : null;
+    const selectedCards = root.querySelectorAll<HTMLElement>("[data-calendar-day-filter]");
+    const host = triggerGroup !== null && root.contains(triggerGroup)
+      ? triggerGroup
+      : selectedCards.length === 1
+        ? selectedCards[0]
+        : screen;
+    if (host === null || host === undefined) return;
+    const error = document.createElement("p");
+    error.className = "form-error calendar-day-step-error";
+    error.dataset.calendarDayStepError = "";
+    error.id = "calendar-day-step-error";
+    error.setAttribute("role", "alert");
+    error.tabIndex = -1;
+    error.textContent = "Hermes could not safely move to that day. Refresh Trades and try again.";
+    host.append(error);
+    error.scrollIntoView({ behavior: "auto", block: "center" });
+    const errorRect = error.getBoundingClientRect();
+    const topbar = root.querySelector<HTMLElement>(".topbar");
+    const topbarRect = topbar?.getBoundingClientRect();
+    const topbarPosition = topbar === null
+      ? ""
+      : window.getComputedStyle(topbar).position;
+    const topBoundary = (
+      (topbarPosition === "sticky" || topbarPosition === "fixed")
+      && topbarRect !== undefined
+      && topbarRect.bottom > 0
+    ) ? topbarRect.bottom : 0;
+    const tabbar = root.querySelector<HTMLElement>(".tabbar");
+    const tabbarRect = tabbar?.getBoundingClientRect();
+    const tabbarPosition = tabbar === null
+      ? ""
+      : window.getComputedStyle(tabbar).position;
+    const bottomBoundary = (
+      (tabbarPosition === "sticky" || tabbarPosition === "fixed")
+      && tabbarRect !== undefined
+      && tabbarRect.top < window.innerHeight
+    ) ? tabbarRect.top : window.innerHeight;
+    const availableHeight = Math.max(0, bottomBoundary - topBoundary);
+    const desiredTop = topBoundary + Math.max(
+      0,
+      (availableHeight - errorRect.height) / 2,
+    );
+    window.scrollBy({
+      top: errorRect.top - desiredTop,
+      left: 0,
+      behavior: "auto",
+    });
+    error.focus({ preventScroll: true });
+  };
 
   const setBackgroundInert = (inert: boolean) => {
     document.body.classList.toggle("modal-open", inert);
@@ -998,6 +1103,128 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       render(currentTab, false);
       announceStatus(announcement);
     });
+    root.querySelectorAll<HTMLButtonElement>("button[data-calendar-day-step]").forEach((button) => {
+      button.addEventListener("click", () => {
+        try {
+          if (!button.isConnected || button.disabled) {
+            throw new Error("Scoped activity-day trigger is unavailable.");
+          }
+          const current = buildTradeBrowser(snapshot, tradeBrowserState);
+          const neighbors = scopedActivityDayNeighbors(current);
+          const directionValue = button.dataset.calendarDayStep;
+          if (directionValue !== "previous" && directionValue !== "next") {
+            throw new Error("Scoped activity-day direction is unavailable.");
+          }
+          const direction: ScopedActivityDayDirection = directionValue;
+          const selectedDay = neighbors.current.isoDate;
+          const cards = Array.from(root.querySelectorAll<HTMLElement>(
+            "[data-calendar-day-filter]",
+          ));
+          const headings = Array.from(root.querySelectorAll<HTMLElement>(
+            "[data-calendar-day-filter-title]",
+          ));
+          const steppers = Array.from(root.querySelectorAll<HTMLElement>(
+            "[data-calendar-day-stepper]",
+          ));
+          const controls = Array.from(root.querySelectorAll<HTMLButtonElement>(
+            "button[data-calendar-day-step]",
+          ));
+          const directionControls = controls.filter((control) => (
+            control.dataset.calendarDayStep === direction
+          ));
+          const previousControls = controls.filter((control) => (
+            control.dataset.calendarDayStep === "previous"
+          ));
+          const nextControls = controls.filter((control) => (
+            control.dataset.calendarDayStep === "next"
+          ));
+          const selectedCard = cards[0];
+          const selectedHeading = headings[0];
+          const stepper = steppers[0];
+          if (
+            cards.length !== 1
+            || headings.length !== 1
+            || steppers.length !== 1
+            || controls.length !== 2
+            || directionControls.length !== 1
+            || previousControls.length !== 1
+            || nextControls.length !== 1
+            || directionControls[0] !== button
+            || selectedCard === undefined
+            || selectedHeading === undefined
+            || stepper === undefined
+            || selectedCard.dataset.calendarDayFilter !== selectedDay
+            || selectedHeading.dataset.calendarDayFilterTitle !== selectedDay
+            || selectedHeading.id !== "calendar-day-filter-title"
+            || !selectedCard.contains(selectedHeading)
+            || !selectedCard.contains(stepper)
+            || !stepper.contains(button)
+            || stepper.dataset.calendarDayStepper !== selectedDay
+            || controls.some((control) => (
+              control.dataset.calendarDayCurrent !== selectedDay
+              || !stepper.contains(control)
+            ))
+          ) {
+            throw new Error("Scoped activity-day markup does not reconcile.");
+          }
+          const expected = direction === "previous"
+            ? neighbors.previous
+            : neighbors.next;
+          const target = button.dataset.calendarDayTarget;
+          if (
+            expected === null
+            || target === undefined
+            || target !== expected.isoDate
+          ) {
+            throw new Error("Scoped activity-day target is not the exact adjacent day.");
+          }
+
+          const candidate = buildTradeBrowser(snapshot, {
+            ...current.state,
+            selectedDay: target,
+            calendarMonth: target.slice(0, 7),
+          });
+          const candidateNeighbors = scopedActivityDayNeighbors(candidate);
+          if (
+            candidate.invalidatedSelectedDay !== null
+            || candidate.state.selectedDay !== target
+            || candidate.state.calendarMonth !== target.slice(0, 7)
+            || candidate.selectedSession?.isoDate !== target
+            || candidateNeighbors.current.isoDate !== target
+            || !retainedActivityDayStateMatches(current.state, candidate.state)
+            || current.scopedCalendar.length !== candidate.scopedCalendar.length
+            || current.scopedCalendar.some((session, index) => (
+              candidate.scopedCalendar[index]?.isoDate !== session.isoDate
+            ))
+          ) {
+            throw new Error("Scoped activity-day candidate does not reconcile.");
+          }
+
+          const previousState = tradeBrowserState;
+          const previousAnnouncement = announcer?.textContent ?? "";
+          try {
+            tradeBrowserState = candidate.state;
+            render("trades", false);
+            const directionLabel = direction === "previous" ? "Previous" : "Next";
+            announceStatus(
+              `${directionLabel} activity day. ${calendarDayAnnouncement(candidateNeighbors.current, snapshot.currencyCode)} Scoped activity day ${candidateNeighbors.position} of ${candidateNeighbors.count} in retained scope.${viewFilterAnnouncement(candidate)}`,
+            );
+            focusExactCalendarDay(target);
+          } catch (caught) {
+            tradeBrowserState = previousState;
+            if (announcer !== null) announcer.textContent = previousAnnouncement;
+            try {
+              render("trades", false);
+            } catch {
+              // Preserve the last validated state even if a second redraw also fails.
+            }
+            throw caught;
+          }
+        } catch {
+          showCalendarDayStepError(button);
+        }
+      });
+    });
     root.querySelectorAll<HTMLButtonElement>("button[data-calendar-day]").forEach((button) => {
       button.addEventListener("click", () => {
         const isoDate = button.dataset.calendarDay;
@@ -1014,7 +1241,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         announceStatus(
           `${calendarDayAnnouncement(day, snapshot.currencyCode)}${viewFilterAnnouncement(next)}`,
         );
-        root.querySelector<HTMLElement>("#calendar-day-filter-title")?.focus();
+        focusExactCalendarDay(isoDate);
       });
     });
     root.querySelectorAll<HTMLButtonElement>("button[data-calendar-month]").forEach((button) => {

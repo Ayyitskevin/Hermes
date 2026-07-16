@@ -114,6 +114,81 @@ export interface TradeBrowserResult {
   readonly activityDayCount: number;
 }
 
+export type ScopedActivityDayDirection = "previous" | "next";
+
+export interface ScopedActivityDayNeighbors {
+  readonly current: CalendarSession;
+  readonly previous: CalendarSession | null;
+  readonly next: CalendarSession | null;
+  /** One-based position inside the retained account/date activity cohort. */
+  readonly position: number;
+  readonly count: number;
+}
+
+/**
+ * Resolves adjacent activity days from the exact account/date cohort.
+ * Search, card facets, and the currently displayed month never redefine it.
+ */
+export function scopedActivityDayNeighbors(
+  browser: TradeBrowserResult,
+): ScopedActivityDayNeighbors {
+  const selected = browser.selectedSession;
+  const selectedDay = browser.state.selectedDay;
+  if (selected === null || selectedDay === null) {
+    throw new Error("Scoped activity-day navigation requires one selected day.");
+  }
+  if (browser.invalidatedSelectedDay !== null) {
+    throw new Error("Scoped activity-day navigation cannot use an invalidated day.");
+  }
+  const canonicalSelectedDay = canonicalIsoDate(
+    selectedDay,
+    "Selected scoped activity day",
+  );
+  if (
+    canonicalSelectedDay !== selected.isoDate
+    || browser.state.calendarMonth !== selectedDay.slice(0, 7)
+    || browser.calendar.month !== selectedDay.slice(0, 7)
+  ) {
+    throw new Error("Selected scoped activity-day identity does not reconcile.");
+  }
+  if (browser.calendar.scopedSessionCount !== browser.scopedCalendar.length) {
+    throw new Error("Scoped activity-day count does not reconcile.");
+  }
+
+  let selectedIndex = -1;
+  let previousIsoDate: string | null = null;
+  for (const [index, session] of browser.scopedCalendar.entries()) {
+    const isoDate = canonicalIsoDate(session.isoDate, "Scoped activity day");
+    if (isoDate === null) {
+      throw new Error("Scoped activity-day identity is unavailable.");
+    }
+    if (
+      previousIsoDate !== null
+      && stableCompare(previousIsoDate, isoDate) >= 0
+    ) {
+      throw new Error("Scoped activity days must be unique and strictly ascending.");
+    }
+    previousIsoDate = isoDate;
+    if (isoDate === selectedDay) {
+      if (selectedIndex !== -1 || session !== selected) {
+        throw new Error("Selected scoped activity day is duplicated or detached.");
+      }
+      selectedIndex = index;
+    }
+  }
+  if (selectedIndex === -1) {
+    throw new Error("Selected scoped activity day is missing from its retained cohort.");
+  }
+
+  return Object.freeze({
+    current: selected,
+    previous: browser.scopedCalendar[selectedIndex - 1] ?? null,
+    next: browser.scopedCalendar[selectedIndex + 1] ?? null,
+    position: selectedIndex + 1,
+    count: browser.scopedCalendar.length,
+  });
+}
+
 const FULL_DATE = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   month: "short",

@@ -279,6 +279,32 @@ uncertain, stale, blocked, and committed-but-not-refreshed states retain their
 existing modal ownership. No focus identity enters schema v4, SQLite, browser
 session state, exports/restores, archives, digests, reports, or formulas.
 
+### Exact scoped activity-day stepper
+
+Exact Scoped Activity-Day Stepper v1 is the twenty-second bounded Slice D
+increment and the eighteenth derived-only presentation/projection increment.
+It adds no ledger fact. Previous/next is derived from the validated, frozen,
+strictly ascending Trade Browser cohort after account and inclusive
+activity-date scope, before optional selected-day refinement, query, or exact
+card facets. The selected session must be the exact cohort member and its state,
+calendar month, cohort count, canonical date, strict order, and unique identity
+must reconcile. No-activity dates are skipped and month boundaries do not end
+adjacency.
+
+The click path rebuilds from current session state so inline query/facet edits
+cannot be lost. It proves one selected card and date-qualified heading, one
+stepper, exactly one control per direction, matching current identity, and the
+exact adjacent target. The candidate must retain account, date bounds, query,
+and all eight facets plus the identical scoped-date cohort; only selected day
+and destination calendar month may differ. State assignment is rolled back if
+the redraw, announcement, or focus handoff unexpectedly fails. A malformed,
+detached, duplicated, nonadjacent, boundary, or tampered identity yields one
+fully visible focused generic local error and no store, command, randomness,
+network, modal, or durable-state work. Stepper position, focus, announcement,
+error, and displayed month remain ephemeral UI state and do not enter schema
+v4, SQLite, browser journal persistence, export/restore, archives, digests,
+governed reports, or financial formulas.
+
 ## Daily-journal sequence
 
 ```text
@@ -958,6 +984,13 @@ Journal cards/headings, direct create/edit and stale-success return, a successfu
 frozen-command replay, committed-refresh-only return, exact-heading absence
 fallback to **Daily notes**, retained cancel/recovery ownership, focus visibility,
 and unchanged calendar-origin behavior without another persistence call.
+Exact Scoped Activity-Day Stepper coverage adds first/last/single-day,
+gap-skipping, cross-month, strict-order, duplicate/detached identity, live
+query plus all-eight-facet retention, exact keyboard navigation, boundary
+disablement, generic tamper/ambiguity failure, selected reflection refresh,
+date-qualified focus/announcement, 44-point controls, 320/421px 200% reflow,
+and measured 844px sticky-chrome visibility without persistence or network
+work.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low
