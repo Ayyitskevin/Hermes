@@ -93,9 +93,9 @@ submission-ready product:
   can explicitly save a draft or completed reflection on trading and no-trade
   days, edit only through an optimistic successor version, and optionally add a
   headline, note, emotion, tags, and a clearly self-reported process score that
-  never enters performance, Direction Mix, Opening Weekday Mix, Plan Check,
-  Setup Breakdown, Mistake Patterns, Emotion Patterns, or Tag Patterns
-  analytics.
+  never enters performance, Review Session Coverage, Direction Mix, Opening
+  Weekday Mix, Plan Check, Setup Breakdown, Mistake Patterns, Emotion Patterns,
+  or Tag Patterns analytics.
 - Daily Journal Stale-Head Recovery v1 keeps the unsaved form intact after a
   deterministic optimistic conflict, blocks the obsolete save, loads and shows
   the newer local head, and requires separate consent to use it as the base
@@ -167,6 +167,15 @@ submission-ready product:
 - Headline currency P&L, win rate, profit factor, versioned percent return, and
   risk-backed R derived from real ledger records; unavailable denominators fail
   visibly instead of producing an invented metric.
+- Review Session Coverage v1 is a checksum-pinned, count-only explanation of
+  the existing review streak. Every workspace-local date with at least one
+  durable trade contribution appears exactly once in fixed current-streak,
+  reviewed-before-streak, or unreviewed groups. A saved draft or completed
+  trade-review head can cover a session; one reviewed contributor does not
+  imply every trade that day is reviewed. Session counts and date/trade
+  assignments reconcile separately, rows open exact stable-ID trades 25 at a
+  time, and the report contains no P&L, rate, ranking, trading target,
+  prediction, or advice.
 - An offline plan-adherence report derived from current completed review heads.
   It reconciles followed/broken cohorts with explicit exclusions, exact cash
   and R coverage, account/currency/time-zone context, and deterministic evidence
@@ -219,19 +228,20 @@ submission-ready product:
   report exposes no P&L, currency, win rate, R, expectancy, percentage, rate,
   ranking, comparison, outcome claim, target, reward, prediction, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
-  Direction Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion
-  Patterns, Tag Patterns, and Setup Breakdown in one semantic, DOM-ordered
-  report menu.
-  Dashboard opens Plan Check directly; every section returns to the menu; jumps
-  preserve open evidence disclosures and move visible focus below live chrome.
+  Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check,
+  Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown in one
+  semantic, DOM-ordered report menu.
+  Dashboard opens Review Session Coverage or Plan Check directly; every section
+  returns to the menu; jumps preserve open evidence disclosures and move visible
+  focus below live chrome.
   At iPhone widths the redundant top bar scrolls with content so 200% text and
   large report summaries can remain fully visible above the fixed primary tabs.
   This is transient presentation over the unchanged full-workspace snapshot:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
-- Report Trade Continuation v1 adds an **Open trade** action to every Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
-  Tag Patterns, or Setup Breakdown contributor. It
+- Report Trade Continuation v1 adds an **Open trade** action to every Review
+  Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
+  Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown contributor. It
   resolves exactly one trade by stable subject ID and reuses the review/detail
   sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
@@ -249,8 +259,9 @@ submission-ready product:
   and keeps whole-trade realized-to-date P&L separate from scoped allocation
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
-  progress, Direction Mix, Opening Weekday Mix, Plan Check, Mistake Patterns,
-  Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole-workspace.
+  progress, Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan
+  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown
+  remain whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

@@ -100,6 +100,11 @@ describe("trade review sheet", () => {
       localWorkspace(),
       "opening-weekday-mix",
     );
+    const reviewSessionCoverageHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "review-session-coverage",
+    );
     const html = tradeReviewSheetTemplate(trade(), localWorkspace(), "plan-check");
     const mistakeHtml = tradeReviewSheetTemplate(
       trade(),
@@ -125,6 +130,12 @@ describe("trade review sheet", () => {
       'data-trade-review-report-context="opening-weekday-mix"',
     );
     expect(openingWeekdayHtml).toContain("Opened from Opening weekday mix.");
+    expect(reviewSessionCoverageHtml).toContain(
+      'data-trade-review-report-context="review-session-coverage"',
+    );
+    expect(reviewSessionCoverageHtml).toContain(
+      "Opened from Review session coverage.",
+    );
     expect(html).toContain(
       "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
     );
@@ -448,6 +459,19 @@ describe("trade review sheet", () => {
     );
     expect(openingWeekdayAction).toContain(
       "Open &lt;AAPL&gt; trade for the Thursday opening group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+
+    const reviewSessionCoverageAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "review-session-coverage",
+      "the Jul 2 reviewed trading session",
+    );
+    expect(reviewSessionCoverageAction).toContain(
+      'data-trade-review-report-source="review-session-coverage"',
+    );
+    expect(reviewSessionCoverageAction).toContain(
+      "Open &lt;AAPL&gt; trade for the Jul 2 reviewed trading session — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
 
     const mistakeAction = reportTradeAction(

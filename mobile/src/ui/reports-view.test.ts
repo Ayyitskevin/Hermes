@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { deriveTradeMetricsV1 } from "../core/trade-metrics";
-import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
+import type {
+  CalendarSession,
+  JournalWorkspaceSnapshot,
+  TradePreview,
+} from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
   bindReportNavigation,
@@ -29,6 +33,68 @@ function cloneTrade(
     tradeSubjectId: `${source.tradeSubjectId}-${suffix}`,
     reviewId: source.reviewId === null ? null : `${source.reviewId}-${suffix}`,
     ...overrides,
+  };
+}
+
+function withCoherentReviewSessions(
+  snapshot: JournalWorkspaceSnapshot,
+  trades: readonly TradePreview[],
+): JournalWorkspaceSnapshot {
+  const tradesByDate = new Map<string, TradePreview[]>();
+  for (const trade of trades) {
+    const dates = new Set([trade.tradedOn, ...trade.reviewSessionDates]);
+    for (const date of dates) {
+      const existing = tradesByDate.get(date) ?? [];
+      existing.push(trade);
+      tradesByDate.set(date, existing);
+    }
+  }
+  const calendar: readonly CalendarSession[] = [...tradesByDate.entries()]
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([isoDate, datedTrades]) => ({
+      isoDate,
+      dayLabel: "Recorded day",
+      dateLabel: isoDate,
+      pnlExact: "0",
+      pnl: 0,
+      tradeCount: datedTrades.length,
+      allocationCount: datedTrades.length,
+      contributions: datedTrades
+        .map((trade) => ({
+          tradeSubjectId: trade.tradeSubjectId,
+          pnlExact: "0",
+          pnl: 0,
+          allocationCount: 1,
+        }))
+        .sort((left, right) => (
+          left.tradeSubjectId < right.tradeSubjectId ? -1
+            : left.tradeSubjectId > right.tradeSubjectId ? 1
+              : 0
+        )),
+    }));
+  const reviewedDates = new Set(trades
+    .filter((trade) => trade.reviewStatus !== "pending")
+    .flatMap((trade) => trade.reviewSessionDates));
+  let streakSessions = 0;
+  for (const session of [...calendar].reverse()) {
+    if (!reviewedDates.has(session.isoDate)) break;
+    streakSessions += 1;
+  }
+  const closed = trades.filter((trade) => trade.status === "closed");
+  return {
+    ...snapshot,
+    trades,
+    calendar,
+    reviewProgress: {
+      pendingTrades: closed.filter((trade) => trade.reviewStatus !== "completed").length,
+      draftTrades: closed.filter((trade) => trade.reviewStatus === "draft").length,
+      completedTrades: closed.filter((trade) => trade.reviewStatus === "completed").length,
+      streakSessions,
+      reviewedSessions: calendar.filter((session) => (
+        reviewedDates.has(session.isoDate)
+      )).length,
+      tradingSessions: calendar.length,
+    },
   };
 }
 
@@ -60,13 +126,10 @@ function insufficientDemoWorkspace(): JournalWorkspaceSnapshot {
 
 function insufficientWorkspaceWithIncompleteReview(): JournalWorkspaceSnapshot {
   const snapshot = insufficientDemoWorkspace();
-  return {
-    ...snapshot,
-    trades: [
-      ...snapshot.trades,
-      cloneTrade(demoTrade("AAPL"), "unfinished", { reviewStatus: "draft" }),
-    ],
-  };
+  return withCoherentReviewSessions(snapshot, [
+    ...snapshot.trades,
+    cloneTrade(demoTrade("AAPL"), "unfinished", { reviewStatus: "draft" }),
+  ]);
 }
 
 function workspaceWithManyContributors(count = 31): JournalWorkspaceSnapshot {
@@ -76,6 +139,7 @@ function workspaceWithManyContributors(count = 31): JournalWorkspaceSnapshot {
     const tradeSubjectId = `demo-subject-aapl-${suffix}`;
     return cloneTrade(aapl, suffix, {
       tradedOn: "2026-07-10",
+      reviewSessionDates: ["2026-07-10"],
       sessionLabel: `Bulk ${String(index).padStart(2, "0")}`,
       rules: aapl.rules.map((rule, ruleIndex) => ({
         ...rule,
@@ -86,10 +150,7 @@ function workspaceWithManyContributors(count = 31): JournalWorkspaceSnapshot {
   const broken = DEMO_WORKSPACE.trades.filter((trade) => (
     trade.rules.some((rule) => rule.outcome === "broken")
   ));
-  return {
-    ...DEMO_WORKSPACE,
-    trades: [...followed, ...broken],
-  };
+  return withCoherentReviewSessions(DEMO_WORKSPACE, [...followed, ...broken]);
 }
 
 function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
@@ -126,22 +187,21 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
     followedPlan: null,
     rules: aapl.rules.map((rule) => ({ ...rule, outcome: "not_applicable" as const })),
   });
-  return {
+  return withCoherentReviewSessions({
     ...DEMO_WORKSPACE,
     provenance: "local",
     provenanceLabel: "ON-DEVICE JOURNAL",
     periodLabel: "<all history>",
     timeZone: "<UTC & local>",
     accountLabel: "<all accounts & scope>",
-    trades: [
-      escaped,
-      ...DEMO_WORKSPACE.trades.slice(1),
-      open,
-      missing,
-      draft,
-      unclassified,
-    ],
-  };
+  }, [
+    escaped,
+    ...DEMO_WORKSPACE.trades.slice(1),
+    open,
+    missing,
+    draft,
+    unclassified,
+  ]);
 }
 
 describe("reports presentation", () => {
@@ -151,6 +211,7 @@ describe("reports presentation", () => {
       "reports-navigation-title",
       "performance-summary-title",
       "cumulative-result-title",
+      "review-session-coverage-title",
       "direction-mix-title",
       "opening-weekday-mix-title",
       "plan-check-title",
@@ -167,12 +228,15 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(9);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(9);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(10);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(10);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
     expect(html.indexOf('href="#cumulative-result-title"')).toBeLessThan(
+      html.indexOf('href="#review-session-coverage-title"'),
+    );
+    expect(html.indexOf('href="#review-session-coverage-title"')).toBeLessThan(
       html.indexOf('href="#direction-mix-title"'),
     );
     expect(html.indexOf('href="#direction-mix-title"')).toBeLessThan(
@@ -194,6 +258,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#setup-performance-title"'),
     );
     expect(html.indexOf("data-report-overview")).toBeLessThan(
+      html.indexOf("data-review-session-coverage"),
+    );
+    expect(html.indexOf("data-review-session-coverage")).toBeLessThan(
       html.indexOf("data-direction-mix"),
     );
     expect(html.indexOf("data-direction-mix")).toBeLessThan(
@@ -270,9 +337,23 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all seven versioned evidence reports with the existing headline context", () => {
+  it("renders all eight versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
+    expect(html).toContain("data-review-session-coverage");
+    expect(html).toContain(
+      '<h2 id="review-session-coverage-title" class="report-target" tabindex="-1">Review session coverage</h2>',
+    );
+    expect(html).toContain("review-session-coverage-report-v1");
+    expect(html).toContain(
+      "<dt>Reviewed sessions</dt><dd>6 trading sessions</dd>",
+    );
+    expect(html).toContain(
+      "<dt>Current streak</dt><dd>6 trading sessions</dd>",
+    );
+    expect(html).toContain(
+      "<dt>Session–trade assignments</dt><dd>8 assignments</dd>",
+    );
     expect(html).toContain("data-direction-mix");
     expect(html).toContain(
       '<h2 id="direction-mix-title" class="report-target" tabindex="-1">Direction mix</h2>',
@@ -339,7 +420,10 @@ describe("reports presentation", () => {
     expect(html).toContain("16 saved tag assignments");
     expect(html).toContain("Showing 5 of 12 tag groups");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(47);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(55);
+    expect(html).toContain(
+      'data-trade-review-report-source="review-session-coverage"',
+    );
     expect(html).toContain('data-trade-review-report-source="direction-mix"');
     expect(html).toContain(
       'data-trade-review-report-source="opening-weekday-mix"',
@@ -359,6 +443,9 @@ describe("reports presentation", () => {
     );
 
     for (const trade of DEMO_WORKSPACE.trades) {
+      expect(html).toContain(
+        `data-review-session-coverage-trade="${trade.tradeSubjectId}"`,
+      );
       expect(html).toContain(`data-direction-mix-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(
         `data-opening-weekday-mix-trade="${trade.tradeSubjectId}"`,
@@ -538,6 +625,7 @@ describe("reports presentation", () => {
     const root = {
       querySelector(selector: string): unknown {
         if (selector === "[data-report-navigation]") return null;
+        if (selector === "[data-review-session-coverage]") return null;
         if (selector === "[data-direction-mix]") return null;
         if (selector === "[data-opening-weekday-mix]") return null;
         if (selector === "[data-mistake-patterns]") return null;

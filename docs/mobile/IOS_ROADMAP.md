@@ -51,7 +51,7 @@ under the provisional identifier until that gate is cleared.
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
   Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
-  Compact Trades
+  Review Session Coverage v1, Compact Trades
   Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
@@ -248,7 +248,8 @@ observed plugin/device behavior:
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from performance,
   Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
-  Patterns, Emotion Patterns, and Tag Patterns analytics.
+  Patterns, Emotion Patterns, Tag Patterns, and Review Session Coverage
+  analytics.
 - Daily Journal Stale-Head Recovery v1 preserves the raw form after a
   deterministic optimistic conflict, disables the obsolete submission, loads
   one fresh local snapshot, and displays its different newer head before the
@@ -390,6 +391,24 @@ observed plugin/device behavior:
   filters are not consumed. No financial, percentage, rate, comparison,
   ranking, reward, causal, predictive, target, advisory, schema, store,
   archive, or digest-shape change is included.
+- Review Session Coverage v1 is a count-only report over canonical current
+  full-workspace calendar sessions and their durable trade contributions.
+  Definition `review-session-coverage-report-v1` is pinned by SHA-256
+  `8fafa15893363476f1d0433c8fbb70d3db000b6c4a75bfd9a621862c52244113`.
+  A session is reviewed when at least one exactly resolved current trade has a
+  saved draft or completed head whose strictly ascending `reviewSessionDates`
+  include that date; the current streak is the maximal reviewed suffix ending
+  at the latest trading session, so no-trade calendar gaps do not break it and
+  an unreviewed latest session yields a zero streak. Three fixed groups—Current
+  streak, Reviewed before streak, and Unreviewed—conserve sessions separately
+  from calendar-date/trade assignments. Evidence uses date descending then
+  stable subject ID, identifies each assignment's current review and coverage
+  state, and opens the exact stable-ID trade through existing continuation.
+  The fictional demo reconciles 6 of 6 reviewed sessions, a six-session current
+  streak, and eight assignments. `reviewProgress` total, reviewed, and streak
+  counts are cross-checks only. P&L, currency, Daily Journal, outcomes, and
+  Trade Browser scope are not consumed; no rate, ranking, reward, advice,
+  schema, store, archive, or digest-shape change is included.
 - Trade Browser Scope v1 derives an all-account or stable single-account view
   over optional inclusive workspace-local allocation/activity dates. Exact
   contribution P&L, trade, allocation, and day counts reconcile from calendar
@@ -398,7 +417,7 @@ observed plugin/device behavior:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and all seven governed reports intentionally remain whole-workspace.
+  and all eight governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -427,11 +446,12 @@ observed plugin/device behavior:
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
   stale refresh, report/storage neutrality, 44-point controls, and no overflow
   at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
-- Reports Navigator v1 exposes Performance Summary, Journal Curve, Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
-  Patterns, and Setup Breakdown in semantic DOM order.
-  Dashboard enters
-  Plan Check directly, every section returns to the menu, and jumps preserve
+- Reports Navigator v1 exposes ten semantic targets: Performance Summary,
+  Journal Curve, Review Session Coverage, Direction Mix, Opening Weekday Mix,
+  Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
+  Breakdown in DOM order.
+  Dashboard enters Review Session Coverage or Plan Check directly, every
+  section returns to the menu, and jumps preserve
   opened disclosures while moving focus below measured chrome without animation. At
   480 CSS pixels or narrower the top bar scrolls with content, leaving the
   fixed primary tabs and enough visible height for bounded report controls at
@@ -443,9 +463,9 @@ observed plugin/device behavior:
   fingerprints. This adds no schema, store, archive, digest input, formula,
   checksum, cohort, evidence-order, or pagination change.
 - Report Trade Continuation v1 opens the existing exact trade review/detail
-  sheet in place from every Direction Mix, Opening Weekday Mix, Plan Check,
-  Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown
-  contributor. Stable
+  sheet in place from every Direction Mix, Opening Weekday Mix, Review Session
+  Coverage, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and
+  Setup Breakdown contributor. Stable
   subject IDs are
   validated at render and activation; asset
   class, account, and session disambiguate duplicate symbols; a replaceable
@@ -506,7 +526,7 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
 - Add templates, reminders, saved view presets, fuller vocabulary/playbook
-  management, drawdown/streak/time-of-day/symbol reports, deeper setup
+  management, drawdown/time-of-day/symbol reports, deeper setup
   comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
@@ -566,8 +586,12 @@ tier-by-tier claim. Reverify before public comparative positioning.
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
-v1, Opening Weekday Mix v1, Compact Trades Filters v1, matching-runtime local
-restore, and all seven governed reports are implemented.
+v1, Opening Weekday Mix v1, Review Session Coverage v1, Compact Trades Filters
+v1, matching-runtime local restore, and all eight governed reports are
+implemented.
+Sixteen bounded Slice D increments are implemented in total; the fourteen
+presentation/projection increments other than Durable Daily Journal v1 and
+Report Trade Continuation v1 remain derived-only.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

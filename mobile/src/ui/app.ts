@@ -228,7 +228,10 @@ function dashboardView(
     <article class="card review-progress-card">
       <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2>${snapshot.reviewProgress.pendingTrades === 0 ? "Review queue clear" : `${countNoun(snapshot.reviewProgress.pendingTrades, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
       <p>${snapshot.reviewProgress.completedTrades} completed · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
-      ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade")}
+      <div class="quick-actions review-progress-actions">
+        ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade")}
+        <button class="text-button" type="button" data-route="reports" data-report-target="review-session-coverage-title">View session evidence</button>
+      </div>
     </article>
     <div class="metric-grid">
       <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>wins versus losses</span></article>

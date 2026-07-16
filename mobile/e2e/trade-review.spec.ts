@@ -386,6 +386,36 @@ test("report review saves return to the source heading when evidence moves", asy
   await completeReview(page, "MSFT", "10");
   await page.getByRole("button", { name: "Reports", exact: true }).click();
 
+  const reviewSessionStreak = page.locator(
+    '[data-review-session-coverage-group="current_streak"]',
+  );
+  await reviewSessionStreak.locator("summary").click();
+  const reviewSessionAction = reviewSessionStreak.getByRole("button", {
+    name: /Open AAPL trade for the current review streak on /u,
+  });
+  await reviewSessionAction.click();
+  const reviewSessionDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(
+    reviewSessionDialog.locator("[data-trade-review-report-context]"),
+  ).toHaveText(
+    "Opened from Review session coverage. This full-workspace report does not use or change your Trades filters.",
+  );
+  await reviewSessionDialog.locator("#review-note")
+    .fill("Review session coverage refresh.");
+  await reviewSessionDialog.getByRole("button", {
+    name: "Save review changes",
+  }).click();
+
+  await expect(reviewSessionDialog).toHaveCount(0);
+  await expect(page.locator("#review-session-coverage-title")).toBeFocused();
+  await expect(reviewSessionStreak).not.toHaveAttribute("open", "");
+  await reviewSessionStreak.locator("summary").click();
+  await expect(
+    reviewSessionStreak.locator("[data-review-session-coverage-trade]"),
+  ).toHaveCount(2);
+
   const longDirection = page.locator('[data-direction-mix-group="long"]');
   await longDirection.locator("summary").click();
   const directionAction = longDirection.getByRole("button", {

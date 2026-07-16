@@ -24,6 +24,7 @@ import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
+import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import {
@@ -90,7 +91,7 @@ async function reviewedSourceArchive(): Promise<{
   readonly archive: JournalArchive;
   readonly contents: string;
 }> {
-  let nowMs = 30_000;
+  let nowMs = Date.parse("2026-07-01T16:00:00.000Z");
   const store = new SessionJournalStore({ nowMs: () => nowMs++ });
   await store.commitManualExecution(manual("d", "NVDA"));
   await store.commitManualExecution(manual("e", "NVDA", "0", {
@@ -179,6 +180,7 @@ describe("browser session user-data restore", () => {
       const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
       const beforeOpeningWeekdays = buildOpeningWeekdayMixReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
+      const beforeReviewSessions = buildReviewSessionCoverageReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
       const beforeTags = buildTagPatternsReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
@@ -189,6 +191,7 @@ describe("browser session user-data restore", () => {
       const afterMistakes = buildMistakePatternsReport(afterSnapshot);
       const afterOpeningWeekdays = buildOpeningWeekdayMixReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
+      const afterReviewSessions = buildReviewSessionCoverageReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
       const afterTags = buildTagPatternsReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
@@ -197,10 +200,18 @@ describe("browser session user-data restore", () => {
       expect(afterDirection).toEqual(beforeDirection);
       expect(afterEmotions).toEqual(beforeEmotions);
       expect(afterPlan).toEqual(beforePlan);
+      expect(afterReviewSessions).toEqual(beforeReviewSessions);
       expect(afterSetup).toEqual(beforeSetup);
       expect(afterMistakes).toEqual(beforeMistakes);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
       expect(afterTags).toEqual(beforeTags);
+      expect(afterReviewSessions.metadata).toMatchObject({
+        totalSessionCount: 1,
+        reviewedSessionCount: 1,
+        unreviewedSessionCount: 0,
+        currentStreakSessionCount: 1,
+        totalAssignmentCount: 1,
+      });
       expect(afterDirection.metadata.totalTradeCount).toBe(1);
       expect(afterDirection.groups).toEqual([
         expect.objectContaining({

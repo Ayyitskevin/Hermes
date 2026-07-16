@@ -15,6 +15,12 @@ const REPORT_DESTINATIONS = [
     returnLink: ".chart-card .report-menu-link",
   },
   {
+    link: "Review session coverage",
+    target: "#review-session-coverage-title",
+    returnLink:
+      "[data-review-session-coverage] > .section-title .report-menu-link",
+  },
+  {
     link: "Direction mix",
     target: "#direction-mix-title",
     returnLink: "[data-direction-mix] > .section-title .report-menu-link",
@@ -106,6 +112,27 @@ async function reportFingerprint(page: Page): Promise<unknown> {
       curve: {
         label: document.querySelector(".equity-chart")?.getAttribute("aria-label"),
         points: document.querySelector(".equity-line")?.getAttribute("points"),
+      },
+      reviewSessions: {
+        metadata: text(
+          "[data-review-session-coverage] .review-session-coverage-meta",
+        ),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-review-session-coverage-group] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-review-session-coverage-trade]",
+          "data-review-session-coverage-trade",
+        ),
+        actions: Array.from(document.querySelectorAll<HTMLElement>(
+          "[data-review-session-coverage-trade] .report-trade-action",
+        )).map((action) => [
+          action.getAttribute("data-review-trade"),
+          action.getAttribute("data-trade-review-report-source"),
+          action.getAttribute("aria-label"),
+        ]),
       },
       direction: {
         metadata: text("[data-direction-mix] .direction-mix-meta"),
@@ -300,6 +327,9 @@ test(
     const planGroup = page.locator(
       '[data-plan-check-group="followed"]',
     );
+    const reviewSessionGroups = page.locator(
+      "[data-review-session-coverage-group]",
+    );
     const mistakeGroup = page.locator(
       '[data-mistake-patterns-group-index="0"]',
     );
@@ -312,6 +342,9 @@ test(
     const setupGroup = page.locator(
       '[data-setup-performance-group-index="0"]',
     );
+    for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
+      await reviewSessionGroups.nth(index).locator(":scope > summary").click();
+    }
     await directionGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
@@ -319,6 +352,9 @@ test(
     await emotionGroup.locator("summary").click();
     await tagGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
+    for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
+      await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
+    }
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
@@ -347,6 +383,9 @@ test(
     const menuHeading = page.locator("#reports-navigation-title");
     await expect(menuHeading).toBeFocused();
     await expectUnobscured(menuHeading);
+    for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
+      await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
+    }
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
@@ -363,6 +402,130 @@ test(
     await expect(
       page.getByRole("button", { name: "Reports", exact: true }),
     ).toHaveAttribute("aria-current", "page");
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "review session coverage reconciles every demo session and stable trade assignment",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-review-session-coverage]");
+    await expect(section).toBeVisible();
+    const metadata = section.locator(".review-session-coverage-meta");
+    for (const expected of [
+      "review-session-coverage-report-v1",
+      "8fafa15893363476f1d0433c8fbb70d3db000b6c4a75bfd9a621862c52244113",
+      "Jul 1–9, 2026",
+      "UTC",
+      "2 demo accounts",
+    ]) {
+      await expect(metadata).toContainText(expected);
+    }
+    const metadataValue = (label: string): Locator => (
+      metadata.getByText(label, { exact: true })
+        .locator("xpath=following-sibling::dd")
+    );
+    await expect(metadataValue("Total sessions")).toHaveText(
+      "6 trading sessions",
+    );
+    await expect(metadataValue("Reviewed sessions")).toHaveText(
+      "6 trading sessions",
+    );
+    await expect(metadataValue("Unreviewed sessions")).toHaveText(
+      "0 trading sessions",
+    );
+    await expect(metadataValue("Current streak")).toHaveText(
+      "6 trading sessions",
+    );
+    await expect(metadataValue("Session–trade assignments")).toHaveText(
+      "8 assignments",
+    );
+
+    const groups = section.locator("[data-review-session-coverage-group]");
+    await expect(groups).toHaveCount(3);
+    await expect(groups.evaluateAll((elements) => elements.map((element) => (
+      element.getAttribute("data-review-session-coverage-group")
+    )))).resolves.toEqual([
+      "current_streak",
+      "reviewed_before_streak",
+      "unreviewed",
+    ]);
+    await expect(groups.locator(":scope > summary strong").allTextContents())
+      .resolves.toEqual([
+        "Current review streak",
+        "Reviewed before current streak",
+        "Unreviewed sessions",
+      ]);
+    await expect(
+      groups.locator(":scope > summary .plan-check-summary-label span")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "6 sessions · 8 assignments",
+      "0 sessions · 0 assignments",
+      "0 sessions · 0 assignments",
+    ]);
+
+    const currentStreak = section.locator(
+      '[data-review-session-coverage-group="current_streak"]',
+    );
+    await currentStreak.locator(":scope > summary").click();
+    const rows = currentStreak.locator("[data-review-session-coverage-trade]");
+    await expect(rows).toHaveCount(8);
+    const expectedSubjects = [
+      "demo-subject-qqq",
+      "demo-subject-meta",
+      "demo-subject-spy",
+      "demo-subject-amd",
+      "demo-subject-nvda",
+      "demo-subject-tsla",
+      "demo-subject-aapl",
+      "demo-subject-msft",
+    ];
+    await expect(rows.evaluateAll((elements) => elements.map((element) => (
+      element.getAttribute("data-review-session-coverage-trade")
+    )))).resolves.toEqual(expectedSubjects);
+    await expect(rows.evaluateAll((elements) => elements.map((element) => {
+      const action = element.querySelector<HTMLElement>(".report-trade-action");
+      return [
+        element.getAttribute("data-review-session-coverage-trade"),
+        action?.getAttribute("data-review-trade"),
+        action?.getAttribute("data-trade-review-report-source"),
+      ];
+    }))).resolves.toEqual(expectedSubjects.map((subject) => [
+      subject,
+      subject,
+      "review-session-coverage",
+    ]));
+    await expect(rows.first().locator(".report-trade-action"))
+      .toHaveAccessibleName(
+        "Open QQQ trade for the current review streak on 2026-07-09 — ETF, Demo Swing, Jul 9 · Morning",
+      );
+
+    for (const classification of ["reviewed_before_streak", "unreviewed"]) {
+      const emptyGroup = section.locator(
+        `[data-review-session-coverage-group="${classification}"]`,
+      );
+      await emptyGroup.locator(":scope > summary").click();
+      await expect(emptyGroup.locator("[data-review-session-coverage-trade]"))
+        .toHaveCount(0);
+    }
+    await section.getByText("How this report works", { exact: true }).click();
+    await expect(section).toContainText(
+      "fixed current-streak, reviewed-before-streak, then unreviewed order",
+    );
+    await expect(section).toContainText(
+      "does not score outcomes, set goals, or tell you what to trade",
+    );
+    for (const prohibited of ["Cash expectancy", "Win rate", "Average R", "Net P&L"]) {
+      await expect(section.getByText(prohibited, { exact: true })).toHaveCount(0);
+    }
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
     expect(externalRequests).toEqual([]);
   },
 );
@@ -748,6 +911,25 @@ test(
     const storageBefore = await localStorageSnapshot(page);
 
     await page.getByRole("button", {
+      name: "View session evidence",
+      exact: true,
+    }).click();
+    const reviewSessionHeading = page.locator("#review-session-coverage-title");
+    await expect(reviewSessionHeading).toBeFocused();
+    await expectUnobscured(reviewSessionHeading);
+    await expect(
+      page.getByRole("button", { name: "Reports", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(page.locator(".topbar")).toHaveCSS("position", "static");
+    await page.locator(
+      "[data-review-session-coverage] > .section-title .report-menu-link",
+    ).click();
+    const menuHeading = page.locator("#reports-navigation-title");
+    await expect(menuHeading).toBeFocused();
+    await expectUnobscured(menuHeading);
+
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+    await page.getByRole("button", {
       name: "Open plan check",
       exact: true,
     }).click();
@@ -762,7 +944,6 @@ test(
     await page.locator(
       "[data-plan-check] > .section-title .report-menu-link",
     ).click();
-    const menuHeading = page.locator("#reports-navigation-title");
     await expect(menuHeading).toBeFocused();
     await expectUnobscured(menuHeading);
 
@@ -788,6 +969,7 @@ test(
     }
 
     const summaries = page.locator([
+      "[data-review-session-coverage-group] > summary",
       "[data-direction-mix-group] > summary",
       "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
@@ -819,6 +1001,8 @@ test(
         "[data-report-navigation] *",
         "[data-report-overview]",
         "[data-report-overview] *",
+        "[data-review-session-coverage]",
+        "[data-review-session-coverage] *",
         "[data-direction-mix]",
         "[data-direction-mix] *",
         "[data-opening-weekday-mix]",
@@ -877,6 +1061,9 @@ test(
 
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".topbar")).toHaveCSS("position", "static");
+    const reviewSessionGroup = page.locator(
+      '[data-review-session-coverage-group="current_streak"]',
+    );
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
@@ -889,12 +1076,14 @@ test(
     const tagGroup = page.locator(
       '[data-tag-patterns-group-index="0"]',
     );
+    await reviewSessionGroup.locator(":scope > summary").click();
     await directionGroup.locator(":scope > summary").click();
     await openingWeekdayGroup.locator(":scope > summary").click();
     await followedGroup.locator(":scope > summary").click();
     await mistakeGroup.locator(":scope > summary").click();
     await emotionGroup.locator(":scope > summary").click();
     await tagGroup.locator(":scope > summary").click();
+    await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(followedGroup).toHaveAttribute("open", "");
@@ -904,6 +1093,7 @@ test(
 
     const controls = page.locator([
       "a[data-report-target]",
+      "[data-review-session-coverage-group] > summary",
       "[data-direction-mix-group] > summary",
       "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
@@ -911,6 +1101,7 @@ test(
       "[data-emotion-patterns-group-index] > summary",
       "[data-tag-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
+      '[data-review-session-coverage-group="current_streak"][open] .report-trade-action',
       '[data-direction-mix-group="long"][open] .report-trade-action',
       '[data-opening-weekday-mix-group="wednesday"][open] .report-trade-action',
       '[data-plan-check-group="followed"][open] .report-trade-action',
@@ -945,11 +1136,36 @@ test(
       [...visited].sort((left, right) => left - right),
     ).toEqual(Array.from({ length: controlCount }, (_, index) => index));
 
+    const reviewSessionAction = page.locator(
+      '[data-review-session-coverage-trade="demo-subject-qqq"] .report-trade-action',
+    );
+    await reviewSessionAction.focus();
+    await page.keyboard.press("Enter");
+    const reviewSessionDialog = page.getByRole("dialog", {
+      name: /QQQ trade review · ETF · Demo Swing · Jul 9 · Morning/u,
+    });
+    await expect(reviewSessionDialog).toBeVisible();
+    await expect(reviewSessionDialog.locator("#trade-review-title")).toBeFocused();
+    await expect(
+      reviewSessionDialog.locator("[data-trade-review-report-context]"),
+    ).toHaveText(
+      "Opened from Review session coverage. This full-workspace report does not use or change your Trades filters.",
+    );
+    await reviewSessionDialog.getByRole("button", {
+      name: "Close",
+      exact: true,
+    }).click();
+    await expect(reviewSessionDialog).toHaveCount(0);
+    await expect(reviewSessionAction).toBeFocused();
+    await expectUnobscured(reviewSessionAction);
+    await expectTouchTarget(reviewSessionAction);
+
     const overflow = await page.evaluate(() => ({
       document: document.documentElement.scrollWidth - window.innerWidth,
       reports: Array.from(document.querySelectorAll<HTMLElement>([
         "[data-report-navigation]",
         "[data-report-overview]",
+        "[data-review-session-coverage]",
         "[data-direction-mix]",
         "[data-opening-weekday-mix]",
         "[data-plan-check]",
@@ -971,6 +1187,8 @@ test(
   async ({ page, context }) => {
     const externalRequests = logExternalRequests(page);
     await startDemo(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    const fullWorkspaceReportBeforeTrades = await reportFingerprint(page);
     await page.getByRole("button", { name: "Trades", exact: true }).click();
     await page.getByRole("combobox", { name: "Account" })
       .selectOption("demo-account-swing");
@@ -986,6 +1204,10 @@ test(
     const browserBefore = await tradeBrowserFingerprint(page);
 
     await page.getByRole("button", { name: "Reports", exact: true }).click();
+    expect(await reportFingerprint(page)).toEqual(fullWorkspaceReportBeforeTrades);
+    const reviewSessionGroup = page.locator(
+      '[data-review-session-coverage-group="current_streak"]',
+    );
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
@@ -995,6 +1217,7 @@ test(
     const emotionGroup = page.locator('[data-emotion-patterns-group-index="0"]');
     const tagGroup = page.locator('[data-tag-patterns-group-index="0"]');
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
+    await reviewSessionGroup.locator("summary").click();
     await directionGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
@@ -1002,6 +1225,7 @@ test(
     await emotionGroup.locator("summary").click();
     await tagGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
+    await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
@@ -1051,6 +1275,27 @@ test(
     await expectUnobscured(action);
     expect(Math.abs(await page.evaluate(() => window.scrollY) - scrollBefore))
       .toBeLessThanOrEqual(1);
+    const reviewSessionAction = page.locator(
+      '[data-review-session-coverage-trade="demo-subject-qqq"] .report-trade-action',
+    );
+    await expect(reviewSessionAction).toHaveAccessibleName(
+      "Open QQQ trade for the current review streak on 2026-07-09 — ETF, Demo Swing, Jul 9 · Morning",
+    );
+    await reviewSessionAction.click();
+    const reviewSessionDialog = page.getByRole("dialog", {
+      name: /QQQ trade review · ETF · Demo Swing · Jul 9 · Morning/u,
+    });
+    await expect(reviewSessionDialog).toBeVisible();
+    await expect(
+      reviewSessionDialog.locator("[data-trade-review-report-context]"),
+    ).toHaveText(
+      "Opened from Review session coverage. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(reviewSessionDialog).toHaveCount(0);
+    await expect(reviewSessionAction).toBeFocused();
+    await expectUnobscured(reviewSessionAction);
+
     const directionAction = page.locator(
       '[data-direction-mix-trade="demo-subject-aapl"] .report-trade-action',
     );
@@ -1224,6 +1469,7 @@ test(
       element.remove();
     });
 
+    await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
@@ -1260,6 +1506,48 @@ for (const viewport of [
       await context.setOffline(true);
       const storageBefore = await localStorageSnapshot(page);
       await page.getByRole("button", { name: "Reports", exact: true }).click();
+      const reviewSessionGroup = page.locator(
+        '[data-review-session-coverage-group="current_streak"]',
+      );
+      await reviewSessionGroup.locator(":scope > summary").click();
+      const reviewSessionAction = reviewSessionGroup.locator(
+        '[data-review-session-coverage-trade="demo-subject-qqq"] .report-trade-action',
+      );
+      await reviewSessionAction.focus();
+      await expect(reviewSessionAction).toBeFocused();
+      await expectUnobscured(reviewSessionAction);
+      await expectTouchTarget(reviewSessionAction);
+      await expect(reviewSessionAction).toHaveAccessibleName(
+        "Open QQQ trade for the current review streak on 2026-07-09 — ETF, Demo Swing, Jul 9 · Morning",
+      );
+      await page.keyboard.press("Enter");
+      const reviewSessionDialog = page.getByRole("dialog", {
+        name: /QQQ trade review · ETF · Demo Swing · Jul 9 · Morning/u,
+      });
+      await expect(reviewSessionDialog).toBeVisible();
+      await expect(reviewSessionDialog.locator("#trade-review-title")).toBeFocused();
+      await expect(
+        reviewSessionDialog.locator("[data-trade-review-report-context]"),
+      ).toHaveText(
+        "Opened from Review session coverage. This full-workspace report does not use or change your Trades filters.",
+      );
+      const reviewSessionOverflow = await reviewSessionDialog.evaluate(
+        (element) => ({
+          document: document.documentElement.scrollWidth - window.innerWidth,
+          dialog: element.scrollWidth - element.clientWidth,
+        }),
+      );
+      expect(reviewSessionOverflow.document).toBeLessThanOrEqual(1);
+      expect(reviewSessionOverflow.dialog).toBeLessThanOrEqual(1);
+      await reviewSessionDialog.getByRole("button", {
+        name: "Close",
+        exact: true,
+      }).click();
+      await expect(reviewSessionDialog).toHaveCount(0);
+      await expect(reviewSessionAction).toBeFocused();
+      await expectUnobscured(reviewSessionAction);
+      await expectTouchTarget(reviewSessionAction);
+
       await page.locator('[data-plan-check-group="followed"] > summary').click();
 
       const action = page.locator(

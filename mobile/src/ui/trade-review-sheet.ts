@@ -37,6 +37,7 @@ export type TradeReviewReportSource =
   | "plan-check"
   | "direction-mix"
   | "opening-weekday-mix"
+  | "review-session-coverage"
   | "mistake-patterns"
   | "emotion-patterns"
   | "tag-patterns"
@@ -51,6 +52,10 @@ const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
   "opening-weekday-mix": Object.freeze({
     label: "Opening weekday mix",
     targetId: "opening-weekday-mix-title",
+  }),
+  "review-session-coverage": Object.freeze({
+    label: "Review session coverage",
+    targetId: "review-session-coverage-title",
   }),
   "mistake-patterns": Object.freeze({
     label: "Mistake patterns",

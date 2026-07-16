@@ -21,6 +21,7 @@ import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
+import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import { SessionJournalStore } from "./session-journal-store";
@@ -241,7 +242,9 @@ describe("browser session trade reviews", () => {
   });
 
   it("moves the current review head between setup-performance groups", async () => {
-    const store = new SessionJournalStore({ nowMs: () => 7_000 });
+    const store = new SessionJournalStore({
+      nowMs: () => Date.parse("2026-07-01T16:00:00.000Z"),
+    });
     try {
       const tradeSubjectId = await addClosedTrade(store, "AAPL", "1", "2");
       const first = await store.commitTradeReviews(batch("setup-first", [
@@ -259,6 +262,9 @@ describe("browser session trade reviews", () => {
         workspaceSnapshotFromLedger(first.ledger),
       );
       const beforeOpeningWeekdays = buildOpeningWeekdayMixReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
+      const beforeReviewSessions = buildReviewSessionCoverageReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
       const beforeEmotions = buildEmotionPatternsReport(
@@ -289,6 +295,9 @@ describe("browser session trade reviews", () => {
       const afterOpeningWeekdays = buildOpeningWeekdayMixReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
+      const afterReviewSessions = buildReviewSessionCoverageReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
       const afterEmotions = buildEmotionPatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
@@ -312,6 +321,14 @@ describe("browser session trade reviews", () => {
       });
       expect(afterDirection).toEqual(beforeDirection);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
+      expect(beforeReviewSessions.metadata).toMatchObject({
+        totalSessionCount: 1,
+        reviewedSessionCount: 1,
+        unreviewedSessionCount: 0,
+        currentStreakSessionCount: 1,
+        totalAssignmentCount: 1,
+      });
+      expect(afterReviewSessions).toEqual(beforeReviewSessions);
       expect(beforeMistakes.groups.map((group) => [
         group.mistake,
         group.tradeSubjectIds,

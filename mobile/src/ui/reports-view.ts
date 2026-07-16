@@ -23,6 +23,10 @@ import {
   openingWeekdayMixSection,
 } from "./opening-weekday-mix-view";
 import {
+  bindReviewSessionCoverageView,
+  reviewSessionCoverageSection,
+} from "./review-session-coverage-view";
+import {
   bindSetupPerformanceView,
   setupPerformanceSection,
 } from "./setup-performance-view";
@@ -40,6 +44,7 @@ export const PLAN_CHECK_EVIDENCE_PAGE_SIZE = 25 as const;
 const REPORT_TARGET_IDS = Object.freeze([
   "reports-navigation-title",
   "performance-summary-title",
+  "review-session-coverage-title",
   "direction-mix-title",
   "opening-weekday-mix-title",
   "plan-check-title",
@@ -57,6 +62,7 @@ function reportNavigation(): string {
     <ul class="report-navigation-list">
       <li><a class="report-navigation-link" href="#performance-summary-title" data-report-target="performance-summary-title">Performance summary</a></li>
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
+      <li><a class="report-navigation-link" href="#review-session-coverage-title" data-report-target="review-session-coverage-title">Review session coverage</a></li>
       <li><a class="report-navigation-link" href="#direction-mix-title" data-report-target="direction-mix-title">Direction mix</a></li>
       <li><a class="report-navigation-link" href="#opening-weekday-mix-title" data-report-target="opening-weekday-mix-title">Opening weekday mix</a></li>
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
@@ -380,6 +386,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
       </div>
       <article class="card chart-card" aria-labelledby="cumulative-result-title"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2 id="cumulative-result-title" class="report-target" tabindex="-1">Cumulative result</h2></div><div class="report-section-actions"><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>${reportMenuLink()}</div></div>${equityChart(snapshot)}</article>
     </section>
+    ${reviewSessionCoverageSection(snapshot)}
     ${directionMixSection(snapshot)}
     ${openingWeekdayMixSection(snapshot)}
     ${planCheckSection(snapshot)}
@@ -395,6 +402,7 @@ export function bindReportsView(
   snapshot: JournalWorkspaceSnapshot,
 ): void {
   bindReportNavigation(root);
+  bindReviewSessionCoverageView(root, snapshot);
   bindDirectionMixView(root, snapshot);
   bindOpeningWeekdayMixView(root, snapshot);
   bindMistakePatternsView(root, snapshot);

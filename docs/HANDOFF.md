@@ -1,8 +1,161 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Tag Patterns v1 · updated 2026-07-16
+Status: verified Review Session Coverage v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver governed Review Session Coverage v1: explain the existing review
+rhythm as fixed count-only trading-session groups with exact stable trade
+evidence, without adding outcome interpretation, targets, persistence, schema,
+archive, or native-readiness claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New canonical definition `review-session-coverage-report-v1` is pinned by
+  SHA-256
+  `8fafa15893363476f1d0433c8fbb70d3db000b6c4a75bfd9a621862c52244113`.
+  A trading session is each real workspace-local calendar date with at least
+  one durable trade contribution. It is reviewed when at least one exactly
+  resolved current trade has a saved draft or completed review whose
+  `reviewSessionDates` contains that date.
+- Every session belongs once to fixed `current_streak`,
+  `reviewed_before_streak`, or `unreviewed` groups. The current streak is the
+  maximal reviewed suffix ending at the latest recorded trading session; no-
+  trade calendar gaps do not break it, and an unreviewed latest session yields
+  a zero streak.
+- Session counts and calendar-date/trade assignments conserve independently.
+  Every contribution becomes one evidence row ordered by date descending then
+  stable subject ID. One covered contributor makes its session reviewed but
+  does not imply that every trade in the session has been reviewed.
+- Dates, calendar/session identities, trade counts, current subject IDs,
+  covered-date subsets, saved-head identities/versions, review states, asset
+  classes, and review-progress totals fail closed at explicit boundaries.
+  Invalid input is never repaired, dropped, deduplicated, or defaulted.
+  Metadata, groups, dates, and evidence are detached and deeply frozen.
+- The report cross-checks only `tradingSessions`, `reviewedSessions`, and
+  `streakSessions` from existing review progress. It does not consume or
+  expose P&L, currency, risk, outcomes, Daily Journal content, Trade Browser
+  scope, a rate, rank, reward, target, prediction, or advice.
+- Reports places Review Session Coverage between Journal Curve and Direction
+  Mix. All three groups remain visible, evidence reveals at most 25 assignments
+  per action, external fields are escaped, live counts are announced, and
+  completion focus moves to newly revealed content.
+- Every row opens exactly one current trade by stable subject ID through the
+  existing review sheet with date-specific accessible context. Ordinary close
+  returns to the exact connected trigger; an explicit save rebuilds the
+  snapshot and returns focus to the Review Session Coverage heading.
+- Dashboard's review-rhythm card now opens the report directly. Report-menu
+  order, return focus, disclosures, offline behavior, localStorage neutrality,
+  full-workspace Trades-filter isolation, and 320/421px 200% text behavior all
+  include the new destination.
+- The fictional demo contract is exactly 6 total sessions, 6 reviewed
+  sessions, 0 unreviewed sessions, a 6-session current streak, 8 assignments,
+  and all 3 fixed groups. Restore and review-edit regression evidence now
+  exercises covered-session equality rather than only zero coverage.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, and
+  report navigation now cover eight governed reports, sixteen Slice D
+  increments, fourteen derived-only presentation/projection increments, and
+  ten report destinations. Native rows remain NOT RUN.
+- No schema, migration, store command, archive/export shape, digest input,
+  financial formula/version, prior governed-report definition/checksum, native
+  source, credential, destructive workflow, or public comparative claim
+  changed.
+- All 23 prior milestones have historical banners; older succession language
+  reserves present-tense `active` for this handoff.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 53 files, 654 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 65 production-Chromium
+  journeys passed, including the exact 6/6/6/8 demo contract, fixed zero
+  groups, independent conservation, stable-ID continuation, Dashboard/menu
+  focus, save-driven heading return, covered-session restore/edit equality,
+  report and Trades-filter isolation, offline/storage neutrality, keyboard
+  reachability, and 320/421px 200% text.
+- `cd mobile && npm run build` — exit 0; Vite transformed 76 modules. The
+  existing >500 kB chunk warning remains visible.
+- `cd mobile && npm run ios:copy` plus `npm run verify:ios-sync` — exit 0;
+  6 production files matched the iOS public copy byte-for-byte with SHA-256
+  `83253bc7d4ade0b026307fc943ce4d9b771b81c2874db6b5dba8c6943b9623be`.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- `rg -c '^## Prior milestone' docs/HANDOFF.md` and
+  `rg -c '^> Historical snapshot' docs/HANDOFF.md` — each returned 23.
+- Independent core-contract and UI/integration reviews found no blocker. Four
+  low-priority boundary, restore, and continuation coverage gaps were closed
+  before the final clean gate.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `snapshot.calendar` is the canonical workspace-local durable execution
+  calendar; each contribution has already been aggregated to one stable trade
+  subject per date.
+- `TradePreview.reviewSessionDates` contains exactly the contribution dates
+  at or before the current saved review head's recorded time; older immutable
+  review versions do not compete with that head.
+- Governed reports intentionally consume the full-workspace snapshot. Trade
+  Browser account/date/day/search/facet state does not scope or mutate them.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- HOLD native Review Session Coverage acceptance: repeat version/checksum,
+  exact 6/6/6/8 demo reconciliation, all three fixed groups, separate
+  conservation, mixed covered/uncovered contributors, no-trade-gap streak
+  continuity, 25-row progression, exact-ID continuation, ordinary-close and
+  save/refresh focus, restore equality, offline/lifecycle behavior, VoiceOver,
+  hardware keyboard, 200% Dynamic Type, and 320/421-width layout on a current
+  Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Tag Patterns v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Review Session Coverage v1 handoff above.
+
+Status: verified Tag Patterns v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver governed Tag Patterns v1: reconcile exact tags on coherent current
 completed trade-review heads as count-only groups with stable trade evidence,
@@ -138,7 +291,7 @@ open:
 ## Prior milestone — Opening Weekday Mix v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Tag Patterns v1 handoff above.
+> then-current Tag Patterns v1 milestone above.
 
 Status: verified Opening Weekday Mix v1 · documentation truth reconciled ·
 updated 2026-07-16
@@ -2766,7 +2919,8 @@ open:
 ## Prior milestone — Slice C-B
 
 > Historical snapshot; current status and open items are superseded by later
-> milestones and ultimately by the active Tag Patterns v1 handoff above.
+> milestones and ultimately by the active Review Session Coverage v1 handoff
+> above.
 
 task: Deliver local-only previewed restore for current `hermes-journal-export`
 v1 files without merging data or adding Delete All Data, trade execution,

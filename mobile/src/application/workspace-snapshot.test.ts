@@ -7,6 +7,7 @@ import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
+import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import type {
@@ -867,6 +868,9 @@ describe("journal workspace snapshot", () => {
       buildOpeningWeekdayMixReport(snapshot),
     );
     expect(buildPlanAdherenceReport(rescored)).toEqual(buildPlanAdherenceReport(snapshot));
+    expect(buildReviewSessionCoverageReport(rescored)).toEqual(
+      buildReviewSessionCoverageReport(snapshot),
+    );
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));
     expect(buildEmotionPatternsReport(rescored)).toEqual(buildEmotionPatternsReport(snapshot));
