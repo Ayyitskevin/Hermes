@@ -1,8 +1,171 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Exact Setup Facet v1 · updated 2026-07-16
+Status: verified Review Queue Focus v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Review Queue Focus v1: replace the flat Journal review queue with
+a fail-closed fixed Drafts then Not started projection and deterministic
+queue-origin post-refresh focus without changing review or batch commands,
+persistence, schemas, reports, archives, digests, or financial definitions.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- `buildReviewQueue` consumes the current full-workspace snapshot and validates
+  every current trade before selecting the queue. Stable subject IDs must be
+  unique, trimmed, control-free strings of 1–256 code points; position and
+  review statuses must be exact runtime members; pending reviews must have no
+  saved head; draft/completed reviews must have a unique valid review ID and a
+  positive safe version.
+- Only closed draft and pending trades are eligible. Closed completed trades
+  remain part of validation and completed-count reconciliation; coherent open
+  pending, draft, and completed trades validate but never enter the queue.
+  Waiting, draft, and completed totals must exactly reconcile with
+  `reviewProgress`, or projection fails closed.
+- The immutable result owns a fixed draft-then-pending tuple. Group containers,
+  stable-ID lists, preview elements, metrics, rules, risk, executions, and other
+  nested evidence are detached from their source and deeply frozen by the
+  established Trade Browser preview copier. Canonical snapshot order is
+  preserved inside each group; no recency, P&L, score, rate, or ranking changes
+  the order.
+- Journal renders only nonempty `Drafts` then `Not started` groups with a
+  semantic heading hierarchy. Existing stable-ID review actions and local batch
+  checkboxes remain bound to their exact trades. The fictional demo remains
+  inspectable and read-only; it exposes neither batch checkboxes nor the batch
+  form.
+- A confirmed queue-origin single-review save or resolved batch-tag refresh
+  redraws Journal before focus moves to the first surviving group heading, or
+  the stable queue title when no unfinished trade survives. Report-origin focus
+  retains precedence, ordinary cancel returns to its connected exact trigger,
+  recovery dialogs retain ownership while unresolved, and unrelated review
+  saves retain the established screen fallback.
+- Application/UI coverage proves invalid identities and current heads,
+  reconciliation, fixed grouping, deep detachment, hostile-value escaping,
+  duplicate-symbol exact-ID binding, read-only demo behavior, and focus helper
+  semantics. Production Chromium proves draft and completion regrouping,
+  resolved batch refresh and retry behavior, queue-specific cancel return,
+  first-surviving-group and empty-title focus, recovery ownership, unchanged
+  review/archive facts, 44-point controls, and no overflow at 320 and 421 CSS
+  pixels with 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  now cover nineteen Slice D increments, sixteen derived-only
+  presentation/projection increments, and the same three write-capable
+  exceptions: Durable Daily Journal, Report Trade Continuation, and Dashboard
+  Recent Trade Continuation. Eight governed reports, ten report targets, five
+  tabs, and schema v4 remain unchanged.
+- No schema, migration, store command, review or batch algorithm,
+  export/restore shape, archive input, digest input, governed report
+  version/checksum/definition, formula, dependency, native source, credential,
+  destructive workflow, or public comparative claim changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 684 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 71 production-Chromium journeys
+  passed. A focused rerun after adding the queue-specific ordinary-cancel focus
+  assertion passed 1/1. Focused application/UI audit runs also passed 61/61.
+- cd mobile && npm run build — exit 0; Vite transformed 78 modules. The
+  existing >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  0b0dcaee87420aabd77b6e30551fa5d3ea5af0fcfd6717184085101e84861b14.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --exit-code -- mobile/ios mobile/package-lock.json and git diff
+  --check — exit 0; no tracked native/lock drift or whitespace errors.
+- rg -c '^## Prior milestone' docs/HANDOFF.md and
+  rg -c '^> Historical snapshot' docs/HANDOFF.md — each returned 26. Exact
+  Setup's historical 25/25 evidence remains unchanged.
+- Independent skeptical product/core, UX, technical, and documentation reviews
+  passed after closing source-mutation, invalid-open-head, duplicate-head,
+  queue-title focus, batch-retry focus, queue-origin wording, and
+  duplicate-symbol evidence-label gaps. The final skeptical code/UI audit found
+  no P0–P2 issue.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `JournalWorkspaceSnapshot.trades` remains the canonical coherent current
+  projection and its order is the only order preserved inside each workflow
+  group. `reviewProgress.pendingTrades` continues to mean all closed unfinished
+  reviews, including saved drafts.
+- The established workspace builder remains the owner of trade preview facts,
+  current review heads, and progress counts. This display layer validates those
+  facts but never repairs, normalizes, infers, or persists them.
+- Drafts before Not started is a fixed workflow grouping, not a quality,
+  urgency, value, performance, outcome, or recommendation ranking.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, SQLCipher, Keychain, or
+  physical-iPhone evidence.
+
+open:
+
+- HOLD native Review Queue Focus acceptance: repeat exact stable-ID and
+  duplicate-symbol targeting, Drafts-then-Not-started grouping, canonical
+  within-group order, count reconciliation, read-only demo behavior,
+  queue-origin single-review and resolved-batch focus, ordinary cancel,
+  recovery ownership, background/foreground, force-quit/relaunch, multi-scene
+  refresh, VoiceOver, hardware keyboard, measured 44-point controls, and
+  320/421-width 200% Dynamic Type on a current Mac/iPhone.
+- HOLD native Exact Setup Facet acceptance: repeat classified-only option
+  derivation across in/out-of-scope reviews, explicitly saved versus absent
+  **Unclassified**, all-eight AND composition, stale-zero refresh, internal
+  navigation, clear boundaries, mode/reload reset, announcements, VoiceOver,
+  hardware keyboard, 44-point controls, and 320/421-width 200% Dynamic Type.
+- HOLD native Dashboard Recent Trade Continuation and Review Session Coverage
+  acceptance; their detailed procedures remain in the historical handoffs and
+  Mac checklist. Browser evidence does not satisfy those native rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions. Durable opening instants plus the
+  workspace IANA zone are technically sufficient without a schema change once
+  that semantic decision is made.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Exact Setup Facet v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Review Queue Focus v1 handoff above.
+
+Status: verified Exact Setup Facet v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Exact Setup Facet v1: add the exact current classified setup to
 the session-only Trades card-visibility layer without treating an absent setup

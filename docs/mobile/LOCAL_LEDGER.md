@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-16
+Status: implemented execution + versioned trade/day review + review-queue focus + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-16
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -195,6 +195,34 @@ no preparation, ID generation, or store commit. Deterministic pre-commit
 failure removes the modal and restores the original controls. This changes no
 schema, review digest, store algorithm, archive, or governed metric, and it
 does not close unknown batch-result recovery.
+
+### Review Queue Focus display projection
+
+Review Queue Focus v1 is the nineteenth bounded Slice D increment and the
+sixteenth derived-only presentation/projection increment. `buildReviewQueue`
+consumes the current full-workspace snapshot only. It validates every current
+`TradePreview` position/review state, unique trimmed control-free stable subject
+identity, and coherent unique current saved-review head before selecting only
+closed draft or pending trades. Open and completed trades never enter the queue;
+every closed completed trade still participates in completed-count
+reconciliation. Waiting, draft, and completed totals must exactly equal
+`reviewProgress`, and invalid identity, head, status, or count evidence throws
+rather than being repaired, dropped, or defaulted.
+
+The frozen grouping projection always owns a fixed draft-then-pending tuple.
+Its group containers, preview elements, and nested evidence are detached from
+the source snapshot and deeply frozen. The view omits empty groups, labels the
+survivors **Drafts** then **Not started**, and preserves canonical snapshot
+order within each group. After a confirmed queue-origin single-review save or
+resolved batch-tag refresh,
+Journal redraws before focus moves to the first surviving group heading or the
+stable queue title when none survives. The existing review/batch persistence
+path and its error/recovery focus states are unchanged. This is transient,
+render-only derived display: no queue, focus, or group state enters schema v4,
+SQLite, the browser journal, export/restore, an archive, digest, report, or
+financial formula. The five primary tabs, ten report targets, and eight governed
+reports remain unchanged. Native VoiceOver, hardware-keyboard, Dynamic Type,
+lifecycle, reflow, and focus acceptance remain a Mac/iPhone hold.
 
 ## Daily-journal sequence
 
@@ -854,6 +882,15 @@ and network neutrality, focused tamper failure before inert state, local
 save/redraw/reopen evidence, stable-screen focus, keyboard activation,
 44-by-48 CSS-pixel controls, and unobscured no-overflow reflow at 320/421px with
 200% text.
+Review Queue Focus application/UI coverage exercises fixed
+Drafts-then-Not-started grouping, canonical within-group order, frozen
+containers, current-head and stable-ID fail-closed tables,
+waiting/draft/completed `reviewProgress` reconciliation, and duplicate-symbol
+exact identity. Browser journeys cover draft and completion regrouping,
+resolved batch-tag redraw, first-surviving-group or empty-queue-title focus,
+recovery-state focus ownership, unchanged review/archive facts, and
+320/421px 200% reflow without adding persistence.
+These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low
 storage, near-limit memory, VoiceOver, hardware-keyboard, Dynamic Type, and

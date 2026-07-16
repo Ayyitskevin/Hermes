@@ -34,6 +34,10 @@ import {
   planAdherenceDashboardCard,
   reportsView,
 } from "./reports-view";
+import {
+  focusReviewQueueAfterRefresh,
+  reviewQueueSection,
+} from "./review-queue-view";
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
 import { bindTradesView, tradesView } from "./trades-view";
@@ -261,9 +265,6 @@ function dashboardView(
 }
 
 function journalView(snapshot: JournalWorkspaceSnapshot): string {
-  const queue = snapshot.trades.filter((trade) => (
-    trade.status === "closed" && trade.reviewStatus !== "completed"
-  ));
   const today = snapshot.provenance === "local"
     ? workspaceTodayIsoDate(snapshot.timeZone)
     : null;
@@ -290,24 +291,7 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
       <strong>${snapshot.reviewProgress.completedTrades} completed</strong>
       <span>${snapshot.reviewProgress.pendingTrades} waiting · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.streakSessions} consecutive reviewed sessions</span>
     </article>
-    <section aria-labelledby="review-queue-title">
-      <div class="section-title"><h2 id="review-queue-title">Trade review queue</h2><span>${queue.length} waiting</span></div>
-      ${snapshot.provenance === "demo" || queue.length === 0 ? "" : `<form class="card batch-review-form" id="batch-review-form" novalidate>
-        <datalist id="batch-tag-options">${snapshot.reviewOptions.tags.map((tag) => `<option value="${escapeHtml(tag)}"></option>`).join("")}</datalist>
-        <div><p class="card-label">ATOMIC BATCH ACTION</p><h3>Tag selected trades</h3><p>Select queue items below. Hermes saves every tag revision together or saves none.</p></div>
-        <label>Tag<input id="batch-review-tag" type="text" maxlength="120" list="batch-tag-options" placeholder="e.g. Earnings day" required /></label>
-        <p class="form-error" id="batch-review-error" role="alert" tabindex="-1" hidden></p>
-        <button class="secondary-button" type="submit">Apply tag to selected</button>
-      </form>`}
-      <div class="journal-list review-queue-list">
-        ${queue.map((trade) => `<article class="card review-queue-item">
-          ${snapshot.provenance === "demo" ? "" : `<label class="review-select"><input type="checkbox" data-batch-review-subject value="${escapeHtml(trade.tradeSubjectId)}" /><span class="sr-only">Select ${escapeHtml(trade.symbol)}, ${escapeHtml(trade.sessionLabel)}, for batch tagging</span></label>`}
-          <div><span class="status-chip review-${trade.reviewStatus}">${escapeHtml(trade.reviewStatus)}</span><h3>${escapeHtml(trade.symbol)}</h3><p>${escapeHtml(trade.sessionLabel)} · ${escapeHtml(signedCurrency(trade.resultPnl, snapshot.currencyCode))}</p></div>
-          ${reviewTradeAction(trade, trade.reviewStatus === "draft" ? "Continue draft" : "Review")}
-        </article>`).join("")}
-        ${queue.length === 0 ? `<article class="empty-state"><h2>Review queue clear</h2><p>Every closed trade has a completed, versioned reflection.</p></article>` : ""}
-      </div>
-    </section>
+    ${reviewQueueSection(snapshot)}
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
       <article class="card daily-journal-intro">
@@ -707,7 +691,7 @@ function bindBatchReviewTagging(
       refreshing = false;
       recovery.backdrop.remove();
       setBackgroundInert(false);
-      root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+      focusReviewQueueAfterRefresh(root);
     };
     recovery.retry.addEventListener("click", () => { void retryRefresh(); });
     await retryRefresh();

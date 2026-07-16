@@ -136,6 +136,23 @@ submission-ready product:
   head/submission cardinality, unchanged execution provenance, focus
   containment, and 320px/200% reflow. Unknown batch status before a resolved
   result remains the separate human-gated exact-command problem above.
+- Review Queue Focus v1 is the nineteenth bounded Slice D increment and the
+  sixteenth derived-only presentation/projection increment. It builds a
+  detached, deeply frozen, fail-closed grouping projection from current closed
+  trades whose current review state is unfinished, reconciles unique stable
+  subject identities and waiting/draft/completed counts against
+  `reviewProgress`, and preserves canonical snapshot order inside fixed
+  nonempty **Drafts** then **Not started** groups. After a confirmed
+  queue-origin single-review save or resolved batch-tag refresh, focus moves to
+  the first surviving group heading, or to the stable queue title when no
+  unfinished trade remains. The existing versioned review and atomic
+  batch write paths are unchanged. No queue, focus, or group state enters the
+  schema, store, browser journal, archive, digest, governed reports, or
+  financial formulas. Durable Daily Journal, Report Trade Continuation, and
+  Dashboard Recent Trade Continuation remain the same three write-capable exceptions;
+  schema v4, five primary tabs, ten report targets, and eight governed reports
+  are unchanged. Native VoiceOver, hardware-keyboard, Dynamic Type, lifecycle,
+  and focus acceptance remain held for the Mac/iPhone gate.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

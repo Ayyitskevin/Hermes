@@ -296,7 +296,7 @@ function freezeMetricEvidence(
   }) as TradePreview["resultRMetric"];
 }
 
-function freezeTradePreview(trade: TradePreview): TradePreview {
+export function freezeTradePreview(trade: TradePreview): TradePreview {
   return Object.freeze({
     ...trade,
     resultRMetric: freezeMetricEvidence(trade.resultRMetric),

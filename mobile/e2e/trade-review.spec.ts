@@ -357,17 +357,23 @@ test("trade reviews persist exact risk metrics, edit immutably, and clear an ato
   await page.getByRole("button", { name: "Journal", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Trade review queue" })).toBeVisible();
   await expect(page.locator(".review-queue-item")).toHaveCount(1);
+  await expect(page.locator('[data-review-queue-group="draft"]')).toHaveCount(0);
+  await expect(page.locator('[data-review-queue-group="pending"]')).toContainText("MSFT");
   await page.locator("[data-batch-review-subject]").check();
   await page.locator("#batch-review-tag").fill("Earnings day");
   await page.getByRole("button", { name: "Apply tag to selected" }).click();
   await expect(page.locator("#route-announcer")).toHaveText(
     "Earnings day added to 1 trade in one atomic review batch.",
   );
+  await expect(page.locator("#review-queue-group-draft-title")).toBeFocused();
+  await expect(page.locator('[data-review-queue-group="pending"]')).toHaveCount(0);
   await expect(page.locator(".review-queue-item")).toContainText("draft");
 
   await page.locator(".review-queue-item").getByRole("button", { name: "Continue draft" }).click();
   await expect(page.locator("#review-tags")).toHaveValue("Earnings day");
   await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.locator(".review-queue-item")
+    .getByRole("button", { name: "Continue draft" })).toBeFocused();
   await page.getByRole("button", { name: "Trades", exact: true }).click();
   await completeReview(page, "MSFT", "10");
 
@@ -377,6 +383,80 @@ test("trade reviews persist exact risk metrics, edit immutably, and clear an ato
   await page.getByRole("button", { name: "Journal", exact: true }).click();
   await expect(page.locator(".review-queue-item")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Review queue clear" })).toBeVisible();
+});
+
+test("review queue groups unfinished work and restores focus after each regroup", async ({ page }) => {
+  await importTwoClosedTrades(page);
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+
+  const queue = page.locator("[data-review-queue]");
+  const pendingGroup = page.locator('[data-review-queue-group="pending"]');
+  await expect(page.locator('[data-review-queue-group="draft"]')).toHaveCount(0);
+  await expect(pendingGroup.locator("[data-review-queue-trade]")).toHaveCount(2);
+  await expect(pendingGroup.locator("[data-review-queue-trade] h4")).toHaveText([
+    "AAPL",
+    "MSFT",
+  ]);
+
+  await pendingGroup.getByRole("button", { name: /Review for MSFT/u }).click();
+  let dialog = page.getByRole("dialog", { name: /MSFT trade review/u });
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+
+  const draftHeading = page.locator("#review-queue-group-draft-title");
+  await expect(draftHeading).toBeFocused();
+  await expect(draftHeading).toBeInViewport();
+  expect(await page.locator("[data-review-queue-group]").evaluateAll((groups) => (
+    groups.map((group) => group.getAttribute("data-review-queue-group"))
+  ))).toEqual(["draft", "pending"]);
+  await expect(page.locator('[data-review-queue-group="draft"]')).toContainText("MSFT");
+  await expect(page.locator('[data-review-queue-group="pending"]')).toContainText("AAPL");
+  await expect(page.locator("[data-batch-review-subject]")).toHaveCount(2);
+
+  for (const width of [320, 421]) {
+    await page.setViewportSize({ width, height: 568 });
+    await page.evaluate(() => {
+      document.documentElement.dataset.testTextScale = "200";
+    });
+    await draftHeading.scrollIntoViewIfNeeded();
+    await expect(draftHeading).toBeInViewport();
+    const overflow = await queue.evaluate((element) => ({
+      document: document.documentElement.scrollWidth - window.innerWidth,
+      queue: element.scrollWidth - element.clientWidth,
+    }));
+    expect(overflow.document).toBeLessThanOrEqual(1);
+    expect(overflow.queue).toBeLessThanOrEqual(1);
+    for (const control of await queue.locator(
+      "button:visible, label.review-select:visible",
+    ).all()) {
+      const box = await control.boundingBox();
+      expect(box, "queue control should have a layout box").not.toBeNull();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  }
+
+  await page.locator('[data-review-queue-group="draft"]')
+    .getByRole("button", { name: /Continue draft for MSFT/u })
+    .click();
+  dialog = page.getByRole("dialog", { name: /MSFT trade review/u });
+  await dialog.locator("#review-note").fill("Completed the saved draft.");
+  await dialog.getByRole("button", { name: "Mark reviewed" }).click();
+  await expect(page.locator("#review-queue-group-pending-title")).toBeFocused();
+  await expect(page.locator('[data-review-queue-group="draft"]')).toHaveCount(0);
+
+  await page.locator('[data-review-queue-group="pending"]')
+    .getByRole("button", { name: /Review for AAPL/u })
+    .click();
+  dialog = page.getByRole("dialog", { name: /AAPL trade review/u });
+  await dialog.locator("#review-note").fill("Completed from the focused queue.");
+  await dialog.getByRole("button", { name: "Mark reviewed" }).click();
+
+  await expect(page.locator("#review-queue-title")).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Review queue clear" })).toBeVisible();
+  await expect(page.locator("[data-review-queue-group]")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  await expect(page.locator("#screen")).not.toHaveAttribute("aria-hidden", "true");
 });
 
 test("report review saves return to the source heading when evidence moves", async ({ page }) => {
@@ -816,7 +896,7 @@ test("a proven batch tag commit retries only the failed journal refresh", async 
 
   await retry.click();
   await expect(recovery).toHaveCount(0);
-  await expect(page.locator("#screen")).toBeFocused();
+  await expect(page.locator("#review-queue-group-draft-title")).toBeFocused();
   await expect(page.locator("#route-announcer")).toHaveText(
     "Earnings day added to 2 trades in one atomic review batch.",
   );

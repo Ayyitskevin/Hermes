@@ -244,6 +244,25 @@ and an App Store disclosure.
   identity. Do not mark ambiguous-save recovery PASS: an unknown result before
   resolution still lacks a durable batch receipt and remains an explicit HIGH
   hold.
+- Build a Journal queue containing interleaved current closed drafts and
+  not-started trades plus open and completed controls, including duplicate
+  symbols with distinct stable subject IDs. Confirm only the closed unfinished
+  current-head trades appear; invalid or duplicate identities and incoherent
+  waiting/draft/completed counts fail closed. Confirm nonempty **Drafts** then
+  **Not started** groups preserve canonical snapshot order and reconcile the
+  queue summary exactly. Save a draft, complete reviews until one group and then
+  the whole queue disappears, and apply a resolved batch tag; after each fresh
+  redraw, visible focus must move to the first surviving group heading or, for
+  the empty queue, the stable **Trade review queue** title. During a stale,
+  uncertain, blocked, or committed-but-not-redrawn result, focus must stay with
+  the existing sheet/recovery surface; a refresh retry must not repeat a review
+  or batch write. Inspect export and storage evidence to confirm no queue,
+  grouping, or focus state exists beyond the established review successors.
+  Schema v4, five primary tabs, ten report targets, eight governed reports, and
+  their digests/formulas must remain unchanged. Repeat with VoiceOver, hardware
+  keyboard, background/foreground, force quit/relaunch, and 200% Dynamic Type at
+  320 and 421 CSS pixels before marking Review Queue Focus native acceptance
+  PASS.
 - With VoiceOver and a hardware keyboard, confirm focus remains inside the
   review sheet through rule removal and returns to its trigger on close.
   While a save is pending, confirm every editable control is disabled.
@@ -653,6 +672,15 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   Browser Batch Tag Known-Commit Refresh-Only Recovery is implemented, but its
   modal/focus, bridge-loss, background/foreground, relaunch, VoiceOver,
   hardware-keyboard, and Dynamic Type behavior is still NOT RUN natively.
+- Review Queue Focus v1 has only Linux/Chromium projection, focus, and reflow
+  evidence. Native VoiceOver announcement/order, hardware-keyboard focus,
+  measured-chrome visibility, background/foreground, force-quit/relaunch,
+  multi-scene refresh, Dynamic Type, and duplicate-symbol exact-ID behavior are
+  NOT RUN and must not inherit browser results. Keep native acceptance on hold
+  until the device procedure above records the fixed group/order/count contract,
+  first-surviving-group or queue-title focus after both queue-origin
+  single-review and batch refreshes, recovery-state focus ownership, and zero
+  queue-specific durable state.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

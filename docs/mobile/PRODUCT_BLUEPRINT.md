@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Eighteen bounded Slice D increments are implemented in the current workspace.
+Nineteen bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -764,6 +764,26 @@ controls remain session-only and change no scope evidence or totals, calendar,
 Dashboard, governed report, store, archive, digest, schema, migration, or
 financial definition.
 
+A nineteenth increment, Review Queue Focus v1, turns the existing Journal
+queue into a detached, deeply frozen, fail-closed grouping projection over
+current closed trades whose current review status is unfinished. It requires
+unique stable subject identities and exact reconciliation of the waiting,
+draft, and completed counts with `reviewProgress`; malformed identity,
+review-head, or count evidence throws rather than being repaired, dropped, or
+defaulted. The only rendered groups are nonempty **Drafts** then **Not
+started**, and each retains canonical snapshot order. After a confirmed
+queue-origin single-review save or a resolved batch-tag refresh rebuilds
+Journal, focus
+moves to the first surviving group heading or the stable queue title when the
+projection is empty. This changes only post-refresh display and
+focus: the existing versioned review and atomic batch commands, recovery
+states, and write ownership remain intact. It is a transient, render-only
+derived display: no group or focus state enters schema v4, a store, browser
+journal, archive, digest, report, or formula. The five primary tabs, ten report
+targets, and eight governed reports remain unchanged. Native VoiceOver,
+hardware-keyboard, Dynamic Type, lifecycle, and focus acceptance remain a
+Mac/iPhone hold.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -918,14 +938,14 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-eighteen Slice D increments add Plan Check, governed Setup Breakdown,
+nineteen Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
-v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, and
-Exact Setup Facet v1. The fifteen presentation/projection increments remain
-derived-only. Durable
+v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
+Setup Facet v1, and Review Queue Focus v1. The sixteen
+presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path without changing its persistence contract.

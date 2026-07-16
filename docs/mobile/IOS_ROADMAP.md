@@ -445,6 +445,22 @@ observed plugin/device behavior:
   and yields zero cards. It is session-only and changes no scope evidence,
   calendar, Dashboard, report, store, archive, digest, schema, or financial
   definition.
+- Review Queue Focus v1 derives a detached, deeply frozen, fail-closed grouping
+  projection from current closed trades whose current review state is
+  unfinished. It requires unique stable subject identities, coherent current
+  review heads, and exact waiting/draft/completed count reconciliation against
+  `reviewProgress`; invalid evidence throws rather than being repaired,
+  dropped, or defaulted. Only nonempty **Drafts** then **Not started** groups
+  render, preserving canonical snapshot order within each group. After a
+  confirmed queue-origin single-review save or resolved
+  batch-tag refresh redraws Journal, focus moves to the first surviving group
+  heading or the stable queue title when none survives. Existing versioned
+  review and atomic batch writes, recovery states, and ownership are unchanged;
+  no queue/focus/group state enters SQLite, the browser journal, an archive,
+  digest, report, or financial formula. Schema v4, the five primary tabs, ten
+  report targets, and eight governed reports are unchanged. Native VoiceOver,
+  hardware-keyboard, Dynamic Type, lifecycle, reflow, and focus acceptance
+  remain a Mac/iPhone hold.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -608,9 +624,10 @@ Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
 v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
-Continuation v1, Exact Setup Facet v1, Compact Trades Filters v1,
+Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Compact Trades
+Filters v1,
 matching-runtime local restore, and all eight governed reports are implemented.
-Eighteen bounded Slice D increments are implemented in total; the fifteen
+Nineteen bounded Slice D increments are implemented in total; the sixteen
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, and Dashboard Recent Trade Continuation are the
 write-capable exceptions; both continuation increments reuse the existing

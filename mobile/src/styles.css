@@ -504,14 +504,22 @@ p { line-height: 1.55; }
 .daily-entry-meta { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; color: var(--muted); font-size: .78rem; }
 .daily-entry-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 .journal-note > .secondary-button { justify-self: start; }
-.review-queue-list { margin-top: .75rem; }
+.review-queue-groups { margin-top: .75rem; display: grid; gap: 1rem; }
+.review-queue-group { display: grid; gap: .65rem; }
+.review-queue-group .review-queue-list { margin-top: 0; }
+.review-queue-group [data-review-queue-group-title]:focus-visible,
+#review-queue-title:focus-visible,
+[data-review-queue-clear-title]:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: .25rem;
+}
 .review-queue-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(7rem, auto);
   align-items: center;
   gap: .75rem;
 }
-.review-queue-item h3 { margin-top: .45rem; font-size: 1.1rem; }
+.review-queue-item h4 { margin: .45rem 0 0; overflow-wrap: anywhere; font-size: 1.1rem; }
 .review-queue-item p { margin: .2rem 0 0; color: var(--muted); font-size: .78rem; }
 .review-select { min-width: 44px; min-height: 44px; display: grid; place-items: center; }
 .review-select input { width: 1.2rem; min-height: 1.2rem; accent-color: var(--violet); }

@@ -513,18 +513,23 @@ function showTradeReviewOpenError(
 function focusAfterTradeReviewRefresh(
   root: HTMLElement,
   reportSource: TradeReviewReportSource | undefined,
+  reviewQueueOrigin: boolean,
 ): void {
+  let target: HTMLElement | null = null;
   if (reportSource !== undefined) {
     const targetId = TRADE_REVIEW_REPORT_SOURCE_METADATA[reportSource].targetId;
-    const target = root.querySelector<HTMLElement>(`#${targetId}`);
-    if (target !== null) {
-      const topbarBottom = root.querySelector<HTMLElement>(".topbar")
-        ?.getBoundingClientRect().bottom ?? 0;
-      target.style.scrollMarginTop = `${Math.ceil(Math.max(0, topbarBottom) + 16)}px`;
-      target.scrollIntoView({ behavior: "auto", block: "start" });
-      target.focus({ preventScroll: true });
-      return;
-    }
+    target = root.querySelector<HTMLElement>(`#${targetId}`);
+  } else if (reviewQueueOrigin) {
+    target = root.querySelector<HTMLElement>("[data-review-queue-group-title]")
+      ?? root.querySelector<HTMLElement>("#review-queue-title");
+  }
+  if (target !== null) {
+    const topbarBottom = root.querySelector<HTMLElement>(".topbar")
+      ?.getBoundingClientRect().bottom ?? 0;
+    target.style.scrollMarginTop = `${Math.ceil(Math.max(0, topbarBottom) + 16)}px`;
+    target.scrollIntoView({ behavior: "auto", block: "start" });
+    target.focus({ preventScroll: true });
+    return;
   }
   root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
 }
@@ -598,6 +603,7 @@ export function bindTradeReviewActions(
       }
       setBackgroundInert(true);
       const returnFocus = trigger;
+      const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
       const initialFingerprint = formFingerprint(form);
       const invalidReviewIdentity = trade.reviewStatus === "pending"
         ? trade.reviewId !== null || trade.reviewVersion !== null
@@ -749,7 +755,7 @@ export function bindTradeReviewActions(
         uncertain = false;
         backdrop.remove();
         setBackgroundInert(false);
-        focusAfterTradeReviewRefresh(root, reportSource);
+        focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
       };
 
       const close = (force = false) => {
@@ -762,7 +768,7 @@ export function bindTradeReviewActions(
         backdrop.remove();
         setBackgroundInert(false);
         if (returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
-        else focusAfterTradeReviewRefresh(root, reportSource);
+        else focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
         button.addEventListener("click", () => close());
@@ -803,7 +809,7 @@ export function bindTradeReviewActions(
             uncertain = false;
             backdrop.remove();
             setBackgroundInert(false);
-            focusAfterTradeReviewRefresh(root, reportSource);
+            focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
           } catch {
             showCommittedRefreshFailure();
           }
