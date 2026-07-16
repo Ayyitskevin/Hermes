@@ -7,12 +7,18 @@ import type {
   TradeBrowserResult,
 } from "../application/trade-browser";
 import { TRADE_BROWSER_SEARCH_MAX_CODE_POINTS } from "../application/trade-browser";
+import { validateDailyJournalIsoDate } from "../application/prepare-daily-journal";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import {
   calendarDayFilterCard,
   calendarTradeContributionCard,
 } from "./calendar-day-view";
+import {
+  dailyJournalAction,
+  validateDailyJournalPreview,
+  workspaceTodayIsoDate,
+} from "./daily-journal-sheet";
 import { manualExecutionAction } from "./manual-execution-sheet";
 import { reviewTradeAction } from "./trade-review-sheet";
 
@@ -333,6 +339,54 @@ function noMatchCopy(browser: TradeBrowserResult): string {
     : "Try another symbol, account, setup, side, or tag.";
 }
 
+export function calendarDayReflectionContinuation(
+  snapshot: JournalWorkspaceSnapshot,
+  isoDate: string,
+  maximumDate = workspaceTodayIsoDate(snapshot.timeZone),
+): string {
+  const exactDate = validateDailyJournalIsoDate(isoDate);
+  const today = validateDailyJournalIsoDate(maximumDate);
+  const matches = snapshot.dailyJournal.filter((entry) => entry.isoDate === exactDate);
+  if (matches.length > 1) {
+    throw new Error("A calendar date cannot have multiple current daily reflection heads.");
+  }
+  const entry = matches[0] ?? null;
+  if (entry !== null) validateDailyJournalPreview(entry);
+
+  const boundary = `<p class="scope-boundary">Daily reflections belong to the whole workspace date, not only this trade-browser scope. They are separate from trade reviews and do not mark this trading session reviewed.</p>`;
+  if (snapshot.provenance === "demo") {
+    return `<section class="calendar-day-reflection" aria-labelledby="calendar-day-reflection-title">
+      <h3 id="calendar-day-reflection-title" tabindex="-1">Daily reflection</h3>
+      <p class="calendar-day-reflection-state">Fictional demo reflection · read only</p>
+      ${boundary}
+      <p>Demo content is informative only; no daily reflection changes can be saved.</p>
+    </section>`;
+  }
+  if (snapshot.provenance !== "local") {
+    throw new Error("A selected calendar day requires a local or demo workspace.");
+  }
+  if (exactDate > today) {
+    return `<section class="calendar-day-reflection" aria-labelledby="calendar-day-reflection-title">
+      <h3 id="calendar-day-reflection-title" tabindex="-1">Daily reflection</h3>
+      <p class="calendar-day-reflection-state">Reflection unavailable for this future activity date</p>
+      ${boundary}
+      <p>Return on or after this workspace date to write or continue its reflection.</p>
+    </section>`;
+  }
+
+  const state = entry === null
+    ? "No reflection saved"
+    : entry.state === "draft"
+      ? "Draft saved on device"
+      : "Completed reflection saved on device";
+  return `<section class="calendar-day-reflection" aria-labelledby="calendar-day-reflection-title">
+    <h3 id="calendar-day-reflection-title" tabindex="-1">Daily reflection</h3>
+    <p class="calendar-day-reflection-state">${state}</p>
+    ${boundary}
+    ${dailyJournalAction(entry, undefined, exactDate)}
+  </section>`;
+}
+
 export function tradesView(
   snapshot: JournalWorkspaceSnapshot,
   browser: TradeBrowserResult,
@@ -366,7 +420,12 @@ export function tradesView(
   return `<section class="screen-stack" aria-labelledby="trades-title">
     <div class="screen-heading"><div><p class="eyebrow">${total} ${scopeLabel}</p><h1 id="trades-title">Trades</h1></div><span class="demo-badge">${snapshot.provenance === "demo" ? "DEMO" : snapshot.provenance === "empty" ? "NEW" : "LOCAL"}</span></div>
     ${snapshot.accountOptions.length === 0 ? "" : scopeForm(snapshot, browser)}
-    ${selected === null ? "" : calendarDayFilterCard(selected, snapshot.currencyCode, browser.scopeLabel)}
+    ${selected === null ? "" : calendarDayFilterCard(
+      selected,
+      snapshot.currencyCode,
+      browser.scopeLabel,
+      calendarDayReflectionContinuation(snapshot, selected.isoDate),
+    )}
     ${snapshot.accountOptions.length === 0 ? "" : scopeSummary(browser, snapshot.currencyCode)}
     ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
     ${snapshot.accountOptions.length === 0 ? "" : viewFilters(browser)}

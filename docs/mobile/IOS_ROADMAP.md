@@ -52,7 +52,8 @@ under the provisional identifier until that gate is cleared.
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
   Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
   Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
-  Setup Facet v1, Compact Trades Filters v1, export, and
+  Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
+  v1, Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -461,6 +462,21 @@ observed plugin/device behavior:
   report targets, and eight governed reports are unchanged. Native VoiceOver,
   hardware-keyboard, Dynamic Type, lifecycle, reflow, and focus acceptance
   remain a Mac/iPhone hold.
+- Calendar-Day Reflection Continuation v1 renders the full-workspace Daily
+  Journal state for the exact selected activity date inside its Trades card.
+  Local non-future actions carry a canonical date that must agree with the
+  selected Trade Browser state and card before the editor, random submission
+  identity, inert state, or persistence can begin. Exact creates lock that date
+  instead of using the generic newest-unoccupied default; draft/completed
+  actions continue the unique current head. Demo and future dates remain
+  read-only. Direct save, exact replay, and known-commit refresh recovery focus
+  the rebuilt reflection status while retaining account/date/day scope, query,
+  and all eight exact facets. The reflection remains a whole-workspace-date
+  record and never marks the trading session reviewed. Existing Daily Journal
+  persistence/recovery is reused without schema, store-command, report,
+  formula, archive, digest, preference, dependency, or native-source changes.
+  Native VoiceOver, keyboard, Dynamic Type, lifecycle, and physical-device
+  persistence acceptance remain held.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -624,14 +640,16 @@ Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
 v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
-Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Compact Trades
-Filters v1,
+Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
+Reflection Continuation v1, Compact Trades Filters v1,
 matching-runtime local restore, and all eight governed reports are implemented.
-Nineteen bounded Slice D increments are implemented in total; the sixteen
+Twenty bounded Slice D increments are implemented in total; the sixteen
 presentation/projection increments remain derived-only. Durable Daily Journal,
-Report Trade Continuation, and Dashboard Recent Trade Continuation are the
-write-capable exceptions; both continuation increments reuse the existing
-versioned trade-review save path without changing its persistence contract.
+Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
+Reflection Continuation are the write-capable exceptions. The trade
+continuations reuse the existing versioned trade-review path; the calendar-day
+continuation reuses the existing Daily Journal path without changing either
+persistence contract.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

@@ -6,7 +6,10 @@ import {
 } from "../application/trade-browser";
 import { EMPTY_WORKSPACE } from "../application/workspace-snapshot";
 import { DEMO_WORKSPACE } from "../data/demo";
-import { tradesView } from "./trades-view";
+import {
+  calendarDayReflectionContinuation,
+  tradesView,
+} from "./trades-view";
 
 describe("trades view", () => {
   it("renders stable account and inclusive activity-date scope with exact evidence", () => {
@@ -235,6 +238,94 @@ describe("trades view", () => {
     expect(html).not.toContain("1 ALLOCATION-DAY CONTRIBUTORS");
     expect(html).toContain("Search Jul 7 scoped trades");
     expect(html).toContain("Clear day filter");
+  });
+
+  it("resolves the exact calendar date from the whole daily journal and emits an exact create action", () => {
+    const snapshot = {
+      ...DEMO_WORKSPACE,
+      provenance: "local" as const,
+      provenanceLabel: "ON-DEVICE JOURNAL",
+    };
+
+    const existing = calendarDayReflectionContinuation(
+      snapshot,
+      "2026-07-08",
+      "2026-07-09",
+    );
+    expect(existing).toContain("Completed reflection saved on device");
+    expect(existing).toContain('data-daily-entry-edit="2026-07-08"');
+    expect(existing).toContain('data-daily-entry-calendar-date="2026-07-08"');
+    expect(existing).toContain("Edit completed reflection — July 8, 2026");
+    expect(existing).not.toContain('data-daily-entry-edit="2026-07-09"');
+
+    const missing = calendarDayReflectionContinuation(
+      snapshot,
+      "2026-07-07",
+      "2026-07-09",
+    );
+    expect(missing).toContain("No reflection saved");
+    expect(missing).toContain("Write reflection for this day");
+    expect(missing).toContain('data-daily-entry-new');
+    expect(missing).toContain('data-daily-entry-calendar-date="2026-07-07"');
+    expect(missing).toContain('aria-label="Write reflection for this day — July 7, 2026"');
+    expect(missing).toContain("Daily reflections belong to the whole workspace date");
+  });
+
+  it("keeps demo and future calendar reflections noninteractive even when a head exists", () => {
+    const demo = calendarDayReflectionContinuation(
+      DEMO_WORKSPACE,
+      "2026-07-08",
+      "2026-07-09",
+    );
+    expect(demo).toContain("Fictional demo reflection · read only");
+    expect(demo).not.toContain("data-daily-entry-new");
+    expect(demo).not.toContain("data-daily-entry-edit");
+    expect(demo).not.toContain("data-daily-entry-calendar-date");
+
+    const futureHead = {
+      ...DEMO_WORKSPACE.dailyJournal[0]!,
+      isoDate: "2026-07-10",
+      dateLabel: "Jul 10",
+      entryVersionId: "local-daily-entry-2026-07-10-v1",
+    };
+    const future = calendarDayReflectionContinuation({
+      ...DEMO_WORKSPACE,
+      provenance: "local",
+      provenanceLabel: "ON-DEVICE JOURNAL",
+      dailyJournal: [futureHead],
+    }, "2026-07-10", "2026-07-09");
+    expect(future).toContain("Reflection unavailable for this future activity date");
+    expect(future).not.toContain("data-daily-entry-new");
+    expect(future).not.toContain("data-daily-entry-edit");
+    expect(future).not.toContain("data-daily-entry-calendar-date");
+  });
+
+  it("fails loud on duplicate or tampered current reflection identities", () => {
+    const localSnapshot = {
+      ...DEMO_WORKSPACE,
+      provenance: "local" as const,
+      provenanceLabel: "ON-DEVICE JOURNAL",
+    };
+    const exactHead = DEMO_WORKSPACE.dailyJournal[1]!;
+
+    expect(() => calendarDayReflectionContinuation({
+      ...localSnapshot,
+      dailyJournal: [...localSnapshot.dailyJournal, { ...exactHead }],
+    }, exactHead.isoDate, "2026-07-09")).toThrow(
+      "A calendar date cannot have multiple current daily reflection heads.",
+    );
+    expect(() => calendarDayReflectionContinuation({
+      ...localSnapshot,
+      dailyJournal: [{ ...exactHead, entryVersionId: " tampered-version-id " }],
+    }, exactHead.isoDate, "2026-07-09")).toThrow(
+      "Daily reflection entry version ID must contain",
+    );
+    expect(() => calendarDayReflectionContinuation({
+      ...localSnapshot,
+      dailyJournal: [{ ...exactHead, revision: "not-a-revision" }],
+    }, exactHead.isoDate, "2026-07-09")).toThrow(
+      "Daily reflection revision must be a 256-bit lowercase hexadecimal value.",
+    );
   });
 
   it("keeps search presentation separate from the exact account scope summary", () => {

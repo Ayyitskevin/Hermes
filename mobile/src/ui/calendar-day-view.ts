@@ -196,12 +196,14 @@ export function calendarDayFilterCard(
   session: CalendarSession,
   currency: string,
   scopeLabel: string,
+  reflectionContinuationHtml = "",
 ): string {
   validateCalendarSession(session);
   const fullDate = calendarFullDate(session.isoDate);
   return `<article class="card calendar-day-filter" aria-labelledby="calendar-day-filter-title" data-calendar-day-filter="${escapeHtml(session.isoDate)}">
     <div class="section-title"><div><p class="card-label">CALENDAR DAY</p><h2 id="calendar-day-filter-title" tabindex="-1">${escapeHtml(fullDate)}</h2></div><strong class="${resultClass(session.pnl)}">${escapeHtml(signedCurrency(session.pnl, currency))}</strong></div>
     <p>${countNoun(session.tradeCount, "contributing trade")} · ${countNoun(session.allocationCount, "allocation")} · Trade browser scope: ${escapeHtml(scopeLabel)}. The day total and contribution labels use allocation-day P&amp;L; each card's main result remains the whole trade's realized-to-date result.</p>
+    ${reflectionContinuationHtml}
     <button class="secondary-button" type="button" data-calendar-day-clear>Clear day filter</button>
   </article>`;
 }

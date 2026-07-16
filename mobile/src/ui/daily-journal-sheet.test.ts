@@ -82,6 +82,34 @@ describe("daily journal sheet", () => {
     expect(html).toContain("Save changes");
   });
 
+  it("locks an exact calendar create date while leaving generic create dates editable", () => {
+    const exact = dailyJournalSheetTemplate(
+      null,
+      localWorkspace(),
+      "2026-07-13",
+      "2026-07-08",
+      "2026-07-08",
+    );
+    expect(exact).toMatch(
+      /id="daily-entry-date"[^>]*value="2026-07-08"[^>]*readonly/u,
+    );
+    expect(exact).toContain(
+      "The selected calendar day is this entry’s durable identity and cannot be changed here.",
+    );
+
+    const generic = dailyJournalSheetTemplate(
+      null,
+      localWorkspace(),
+      "2026-07-13",
+      "2026-07-08",
+    );
+    expect(generic).toMatch(
+      /id="daily-entry-date"[^>]*value="2026-07-08"/u,
+    );
+    expect(generic).not.toMatch(/id="daily-entry-date"[^>]*readonly/u);
+    expect(generic).not.toContain("daily-entry-date-hint");
+  });
+
   it("emits stable accessible triggers and parses comma/newline tags", () => {
     expect(dailyJournalAction(null)).toContain("data-daily-entry-new");
     const action = dailyJournalAction(DEMO_WORKSPACE.dailyJournal[0]!);

@@ -275,6 +275,26 @@ and an App Store disclosure.
   the newest unused date, an edited entry's date is immutable, and each explicit
   draft/completed save appends one version while one current head remains per
   date. No autosave may occur after accepting discard.
+- From Dashboard, open an exact activity date into Trades. Confirm the nested
+  **Daily reflection** region states that the record belongs to the whole
+  workspace date, remains separate from trade reviews, and does not mark the
+  session reviewed. A local past/current date with no head must open that exact
+  read-only date—not the generic newest unused date—while a draft or completed
+  head must continue its unique current version. Demo and future activity dates
+  must show read-only explanations with no write action. Mutate and separately
+  remove the action's calendar-date attribute before opening; each attempt must
+  expose a focused generic error before modal, random identity, inert state, or
+  SQLite work. Programmatically alter the readonly input after a valid open and
+  confirm the prepared save still targets the captured selected date. After
+  direct save, exact replay, and known-commit refresh retry, confirm Trades
+  redraws with account/date/day scope, query, and all eight exact facets intact,
+  then focuses the same date's reflection heading. Concurrently invalidate the
+  selected day and confirm focus falls to the screen without reconstructing it.
+  Review Session Coverage, all governed reports, export/restore facts, and one
+  head per date must remain unchanged except for the explicit new Daily Journal
+  version. Repeat at 320 and 421 CSS pixels with 200% Dynamic Type, VoiceOver,
+  hardware keyboard, background/foreground, force-quit/relaunch, and two scenes
+  before marking Calendar-Day Reflection Continuation native acceptance PASS.
 - Retry an exact Daily Journal submission after simulated bridge loss before
   and after commit. Confirm the sheet retains the same submission ID,
   predecessor, normalized content, and revision; exposes no close or second
@@ -681,6 +701,14 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   first-surviving-group or queue-title focus after both queue-origin
   single-review and batch refreshes, recovery-state focus ownership, and zero
   queue-specific durable state.
+- Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
+  recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
+  two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,
+  hardware-keyboard, measured sticky-chrome visibility, and 320/421-width 200%
+  Dynamic Type are NOT RUN. Do not inherit browser acceptance; keep the native
+  row held until the procedure above proves exact selected-date ownership,
+  demo/future noninteraction, scope/facet retention, structural focus, unchanged
+  Review Session Coverage, and one immutable current head per date.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

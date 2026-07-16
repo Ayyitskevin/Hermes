@@ -1,8 +1,173 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Review Queue Focus v1 · updated 2026-07-16
+Status: verified Calendar-Day Reflection Continuation v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Calendar-Day Reflection Continuation v1: continue the exact
+whole-workspace Daily Journal record from the selected activity-day card without
+changing Trade Browser scope, review coverage, persistence contracts, schemas,
+reports, archives, digests, preferences, or financial definitions.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- The selected Trades calendar card now contains a semantic **Daily
+  reflection** region. It resolves zero or one current head for the exact
+  canonical activity date from the full `snapshot.dailyJournal`, never from
+  account/date scope, selected contributors, query, or the eight exact card
+  facets. Duplicate dates or malformed date, entry-version, revision, version,
+  or state identities throw rather than defaulting or selecting another head.
+- Local past/current dates render **No reflection saved**, **Draft saved on
+  device**, or **Completed reflection saved on device** with exact create,
+  continue, or edit actions. Their accessible names retain the full visible
+  label and append the full date. Demo dates are explicitly fictional and
+  read-only; future activity dates expose an explanatory hold and no write
+  action, even if a coherent source projection supplies a future head.
+- A calendar action is valid only when its captured Trade Browser selected
+  date, enclosing selected-card identity, exact action date, and edit date (when
+  present) are canonical and agree. Captured selected state and the action date
+  must be present or absent together. Changed, removed, detached, missing, and
+  ambiguous evidence produces one focused generic error before sheet markup,
+  random submission identity, background inerting, or persistence.
+- Calendar-origin creation locks the captured selected date and passes that
+  identity to the established Daily Journal preparation path; it never invokes
+  the generic newest-unoccupied-date choice. Programmatic changes to the
+  readonly DOM field cannot redirect a save. Existing heads preserve their
+  exact entry-version predecessor. Generic Journal create remains editable and
+  retains its newest-unoccupied-date behavior.
+- Direct save, exact-command replay, and known-commit refresh retry reload and
+  redraw Trades before focus moves to the rebuilt same-date reflection heading,
+  then the selected-day heading, then the screen. Ordinary cancel returns to a
+  connected exact trigger; unresolved stale/uncertain/refresh recovery retains
+  modal ownership. If concurrent activity invalidates the day, Hermes keeps the
+  existing browser invalidation behavior and does not reconstruct it.
+- Account/date/day scope, normalized query, and all eight exact facet values
+  survive coherent refresh. Daily reflection copy states that the record belongs
+  to the whole workspace date, remains separate from trade reviews, and never
+  marks the trading session reviewed. Review Session Coverage is unchanged.
+- Pure UI coverage proves whole-journal second-head selection, exact no-head
+  creation, locked versus generic dates, demo/future holds, and duplicate or
+  malformed identity rejection. Production Chromium proves changed and removed
+  origin-attribute failure, zero pre-open state mutation, captured-date
+  resistance to DOM changes, cancel return, draft/completed continuation,
+  structural focus, browser-state retention, unchanged review coverage, no
+  external requests, 44-point actions, and internal/document no-overflow at 320
+  and 421 CSS pixels with 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
+  cover twenty Slice D increments, sixteen derived-only presentation/projection
+  increments, and four write-capable exceptions: Durable Daily Journal, Report
+  Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
+  Reflection Continuation. Schema v4, five primary tabs, ten report targets,
+  and eight governed reports remain unchanged.
+- No schema, migration, new store command, Daily Journal preparation/commit
+  algorithm, export/restore shape, archive input, digest input, governed report
+  version/checksum/definition, formula, dependency, native source, credential,
+  destructive workflow, or public comparative claim changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 688 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 72 production-Chromium journeys
+  passed. The focused exact-day/calendar matrix separately passed 3/3 after the
+  final label-in-name, origin-presence, revision, and reflow hardening.
+- cd mobile && npm run build — exit 0; Vite transformed 78 modules. The existing
+  >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  71425661d54970a895b578abb97feb015d2fd813943d18135686e5ae98d4742f.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --exit-code -- mobile/ios mobile/package-lock.json and git diff
+  --check — exit 0; no tracked native/lock drift or whitespace errors.
+- Independent product, technical, UX/test, and skeptical source reviews passed
+  after closing the removed-origin generic-date fallback, internal 200%-text
+  overflow, non-hex revision acceptance, and accessible label-in-name defect.
+  The final source review found no open P0-P3 issue.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `JournalWorkspaceSnapshot.dailyJournal` remains the canonical coherent
+  current-head projection, and Trade Browser's validated `selectedDay` remains
+  the only application-state origin for an exact calendar continuation.
+- One Daily Journal entry belongs to the whole workspace-local date. Account,
+  activity range, selected-day contributor scope, query, and exact card facets
+  do not create separate reflections or alter the Daily Journal write identity.
+- The established Daily Journal command remains the sole owner of content
+  normalization, immutable versioning, idempotent receipts, optimistic head
+  checks, and recovery. This slice validates and routes an exact date but does
+  not infer, merge, autosave, or persist browser presentation state.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, SQLCipher, Keychain, or
+  physical-iPhone evidence.
+
+open:
+
+- HOLD native Calendar-Day Reflection Continuation acceptance: repeat exact
+  selected-date ownership, changed/removed/detached trigger failure, generic
+  Journal separation, demo/future noninteraction, immutable draft/completed
+  chains, direct/exact-replay/known-commit focus, selected-day invalidation,
+  scope/query/eight-facet retention, Review Session Coverage isolation,
+  background/foreground, force-quit/relaunch, two-scene races, VoiceOver,
+  hardware keyboard, measured 44-point controls, and 320/421-width 200% Dynamic
+  Type on a current Mac/iPhone.
+- HOLD native Review Queue Focus and Exact Setup Facet acceptance; their
+  detailed procedures remain in the historical handoffs and Mac checklist.
+  Browser evidence does not satisfy those native rows.
+- HOLD native Dashboard Recent Trade Continuation and Review Session Coverage
+  acceptance; their detailed procedures remain in historical handoffs and the
+  Mac checklist.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions. Durable opening instants plus the
+  workspace IANA zone are technically sufficient without a schema change once
+  that semantic decision is made.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Review Queue Focus v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Calendar-Day Reflection Continuation v1 handoff above.
+
+Status: verified Review Queue Focus v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Review Queue Focus v1: replace the flat Journal review queue with
 a fail-closed fixed Drafts then Not started projection and deterministic

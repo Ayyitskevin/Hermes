@@ -969,7 +969,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         return snapshot;
       },
     );
-    if (tab === "journal") {
+    if (tab === "journal" || tab === "trades") {
       bindDailyJournalActions(
         root,
         application,
@@ -981,6 +981,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           announceStatus(announcement);
           return snapshot;
         },
+        tab === "trades" ? tradeBrowserState.selectedDay : null,
       );
     }
     bindBatchReviewTagging(root, application, setBackgroundInert, async (announcement) => {

@@ -39,6 +39,20 @@ test("calendar day opens reconciled trade evidence and clears without losing rev
   await expect(page.locator("[data-calendar-day-filter]")).toContainText(
     "each card's main result remains the whole trade's realized-to-date result",
   );
+  const reflection = page.locator("[data-calendar-day-filter] .calendar-day-reflection");
+  await expect(reflection.getByRole("heading", { name: "Daily reflection" })).toBeVisible();
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "Fictional demo reflection · read only",
+  );
+  await expect(reflection).toContainText(
+    "Daily reflections belong to the whole workspace date, not only this trade-browser scope.",
+  );
+  await expect(reflection).toContainText(
+    "Demo content is informative only; no daily reflection changes can be saved.",
+  );
+  await expect(page.locator(
+    "[data-daily-entry-new], [data-daily-entry-edit], [data-daily-entry-calendar-date]",
+  )).toHaveCount(0);
   await expect(page.locator(".trade-card")).toHaveCount(2);
   const aaplCard = page.locator(".trade-card").filter({
     has: page.getByRole("heading", { name: "AAPL", exact: true }),

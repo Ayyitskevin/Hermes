@@ -306,6 +306,32 @@ p { line-height: 1.55; }
 .calendar-day-filter .section-title > strong.gain { color: var(--positive); }
 .calendar-day-filter .section-title > strong.loss { color: var(--negative); }
 .calendar-day-filter > p { margin: 0; color: var(--muted); }
+.calendar-day-reflection {
+  min-width: 0;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background: rgb(92 225 230 / 4%);
+  display: grid;
+  gap: .65rem;
+}
+.calendar-day-reflection h3,
+.calendar-day-reflection p { margin: 0; overflow-wrap: anywhere; }
+.calendar-day-reflection h3 {
+  scroll-margin-top: calc(5.25rem + env(safe-area-inset-top));
+}
+.calendar-day-reflection-state {
+  color: var(--cyan);
+  font: 700 .82rem/1.35 "B612 Mono", monospace;
+}
+.calendar-day-reflection .primary-button,
+.calendar-day-reflection .secondary-button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 
 .calendar-trade-contribution {
   min-width: 0;
@@ -455,6 +481,7 @@ p { line-height: 1.55; }
 .trade-scope-summary:focus-visible,
 #calendar-month-title:focus-visible,
 #calendar-day-filter-title:focus-visible,
+#calendar-day-reflection-title:focus-visible,
 .form-error[tabindex="-1"]:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;

@@ -27,6 +27,18 @@ async function establishLocalJournal(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Journal", exact: true }).click();
 }
 
+async function localStorageSnapshot(page: Page): Promise<readonly string[]> {
+  return page.evaluate(() => (
+    Array.from({ length: window.localStorage.length }, (_, index) => {
+      const key = window.localStorage.key(index);
+      return JSON.stringify([
+        key,
+        key === null ? null : window.localStorage.getItem(key),
+      ]);
+    }).sort()
+  ));
+}
+
 test("daily reflection creates, validates, completes, and returns focus without autosave", async ({ page }) => {
   await establishLocalJournal(page);
   const trigger = page.getByRole("button", { name: "Write daily reflection" });
@@ -140,6 +152,201 @@ test("daily reflection creates, validates, completes, and returns focus without 
     "Stayed patient; no setup met the plan.",
   );
   await expect(page.locator("#screen")).toBeFocused();
+});
+
+test("calendar day continues the exact workspace reflection without changing trade-browser state or review coverage", async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.origin !== BASE_ORIGIN) externalRequests.push(request.url());
+  });
+  await establishLocalJournal(page);
+
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  const reviewProgress = page.locator(".review-progress-card");
+  const reviewProgressBefore = await reviewProgress.evaluate((element) => (
+    element.textContent?.replace(/\s+/gu, " ").trim() ?? ""
+  ));
+
+  await page.getByRole("button", { name: "Trades", exact: true }).click();
+  await page.getByRole("combobox", { name: "Account" }).selectOption({
+    label: "Primary brokerage · 1 trade",
+  });
+  await page.getByRole("textbox", { name: "Activity from" }).fill("2026-07-09");
+  await page.getByRole("textbox", { name: "Activity through" }).fill("2026-07-09");
+  await page.getByRole("button", { name: "Apply scope" }).click();
+
+  await page.locator("#trade-view-filter-summary").click();
+  await page.getByRole("combobox", { name: "Asset class" }).selectOption("stock");
+  await page.getByRole("combobox", { name: "Direction" }).selectOption("long");
+  await page.getByRole("combobox", { name: "Position state" }).selectOption("closed");
+  await page.getByRole("combobox", { name: "Review state" }).selectOption("pending");
+  await page.getByRole("searchbox", { name: "Search scoped trades" }).fill("AAPL");
+  await expect(page.locator("[data-trade-view-filter-count]")).toHaveText(
+    "· 4 active filters",
+  );
+  await expect(page.locator("#trade-count")).toHaveText("Showing 1 of 1 trade");
+
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  const calendarDay = page.locator('button[data-calendar-day="2026-07-09"]');
+  await calendarDay.click();
+
+  const selectedCard = page.locator('[data-calendar-day-filter="2026-07-09"]');
+  const reflection = selectedCard.locator(".calendar-day-reflection");
+  const reflectionHeading = reflection.locator("#calendar-day-reflection-title");
+  await expect(selectedCard).toBeVisible();
+  await expect(reflectionHeading).toHaveText("Daily reflection");
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "No reflection saved",
+  );
+  await expect(reflection).toContainText(
+    "Daily reflections belong to the whole workspace date, not only this trade-browser scope.",
+  );
+  await expect(reflection).toContainText(
+    "They are separate from trade reviews and do not mark this trading session reviewed.",
+  );
+
+  const exactAction = reflection.getByRole("button", {
+    name: "Write reflection for this day — July 9, 2026",
+  });
+  await expect(exactAction).toHaveAttribute("data-daily-entry-calendar-date", "2026-07-09");
+  const storageBeforeTamper = await localStorageSnapshot(page);
+  await exactAction.evaluate((element) => {
+    element.setAttribute("data-daily-entry-calendar-date", "2026-07-08");
+  });
+  await exactAction.click();
+  const openError = page.locator("[data-daily-entry-open-error]");
+  await expect(openError).toBeFocused();
+  await expect(openError).toContainText("could not safely open this daily reflection");
+  await expect(page.locator("[data-daily-entry-backdrop]")).toHaveCount(0);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "No reflection saved",
+  );
+  expect(await localStorageSnapshot(page)).toEqual(storageBeforeTamper);
+
+  await exactAction.evaluate((element) => {
+    element.removeAttribute("data-daily-entry-calendar-date");
+  });
+  await exactAction.click();
+  await expect(openError).toBeFocused();
+  await expect(openError).toContainText("could not safely open this daily reflection");
+  await expect(page.locator("[data-daily-entry-open-error]")).toHaveCount(1);
+  await expect(page.locator("[data-daily-entry-backdrop]")).toHaveCount(0);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "No reflection saved",
+  );
+  expect(await localStorageSnapshot(page)).toEqual(storageBeforeTamper);
+
+  await exactAction.evaluate((element) => {
+    element.setAttribute("data-daily-entry-calendar-date", "2026-07-09");
+  });
+  await exactAction.click();
+  let dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const exactDate = dialog.locator("#daily-entry-date");
+  await expect(dialog).toBeVisible();
+  await expect(exactDate).toHaveValue("2026-07-09");
+  await expect(exactDate).toHaveAttribute("readonly", "");
+  await expect(dialog.locator("#daily-entry-date-hint")).toContainText(
+    "selected calendar day is this entry’s durable identity",
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(exactAction).toBeFocused();
+
+  await exactAction.click();
+  dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  await dialog.locator("#daily-entry-date").evaluate((input) => {
+    const date = input as HTMLInputElement;
+    date.value = "2026-07-08";
+    date.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await expect(dialog.locator("#daily-entry-date")).toHaveValue("2026-07-08");
+  await dialog.locator("#daily-entry-note").fill(
+    "Captured the selected session without changing its trade review.",
+  );
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(reflectionHeading).toBeFocused();
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "Draft saved on device",
+  );
+  await expect(reflection.getByRole("button", {
+    name: "Continue reflection draft — July 9, 2026",
+  })).toHaveText("Continue reflection draft");
+
+  await expect(page.getByRole("combobox", { name: "Account" }).locator("option:checked"))
+    .toContainText("Primary brokerage");
+  await expect(page.getByRole("textbox", { name: "Activity from" })).toHaveValue(
+    "2026-07-09",
+  );
+  await expect(page.getByRole("textbox", { name: "Activity through" })).toHaveValue(
+    "2026-07-09",
+  );
+  await expect(page.getByRole("searchbox", { name: "Search Jul 9 scoped trades" }))
+    .toHaveValue("aapl");
+  await expect(page.getByRole("combobox", { name: "Asset class" })).toHaveValue("stock");
+  await expect(page.getByRole("combobox", { name: "Direction" })).toHaveValue("long");
+  await expect(page.getByRole("combobox", { name: "Position state" })).toHaveValue("closed");
+  await expect(page.getByRole("combobox", { name: "Review state" })).toHaveValue("pending");
+  await expect(page.locator("[data-trade-view-filter-count]")).toHaveText(
+    "· 4 active filters",
+  );
+  await expect(page.locator(".trade-card:visible")).toHaveCount(1);
+
+  await reflection.getByRole("button", {
+    name: "Continue reflection draft — July 9, 2026",
+  }).click();
+  dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  await expect(dialog.locator("#daily-entry-date")).toHaveValue("2026-07-09");
+  await expect(dialog.locator("#daily-entry-date")).toHaveAttribute("readonly", "");
+  await expect(dialog.locator("#daily-entry-note")).toHaveValue(
+    "Captured the selected session without changing its trade review.",
+  );
+  await dialog.getByRole("button", { name: "Complete reflection" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(reflectionHeading).toBeFocused();
+  await expect(reflection.locator(".calendar-day-reflection-state")).toHaveText(
+    "Completed reflection saved on device",
+  );
+  await expect(reflection.getByRole("button", {
+    name: "Edit completed reflection — July 9, 2026",
+  })).toHaveText("Edit completed reflection");
+
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  expect(await reviewProgress.evaluate((element) => (
+    element.textContent?.replace(/\s+/gu, " ").trim() ?? ""
+  ))).toBe(reviewProgressBefore);
+  await expect(calendarDay).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Trades", exact: true }).click();
+
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  const completedAction = reflection.getByRole("button", {
+    name: "Edit completed reflection — July 9, 2026",
+  });
+  for (const width of [320, 421]) {
+    await page.setViewportSize({ width, height: 568 });
+    await reflection.scrollIntoViewIfNeeded();
+    const overflow = await reflection.evaluate((element) => ({
+      document: document.documentElement.scrollWidth - window.innerWidth,
+      reflection: element.scrollWidth - element.clientWidth,
+    }));
+    expect(overflow.document, `${width}px: ${JSON.stringify(overflow)}`)
+      .toBeLessThanOrEqual(1);
+    expect(overflow.reflection, `${width}px: ${JSON.stringify(overflow)}`)
+      .toBeLessThanOrEqual(1);
+    const actionBox = await completedAction.boundingBox();
+    expect(
+      actionBox,
+      `${width}px calendar reflection action should have a layout box`,
+    ).not.toBeNull();
+    expect(actionBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(actionBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+  expect(externalRequests).toEqual([]);
 });
 
 test("empty and fictional journals keep daily reflection controls read-only", async ({ page }) => {

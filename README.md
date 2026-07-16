@@ -148,11 +148,28 @@ submission-ready product:
   unfinished trade remains. The existing versioned review and atomic
   batch write paths are unchanged. No queue, focus, or group state enters the
   schema, store, browser journal, archive, digest, governed reports, or
-  financial formulas. Durable Daily Journal, Report Trade Continuation, and
-  Dashboard Recent Trade Continuation remain the same three write-capable exceptions;
-  schema v4, five primary tabs, ten report targets, and eight governed reports
-  are unchanged. Native VoiceOver, hardware-keyboard, Dynamic Type, lifecycle,
-  and focus acceptance remain held for the Mac/iPhone gate.
+  financial formulas. It remains derived-only; schema v4, five primary tabs,
+  ten report targets, and eight governed reports are unchanged. Native
+  VoiceOver, hardware-keyboard, Dynamic Type, lifecycle, and focus acceptance
+  remain held for the Mac/iPhone gate.
+- Calendar-Day Reflection Continuation v1 is the twentieth bounded Slice D
+  increment and the fourth write-capable exception. Opening an exact activity
+  day now shows that whole-workspace date's current reflection state and reuses
+  the existing Durable Daily Journal editor without routing through Journal or
+  choosing the generic newest-unoccupied date. Calendar-origin dates are
+  canonical, non-future, read-only identities. A zero-head date offers creation
+  for that exact date; malformed or detached actions and duplicate, missing, or
+  ambiguous edit heads fail visibly before modal, randomness, inert state, or
+  persistence.
+  Demo and future dates remain informative and noninteractive. Save, exact
+  replay, and committed-refresh recovery rebuild
+  Trades before focusing the same day's reflection status while retaining
+  account/date/day scope, query, and all eight exact facets. A daily reflection
+  belongs to the whole workspace date and never marks its trading session
+  reviewed. No schema, store command, report, formula, archive, digest,
+  preference, dependency, or native source changed; the sixteen derived-only
+  increments, schema v4, five tabs, ten report targets, and eight governed
+  reports remain unchanged.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

@@ -224,6 +224,39 @@ financial formula. The five primary tabs, ten report targets, and eight governed
 reports remain unchanged. Native VoiceOver, hardware-keyboard, Dynamic Type,
 lifecycle, reflow, and focus acceptance remain a Mac/iPhone hold.
 
+### Calendar-day reflection continuation
+
+Calendar-Day Reflection Continuation v1 is the twentieth bounded Slice D
+increment and fourth write-capable exception. It does not add a command or
+storage representation. The selected Trades calendar card resolves one current
+Daily Journal head by exact canonical ISO date from the full workspace
+snapshot, independent of account/date scope, selected-day contributors, query,
+and all eight exact card facets. Zero heads yields an exact-date create action;
+one draft or completed head yields its exact continuation; multiple heads,
+malformed identity/version/state, or a detached/mismatched action fails closed.
+
+The binder receives the selected date captured by Trade Browser state. That
+date, the selected-card identity, and `data-daily-entry-calendar-date` must be
+present together and agree before sheet markup, random submission identity,
+background inerting, or persistence. A calendar-origin create passes the exact
+captured date to the existing Daily Journal preparation path and renders it
+read-only; it never invokes `newestAvailableDailyJournalDate`. Programmatic DOM
+changes cannot redirect the prepared identity. Existing heads retain their
+entry-version predecessor and all stale, uncertain, exact-replay, and
+known-commit refresh-only behavior.
+
+After direct save, exact replay, or committed refresh retry, Hermes first
+reloads the workspace and redraws Trades. Focus moves to the rebuilt exact-day
+reflection heading, then the selected-day heading, then the screen. If a
+concurrent workspace change invalidates the selected activity date, Hermes uses
+the screen fallback and does not reconstruct browser state. Ordinary close
+returns to the connected exact trigger; unresolved recovery keeps modal focus.
+Demo and future selected dates expose no write action. The daily reflection is
+owned by the whole workspace date, remains separate from trade reviews, and
+does not mark Review Session Coverage. No schema, migration, store command,
+archive/export shape, digest, report, formula, preference, dependency, or
+native source changes.
+
 ## Daily-journal sequence
 
 ```text
@@ -890,6 +923,14 @@ exact identity. Browser journeys cover draft and completion regrouping,
 resolved batch-tag redraw, first-surviving-group or empty-queue-title focus,
 recovery-state focus ownership, unchanged review/archive facts, and
 320/421px 200% reflow without adding persistence.
+Calendar-Day Reflection Continuation coverage adds whole-journal exact-date
+head resolution, locked exact creation versus generic editable creation,
+malformed/duplicate head rejection, changed and deleted origin-attribute
+failure before modal/persistence, captured-date resistance to DOM mutation,
+demo/future read-only behavior, preserved Trade Browser state, direct
+draft/completed continuation, structural post-refresh focus, unchanged Review
+Session Coverage, 44-point actions, and internal/document no-overflow evidence
+at 320px with 200% text.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

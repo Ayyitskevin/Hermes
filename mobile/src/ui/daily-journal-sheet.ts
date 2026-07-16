@@ -5,6 +5,8 @@ import {
 import {
   DailyJournalPreparationError,
   type PreparedDailyJournalEntry,
+  validateDailyJournalIdentifier,
+  validateDailyJournalIsoDate,
 } from "../application/prepare-daily-journal";
 import { JournalDailyEntryError } from "../application/journal-store";
 import { escapeHtml } from "../core/html";
@@ -64,22 +66,53 @@ export function newestAvailableDailyJournalDate(
 }
 
 function longDateLabel(isoDate: string): string {
+  const exactDate = validateDailyJournalIsoDate(isoDate);
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC",
     month: "long",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(`${isoDate}T12:00:00.000Z`));
+  }).format(new Date(`${exactDate}T12:00:00.000Z`));
 }
 
 export function dailyJournalAction(
   entry: DailyJournalPreview | null,
   label?: string,
+  calendarIsoDate?: string,
 ): string {
-  if (entry === null) {
-    return `<button class="primary-button" type="button" data-daily-entry-new>${escapeHtml(label ?? "Write daily reflection")}</button>`;
+  const exactCalendarDate = calendarIsoDate === undefined
+    ? null
+    : validateDailyJournalIsoDate(calendarIsoDate);
+  if (entry !== null) {
+    validateDailyJournalIsoDate(entry.isoDate);
+    if (exactCalendarDate !== null && entry.isoDate !== exactCalendarDate) {
+      throw new DailyJournalPreparationError(
+        "invalid_date",
+        "The calendar origin must match the daily reflection date.",
+      );
+    }
   }
-  return `<button class="secondary-button" type="button" data-daily-entry-edit="${escapeHtml(entry.isoDate)}" aria-label="Edit daily reflection for ${escapeHtml(longDateLabel(entry.isoDate))}">${escapeHtml(label ?? "Edit reflection")}</button>`;
+  const calendarAttribute = exactCalendarDate === null
+    ? ""
+    : ` data-daily-entry-calendar-date="${escapeHtml(exactCalendarDate)}" aria-haspopup="dialog"`;
+  if (entry === null) {
+    const actionLabel = label
+      ?? (exactCalendarDate === null ? "Write daily reflection" : "Write reflection for this day");
+    const accessibleName = exactCalendarDate === null
+      ? ""
+      : ` aria-label="${escapeHtml(actionLabel)} — ${escapeHtml(longDateLabel(exactCalendarDate))}"`;
+    return `<button class="primary-button" type="button" data-daily-entry-new${calendarAttribute}${accessibleName}>${escapeHtml(actionLabel)}</button>`;
+  }
+  const actionLabel = exactCalendarDate === null
+    ? "Edit reflection"
+    : entry.state === "draft"
+      ? "Continue reflection draft"
+      : "Edit completed reflection";
+  const visibleLabel = label ?? actionLabel;
+  const accessibleName = exactCalendarDate === null
+    ? `Edit daily reflection for ${longDateLabel(entry.isoDate)}`
+    : `${visibleLabel} — ${longDateLabel(entry.isoDate)}`;
+  return `<button class="secondary-button" type="button" data-daily-entry-edit="${escapeHtml(entry.isoDate)}"${calendarAttribute} aria-label="${escapeHtml(accessibleName)}">${escapeHtml(visibleLabel)}</button>`;
 }
 
 export function dailyJournalLatestVersionTemplate(
@@ -124,9 +157,24 @@ export function dailyJournalSheetTemplate(
   snapshot: JournalWorkspaceSnapshot,
   defaultDate = workspaceTodayIsoDate(snapshot.timeZone),
   createDate = defaultDate,
+  calendarIsoDate: string | null = null,
 ): string {
-  const isoDate = entry?.isoDate ?? createDate;
+  const maximumDate = validateDailyJournalIsoDate(defaultDate);
+  const isoDate = validateDailyJournalIsoDate(entry?.isoDate ?? createDate);
+  const exactCalendarDate = calendarIsoDate === null
+    ? null
+    : validateDailyJournalIsoDate(calendarIsoDate);
+  if (
+    exactCalendarDate !== null
+    && (exactCalendarDate !== isoDate || exactCalendarDate > maximumDate)
+  ) {
+    throw new DailyJournalPreparationError(
+      "invalid_date",
+      "The calendar origin must be the same non-future daily reflection date.",
+    );
+  }
   const edit = entry !== null;
+  const dateLocked = edit || exactCalendarDate !== null;
   const title = entry?.title ?? "";
   const note = entry?.note ?? "";
   const emotion = entry?.emotion ?? "";
@@ -148,10 +196,10 @@ export function dailyJournalSheetTemplate(
       <form id="daily-entry-form" novalidate>
         <label>Date
           <input id="daily-entry-date" name="daily-entry-date" type="date"
-            min="1970-01-01" max="${escapeHtml(defaultDate)}" value="${escapeHtml(isoDate)}"
-            ${edit ? 'readonly aria-describedby="daily-entry-date-hint"' : ""} required />
+            min="1970-01-01" max="${escapeHtml(maximumDate)}" value="${escapeHtml(isoDate)}"
+            ${dateLocked ? 'readonly aria-describedby="daily-entry-date-hint"' : ""} required />
         </label>
-        ${edit ? '<p class="field-hint" id="daily-entry-date-hint">The date is part of this entry’s durable identity and cannot be changed.</p>' : ""}
+        ${dateLocked ? `<p class="field-hint" id="daily-entry-date-hint">${exactCalendarDate === null ? "The date is part of this entry’s durable identity and cannot be changed." : "The selected calendar day is this entry’s durable identity and cannot be changed here."}</p>` : ""}
         <label>Headline <span class="field-hint">Optional</span>
           <input id="daily-entry-headline" name="daily-entry-headline" type="text"
             maxlength="240" value="${escapeHtml(title)}" placeholder="What defined the day?" aria-describedby="daily-entry-headline-count" />
@@ -244,12 +292,47 @@ function inputValue(form: HTMLFormElement, id: string): string {
   return input.value;
 }
 
+export function validateDailyJournalPreview(entry: DailyJournalPreview): void {
+  validateDailyJournalIsoDate(entry.isoDate);
+  validateDailyJournalIdentifier(entry.entryVersionId, "Daily reflection entry version ID");
+  if (typeof entry.revision !== "string" || !/^[a-f0-9]{64}$/.test(entry.revision)) {
+    throw new Error("Daily reflection revision must be a 256-bit lowercase hexadecimal value.");
+  }
+  if (!Number.isSafeInteger(entry.version) || entry.version < 1) {
+    throw new Error("Daily reflection version must be a positive safe integer.");
+  }
+  if (entry.state !== "draft" && entry.state !== "completed") {
+    throw new Error("Daily reflection state must be draft or completed.");
+  }
+}
+
+function focusAfterDailyJournalRefresh(
+  root: HTMLElement,
+  calendarOriginDate: string | null,
+): void {
+  if (calendarOriginDate !== null) {
+    const card = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-calendar-day-filter]"),
+    ).find((candidate) => candidate.dataset.calendarDayFilter === calendarOriginDate);
+    const target = card?.querySelector<HTMLElement>("#calendar-day-reflection-title")
+      ?? card?.querySelector<HTMLElement>("#calendar-day-filter-title")
+      ?? null;
+    if (target !== null) {
+      target.scrollIntoView?.({ behavior: "auto", block: "start" });
+      target.focus({ preventScroll: true });
+      return;
+    }
+  }
+  root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+}
+
 export function bindDailyJournalActions(
   root: HTMLElement,
   application: JournalApplication,
   snapshot: JournalWorkspaceSnapshot,
   setBackgroundInert: (inert: boolean) => void,
   refresh: (announcement: string) => Promise<JournalWorkspaceSnapshot>,
+  selectedCalendarDate: string | null = null,
 ): void {
   if (snapshot.provenance !== "local") return;
   const triggers = root.querySelectorAll<HTMLButtonElement>(
@@ -257,18 +340,107 @@ export function bindDailyJournalActions(
   );
   triggers.forEach((trigger) => {
     trigger.addEventListener("click", () => {
-      const requestedDate = trigger.dataset.dailyEntryEdit;
-      const entry = requestedDate === undefined
-        ? null
-        : snapshot.dailyJournal.find((candidate) => candidate.isoDate === requestedDate) ?? null;
-      if (requestedDate !== undefined && entry === null) return;
-      const defaultDate = workspaceTodayIsoDate(snapshot.timeZone);
-      const createDate = entry === null
-        ? newestAvailableDailyJournalDate(snapshot.dailyJournal, defaultDate)
-        : defaultDate;
+      root.querySelectorAll<HTMLElement>("[data-daily-entry-open-error]")
+        .forEach((message) => message.remove());
+      const showOpenError = () => {
+        const message = document.createElement("p");
+        message.className = "form-error";
+        message.dataset.dailyEntryOpenError = "";
+        message.setAttribute("role", "alert");
+        message.setAttribute("tabindex", "-1");
+        message.textContent = "Hermes could not safely open this daily reflection. Refresh the journal and try again.";
+        trigger.insertAdjacentElement("afterend", message);
+        message.focus({ preventScroll: true });
+      };
+      let entry: DailyJournalPreview | null;
+      let defaultDate: string;
+      let createDate: string;
+      let calendarOriginDate: string | null;
+      let sheetHtml: string;
+      try {
+        const isNew = trigger.hasAttribute("data-daily-entry-new");
+        const isEdit = trigger.hasAttribute("data-daily-entry-edit");
+        if (Number(isNew) + Number(isEdit) !== 1) throw new Error("Ambiguous action.");
+
+        const editAttribute = isEdit
+          ? trigger.getAttribute("data-daily-entry-edit")
+          : null;
+        if (isEdit && editAttribute === null) throw new Error("Missing edit date.");
+        const requestedDate = editAttribute === null
+          ? null
+          : validateDailyJournalIsoDate(editAttribute);
+        const calendarAttribute = trigger.getAttribute("data-daily-entry-calendar-date");
+        calendarOriginDate = calendarAttribute === null
+          ? null
+          : validateDailyJournalIsoDate(calendarAttribute);
+        const selectedDate = selectedCalendarDate === null
+          ? null
+          : validateDailyJournalIsoDate(selectedCalendarDate);
+        if ((selectedDate === null) !== (calendarOriginDate === null)) {
+          throw new Error("The daily reflection action has an invalid calendar origin.");
+        }
+        if (calendarOriginDate !== null && selectedDate !== null) {
+          const selectedCard = trigger.closest<HTMLElement>("[data-calendar-day-filter]");
+          const selectedCardDate = selectedCard?.getAttribute("data-calendar-day-filter") ?? null;
+          if (
+            selectedDate !== calendarOriginDate
+            || selectedCardDate === null
+            || validateDailyJournalIsoDate(selectedCardDate) !== calendarOriginDate
+          ) {
+            throw new Error("The calendar action is detached from its selected day.");
+          }
+        }
+        if (
+          calendarOriginDate !== null
+          && requestedDate !== null
+          && calendarOriginDate !== requestedDate
+        ) {
+          throw new Error("Calendar and edit dates do not match.");
+        }
+
+        defaultDate = validateDailyJournalIsoDate(
+          workspaceTodayIsoDate(snapshot.timeZone),
+        );
+        if (calendarOriginDate !== null && calendarOriginDate > defaultDate) {
+          throw new Error("Future calendar dates cannot open daily reflections.");
+        }
+
+        const matches = requestedDate === null
+          ? []
+          : snapshot.dailyJournal.filter((candidate) => candidate.isoDate === requestedDate);
+        if (requestedDate !== null && matches.length !== 1) {
+          throw new Error("The requested daily reflection head is missing or ambiguous.");
+        }
+        entry = matches[0] ?? null;
+        if (entry !== null) validateDailyJournalPreview(entry);
+
+        if (isNew && calendarOriginDate !== null) {
+          const existingCalendarHeads = snapshot.dailyJournal.filter(
+            (candidate) => candidate.isoDate === calendarOriginDate,
+          );
+          if (existingCalendarHeads.length !== 0) {
+            throw new Error("The calendar date already has a daily reflection head.");
+          }
+        }
+        createDate = entry === null
+          ? calendarOriginDate
+            ?? newestAvailableDailyJournalDate(snapshot.dailyJournal, defaultDate)
+          : defaultDate;
+        sheetHtml = dailyJournalSheetTemplate(
+          entry,
+          snapshot,
+          defaultDate,
+          createDate,
+          calendarOriginDate,
+        );
+      } catch {
+        showOpenError();
+        return;
+      }
+      const identityIsoDate = entry?.isoDate ?? calendarOriginDate;
       root.insertAdjacentHTML(
         "beforeend",
-        dailyJournalSheetTemplate(entry, snapshot, defaultDate, createDate),
+        sheetHtml,
       );
       const backdrop = root.querySelector<HTMLElement>("[data-daily-entry-backdrop]");
       const sheet = backdrop?.querySelector<HTMLElement>(".daily-journal-sheet");
@@ -433,7 +605,7 @@ export function bindDailyJournalActions(
         backdrop.remove();
         setBackgroundInert(false);
         if (trigger.isConnected) trigger.focus();
-        else root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+        else focusAfterDailyJournalRefresh(root, calendarOriginDate);
       };
 
       backdrop.querySelectorAll<HTMLButtonElement>("[data-daily-entry-close]")
@@ -460,7 +632,7 @@ export function bindDailyJournalActions(
             await refresh("Journal reloaded after the saved daily reflection could not refresh.");
             backdrop.remove();
             setBackgroundInert(false);
-            root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+            focusAfterDailyJournalRefresh(root, calendarOriginDate);
           } catch {
             showCommittedRefreshFailure();
           }
@@ -501,7 +673,7 @@ export function bindDailyJournalActions(
           await refresh("Journal reloaded after confirming the exact daily reflection save.");
           backdrop.remove();
           setBackgroundInert(false);
-          root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          focusAfterDailyJournalRefresh(root, calendarOriginDate);
         } catch {
           showCommittedRefreshFailure();
         }
@@ -520,7 +692,9 @@ export function bindDailyJournalActions(
           preservedValues.forEach((value, id) => {
             const control = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
             if (control === null) return;
-            control.value = value;
+            control.value = id === "daily-entry-date" && identityIsoDate !== null
+              ? identityIsoDate
+              : value;
             control.dispatchEvent(new Event("input"));
           });
         };
@@ -596,10 +770,12 @@ export function bindDailyJournalActions(
         error.hidden = true;
         uncertainPrepared = null;
         const scoreText = inputValue(form, "daily-entry-score").trim();
+        const isoDateForSave = identityIsoDate
+          ?? inputValue(form, "daily-entry-date");
         try {
           const prepared = application.prepareDailyJournal({
             submissionId,
-            isoDate: inputValue(form, "daily-entry-date"),
+            isoDate: isoDateForSave,
             expectedPreviousEntryId,
             state,
             title: inputValue(form, "daily-entry-headline"),
@@ -625,7 +801,7 @@ export function bindDailyJournalActions(
           saving = false;
           backdrop.remove();
           setBackgroundInert(false);
-          root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          focusAfterDailyJournalRefresh(root, calendarOriginDate);
         } catch (caught) {
           const failureKind = dailyJournalSaveFailureKind(caught);
           if (failureKind === "uncertain") {
@@ -635,7 +811,7 @@ export function bindDailyJournalActions(
             return;
           }
           if (failureKind === "stale") {
-            showStaleConflict(inputValue(form, "daily-entry-date"));
+            showStaleConflict(isoDateForSave);
             return;
           }
           if (failureKind === "blocked") {

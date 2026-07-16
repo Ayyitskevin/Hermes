@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Nineteen bounded Slice D increments are implemented in the current workspace.
+Twenty bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -784,6 +784,27 @@ targets, and eight governed reports remain unchanged. Native VoiceOver,
 hardware-keyboard, Dynamic Type, lifecycle, and focus acceptance remain a
 Mac/iPhone hold.
 
+A twentieth increment, Calendar-Day Reflection Continuation v1, adds one
+reflection region to the exact selected activity-day card. It resolves the
+current head from the full workspace Daily Journal by canonical ISO date, never
+from Trade Browser scope, query, or card-filter evidence. A local past or
+current date opens the established Daily Journal editor with a captured,
+read-only date identity; a missing head creates that exact date rather than the
+generic newest unoccupied date. Draft and completed heads continue their exact
+immutable chains. Duplicate, malformed, missing, ambiguous, detached, or
+future action identities fail closed before modal state, random submission
+identity, inerting, or persistence. Fictional demo and future activity dates
+render read-only explanations with no write action. Direct save, exact-command
+replay, and known-commit refresh recovery rebuild Trades and focus the same
+day's reflection status, falling back to the selected-day heading and then the
+screen if concurrent activity invalidates the day. Account/date/day scope,
+query, and all eight exact facets remain session-only and survive a coherent
+refresh. Daily reflections remain whole-workspace-date records, separate from
+trade reviews, and never mark a session covered. This reuses the existing
+checksum-pinned Daily Journal command and recovery state machine; no schema,
+store command, report, formula, archive, digest, preference, dependency, or
+native source changes.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -938,17 +959,20 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-nineteen Slice D increments add Plan Check, governed Setup Breakdown,
+twenty Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
-Setup Facet v1, and Review Queue Focus v1. The sixteen
+Setup Facet v1, Review Queue Focus v1, and Calendar-Day Reflection Continuation
+v1. The sixteen
 presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
-versioned trade-review save path without changing its persistence contract.
+versioned trade-review save path, while Calendar-Day Reflection Continuation
+reuses the existing Daily Journal save path without changing either persistence
+contract.
 Daily Journal preserves the outer archive version while browser payload v2
 carries its state. Final
 integration
