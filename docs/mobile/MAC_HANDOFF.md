@@ -549,6 +549,12 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 - Native plugin diagnostics and error logging have not been audited on device.
   Do not claim that journal paths or technical failure details stay out of the
   Xcode/device console until that dependency/runtime audit has recorded evidence.
+- Source inspection of pinned `@capacitor-community/sqlite` 8.1.0 finds an
+  unused registered HTTP-download bridge backed by native `URLSession` and an
+  unconditional database-path print during connection construction. No Hermes
+  app-code caller of the download method was found, and on-device behavior is
+  still NOT RUN. Remove, wrap, or explicitly accept those dependency surfaces
+  before claiming no native network capability or console-path privacy.
 - Browser Daily Journal exact-command recovery is implemented and covered, but
   native acceptance is NOT RUN. Record lost responses before/after commit,
   confirmed-not-saved ambiguity, repeated unknown results, stale-after-unknown,
@@ -574,10 +580,10 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   evidence of App Store or trademark availability.
 - SQLCipher is configured and the schema/import repository is tested on Linux,
   but native encryption/Keychain behavior has not been observed on a Mac/iPhone.
-- The database is configured in the app's `Documents` container so the plugin
-  does not apply its custom-directory backup-exclusion flag. Actual device and
-  iCloud backup inclusion—and whether the matching Keychain item restores—remain
-  unresolved until measured and reflected in privacy/help copy.
+- The database is configured for the app's `Documents` container rather than a
+  custom subdirectory. Actual device and iCloud backup inclusion—and whether the
+  matching Keychain item restores—remain unresolved until measured and
+  reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Direction Mix, Opening Weekday Mix,
   Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown,
   export generation, and Slice C-B local restore still need the applicable

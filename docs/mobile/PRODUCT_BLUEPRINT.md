@@ -12,8 +12,9 @@ orders, or recommends a security.
 
 The implementation strategy is a **staged hybrid**:
 
-1. Finish and release the private, offline Core using the tested
-   TypeScript/Capacitor/SQLCipher foundation already in this repository.
+1. Finish and release the private, offline Core using the Linux-tested
+   TypeScript/Capacitor ledger and configured SQLCipher adapter already in this
+   repository.
 2. Add narrowly scoped Swift/Capacitor integrations where they materially
    improve the iPhone experience: Files and Share Sheet import, camera/photo
    attachments, local notifications, biometric lock, and MetricKit diagnostics.
@@ -24,9 +25,9 @@ The implementation strategy is a **staged hybrid**:
 
 Do not rewrite the current ledger in SwiftUI and do not stand up a multi-tenant
 backend before those gates. The existing immutable execution ledger, exact FIFO
-normalizer, CSV provenance, rollback model, encrypted native store, and test
-fixtures are Hermes's strongest assets. A rewrite would delay validation while
-discarding verified correctness.
+normalizer, CSV provenance, rollback model, encrypted-native-store design and
+adapter, and test fixtures are Hermes's strongest assets. A rewrite would delay
+validation while discarding verified correctness.
 
 ## Product position
 
@@ -240,8 +241,9 @@ remains part of the Mac/device release gate.
 - Split just enough UI structure to add a maintainable task flow.
 - Add validated manual execution entry through the same immutable ledger and
   projection contracts as CSV.
-- Persist the reviewed command and unacknowledged result in encrypted schema v2
-  so a lost native response or WebView restart reconciles the existing fill.
+- Persist the reviewed command and unacknowledged result in schema v2, intended
+  to reside in the configured encrypted native store, so a lost native response
+  or WebView restart reconciles the existing fill.
 - Cover empty and existing workspace/account states, exact decimals, fees,
   time zones, duplicate submission, failure atomicity, and accessibility.
 
@@ -281,19 +283,21 @@ never appear without their inspectable, versioned denominator.
   behavior, and a verification receipt.
 
 Slice C-B adds local-only, previewed restore for current
-`hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1
-from the current migration set; its decoder verifies the envelope checksum,
-all 35 tables and 280 pinned ordered columns, canonical rows and signed 64-bit
-integers, table/state digests, and a recomputed summary. Archive SQL is never
-executed, and live table-SQL hashes remain diagnostic.
+`hermes-journal-export` v1 files. The native adapter, covered by Linux
+repository/codec tests, accepts only `sqlite-table-set` v1 from the current
+migration set; its decoder verifies the envelope checksum, all 35 tables and 280
+pinned ordered columns, canonical rows and signed 64-bit integers, table/state
+digests, and a recomputed summary. Archive SQL is never executed, and live
+table-SQL hashes remain diagnostic.
 
-Native preview trial-restores into the real destination transaction,
-recomputes table equality, report and summary equality, foreign keys, and
-`quick_check`, then rolls back deliberately. Commit reparses and rederives the
-archive, atomically rechecks that the destination is empty, verifies inside the
-transaction, and verifies the committed state again. An exact already-restored
-state is an idempotent retry; different nonempty state is never merged or
-overwritten. Browser development accepts only `browser-session-state` v2,
+The native restore adapter is implemented and covered by Linux repository tests
+that trial-restore into the real destination transaction, recompute table,
+report, summary, foreign-key, and `quick_check` evidence, then roll back
+deliberately. Commit reparses and rederives the archive, atomically rechecks that
+the destination is empty, verifies inside the transaction, and verifies the
+committed state again. An exact already-restored state is an idempotent retry;
+different nonempty state is never merged or overwritten. Browser development
+accepts only `browser-session-state` v2,
 validates a separate candidate before one atomic swap, and is not native
 recovery evidence.
 
@@ -443,10 +447,11 @@ Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
 Patterns, and Emotion Patterns analytics.
 Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
-v2 and native schema-v4 exports/restores preserve the complete chain, validate
-the content-bound revision, and reject legacy payloads rather than guessing at
-conversion. Demo examples remain fictional and read-only, and the editor states
-that Hermes never places or routes a trade.
+v2 and the native archive codecs covered by Linux tests preserve the complete
+chain, validate the content-bound revision, and reject legacy payloads rather than
+guessing at conversion. Native Files/plugin execution remains a Mac/iPhone
+gate. Demo examples remain fictional and read-only, and the editor states that
+Hermes never places or routes a trade.
 
 Daily Journal Stale-Head Recovery v1 hardens that optimistic boundary without
 changing persistence. A definite `entry_changed` keeps the user's raw form

@@ -109,8 +109,9 @@ Capacitor iOS shell
   mobile task-oriented UI
     typed application services
       pure TypeScript journal and analytics core
-        encrypted local SQLite repositories
+        native repository configured to require SQLCipher
         file import/export adapters
+        plugin secret API with configured iOS Keychain prefix
         Keychain adapter for future user-owned credentials
         best-effort platform lifecycle adapters
 ```
@@ -158,7 +159,10 @@ Delivered:
 - Working trade search and position-size planning tool.
 - Safe areas, 44-point controls, focus containment/return, route announcements,
   reduced motion, and 200% short-landscape browser coverage.
-- Production CSP blocking all network connections in the demo.
+- Production WebView CSP with `connect-src 'none'` and bundled subresources
+  restricted to local `self`/`data` sources, with no network requests in Hermes
+  app code. The pinned SQLite plugin's unused native HTTP-download bridge
+  remains a dependency audit/removal gate.
 - Linux CI for locked install, TypeScript, unit tests, browser flows, bundle
   build, byte-identical Capacitor public-copy verification, selected generated-
   config contract validation, explicit tracked native/lockfile drift, and the
@@ -171,14 +175,17 @@ selection, native device/Xcode evidence, final branding, or App Store metadata.
 
 ### Phase 1 — durable import → journal → report slice
 
-Delivered in the current vertical slice:
+Delivered in the current vertical slice. Here, "delivered" means checked-in
+source/configuration plus Linux SQL.js, mock, and Chromium evidence; it is not
+observed plugin/device behavior:
 
 - Numbered SQLite v1 ledger and v2 durable-manual-submission migrations with
   STRICT tables, foreign keys, checksums,
   immutable import/execution facts, mutable heads, and generation-scoped derived
   projections.
 - SQLCipher configuration through pinned `@capacitor-community/sqlite` 8.1.0,
-  with a random secret stored by the plugin in the iOS Keychain.
+  plus app code that generates a random secret and passes it to the plugin's
+  secret API under the configured iOS Keychain prefix.
 - Generic RFC 4180 CSV selection, mapping/remapping, exact raw-row provenance,
   explicit limits, IANA-zone parsing, DST gap/fold rejection, and exact decimal
   validation entirely on device.
@@ -190,17 +197,18 @@ Delivered in the current vertical slice:
   reversals, proportional fees/rebates, contract multipliers, and
   currency-separated totals, with stable equal-timestamp ordering and
   opening-allocation trade identities.
-- Replay-safe migration statements plus native fail-closed checks for missing
-  Keychain secrets, encryption, SQLite/SQLCipher integrity, foreign keys,
-  schema version, and migration receipts.
+- Replay-safe migration statements plus implemented native-adapter fail-closed
+  checks for missing plugin secrets, configured encryption, SQLite/SQLCipher
+  integrity, foreign keys, schema version, and migration receipts.
 - Explicit empty, fictional-demo, and real-workspace UI states; imported
   execution projections drive the Dashboard, Trades, Reports, calendar, curve,
   import history, and rollback controls.
 - Two-step manual execution capture with exact string decimals, stock/ETF and
   account identity, side/position effect, IANA time plus optional explicit UTC
   offset, tamper-evident review, replay-safe submission identity, immutable
-  `manual` source facts, atomic projection rebuild, and an encrypted
-  unacknowledged-command record that reconciles a lost response on relaunch.
+  `manual` source facts, atomic projection rebuild, and an unacknowledged-command
+  record intended to reside in encrypted native storage and reconcile a lost
+  response on relaunch.
 - Manual-only journals remain distinct from import receipts, while CSV receipt
   rollback cannot deactivate independently entered manual facts.
 - SQLite v3 immutable review versions and optimistic heads attached to stable
@@ -264,9 +272,10 @@ Delivered in the current vertical slice:
   completed queues, atomic batch tagging, and session streaks that follow the
   blueprint's any-execution-date/at-least-one-saved-review definition.
 - Slice C-B user-owned data v1: Slice C-A's transactional native table-set and
-  development-only browser export now have matching-runtime local restore.
-  Native accepts only current-migration `sqlite-table-set` v1 and verifies the
-  checksum, 35 tables, 280 ordered columns, canonical rows/signed integers,
+  development-only browser export now have matching-runtime local restore
+  implementations. The native restore adapter, covered by Linux repository and
+  codec tests, accepts only current-migration `sqlite-table-set` v1 and verifies
+  the checksum, 35 tables, 280 ordered columns, canonical rows/signed integers,
   table/state digests, and recomputed summary without executing archive SQL.
   Preview trial-restores in the real destination transaction, verifies table,
   report, summary, foreign-key, and `quick_check` evidence, then rolls back.

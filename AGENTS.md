@@ -39,8 +39,11 @@ and the stale document must be flagged or archived rather than blended.
 
 ## Mobile invariants
 
-- Native state lives in encrypted SQLite; its random secret lives in Keychain.
-  Browser persistence is ephemeral development behavior.
+- Native state is required to use SQLCipher-encrypted SQLite. The adapter must
+  hand its random secret to the pinned plugin's secret API under the configured
+  iOS Keychain prefix. Treat encryption and Keychain operation as unverified
+  until recorded Mac/iPhone evidence exists; browser persistence is ephemeral
+  development behavior.
 - Preserve immutable source facts, execution versions, exact decimal strings,
   atomic writes, deterministic ordering, idempotency, and visible errors.
 - Derived trades never replace executions. Annotations attach to stable trade

@@ -28,9 +28,10 @@ legacy desktop journal schema is not part of this contract.
    projection, or receipt failure rolls the entire batch back.
 9. A manual execution uses the same immutable execution/version/head and
    projection path without manufacturing an import batch or receipt. Its
-   cryptographic submission ID plus encrypted v2 command record makes retries
-   and lost native responses idempotent while retaining two independently
-   entered fills that happen to have identical values.
+   cryptographic submission ID plus v2 command record, intended to reside in
+   the configured encrypted native store, makes retries and lost native
+   responses idempotent while retaining two independently entered fills that
+   happen to have identical values.
 10. A review is an immutable version attached to a durable trade subject. Only
     its optimistic current head advances; a review never mutates an execution,
     projection generation, source row, or import receipt.
@@ -94,7 +95,7 @@ one-thumb form
   → immediate revalidation at the store boundary
   → BEGIN transaction
       workspace + account + instrument identity checks
-      encrypted pending command + reviewed revision
+      pending native-store command + reviewed revision
       replay/payload conflict check
       immutable execution + version + manual source + active head
       FIFO normalization
@@ -110,11 +111,13 @@ Manual facts do not create rows in `import_batches`,
 `import_receipts`. CSV receipt rollback therefore cannot claim or void a
 manual execution. The current slice creates facts only; corrections and voiding
 must use later append-only execution versions rather than editing this source
-record in place. If the native transaction commits but the WebView is killed or
-the bridge response is lost, the unacknowledged v2 row survives in the same
-encrypted database. Startup reconciles its execution ID against the active
-ledger and acknowledges it only after the saved result has been read; retrying
-the original submission returns the existing execution without rebuilding.
+record in place. The native path is designed so that, if its transaction commits
+but the WebView is killed or the bridge response is lost, the unacknowledged v2
+row survives in the configured encrypted database. Startup reconciles its
+execution ID against the active ledger and acknowledges it only after the saved
+result has been read; retrying the original submission returns the existing
+execution without rebuilding. That native persistence behavior remains
+unobserved until the Mac/iPhone gate runs.
 
 ## Trade-review sequence
 
@@ -477,20 +480,29 @@ receipt, adds non-void execution versions, and moves the heads back to those
 versions. The original receipt remains visibly rolled back; active exact-file
 deduplication still prevents a second copy while the restored receipt is active.
 
-## Native storage and secrets
+## Configured native storage contract (runtime not yet observed)
 
-- Native iOS uses pinned `@capacitor-community/sqlite` 8.1.0 with encryption
-  enabled and a random 256-bit passphrase generated on first open.
-- The plugin stores that secret in the iOS Keychain under the configured Hermes
-  prefix. Hermes never logs or stores it in web preferences.
-- The database is configured in the app's `Documents` container. That avoids
-  the plugin's explicit backup-exclusion flag for custom directories and keeps
-  irreplaceable journal data eligible for normal device backup policy.
-- Encryption, SQLite quick-check, SQLCipher page-HMAC integrity, and foreign-key
-  integrity are verified on every native open. The schema `user_version` and
-  migration receipt checksums must match the app before repository reads or writes.
-- The production CSP denies network connections. The importer receives local
-  file contents and makes no upload request.
+- The checked-in native path pins `@capacitor-community/sqlite` 8.1.0, enables
+  encryption in Capacitor configuration, and generates a random 256-bit
+  passphrase on first open.
+- The adapter hands that secret to the plugin's secret API under the configured
+  iOS Keychain prefix. Hermes application code does not write the secret to web
+  preferences or log it. Actual Keychain persistence remains a Mac/iPhone gate.
+- The database is configured in the app's `Documents` container, with no
+  Hermes/plugin custom-directory backup-exclusion path selected in source.
+  Actual device or iCloud backup inclusion and matching-Keychain-item restore
+  remain unknown.
+- Before returning a native connection, the adapter requires the plugin to
+  report encryption, enables and checks foreign keys, and issues SQLite
+  `quick_check`, SQLCipher `cipher_integrity_check`, and `foreign_key_check`.
+  Linux tests cover this orchestration with mocks; native enforcement is not
+  yet observed.
+- The production WebView CSP sets `connect-src 'none'` and restricts bundled
+  subresources to local `self`/`data` sources. Hermes importer code receives
+  local file contents without making an upload request. The pinned SQLite
+  plugin still exposes an unused native HTTP-download bridge method outside
+  that CSP, so the binary cannot yet be described as having no network
+  capability.
 - Browser builds are a development surface only: financial records live in an
   explicitly labeled in-memory session store and disappear on reload.
 
@@ -505,6 +517,10 @@ until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
 ## User-owned export and restore v1
+
+The native adapter and archive statements below describe implemented behavior
+covered by Linux repository/codec tests. They are not native Files, SQLCipher,
+or plugin-runtime evidence.
 
 - The file envelope is app-owned `hermes-journal-export` format v1. Native
   export reads all app-owned durable tables and the current report input inside one SQLite
@@ -579,10 +595,10 @@ export-compliance answers also require a human determination.
   destination; the replacement file must earn its own preview. Successful
   commit focuses the stable rendered screen after the old commit control is
   removed.
-- A current-schema archive is now restorable on its matching runtime, but it is
-  not a complete native backup until attachment round-trip and native
-  Files/lifecycle/interruption/low-storage/near-limit-memory gates pass. Delete
-  All Data remains unavailable.
+- The implementation and Linux evidence support the matching-runtime restore
+  contract, but the archive is not an accepted native backup until attachment
+  round-trip and native Files/lifecycle/interruption/low-storage/near-limit-
+  memory gates pass. Delete All Data remains unavailable.
 
 ## Verification evidence
 
@@ -599,7 +615,7 @@ also cover overlapping receipts, dependent rollback atomicity, stable trade
 subjects, equal-timestamp cross-batch ordering, reversed restore order, causal
 clock rollback, and immutable input-head digests. Manual-entry coverage adds
 tamper detection, offset-to-IANA matching, DST gap/fold handling, fee
-precision/range limits, exact two-fill P&L, encrypted response-loss
+precision/range limits, exact two-fill P&L, schema-backed response-loss
 reconciliation, replay idempotency, failed-close atomicity, manual/CSV
 asset-class and receipt ownership separation, save-time dismissal guards,
 two-step browser review, focus restoration, and manual-only receipt truthfulness.

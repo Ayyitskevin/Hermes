@@ -1,6 +1,6 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Opening Weekday Mix v1 ·
+Status: verified Opening Weekday Mix v1 · documentation truth reconciled ·
 updated 2026-07-16
 
 ## Current handoff
@@ -50,6 +50,18 @@ produced:
 - README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
   record six governed reports, fourteen Slice D increments, and eight report
   destinations while keeping every native row NOT RUN.
+- A documentation-only follow-up now distinguishes checked-in configuration,
+  implemented adapter behavior, Linux mock/repository/codec evidence, generated
+  registration evidence, and native runtime evidence that remains NOT RUN.
+  Encryption, Keychain persistence, integrity enforcement, backup/restore, and
+  native Files behavior are no longer described as observed device facts.
+- Source inspection of the pinned SQLite plugin found an unused registered
+  native HTTP-download bridge and an unconditional database-path print. Hermes
+  app code has no caller for the bridge, but the CSP does not govern it; both
+  dependency surfaces are recorded as release holds rather than silently
+  covered by the offline/WebView boundary.
+- All 21 prior milestones now have historical banners. Older named succession
+  links say `then-current`, reserving present-tense `active` for this handoff.
 - No schema, migration, store command, archive/export shape, digest input,
   financial formula/version, prior governed-report definition/checksum, native
   source, credential, destructive workflow, or public comparative claim
@@ -82,8 +94,19 @@ verified:
 - Three independent read-only contract, verification-design, and documentation
   reviews found no implementation blocker after the active handoff, explicit
   outcome-neutrality/code-point boundaries, responsive exact-trade action, and
-  source-document dates were corrected. Pre-existing native-security wording
-  and historical supersession debt remain a separate documentation slice.
+  source-document dates were corrected.
+- Documentation follow-up: `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 49 files, 555 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 tests passed.
+- `cd mobile && npm run verify:ios-sync` — exit 0; registration-only evidence
+  passed while CocoaPods, Xcode, iPhone, SQLCipher, Keychain, lifecycle,
+  VoiceOver, and Dynamic Type remained NOT RUN.
+- `cd mobile && npm audit --omit=dev` and `git diff --check` — exit 0.
+- `rg -c '^## Prior milestone' docs/HANDOFF.md` — returned 21.
+- `rg -c '^> Historical snapshot' docs/HANDOFF.md` — returned 21. Independent
+  source-code, evidence-wording, handoff-integrity, and editorial reviews found
+  no remaining blocker after the follow-up corrections.
 - Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
   does not touch legacy Python and this checkout has no complete project venv.
   The hosted Legacy Python safety job must provide independent evidence after
@@ -116,6 +139,10 @@ open:
   ETF/options/futures/crypto file-coverage claims.
 - HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
   approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
 - Attachments, verified Delete All Data, saved presets, persistent/report
   scope, fuller management, remaining reports, and native restore/backup
   acceptance remain separate.
@@ -255,7 +282,7 @@ open:
 ## Prior milestone — Emotion Patterns v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Direction Mix v1 handoff above.
+> then-current Direction Mix v1 handoff above.
 
 Status: verified Emotion Patterns v1 ·
 updated 2026-07-15
@@ -388,7 +415,7 @@ open:
 ## Prior milestone — Compact Trades Filters v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Emotion Patterns v1 handoff above.
+> then-current Emotion Patterns v1 handoff above.
 
 Status: verified Compact Trades Filters v1 ·
 updated 2026-07-15
@@ -509,7 +536,7 @@ open:
 ## Prior milestone — Mistake Patterns v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Compact Trades Filters v1 handoff above.
+> then-current Compact Trades Filters v1 handoff above.
 
 Status: verified Mistake Patterns v1 ·
 updated 2026-07-15
@@ -654,7 +681,7 @@ open:
 ## Prior milestone — Report Trade Continuation v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Mistake Patterns v1 handoff above.
+> then-current Mistake Patterns v1 handoff above.
 
 Status: verified Report Trade Continuation v1 ·
 updated 2026-07-15
@@ -797,8 +824,8 @@ open:
 ## Prior milestone — Reports Navigator v1
 
 > Historical snapshot; current status and open items are superseded by the
-> newer Report Trade Continuation v1 milestone and now by the active Mistake
-> Patterns v1 handoff above.
+> newer Report Trade Continuation v1 milestone and later by the then-current
+> Mistake Patterns v1 handoff above.
 
 Status: verified Reports Navigator v1 ·
 updated 2026-07-15
@@ -877,7 +904,7 @@ verified:
   errors.
 - Three independent final reviews found no functional, formula, scope,
   persistence, security, listener-lifetime, documentation-truth, iPhone-layout,
-  accessibility, or test-quality blocker after the active handoff and a
+  accessibility, or test-quality blocker after that milestone's handoff and a
   421px/200% control-visibility finding were addressed. These reviews are
   advisory; the rerunnable commands above are authoritative.
 - Legacy Python `ruff` / `pytest` — NOT RUN locally: this checkout has no
@@ -932,7 +959,7 @@ open:
 ## Prior milestone — Dynamic Review Facets v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Reports Navigator v1 handoff above.
+> then-current Reports Navigator v1 handoff above.
 
 Status: verified Dynamic Review Facets v1 ·
 updated 2026-07-15
@@ -1064,7 +1091,7 @@ open:
 ## Prior milestone — Batch Tag Known-Commit Refresh-Only Recovery v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Dynamic Review Facets v1 handoff above.
+> then-current Dynamic Review Facets v1 handoff above.
 
 task: Deliver Batch Tag Known-Commit Refresh-Only Recovery v1: once a batch
 tag result resolves, make redraw recovery one-way and prove it cannot prepare
@@ -1188,7 +1215,8 @@ open:
 ## Prior milestone — Individual Trade Review Stale-Head Recovery v1
 
 > Historical snapshot; superseded first by Batch Tag Known-Commit Refresh-Only
-> Recovery v1 and now by the active Dynamic Review Facets v1 handoff above.
+> Recovery v1 and later by the then-current Dynamic Review Facets v1 handoff
+> above.
 
 task: Deliver Individual Trade Review Stale-Head Recovery v1: preserve one
 complete unsaved review after deterministic optimistic-concurrency rejection,
@@ -1327,7 +1355,7 @@ open:
 ## Prior milestone — Single-Trade Review Exact-Command Recovery v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Individual Trade Review Stale-Head Recovery handoff above.
+> then-current Individual Trade Review Stale-Head Recovery handoff above.
 
 task: Deliver Single-Trade Review Exact-Command Recovery v1 for the individual
 Trade Review sheet: retain one immutable prepared command across an unknown
@@ -1464,7 +1492,7 @@ open:
 ## Prior milestone — Daily Journal Exact-Command Recovery v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Single-Trade Review Exact-Command Recovery handoff above.
+> then-current Single-Trade Review Exact-Command Recovery handoff above.
 
 task: Deliver Daily Journal Exact-Command Recovery v1: retain the immutable
 prepared command across an unknown save outcome, permit only exact replay,
@@ -1584,8 +1612,8 @@ assumptions:
 
 open:
 
-- Superseded by the active individual-sheet milestone above: exact replay and
-  refresh-only recovery are now delivered narrowly for one Trade Review.
+- Superseded by the then-current individual-sheet milestone above: exact replay
+  and refresh-only recovery are now delivered narrowly for one Trade Review.
   Atomic batch-tag recovery and full stale-head evidence/consent remain open.
 - HOLD native Daily Journal acceptance: repeat bridge loss before/after commit,
   repeated ambiguity, a later head from a second real scene, receipt-first
@@ -1608,7 +1636,7 @@ open:
 ## Prior milestone — Daily Journal Stale-Head Recovery v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Daily Journal Exact-Command Recovery handoff above.
+> then-current Daily Journal Exact-Command Recovery handoff above.
 
 task: Deliver Daily Journal Stale-Head Recovery v1: preserve unsaved authored
 changes after a deterministic optimistic conflict, prove and display the
@@ -1744,7 +1772,7 @@ open:
 ## Prior milestone — Startup Recovery v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Daily Journal Stale-Head Recovery handoff above.
+> then-current Daily Journal Stale-Head Recovery handoff above.
 
 task: Deliver Startup Recovery v1 and a truthful pre-native iOS evidence gate:
 fail closed when the first application open/read cannot establish safe
@@ -1870,7 +1898,7 @@ open:
 ## Prior milestone — Recovery Continuity v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Startup Recovery handoff above.
+> then-current Startup Recovery handoff above.
 
 task: Deliver Daily Journal Recovery Continuity v1: compose the existing Daily
 Journal and matching-runtime recovery contracts into one user-facing
@@ -1970,7 +1998,7 @@ open:
 ## Prior milestone — Slice D-F
 
 > Historical snapshot; current status and open items are superseded by the
-> active Startup Recovery handoff above.
+> then-current Startup Recovery handoff above.
 
 task: Deliver Structured Trades Facets v1: four fixed exact, session-only card
 filters that compose with normalized search while preserving the existing
@@ -2076,7 +2104,7 @@ open:
 ## Prior milestone — Slice D-E
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-F handoff above.
+> then-current Slice D-F handoff above.
 
 task: Deliver Trade Browser Scope v1: a derived-only, mobile-first account and
 allocation-date evidence browser with exact scoped contributions, activity
@@ -2174,7 +2202,7 @@ open:
 ## Prior milestone — Slice D-D
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-F handoff above.
+> then-current Slice D-F handoff above.
 
 task: Deliver Durable Daily Journal v1: an explicit-save, mobile-first,
 day-level reflection workflow with immutable optimistic history, complete local
@@ -2282,7 +2310,7 @@ open:
 ## Prior milestone — Slice D-C
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-F handoff above.
+> then-current Slice D-F handoff above.
 
 task: Deliver a bounded Dashboard-calendar → Trades evidence drill-down that
 reconciles workspace-local allocation days to stable trade subjects and exact
@@ -2387,7 +2415,7 @@ open:
 ## Prior milestone — Slice D-B
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-F handoff above.
+> then-current Slice D-F handoff above.
 
 task: Deliver the second governed Slice D insight: a checksum-pinned offline
 Setup Breakdown derived from current projections and current saved review
@@ -2492,7 +2520,7 @@ open:
 ## Prior milestone — Slice D-A
 
 > Historical snapshot; current status and open items are superseded by the
-> active Slice D-F handoff above.
+> then-current Slice D-F handoff above.
 
 task: Deliver the first governed Slice D insight: an offline, evidence-linked
 plan-adherence report derived from current trade projections and current saved
@@ -2596,6 +2624,9 @@ open:
   submission in the next slice.
 
 ## Prior milestone — Slice C-B
+
+> Historical snapshot; current status and open items are superseded by later
+> milestones and ultimately by the active Opening Weekday Mix v1 handoff above.
 
 task: Deliver local-only previewed restore for current `hermes-journal-export`
 v1 files without merging data or adding Delete All Data, trade execution,

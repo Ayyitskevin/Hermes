@@ -75,14 +75,17 @@ submission-ready product:
 - Versioned STRICT SQLite migrations for immutable import provenance, execution
   versions, current heads, FIFO projections, fees, receipts, rollbacks, and
   durable manual-submission reconciliation.
-- SQLCipher-backed native storage with a random passphrase held by the iOS
-  Keychain through the pinned Capacitor SQLite plugin.
+- Capacitor configuration that requires SQLCipher-backed storage, plus a native
+  adapter that generates a random passphrase and hands it to the pinned SQLite
+  plugin's secret API. Native SQLCipher/Keychain operation remains a Mac/iPhone
+  gate.
 - An on-device RFC 4180 CSV flow with inference/remapping, exact source text,
   row-level validation, stale-preview protection, atomic commit, deduplication,
   and receipt rollback.
 - A two-step manual execution flow with exact decimal validation, IANA/offset
-  timestamps, encrypted durable submission reconciliation, immutable
-  manual-source facts, and the same atomic deterministic projection path as CSV.
+  timestamps, schema-backed submission reconciliation intended for the
+  configured native store, immutable manual-source facts, and the same atomic
+  deterministic projection path as CSV.
 - Immutable v3 trade-review versions attached to durable trade subjects, with
   notes, setup/mistake/emotion tags, playbooks, rule outcomes, exact initial
   risk, optional planned stop, optimistic concurrency, and atomic batch tagging.
@@ -140,11 +143,12 @@ submission-ready product:
   accessibility-designed two-step delivery path: file-capable Web Share when
   supported, otherwise a browser download. The browser export is a labeled
   in-memory development artifact, not a native backup.
-- A local-only, previewed Slice C-B restore for current
-  `hermes-journal-export` v1 files. Native accepts only `sqlite-table-set` v1;
-  the browser development runtime accepts only `browser-session-state` v2 and
-  is not native recovery evidence. Restore revalidates the selected archive,
-  never merges or overwrites an existing journal, and treats an exact
+- A local-only, previewed Slice C-B restore implementation for current
+  `hermes-journal-export` v1 files. The native adapter, covered by Linux
+  repository/codec tests, accepts only `sqlite-table-set` v1; the browser
+  development runtime accepts only `browser-session-state` v2 and is not native
+  recovery evidence. Restore revalidates the selected archive, never merges or
+  overwrites an existing journal, and treats an exact
   already-restored state as an idempotent retry. The UI rejects files larger
   than 64 MiB before reading them; the parser independently enforces the same
   67,108,864-byte UTF-8 limit.
@@ -326,14 +330,20 @@ Capacitor iOS shell
   mobile task-oriented UI
     typed application services
       pure TypeScript journal and analytics core
-        encrypted local SQLite repositories
+        native repository configured to require SQLCipher
         local CSV import/provenance adapters
-        Keychain-held random database secret
+        plugin secret API with configured iOS Keychain prefix
 ```
 
 The production Capacitor configuration has no remote `server.url`, and the
-content security policy blocks network connections. Browser development uses
-an explicitly labeled in-memory session store; native iOS uses encrypted SQLite.
+content security policy sets `connect-src 'none'` and restricts bundled WebView
+subresources to local `self`/`data` sources. Hermes production app code makes no
+network requests, but the pinned SQLite plugin still exposes an unused native
+HTTP-download bridge method that the WebView CSP does not govern. Audit or
+remove that dependency surface before claiming the native binary has no network
+capability. Browser development uses an explicitly labeled in-memory session
+store; native iOS is configured to require encrypted SQLite, with runtime proof
+still held for the Mac/iPhone gate.
 See [the local ledger contract](docs/mobile/LOCAL_LEDGER.md).
 
 ## Legacy desktop prototype
