@@ -41,6 +41,11 @@ const REPORT_DESTINATIONS = [
     returnLink: "[data-emotion-patterns] > .section-title .report-menu-link",
   },
   {
+    link: "Tag patterns",
+    target: "#tag-patterns-title",
+    returnLink: "[data-tag-patterns] > .section-title .report-menu-link",
+  },
+  {
     link: "Setup breakdown",
     target: "#setup-performance-title",
     returnLink: "[data-setup-performance] > .section-title .report-menu-link",
@@ -162,6 +167,18 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         evidence: attributes(
           "[data-emotion-patterns-trade]",
           "data-emotion-patterns-trade",
+        ),
+      },
+      tags: {
+        metadata: text("[data-tag-patterns] .tag-patterns-meta"),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-tag-patterns-group-index] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-tag-patterns-trade]",
+          "data-tag-patterns-trade",
         ),
       },
       setup: {
@@ -289,6 +306,9 @@ test(
     const emotionGroup = page.locator(
       '[data-emotion-patterns-group-index="0"]',
     );
+    const tagGroup = page.locator(
+      '[data-tag-patterns-group-index="0"]',
+    );
     const setupGroup = page.locator(
       '[data-setup-performance-group-index="0"]',
     );
@@ -297,12 +317,14 @@ test(
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
     await emotionGroup.locator("summary").click();
+    await tagGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
+    await expect(tagGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
 
     for (const [index, destination] of REPORT_DESTINATIONS.entries()) {
@@ -330,6 +352,7 @@ test(
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
+    await expect(tagGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-navigation-sentinel",
@@ -589,6 +612,130 @@ test(
 );
 
 test(
+  "tag patterns reports exact current-head assignments without ranking or outcome fields",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-tag-patterns]");
+    await expect(section).toBeVisible();
+    const metadata = section.locator(".tag-patterns-meta");
+    for (const expected of [
+      "tag-patterns-report-v1",
+      "ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27",
+      "Current completed review heads",
+      "8 unique trades of 8 trades",
+      "16 saved tag assignments",
+      "0 pending or draft · 0 completed without a saved tag",
+    ]) {
+      await expect(metadata).toContainText(expected);
+    }
+    await expect(
+      section.locator("[data-tag-patterns-group-index] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "Chased entry",
+      "Early entry",
+      "Early exit",
+      "Invalidation respected",
+      "Opening range",
+    ]);
+    await expect(
+      section.locator("[data-tag-patterns-trade]").evaluateAll((elements) => (
+        elements.map((element) => element.getAttribute("data-tag-patterns-trade"))
+      )),
+    ).resolves.toEqual([
+      "demo-subject-spy",
+      "demo-subject-tsla",
+      "demo-subject-qqq",
+      "demo-subject-tsla",
+      "demo-subject-aapl",
+    ]);
+    await expect(section).toContainText("Showing 5 of 12 tag groups");
+    await section.getByRole("button", { name: "Show 5 more tag groups" }).click();
+    await expect(
+      section.locator('[data-tag-patterns-group-index="5"] > summary'),
+    ).toBeFocused();
+    await expect(
+      section.locator("[data-tag-patterns-group-index] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "Chased entry",
+      "Early entry",
+      "Early exit",
+      "Invalidation respected",
+      "Opening range",
+      "Patient entry",
+      "Plan followed",
+      "Protected remainder",
+      "Risk reduced",
+      "Stop respected",
+    ]);
+    await section.getByRole("button", { name: "Show 2 more tag groups" }).click();
+    await expect(
+      section.locator('[data-tag-patterns-group-index="10"] > summary'),
+    ).toBeFocused();
+    await expect(
+      section.locator("[data-tag-patterns-group-index] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "Chased entry",
+      "Early entry",
+      "Early exit",
+      "Invalidation respected",
+      "Opening range",
+      "Patient entry",
+      "Plan followed",
+      "Protected remainder",
+      "Risk reduced",
+      "Stop respected",
+      "Stopped on plan",
+      "Target held",
+    ]);
+    const planFollowed = section.locator("[data-tag-patterns-group-index]")
+      .filter({ has: page.locator("summary", { hasText: "Plan followed" }) });
+    await planFollowed.locator("summary").click();
+    await expect(
+      planFollowed.locator("[data-tag-patterns-trade]")
+        .evaluateAll((elements) => elements.map((element) => (
+          element.getAttribute("data-tag-patterns-trade")
+        ))),
+    ).resolves.toEqual([
+      "demo-subject-meta",
+      "demo-subject-amd",
+      "demo-subject-nvda",
+      "demo-subject-aapl",
+      "demo-subject-msft",
+    ]);
+    await expect(section.locator("dt").allTextContents())
+      .resolves.not.toContain("Currency");
+    for (const prohibited of [
+      "Cash expectancy",
+      "Wins",
+      "Win rate",
+      "Average R",
+      "Exact net P&L",
+      "Top tags",
+    ]) {
+      await expect(section.getByText(prohibited, { exact: true })).toHaveCount(0);
+    }
+    await section.getByText("How this report works", { exact: true }).click();
+    await expect(section).toContainText(
+      "total assignments and summed group counts can exceed unique included trades",
+    );
+    await expect(section).toContainText("never count or performance rank");
+    await expect(section).toContainText(
+      "does not read tag vocabulary, Daily Journal tags, trade results, or Trades filters",
+    );
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
   "report navigation and disclosures stay reachable at 320px and 200% text",
   async ({ page, context }) => {
     const externalRequests = logExternalRequests(page);
@@ -646,6 +793,7 @@ test(
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
       "[data-emotion-patterns-group-index] > summary",
+      "[data-tag-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
     ].join(", "));
     for (let index = 0; index < await summaries.count(); index += 1) {
@@ -681,6 +829,8 @@ test(
         "[data-mistake-patterns] *",
         "[data-emotion-patterns]",
         "[data-emotion-patterns] *",
+        "[data-tag-patterns]",
+        "[data-tag-patterns] *",
         "[data-setup-performance]",
         "[data-setup-performance] *",
       ].join(", ")))
@@ -736,16 +886,21 @@ test(
     const emotionGroup = page.locator(
       '[data-emotion-patterns-group-index="0"]',
     );
+    const tagGroup = page.locator(
+      '[data-tag-patterns-group-index="0"]',
+    );
     await directionGroup.locator(":scope > summary").click();
     await openingWeekdayGroup.locator(":scope > summary").click();
     await followedGroup.locator(":scope > summary").click();
     await mistakeGroup.locator(":scope > summary").click();
     await emotionGroup.locator(":scope > summary").click();
+    await tagGroup.locator(":scope > summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(followedGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
+    await expect(tagGroup).toHaveAttribute("open", "");
 
     const controls = page.locator([
       "a[data-report-target]",
@@ -754,12 +909,14 @@ test(
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
       "[data-emotion-patterns-group-index] > summary",
+      "[data-tag-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
       '[data-direction-mix-group="long"][open] .report-trade-action',
       '[data-opening-weekday-mix-group="wednesday"][open] .report-trade-action',
       '[data-plan-check-group="followed"][open] .report-trade-action',
       '[data-mistake-patterns-group-index="0"][open] .report-trade-action',
       '[data-emotion-patterns-group-index="0"][open] .report-trade-action',
+      '[data-tag-patterns-group-index="0"][open] .report-trade-action',
     ].join(", "));
     const controlCount = await controls.count();
     expect(controlCount).toBeGreaterThanOrEqual(10);
@@ -798,6 +955,7 @@ test(
         "[data-plan-check]",
         "[data-mistake-patterns]",
         "[data-emotion-patterns]",
+        "[data-tag-patterns]",
         "[data-setup-performance]",
       ].join(", "))).map((element) => element.scrollWidth - element.clientWidth),
     }));
@@ -835,18 +993,21 @@ test(
     const planGroup = page.locator('[data-plan-check-group="followed"]');
     const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
     const emotionGroup = page.locator('[data-emotion-patterns-group-index="0"]');
+    const tagGroup = page.locator('[data-tag-patterns-group-index="0"]');
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
     await directionGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
     await emotionGroup.locator("summary").click();
+    await tagGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
+    await expect(tagGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await page.locator("[data-plan-check]").evaluate((element) => {
       element.dataset.tradeContinuationSentinel = "preserved";
@@ -970,6 +1131,25 @@ test(
     await expect(emotionAction).toBeFocused();
     await expectUnobscured(emotionAction);
 
+    const tagAction = page.locator(
+      '[data-tag-patterns-trade="demo-subject-spy"] .report-trade-action',
+    );
+    await expect(tagAction).toHaveAccessibleName(
+      "Open SPY trade for saved tag Chased entry — ETF, Demo Swing, Jul 7 · Afternoon",
+    );
+    await tagAction.click();
+    const tagDialog = page.getByRole("dialog", {
+      name: /SPY trade review · ETF · Demo Swing · Jul 7 · Afternoon/u,
+    });
+    await expect(tagDialog).toBeVisible();
+    await expect(tagDialog.locator("[data-trade-review-report-context]")).toHaveText(
+      "Opened from Tag patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(tagDialog).toHaveCount(0);
+    await expect(tagAction).toBeFocused();
+    await expectUnobscured(tagAction);
+
     await action.evaluate((element) => {
       const clone = element.cloneNode(true) as HTMLButtonElement;
       clone.id = "appended-report-trade";
@@ -1049,6 +1229,7 @@ test(
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
+    await expect(tagGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-trade-continuation-sentinel",
@@ -1239,6 +1420,37 @@ for (const viewport of [
       await expect(mistakeAction).toBeFocused();
       await expectUnobscured(mistakeAction);
       await expectTouchTarget(mistakeAction);
+
+      const tagGroup = page.locator('[data-tag-patterns-group-index="0"]');
+      await tagGroup.locator(":scope > summary").click();
+      const tagAction = tagGroup.locator(".report-trade-action");
+      await tagAction.focus();
+      await expect(tagAction).toBeFocused();
+      await expectUnobscured(tagAction);
+      await expectTouchTarget(tagAction);
+      await expect(tagAction).toHaveAccessibleName(
+        "Open SPY trade for saved tag Chased entry — ETF, Demo Swing, Jul 7 · Afternoon",
+      );
+      await tagAction.click();
+      const tagDialog = page.getByRole("dialog", {
+        name: /SPY trade review · ETF · Demo Swing · Jul 7 · Afternoon/u,
+      });
+      await expect(tagDialog).toBeVisible();
+      await expect(tagDialog.locator("[data-trade-review-report-context]"))
+        .toHaveText(
+          "Opened from Tag patterns. This full-workspace report does not use or change your Trades filters.",
+        );
+      const tagOverflow = await tagDialog.evaluate((element) => ({
+        document: document.documentElement.scrollWidth - window.innerWidth,
+        dialog: element.scrollWidth - element.clientWidth,
+      }));
+      expect(tagOverflow.document).toBeLessThanOrEqual(1);
+      expect(tagOverflow.dialog).toBeLessThanOrEqual(1);
+      await page.keyboard.press("Escape");
+      await expect(tagDialog).toHaveCount(0);
+      await expect(tagAction).toBeFocused();
+      await expectUnobscured(tagAction);
+      await expectTouchTarget(tagAction);
       expect(await localStorageSnapshot(page)).toEqual(storageBefore);
       expect(externalRequests).toEqual([]);
     },

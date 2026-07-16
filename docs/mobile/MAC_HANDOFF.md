@@ -168,7 +168,7 @@ and an App Store disclosure.
   scope. Confirm all seven AND against exact current trade fields, change visible
   cards only, expose the asset-class chip, and leave exact scope P&L/counts, the
   calendar, Dashboard, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-  Patterns, Emotion Patterns, and Setup Breakdown unchanged.
+  Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
 - Confirm the exact-filter disclosure starts collapsed with **none active**,
@@ -199,9 +199,9 @@ and an App Store disclosure.
   state. If an account or day disappears after refresh, confirm Hermes announces
   the recovery instead of silently broadening or trapping the app.
 - Confirm Dashboard headline P&L, equity, and review progress plus Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-  Setup Breakdown remain whole-workspace while only Trades and the Dashboard
-  calendar are scoped.
+  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, and Setup Breakdown remain whole-workspace while only Trades and
+  the Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
   inputs, seven facet selects, month controls, day tiles, scope summary,
   contribution evidence, and focused destinations have no horizontal overflow
@@ -400,11 +400,11 @@ and an App Store disclosure.
   visible Plan Check heading rather than the generic Reports container. In the
   Report sections landmark, verify VoiceOver and hardware-keyboard order is
   Performance Summary, Journal Curve, Direction Mix, Opening Weekday Mix, Plan
-  Check, Mistake Patterns, Emotion Patterns, then Setup Breakdown. Open a
-  Direction, Opening Weekday, Plan, Mistake, Emotion, and Setup disclosure,
-  visit all eight targets, and use every **Back to report menu** link; focus
-  must remain visible and all six disclosures must stay open. At 320 CSS
-  pixels and again in the 421–440 CSS-pixel device class with
+  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup Breakdown.
+  Open a Direction, Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup
+  disclosure, visit all nine targets, and use every **Back to report menu**
+  link; focus must remain visible and all seven disclosures must stay open. At
+  320 CSS pixels and again in the 421–440 CSS-pixel device class with
   200% Dynamic Type, confirm the top bar scrolls
   away, the fixed primary tabs remain available, every menu/return/summary
   control is at least 44 points and can be fully visible between viewport edges
@@ -412,8 +412,8 @@ and an App Store disclosure.
   Reduce Motion and inspect the network log. This native row remains NOT RUN
   until observed on the Mac/iPhone candidate.
 - With VoiceOver and a hardware keyboard, open **Open trade** from a Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-  Setup Breakdown contributor. Confirm the action and sheet
+  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, or Setup Breakdown contributor. Confirm the action and sheet
   heading announce symbol, asset class, account, and session; duplicate symbols
   in different accounts/sessions open the stable-ID-matched trade, never the
   first symbol match. Close, Cancel, Escape, and backdrop dismissal must return
@@ -421,15 +421,16 @@ and an App Store disclosure.
   loaded contributor/group pages, scroll, report evidence, or retained Trades
   account/date/day/search/facets.
 - Repeat after revealing Direction, Opening Weekday, and Plan contributors 26
-  and 51; Mistake, Emotion, and Setup contributors 26 and 51; and a Mistake,
-  Emotion, or Setup
+  and 51; Mistake, Emotion, Tag, and Setup contributors 26 and 51; and a Mistake,
+  Emotion, Tag, or Setup
   group appended after the initial five. Activate nested button content with
   pointer, keyboard, and VoiceOver. Unknown/tampered identity or
   source data must show a focused error without opening a sheet or making the
   background inert.
 - In a local journal, save a review from Direction and Opening Weekday
   evidence, then save changes that move a Plan classification, a Setup group,
-  exact Mistake assignments, and the exact Emotion assignment. Confirm
+  exact Mistake assignments, the exact Emotion assignment, and exact Tag
+  assignments. Confirm
   Direction and Opening Weekday membership stay fixed and every rebuilt report
   is announced with focus on the originating report heading, not a disconnected
   row. Repeat at 320 and 421 CSS pixels with 200% Dynamic Type, offline, and
@@ -472,12 +473,28 @@ and an App Store disclosure.
   contributors, verify each action adds at most five groups or 25 contributors,
   live status stays exact, focus moves to the newly revealed content, controls
   remain 44 points, and 200% text reflows without clipping.
+- In Reports, verify Tag Patterns shows `tag-patterns-report-v1` and checksum
+  `ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27`,
+  8 unique included demo trades, 16 assignments, 12 groups, and zero
+  incomplete-review or completed-without-tag exclusions. Reconcile the stable
+  ordered counts: Chased entry 1, Early entry 1, Early exit 1, Invalidation
+  respected 1, Opening range 1, Patient entry 1, Plan followed 5, Protected
+  remainder 1, Risk reduced 1, Stop respected 1, Stopped on plan 1, and Target
+  held 1. Confirm neither saved vocabulary nor Daily Journal tags are inputs and
+  the report has no currency, P&L, rate, rank, importance, outcome, reward,
+  prediction, or advice. With a multi-tag fixture, reconcile unique trades
+  separately from assignments, current-head movement, exact-ID continuation,
+  ordinary-close trigger focus, and post-save Tag Patterns heading focus.
+- With at least six exact tag groups and one group containing at least 26
+  contributors, verify each action adds at most five groups or 25 contributors,
+  live status stays exact, focus moves to the newly revealed content, controls
+  remain 44 points, and 200% text reflows without clipping.
 - With a local fixture containing at least six classified setup names and one
   setup with at least 26 included trades, verify each group action adds at most
   five groups, each evidence action adds at most 25 contributors, live status
   stays exact, focus moves to the first newly revealed group, controls remain
   44 points, and 200% text reflows at 320 CSS pixels without clipping.
-- After native export → empty-container restore, verify all six governed
+- After native export → empty-container restore, verify all seven governed
   reports, their checksums, cohorts, exclusions, group/evidence order, exact
   values, and contributor identities equal the source.
 - Calculate valid long and short plans; verify wrong-side stops show inline errors.
@@ -585,8 +602,8 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   matching Keychain item restores—remain unresolved until measured and
   reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Direction Mix, Opening Weekday Mix,
-  Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown,
-  export generation, and Slice C-B local restore still need the applicable
+  Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
+  Breakdown, export generation, and Slice C-B local restore still need the
   persistence, response-loss, migration, accessibility, and lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, and Dynamic Review
   Facets v1 intentionally remain session-only; Compact Trades Filters v1 adds
@@ -594,7 +611,8 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
   behaviors. Direction Mix, Opening Weekday Mix, Mistake Patterns, Emotion
-  Patterns, and Report Trade Continuation are browser-verified only; native
+  Patterns, Tag Patterns, and Report Trade Continuation are browser-verified
+  only; native
   stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
   activation, exact-trigger return, post-save heading fallback, offline
   lifecycle, Dynamic Type, and hardware-keyboard acceptance remain NOT RUN.

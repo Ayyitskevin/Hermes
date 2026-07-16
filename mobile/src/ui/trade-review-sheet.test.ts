@@ -111,6 +111,11 @@ describe("trade review sheet", () => {
       localWorkspace(),
       "emotion-patterns",
     );
+    const tagHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "tag-patterns",
+    );
 
     expect(directionHtml).toContain(
       'data-trade-review-report-context="direction-mix"',
@@ -136,6 +141,10 @@ describe("trade review sheet", () => {
       'data-trade-review-report-context="emotion-patterns"',
     );
     expect(emotionHtml).toContain("Opened from Emotion patterns.");
+    expect(tagHtml).toContain(
+      'data-trade-review-report-context="tag-patterns"',
+    );
+    expect(tagHtml).toContain("Opened from Tag patterns.");
   });
 
   it("renders complete escaped evidence for one coherent saved review", () => {
@@ -465,6 +474,19 @@ describe("trade review sheet", () => {
     );
     expect(emotionAction).toContain(
       "Open &lt;AAPL&gt; trade for saved emotion Focused — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+
+    const tagAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "tag-patterns",
+      "saved tag Plan followed",
+    );
+    expect(tagAction).toContain(
+      'data-trade-review-report-source="tag-patterns"',
+    );
+    expect(tagAction).toContain(
+      "Open &lt;AAPL&gt; trade for saved tag Plan followed — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
 
     expect(() => reportTradeAction(snapshot, "missing", "plan-check")).toThrow(

@@ -156,6 +156,7 @@ describe("reports presentation", () => {
       "plan-check-title",
       "mistake-patterns-title",
       "emotion-patterns-title",
+      "tag-patterns-title",
       "setup-performance-title",
     ] as const;
 
@@ -166,8 +167,8 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(8);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(8);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(9);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(9);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
@@ -187,6 +188,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#emotion-patterns-title"'),
     );
     expect(html.indexOf('href="#emotion-patterns-title"')).toBeLessThan(
+      html.indexOf('href="#tag-patterns-title"'),
+    );
+    expect(html.indexOf('href="#tag-patterns-title"')).toBeLessThan(
       html.indexOf('href="#setup-performance-title"'),
     );
     expect(html.indexOf("data-report-overview")).toBeLessThan(
@@ -205,6 +209,9 @@ describe("reports presentation", () => {
       html.indexOf("data-emotion-patterns"),
     );
     expect(html.indexOf("data-emotion-patterns")).toBeLessThan(
+      html.indexOf("data-tag-patterns"),
+    );
+    expect(html.indexOf("data-tag-patterns")).toBeLessThan(
       html.indexOf("data-setup-performance"),
     );
   });
@@ -263,7 +270,7 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all six versioned evidence reports with the existing headline context", () => {
+  it("renders all seven versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain("data-direction-mix");
@@ -322,8 +329,17 @@ describe("reports presentation", () => {
     expect(html).toContain('<h2 id="emotion-patterns-title" class="report-target" tabindex="-1">Emotion patterns</h2>');
     expect(html).toContain("emotion-patterns-report-v1");
     expect(html).toContain("8 current assignments");
+    expect(html).toContain('data-tag-patterns');
+    expect(html).toContain('<h2 id="tag-patterns-title" class="report-target" tabindex="-1">Tag patterns</h2>');
+    expect(html).toContain("tag-patterns-report-v1");
+    expect(html).toContain(
+      "ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27",
+    );
+    expect(html).toContain("8 unique trades of 8 trades");
+    expect(html).toContain("16 saved tag assignments");
+    expect(html).toContain("Showing 5 of 12 tag groups");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(42);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(47);
     expect(html).toContain('data-trade-review-report-source="direction-mix"');
     expect(html).toContain(
       'data-trade-review-report-source="opening-weekday-mix"',
@@ -334,6 +350,9 @@ describe("reports presentation", () => {
     );
     expect(html).toContain(
       'data-trade-review-report-source="emotion-patterns"',
+    );
+    expect(html).toContain(
+      'data-trade-review-report-source="tag-patterns"',
     );
     expect(html).toContain(
       'data-trade-review-report-source="setup-performance"',
@@ -350,6 +369,16 @@ describe("reports presentation", () => {
     }
     expect(html).toContain('data-mistake-patterns-trade="demo-subject-spy"');
     expect(html).toContain('data-mistake-patterns-trade="demo-subject-tsla"');
+    expect(Array.from(
+      html.matchAll(/data-tag-patterns-trade="([^"]+)"/g),
+      (match) => match[1],
+    )).toEqual([
+      "demo-subject-spy",
+      "demo-subject-tsla",
+      "demo-subject-qqq",
+      "demo-subject-tsla",
+      "demo-subject-aapl",
+    ]);
   });
 
   it("renders ready observational dashboard and report copy with exact values", () => {
@@ -513,6 +542,7 @@ describe("reports presentation", () => {
         if (selector === "[data-opening-weekday-mix]") return null;
         if (selector === "[data-mistake-patterns]") return null;
         if (selector === "[data-emotion-patterns]") return null;
+        if (selector === "[data-tag-patterns]") return null;
         if (selector === "[data-setup-performance]") return null;
         expect(selector).toBe("[data-plan-check]");
         return planCheck;

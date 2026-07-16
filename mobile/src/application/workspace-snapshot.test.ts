@@ -8,6 +8,7 @@ import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import type {
   JournalLedgerSnapshot,
   JournalTradeReviewRecord,
@@ -853,7 +854,9 @@ describe("journal workspace snapshot", () => {
     ]);
     const rescored = workspaceSnapshotFromLedger(ledger({
       dailyEntries: dailyEntries.map((entry, index) => (
-        index === 0 ? { ...entry, processScorePct: 7 } : entry
+        index === 0
+          ? { ...entry, processScorePct: 7, tags: ["Daily-only changed tag"] }
+          : entry
       )),
     }));
     const { dailyJournal: _dailyJournal, ...snapshotWithoutDailyJournal } = snapshot;
@@ -867,6 +870,7 @@ describe("journal workspace snapshot", () => {
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));
     expect(buildEmotionPatternsReport(rescored)).toEqual(buildEmotionPatternsReport(snapshot));
+    expect(buildTagPatternsReport(rescored)).toEqual(buildTagPatternsReport(snapshot));
     expect(() => workspaceSnapshotFromLedger(ledger({
       dailyEntries: [...dailyEntries, { ...dailyEntries[0]!, id: "duplicate-head" }],
     }))).toThrow(/more than one head/);

@@ -1,9 +1,149 @@
 # Hermes Journal — active mobile handoff
 
+Status: verified Tag Patterns v1 · updated 2026-07-16
+
+## Current handoff
+
+task: Deliver governed Tag Patterns v1: reconcile exact tags on coherent current
+completed trade-review heads as count-only groups with stable trade evidence,
+without adding outcome interpretation, vocabulary semantics, persistence,
+schema, archive, or native-readiness claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New canonical definition `tag-patterns-report-v1` is pinned by SHA-256
+  `ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27`.
+  Pending/draft reviews are excluded before tag validation; coherent completed
+  heads without a saved tag form the second mutually exclusive exclusion.
+- Unique included trades and total exact tag assignments conserve
+  independently because one trade may contribute once to several groups. The
+  builder fails closed on incoherent subject/head identities and on saved tags
+  outside the existing normalization, folded-identity, length, 20-assignment,
+  within-trade uniqueness, or cross-current-head canonical-display boundary.
+  It never repairs, deduplicates, or drops stored values.
+- Groups use stable tag-name code-unit order. Evidence uses traded date
+  descending then stable subject ID. Metadata, exclusions, groups, subject-ID
+  arrays, and evidence are detached and deeply frozen.
+- The report consumes current projection identity/evidence and exact
+  `TradePreview.tags` from current completed heads; tags are the only authored
+  grouping input. Saved vocabulary, Daily Journal tags, historical heads,
+  position state, trade results, currency, and Trade Browser scope/search/facets
+  do not affect eligibility or grouping. It exposes no P&L, rate, importance,
+  rank, reward, outcome interpretation, causation, prediction, or advice.
+- Reports places Tag Patterns between Emotion Patterns and Setup Breakdown.
+  The view reveals at most five groups and 25 contributors per action, escapes
+  external fields, announces exact live counts, and returns focus to newly
+  revealed group summaries or the originating report heading after a save.
+- Every contributor opens the exact stable-ID trade through the existing
+  review sheet with a tag-specific accessible name. Ordinary close returns to
+  the exact connected trigger; review saves may move assignments and return to
+  the Tag Patterns heading without changing retained Trades state.
+- The demo contract is 8 included trades of 8, 16 assignments, 12 stable
+  groups, and 0/0 exclusions. `Plan followed` contains five trades; each of
+  the other eleven groups contains one assignment.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, report
+  navigation, continuation, restore recomputation, Daily Journal score
+  neutrality, and Trade Browser isolation now cover seven governed reports,
+  fifteen Slice D increments, thirteen derived-only presentation/projection
+  increments, and nine report destinations. Native rows remain NOT RUN.
+- No schema, migration, store command, archive/export shape, digest input,
+  financial formula/version, prior governed-report definition/checksum, native
+  source, credential, destructive workflow, or public comparative claim
+  changed.
+- All 22 prior milestones have historical banners; older succession language
+  reserves present-tense `active` for this handoff.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 51 files, 596 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 64 production-Chromium
+  journeys passed, including separate unique/assignment conservation, exact
+  demo groups, malformed-draft exclusion precedence, stable Unicode code-unit
+  ordering, five/25 progression with visible focus, stable-ID continuation,
+  current-head reassignment, restore equality, full-workspace isolation,
+  keyboard reachability, and 320/421px 200% text.
+- `cd mobile && npm run build` — exit 0; Vite transformed 74 modules. The
+  existing >500 kB chunk warning remains visible.
+- `cd mobile && npm run ios:copy` plus `npm run verify:ios-sync` — exit 0;
+  6 production files matched the iOS public copy byte-for-byte with SHA-256
+  `13529efeb3d3faecd8a77bf259008f9d83b0f7b10d6c3f9b9c45eb0e565a0c62`.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- `rg -c '^## Prior milestone' docs/HANDOFF.md` and
+  `rg -c '^> Historical snapshot' docs/HANDOFF.md` — each returned 22.
+- Independent core-contract and UI/integration reviews found no blocker. Their
+  four low-priority coverage gaps were closed before the full gate.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `TradePreview.tags` is the exact current review-head projection produced by
+  the existing store boundary; older immutable versions do not compete with
+  the current head.
+- Governed reports intentionally consume the full-workspace snapshot. Trade
+  Browser account/date/day/search/facet state does not scope or mutate them.
+- A folded tag identity has one exact canonical display across coherent current
+  completed heads; disagreement is invalid source state, not a reporting merge.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- HOLD native Tag Patterns acceptance: repeat version/checksum, 8-of-8 unique
+  trades, 16 assignments, all 12 ordered demo groups, separate conservation,
+  five/25 progression, exact-ID continuation, current-head reassignment,
+  save/refresh focus, restore equality, offline/lifecycle behavior, VoiceOver,
+  hardware keyboard, 200% Dynamic Type, and 320/421-width layout on a current
+  Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Opening Weekday Mix v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Tag Patterns v1 handoff above.
+
 Status: verified Opening Weekday Mix v1 · documentation truth reconciled ·
 updated 2026-07-16
 
-## Current handoff
+### Historical handoff
 
 task: Deliver governed Opening Weekday Mix v1: reconcile every current trade
 into one fixed workspace-local opening-weekday cohort with stable trade
@@ -156,7 +296,7 @@ open:
 ## Prior milestone — Direction Mix v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Opening Weekday Mix v1 handoff above.
+> then-current Opening Weekday Mix v1 handoff above.
 
 Status: verified Direction Mix v1 ·
 updated 2026-07-15
@@ -2626,7 +2766,7 @@ open:
 ## Prior milestone — Slice C-B
 
 > Historical snapshot; current status and open items are superseded by later
-> milestones and ultimately by the active Opening Weekday Mix v1 handoff above.
+> milestones and ultimately by the active Tag Patterns v1 handoff above.
 
 task: Deliver local-only previewed restore for current `hermes-journal-export`
 v1 files without merging data or adding Delete All Data, trade execution,

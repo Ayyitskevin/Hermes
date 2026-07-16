@@ -220,8 +220,8 @@ same-submission retries are idempotent, changed reuse or stale heads fail
 closed, and a lost response is reconciled by date plus the prepared revision.
 Demo entries are fictional and read-only. The daily process score is descriptive
 self-report evidence only; performance, Direction Mix, Opening Weekday Mix,
-Plan Check, Setup Breakdown, Mistake Patterns, and Emotion Patterns do not
-consume it.
+Plan Check, Setup Breakdown, Mistake Patterns, Emotion Patterns, and Tag
+Patterns do not consume it.
 
 The editor treats a deterministic `entry_changed` separately from uncertain
 persistence. It retains the raw date/headline/note/emotion/score/tag form,
@@ -343,8 +343,8 @@ browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
 changes or reload, and affects Trades plus the Dashboard calendar only.
 Dashboard headline metrics, equity, review progress, Direction Mix, Opening
-Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and Setup
-Breakdown consume the full snapshot.
+Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and
+Setup Breakdown consume the full snapshot.
 This slice changes no schema, migration, store, archive, or governed report
 definition/version.
 
@@ -386,6 +386,28 @@ traded date descending then stable subject ID. Five-group and 25-contributor
 limits belong only to transient presentation. No report state, definition input,
 or result enters SQLite, browser journal state, export/restore, archive shape,
 or report-input digests; restore recomputes from existing inputs.
+
+Tag Patterns v1 stays inside the same derived-report boundary. Its complete
+immutable builder consumes current projection trades and exact
+`TradePreview.tags` from coherent current completed review heads; it reads
+neither saved tag vocabulary nor Daily Journal tags. Open and closed positions
+are equally eligible, and no P&L, currency, risk, result, or outcome evidence
+is read. Pending/draft reviews are excluded before tag validation, and
+completed heads without a tag are the second mutually exclusive exclusion.
+Included trades plus both exclusion counts reconcile to total current trades,
+while summed group assignments separately reconcile to total saved assignments
+because one trade may appear in several exact groups.
+`tag-patterns-report-v1` is pinned by SHA-256
+`ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27`.
+
+Completed-head IDs, stable subject IDs, and the saved-review tag
+normalization, folded identity, length, assignment-limit, within-trade
+uniqueness, and cross-current-head display invariants fail closed. The report
+does not repair stored values. Exact tags use code-unit group order; evidence uses
+traded date descending then stable subject ID. Five-group and 25-contributor
+limits are transient presentation only. No report state, definition input, or
+result enters SQLite, browser journal state, export/restore, archive shape, or
+report-input digests; restore recomputes from existing inputs.
 
 Direction Mix v1 stays inside that derived-report boundary. Its complete
 immutable builder consumes every current projection trade and groups only on
@@ -429,13 +451,13 @@ prediction, or advice.
 Reports Navigator v1 remains inside that same derived boundary. It adds no
 scope or result state: semantic in-page links target the existing Performance
 Summary, Journal Curve, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-Patterns, Emotion Patterns, and Setup Breakdown markup, while the Dashboard
-shortcut may enter Plan Check directly. Activating a link scrolls and
+Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown markup, while the
+Dashboard shortcut may enter Plan Check directly. Activating a link scrolls and
 focuses current DOM only; open disclosure state survives because no report is
 rebuilt. The responsive top-bar position and clipped-control focus correction
 are presentation behavior only. No navigation value enters SQLite, browser
 journal state, local preferences, export/restore, archive digests, report-input
-digests, or governed definitions. All six report builders receive the full
+digests, or governed definitions. All seven report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -445,8 +467,8 @@ trade-subject ID must resolve to exactly one trade in the reconciled full
 snapshot before Hermes renders an **Open trade** control, and activation repeats
 that exact validation against the current render snapshot. Symbols, visible
 labels, DOM position, and Trade Browser search are never identity fallback.
-The allowlisted Direction/Opening-Weekday/Plan/Mistake/Emotion/Setup source and
-captured trigger live only in the current sheet closure and DOM attributes.
+The allowlisted Direction/Opening-Weekday/Plan/Mistake/Emotion/Tag/Setup source
+and captured trigger live only in the current sheet closure and DOM attributes.
 They do not enter
 SQLite, browser journal state, Trade Browser state, preferences, URLs, exports,
 restores, digests, report definitions, or archives. Opening and closing perform
@@ -702,6 +724,13 @@ tables, stable order, immutability, real-store updates, process-score
 independence, exact browser restore recomputation, five/25 pagination, count-only
 copy, stable-ID continuation, save-driven regrouping, heading focus return, and
 320/421px 200% reflow.
+Tag Patterns coverage adds checksum, separate unique-trade and assignment
+conservation, vocabulary/Daily-Journal/result neutrality, malformed draft
+exclusion precedence, exact saved-label validation, stable code-unit and
+traded-date/subject-ID ordering, immutability, real-store current-head movement,
+process-score independence, exact browser restore recomputation, five/25
+pagination, count-only copy, stable-ID continuation, save-driven reassignment,
+heading focus return, and 320/421px 200% reflow.
 Direction Mix coverage adds checksum, full-cohort conservation, fixed
 Long-then-Short grouping, zero-count groups, C0/C1 and duplicate stable-ID
 rejection, invalid direction/position/review-state rejection, evidence-only
@@ -724,12 +753,12 @@ keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
 Report Trade Continuation coverage adds exact render/activation identity,
 escaped source/action metadata, progressive Direction, Opening Weekday, Plan,
-Mistake, Emotion, and Setup row/group actions,
+Mistake, Emotion, Tag, and Setup row/group actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
 fail-closed unknown identity before inert state, offline read-only inspection,
 retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
 trigger return, source-heading return after Direction/Opening-Weekday saves and
-after moving Plan/Setup/Mistake/Emotion evidence,
+after moving Plan/Setup/Mistake/Emotion/Tag evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit

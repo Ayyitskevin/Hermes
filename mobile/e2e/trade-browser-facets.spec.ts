@@ -81,6 +81,14 @@ async function reportFingerprint(page: Page): Promise<unknown> {
           "data-emotion-patterns-trade",
         ),
       },
+      tags: {
+        metadata: text("[data-tag-patterns] .tag-patterns-meta"),
+        groups: text("[data-tag-patterns] .tag-patterns-groups"),
+        evidence: attributes(
+          "[data-tag-patterns-trade]",
+          "data-tag-patterns-trade",
+        ),
+      },
       setup: {
         metadata: text("[data-setup-performance] .setup-performance-meta"),
         groups: text("[data-setup-performance] .setup-performance-groups"),
@@ -212,6 +220,10 @@ test("exact card facets compose with search and scope without changing totals or
     .toContainText("8 current trades");
   await expect(page.locator("[data-plan-check]")).toContainText("8 of 8 trades");
   await expect(page.locator("[data-emotion-patterns]")).toContainText("8 trades of 8 trades");
+  await expect(page.locator("[data-tag-patterns]"))
+    .toContainText("8 unique trades of 8 trades");
+  await expect(page.locator("[data-tag-patterns]"))
+    .toContainText("16 saved tag assignments");
   await expect(page.locator("[data-setup-performance]")).toContainText("8 of 8 trades");
   const reportsBefore = await reportFingerprint(page);
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();

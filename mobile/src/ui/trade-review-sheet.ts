@@ -39,6 +39,7 @@ export type TradeReviewReportSource =
   | "opening-weekday-mix"
   | "mistake-patterns"
   | "emotion-patterns"
+  | "tag-patterns"
   | "setup-performance";
 
 const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
@@ -58,6 +59,10 @@ const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
   "emotion-patterns": Object.freeze({
     label: "Emotion patterns",
     targetId: "emotion-patterns-title",
+  }),
+  "tag-patterns": Object.freeze({
+    label: "Tag patterns",
+    targetId: "tag-patterns-title",
   }),
   "setup-performance": Object.freeze({
     label: "Setup breakdown",

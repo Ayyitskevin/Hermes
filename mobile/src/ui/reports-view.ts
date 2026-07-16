@@ -26,6 +26,10 @@ import {
   bindSetupPerformanceView,
   setupPerformanceSection,
 } from "./setup-performance-view";
+import {
+  bindTagPatternsView,
+  tagPatternsSection,
+} from "./tag-patterns-view";
 import { reportTradeAction } from "./trade-review-sheet";
 
 type PlanAdherenceGroup = PlanAdherenceReport["groups"][number];
@@ -41,6 +45,7 @@ const REPORT_TARGET_IDS = Object.freeze([
   "plan-check-title",
   "mistake-patterns-title",
   "emotion-patterns-title",
+  "tag-patterns-title",
   "setup-performance-title",
   "cumulative-result-title",
 ] as const);
@@ -57,6 +62,7 @@ function reportNavigation(): string {
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
       <li><a class="report-navigation-link" href="#mistake-patterns-title" data-report-target="mistake-patterns-title">Mistake patterns</a></li>
       <li><a class="report-navigation-link" href="#emotion-patterns-title" data-report-target="emotion-patterns-title">Emotion patterns</a></li>
+      <li><a class="report-navigation-link" href="#tag-patterns-title" data-report-target="tag-patterns-title">Tag patterns</a></li>
       <li><a class="report-navigation-link" href="#setup-performance-title" data-report-target="setup-performance-title">Setup breakdown</a></li>
     </ul>
   </nav>`;
@@ -379,6 +385,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
     ${planCheckSection(snapshot)}
     ${mistakePatternsSection(snapshot)}
     ${emotionPatternsSection(snapshot)}
+    ${tagPatternsSection(snapshot)}
     ${setupPerformanceSection(snapshot)}
   </section>`;
 }
@@ -392,6 +399,7 @@ export function bindReportsView(
   bindOpeningWeekdayMixView(root, snapshot);
   bindMistakePatternsView(root, snapshot);
   bindEmotionPatternsView(root, snapshot);
+  bindTagPatternsView(root, snapshot);
   bindSetupPerformanceView(root, snapshot);
   const planCheck = root.querySelector<HTMLElement>("[data-plan-check]");
   if (planCheck === null) return;

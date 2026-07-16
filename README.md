@@ -94,7 +94,8 @@ submission-ready product:
   days, edit only through an optimistic successor version, and optionally add a
   headline, note, emotion, tags, and a clearly self-reported process score that
   never enters performance, Direction Mix, Opening Weekday Mix, Plan Check,
-  Setup Breakdown, Mistake Patterns, or Emotion Patterns analytics.
+  Setup Breakdown, Mistake Patterns, Emotion Patterns, or Tag Patterns
+  analytics.
 - Daily Journal Stale-Head Recovery v1 keeps the unsaved form intact after a
   deterministic optimistic conflict, blocks the obsolete save, loads and shows
   the newer local head, and requires separate consent to use it as the base
@@ -192,6 +193,14 @@ submission-ready product:
   exactly one stable code-unit-ordered group. Pages are bounded to five groups
   and 25 contributors, every row opens the exact stable-ID trade, and the report
   shows no P&L, rate, intensity, rank, causation, prediction, or advice.
+- Tag Patterns v1 is a checksum-pinned, count-only projection over exact tags
+  on current completed trade-review heads. Pending/draft reviews and completed
+  reviews without a tag reconcile separately; open/closed state and results do
+  not affect eligibility. Unique included trades remain distinct from total
+  assignments when one trade has several tags. Groups use stable tag-name
+  code-unit order. The view reveals at most five groups and 25 contributors per
+  action in traded-date/subject-ID order, with exact stable-ID continuation and
+  no P&L, rate, ranking, causation, prediction, reward, or advice.
 - Direction Mix v1 is a checksum-pinned, count-only projection over every
   current trade. It has no exclusions: each stable-ID trade appears exactly
   once in fixed Long-then-Short groups, with evidence ordered by trade date
@@ -211,7 +220,8 @@ submission-ready product:
   ranking, comparison, outcome claim, target, reward, prediction, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
   Direction Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion
-  Patterns, and Setup Breakdown in one semantic, DOM-ordered report menu.
+  Patterns, Tag Patterns, and Setup Breakdown in one semantic, DOM-ordered
+  report menu.
   Dashboard opens Plan Check directly; every section returns to the menu; jumps
   preserve open evidence disclosures and move visible focus below live chrome.
   At iPhone widths the redundant top bar scrolls with content so 200% text and
@@ -220,8 +230,8 @@ submission-ready product:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
 - Report Trade Continuation v1 adds an **Open trade** action to every Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-  Setup Breakdown contributor. It
+  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
+  Tag Patterns, or Setup Breakdown contributor. It
   resolves exactly one trade by stable subject ID and reuses the review/detail
   sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
@@ -240,7 +250,7 @@ submission-ready product:
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
   progress, Direction Mix, Opening Weekday Mix, Plan Check, Mistake Patterns,
-  Emotion Patterns, and Setup Breakdown remain whole-workspace.
+  Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

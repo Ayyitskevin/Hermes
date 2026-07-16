@@ -35,6 +35,7 @@ describe("trades view", () => {
     expect(html).toContain("Whole trade");
     expect(html).toContain("governed report totals");
     expect(html).toContain("remain whole-workspace");
+    expect(html).toContain("Emotion Patterns, Tag Patterns, and Setup Breakdown");
   });
 
   it("renders exact card facets separately from allocation scope", () => {

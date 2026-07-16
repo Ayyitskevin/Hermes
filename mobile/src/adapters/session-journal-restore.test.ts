@@ -25,6 +25,7 @@ import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import {
   sessionJournalLedgerFromPayload,
   sessionJournalReportSha256,
@@ -179,6 +180,7 @@ describe("browser session user-data restore", () => {
       const beforeOpeningWeekdays = buildOpeningWeekdayMixReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
+      const beforeTags = buildTagPatternsReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
@@ -188,6 +190,7 @@ describe("browser session user-data restore", () => {
       const afterOpeningWeekdays = buildOpeningWeekdayMixReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
+      const afterTags = buildTagPatternsReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
       expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
 
@@ -197,6 +200,7 @@ describe("browser session user-data restore", () => {
       expect(afterSetup).toEqual(beforeSetup);
       expect(afterMistakes).toEqual(beforeMistakes);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
+      expect(afterTags).toEqual(beforeTags);
       expect(afterDirection.metadata.totalTradeCount).toBe(1);
       expect(afterDirection.groups).toEqual([
         expect.objectContaining({
@@ -233,6 +237,21 @@ describe("browser session user-data restore", () => {
       expect(afterMistakes.groups[0]?.evidence[0]).toMatchObject({
         symbol: "NVDA",
         mistake: "Late scale-out",
+      });
+      expect(afterTags.metadata).toMatchObject({
+        includedTradeCount: 1,
+        totalAssignmentCount: 1,
+      });
+      expect(afterTags.groups).toEqual([
+        expect.objectContaining({
+          tag: "Patient entry",
+          assignmentCount: 1,
+          tradeSubjectIds: [expect.any(String)],
+        }),
+      ]);
+      expect(afterTags.groups[0]?.evidence[0]).toMatchObject({
+        symbol: "NVDA",
+        tag: "Patient entry",
       });
       expect(afterEmotions.metadata).toMatchObject({
         includedTradeCount: 1,

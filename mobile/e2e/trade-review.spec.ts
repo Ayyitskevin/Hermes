@@ -526,6 +526,47 @@ test("report review saves return to the source heading when evidence moves", asy
   await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toHaveCount(1);
   await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toContainText("MSFT");
 
+  const aPlus = page.locator("[data-tag-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "A+ setup" }) });
+  await aPlus.locator("summary").click();
+  const tagAction = aPlus.getByRole("button", {
+    name: /Open AAPL trade for saved tag A\+ setup/u,
+  });
+  await tagAction.click();
+  const tagDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(tagDialog.locator("[data-trade-review-report-context]"))
+    .toHaveText(
+      "Opened from Tag patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+  await tagDialog.locator("#review-tags")
+    .fill("Review next, Risk reduced");
+  await tagDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(tagDialog).toHaveCount(0);
+  await expect(page.locator("#tag-patterns-title")).toBeFocused();
+  const tagSection = page.locator("[data-tag-patterns]");
+  await expect(tagSection.getByText("1 unique trade of 2 trades", { exact: true }))
+    .toBeVisible();
+  await expect(tagSection.getByText("2 saved tag assignments", { exact: true }))
+    .toBeVisible();
+  await expect(tagSection.getByText(
+    "0 pending or draft · 1 completed without a saved tag",
+    { exact: true },
+  )).toBeVisible();
+  const removedAPlus = tagSection.locator("[data-tag-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "A+ setup" }) });
+  const reviewNext = tagSection.locator("[data-tag-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Review next" }) });
+  const riskReduced = tagSection.locator("[data-tag-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Risk reduced" }) });
+  await expect(removedAPlus).toHaveCount(0);
+  await expect(reviewNext.locator('[data-tag-patterns-trade]')).toHaveCount(1);
+  await expect(reviewNext.locator('[data-tag-patterns-trade]')).toContainText("AAPL");
+  await expect(riskReduced.locator('[data-tag-patterns-trade]')).toHaveCount(1);
+  await expect(riskReduced.locator('[data-tag-patterns-trade]')).toContainText("AAPL");
+
   const focused = page.locator("[data-emotion-patterns-group-index]")
     .filter({ has: page.locator("summary", { hasText: "Focused" }) });
   await focused.locator("summary").click();

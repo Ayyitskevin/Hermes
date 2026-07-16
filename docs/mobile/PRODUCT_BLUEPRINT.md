@@ -373,9 +373,8 @@ labels are validated without normalization or repair, groups use stable
 mistake-name code-unit order, and evidence uses traded date descending then
 stable subject ID. Presentation renders five groups and 25 contributors per
 action. The report contains no P&L, win rate, R, expectancy, rate, ranking,
-causal, predictive, or advisory output. A dedicated browser archive test proves
-all six governed reports recompute identically after export and restore. No
-schema, archive, or digest-shape change is included.
+causal, predictive, or advisory output. No schema, archive, or digest-shape
+change is included.
 
 The count-only Emotion Patterns report uses definition
 `emotion-patterns-report-v1`, pinned by checksum
@@ -391,6 +390,29 @@ ID. Presentation renders five groups and 25 contributors per action. The report
 contains no P&L, win rate, R, expectancy, rate, intensity, ranking, causal,
 predictive, or advisory output. It is derived-only and adds no schema, archive,
 or digest-shape change.
+
+The count-only Tag Patterns report uses definition
+`tag-patterns-report-v1`, pinned by checksum
+`ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27`.
+It consumes current projection trades and exact `TradePreview.tags` from
+coherent current completed review heads; tags are the only authored grouping
+input. Pending/draft reviews are excluded before tag validation;
+completed heads without a saved tag are excluded next. Unique included trades
+and total assignments conserve independently because one trade may contribute
+once to several exact tag groups. Saved labels retain the review boundary's
+NFC, trimmed/collapsed whitespace, C0/C1-free single-line, 120-code-point,
+`en-US` folded-identity, 20-assignment, within-trade uniqueness, and
+cross-current-head canonical-display requirements; the report validates without
+repair. Groups use stable tag-name code-unit order and evidence uses traded date
+descending then stable subject ID. Presentation renders five groups and 25
+contributors per action. Position state, saved tag vocabulary, Daily Journal
+tags, historical review heads, results, and Trades filters do not affect
+eligibility or grouping. The report contains no P&L, rate, ranking, reward,
+causal, predictive, or advisory output and adds no schema, store, archive, or
+digest-shape change.
+
+A dedicated browser archive test proves all seven governed reports recompute
+identically after export and restore.
 
 The count-only Direction Mix report uses definition
 `direction-mix-report-v1`, pinned by checksum
@@ -444,7 +466,7 @@ successor. The workspace-local date is durable identity. Headline, note,
 emotion, tags, and a self-reported process score are optional, but every version
 requires at least one authored signal; the score is excluded from performance,
 Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
-Patterns, and Emotion Patterns analytics.
+Patterns, Emotion Patterns, and Tag Patterns analytics.
 Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
 v2 and the native archive codecs covered by Linux tests preserve the complete
@@ -530,9 +552,9 @@ whole-trade realized-to-date P&L. Search changes visible cards but never scope
 totals. State is session-only, survives internal navigation/refresh while
 valid, and resets on local/demo switches or reload. It scopes Trades and the
 Dashboard calendar only: headline metrics, equity, review progress, Direction
-Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-Setup Breakdown remain whole-workspace. No schema, migration, journal store, archive, or
-report-definition version changed.
+Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+Patterns, and Setup Breakdown remain whole-workspace. No schema, migration,
+journal store, archive, or report-definition version changed.
 
 The sixth increment is Structured Trades Facets v1. Four fixed exact facets—
 asset class (Stock/ETF), direction, position state, and review state—AND with
@@ -540,8 +562,8 @@ the existing normalized text query over cards already admitted by the account,
 date, and selected-day scope. Facets and search change visible cards only. They
 never change exact contribution P&L, trade/allocation/day counts, calendar
 evidence, Dashboard metrics, Direction Mix, Opening Weekday Mix, Plan Check,
-Mistake Patterns, Emotion Patterns, or Setup Breakdown. Clear search and
-filters resets the query
+Mistake Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown. Clear
+search and filters resets the query
 and facets while retaining scope; Clear all resets both layers.
 The state is session-only, survives internal navigation and valid refresh, and
 resets on a local/demo switch or reload. Fixed options deliberately avoid
@@ -572,8 +594,9 @@ or report scope, and vocabulary/playbook management remain separate work.
 An eighth increment, Reports Navigator v1, reorganizes only the existing
 Reports presentation. Its semantic menu follows DOM order—Performance Summary,
 Journal Curve, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-Patterns, Emotion Patterns, then Setup Breakdown—and every destination has a
-stable focusable heading plus a return path. Dashboard's existing Plan Check
+Patterns, Emotion Patterns, Tag Patterns, then Setup Breakdown—and every
+destination has a stable focusable heading plus a return path. Dashboard's
+existing Plan Check
 shortcut lands on that heading. In-page jumps measure the live top chrome,
 scroll without animation, then focus without a second scroll; opened report
 disclosures and DOM identity survive every jump. At widths through 480 CSS
@@ -586,9 +609,9 @@ digests are unchanged.
 
 A ninth increment, Report Trade Continuation v1, completes the explainable
 pattern-to-trade loop without adding a route or detail surface. Every Direction
-Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-Setup Breakdown contributor emits **Open trade** only after its stable
-trade-subject ID resolves to exactly one current trade. The existing review
+Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+Patterns, and Setup Breakdown contributor emits **Open trade** only after its
+stable trade-subject ID resolves to exactly one current trade. The existing review
 sheet opens in place with an allowlisted
 transient report source; its action and heading qualify duplicate symbols by
 asset class, account, and session. One replaceable delegated listener covers
@@ -668,6 +691,19 @@ review content or state, result fields, URL, persisted presentation state,
 archive, or digest. Copy expressly avoids trade-count rewards and any weekday
 ranking, comparison, outcome claim, prediction, target, or advice.
 
+A fifteenth increment, Tag Patterns v1, adds the governed count-and-evidence
+projection described above between Emotion Patterns and Setup Breakdown.
+Unique included trades and saved tag assignments reconcile separately while
+the immutable builder returns every exact group and contributor. The view
+reveals at most five groups and 25 contributors per action. Contributors reuse
+stable-ID in-place continuation with tag-specific accessible names. Ordinary
+close returns to the exact trigger; an explicit review save that moves, adds,
+or removes assignments returns to the Tag Patterns heading after Reports
+rebuilds. Full-workspace report isolation remains intact. This transient
+allowlisted source consumes no saved vocabulary, Daily Journal tags, historical
+heads, Trade Browser scope, results, URL, persisted presentation state,
+archive, or digest, and adds no outcome interpretation or persistence.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -681,7 +717,7 @@ remain separate gates.
 
 Still open in Slice D:
 
-- Drawdown, streak, time-of-day, symbol, tag, and remaining report
+- Drawdown, streak, time-of-day, symbol, and remaining report
   families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
   management, and fuller vocabulary/playbook management.
@@ -822,12 +858,12 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-fourteen Slice D increments add Plan Check, governed Setup Breakdown,
+fifteen Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
-v1, Emotion Patterns v1, Direction Mix v1, and Opening Weekday Mix v1. The twelve
-presentation/projection increments other than
+v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, and Tag
+Patterns v1. The thirteen presentation/projection increments other than
 Daily Journal and Report Trade Continuation remain derived-only. Report Trade
 Continuation reuses the existing versioned review save path without changing
 its persistence contract; Daily Journal adds checksum-pinned schema v4 and

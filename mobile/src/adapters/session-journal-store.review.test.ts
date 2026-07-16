@@ -22,6 +22,7 @@ import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import { SessionJournalStore } from "./session-journal-store";
 
 function manual(
@@ -263,12 +264,16 @@ describe("browser session trade reviews", () => {
       const beforeEmotions = buildEmotionPatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeTags = buildTagPatternsReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
 
       const edited = await store.commitTradeReviews(batch("setup-edited", [
         review("b", tradeSubjectId, {
           expectedPreviousReviewId: firstHead.id,
           setup: "Pullback",
           mistakes: ["Late scale-out"],
+          tags: ["Patient entry", "Risk reduced"],
           emotion: "Calm",
         }),
       ]));
@@ -285,6 +290,9 @@ describe("browser session trade reviews", () => {
         workspaceSnapshotFromLedger(edited.ledger),
       );
       const afterEmotions = buildEmotionPatternsReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
+      const afterTags = buildTagPatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
 
@@ -320,6 +328,21 @@ describe("browser session trade reviews", () => {
         group.emotion,
         group.tradeSubjectIds,
       ])).toEqual([["Calm", [tradeSubjectId]]]);
+      expect(beforeTags.groups.map((group) => [
+        group.tag,
+        group.tradeSubjectIds,
+      ])).toEqual([["A+", [tradeSubjectId]]]);
+      expect(afterTags.metadata).toMatchObject({
+        includedTradeCount: 1,
+        totalAssignmentCount: 2,
+      });
+      expect(afterTags.groups.map((group) => [
+        group.tag,
+        group.tradeSubjectIds,
+      ])).toEqual([
+        ["Patient entry", [tradeSubjectId]],
+        ["Risk reduced", [tradeSubjectId]],
+      ]);
     } finally {
       await store.close();
     }

@@ -50,7 +50,8 @@ under the provisional identifier until that gate is cleared.
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
-  Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Compact Trades
+  Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
+  Compact Trades
   Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
@@ -247,7 +248,7 @@ observed plugin/device behavior:
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from performance,
   Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
-  Patterns, and Emotion Patterns analytics.
+  Patterns, Emotion Patterns, and Tag Patterns analytics.
 - Daily Journal Stale-Head Recovery v1 preserves the raw form after a
   deterministic optimistic conflict, disables the obsolete submission, loads
   one fresh local snapshot, and displays its different newer head before the
@@ -349,6 +350,20 @@ observed plugin/device behavior:
   and 25 contributors per action. No financial, rate, intensity, rank, causal,
   predictive, advisory, schema, store, archive, or digest-shape change is
   included.
+- Tag Patterns v1 is a count-only report over exact saved tags on current
+  completed review heads. Definition `tag-patterns-report-v1` is pinned by
+  SHA-256
+  `ad24da67086c74558203d89b9fe27f2d8907f6170b29fa5320e0aada88405c27`.
+  Pending/draft reviews and completed heads without a tag reconcile separately.
+  Unique included trades and total assignments conserve independently when a
+  trade has several tags. The builder validates the exact saved-review label
+  contract without repair, groups by stable tag-name code-unit order, and
+  orders evidence by traded date descending then subject ID. Presentation
+  reveals at most five groups and 25 contributors per action. Saved vocabulary,
+  Daily Journal tags, historical heads, position state, results, and Trades
+  filters do not affect eligibility or grouping. No financial, rate, rank,
+  reward, causal, predictive, advisory, schema, store, archive, or digest-shape
+  change is included.
 - Direction Mix v1 is a count-only report over every trade in the current
   full-workspace projection. Definition `direction-mix-report-v1` is pinned by
   SHA-256
@@ -383,7 +398,7 @@ observed plugin/device behavior:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and all six governed reports intentionally remain whole-workspace.
+  and all seven governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -413,8 +428,8 @@ observed plugin/device behavior:
   stale refresh, report/storage neutrality, 44-point controls, and no overflow
   at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
 - Reports Navigator v1 exposes Performance Summary, Journal Curve, Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and
-  Setup Breakdown in semantic DOM order.
+  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, and Setup Breakdown in semantic DOM order.
   Dashboard enters
   Plan Check directly, every section returns to the menu, and jumps preserve
   opened disclosures while moving focus below measured chrome without animation. At
@@ -429,7 +444,8 @@ observed plugin/device behavior:
   checksum, cohort, evidence-order, or pagination change.
 - Report Trade Continuation v1 opens the existing exact trade review/detail
   sheet in place from every Direction Mix, Opening Weekday Mix, Plan Check,
-  Mistake Patterns, Emotion Patterns, and Setup Breakdown contributor. Stable
+  Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown
+  contributor. Stable
   subject IDs are
   validated at render and activation; asset
   class, account, and session disambiguate duplicate symbols; a replaceable
@@ -490,8 +506,8 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
 - Add templates, reminders, saved view presets, fuller vocabulary/playbook
-  management, drawdown/streak/time-of-day/tag reports, deeper setup comparisons,
-  and explainable report drill-down.
+  management, drawdown/streak/time-of-day/symbol reports, deeper setup
+  comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
 
@@ -549,9 +565,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
-v1, Mistake Patterns v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday
-Mix v1, Compact Trades Filters v1, matching-runtime local restore, and all six
-governed reports are implemented.
+v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
+v1, Opening Weekday Mix v1, Compact Trades Filters v1, matching-runtime local
+restore, and all seven governed reports are implemented.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.
