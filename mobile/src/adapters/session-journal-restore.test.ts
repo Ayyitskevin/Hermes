@@ -22,6 +22,7 @@ import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
 import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
+import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import {
@@ -175,6 +176,7 @@ describe("browser session user-data restore", () => {
       const beforeDirection = buildDirectionMixReport(beforeSnapshot);
       const beforeEmotions = buildEmotionPatternsReport(beforeSnapshot);
       const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
+      const beforeOpeningWeekdays = buildOpeningWeekdayMixReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
@@ -183,6 +185,7 @@ describe("browser session user-data restore", () => {
       const afterDirection = buildDirectionMixReport(afterSnapshot);
       const afterEmotions = buildEmotionPatternsReport(afterSnapshot);
       const afterMistakes = buildMistakePatternsReport(afterSnapshot);
+      const afterOpeningWeekdays = buildOpeningWeekdayMixReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
@@ -193,6 +196,7 @@ describe("browser session user-data restore", () => {
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
       expect(afterMistakes).toEqual(beforeMistakes);
+      expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
       expect(afterDirection.metadata.totalTradeCount).toBe(1);
       expect(afterDirection.groups).toEqual([
         expect.objectContaining({
@@ -201,6 +205,19 @@ describe("browser session user-data restore", () => {
           tradeSubjectIds: [expect.any(String)],
         }),
         expect.objectContaining({ direction: "short", tradeCount: 0 }),
+      ]);
+      expect(afterOpeningWeekdays.groups).toEqual([
+        expect.objectContaining({ weekday: "monday", tradeCount: 0 }),
+        expect.objectContaining({ weekday: "tuesday", tradeCount: 0 }),
+        expect.objectContaining({
+          weekday: "wednesday",
+          tradeCount: 1,
+          tradeSubjectIds: [expect.any(String)],
+        }),
+        expect.objectContaining({ weekday: "thursday", tradeCount: 0 }),
+        expect.objectContaining({ weekday: "friday", tradeCount: 0 }),
+        expect.objectContaining({ weekday: "saturday", tradeCount: 0 }),
+        expect.objectContaining({ weekday: "sunday", tradeCount: 0 }),
       ]);
       expect(afterMistakes.metadata).toMatchObject({
         includedTradeCount: 1,

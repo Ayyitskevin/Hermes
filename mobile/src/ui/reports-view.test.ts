@@ -152,6 +152,7 @@ describe("reports presentation", () => {
       "performance-summary-title",
       "cumulative-result-title",
       "direction-mix-title",
+      "opening-weekday-mix-title",
       "plan-check-title",
       "mistake-patterns-title",
       "emotion-patterns-title",
@@ -165,8 +166,8 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(7);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(7);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(8);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(8);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
@@ -174,6 +175,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#direction-mix-title"'),
     );
     expect(html.indexOf('href="#direction-mix-title"')).toBeLessThan(
+      html.indexOf('href="#opening-weekday-mix-title"'),
+    );
+    expect(html.indexOf('href="#opening-weekday-mix-title"')).toBeLessThan(
       html.indexOf('href="#plan-check-title"'),
     );
     expect(html.indexOf('href="#plan-check-title"')).toBeLessThan(
@@ -189,6 +193,9 @@ describe("reports presentation", () => {
       html.indexOf("data-direction-mix"),
     );
     expect(html.indexOf("data-direction-mix")).toBeLessThan(
+      html.indexOf("data-opening-weekday-mix"),
+    );
+    expect(html.indexOf("data-opening-weekday-mix")).toBeLessThan(
       html.indexOf("data-plan-check"),
     );
     expect(html.indexOf("data-plan-check")).toBeLessThan(
@@ -256,7 +263,7 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all five versioned evidence reports with the existing headline context", () => {
+  it("renders all six versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain("data-direction-mix");
@@ -265,6 +272,14 @@ describe("reports presentation", () => {
     );
     expect(html).toContain("direction-mix-report-v1");
     expect(html).toContain("8 current trades");
+    expect(html).toContain("data-opening-weekday-mix");
+    expect(html).toContain(
+      '<h2 id="opening-weekday-mix-title" class="report-target" tabindex="-1">Opening weekday mix</h2>',
+    );
+    expect(html).toContain("opening-weekday-mix-report-v1");
+    expect(html).toContain(
+      "6f205c00826d547f1f0640bec0acceac836e707c4a95287d2e35f4ae62e01cf8",
+    );
     expect(html).toContain('<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>');
     expect(html).toContain('<h2 id="plan-check-title" class="report-target" tabindex="-1">Plan check</h2>');
     expect(html).toContain("FICTIONAL DEMO");
@@ -308,8 +323,11 @@ describe("reports presentation", () => {
     expect(html).toContain("emotion-patterns-report-v1");
     expect(html).toContain("8 current assignments");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(34);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(42);
     expect(html).toContain('data-trade-review-report-source="direction-mix"');
+    expect(html).toContain(
+      'data-trade-review-report-source="opening-weekday-mix"',
+    );
     expect(html).toContain('data-trade-review-report-source="plan-check"');
     expect(html).toContain(
       'data-trade-review-report-source="mistake-patterns"',
@@ -323,6 +341,9 @@ describe("reports presentation", () => {
 
     for (const trade of DEMO_WORKSPACE.trades) {
       expect(html).toContain(`data-direction-mix-trade="${trade.tradeSubjectId}"`);
+      expect(html).toContain(
+        `data-opening-weekday-mix-trade="${trade.tradeSubjectId}"`,
+      );
       expect(html).toContain(`data-plan-check-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-setup-performance-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-emotion-patterns-trade="${trade.tradeSubjectId}"`);
@@ -489,6 +510,7 @@ describe("reports presentation", () => {
       querySelector(selector: string): unknown {
         if (selector === "[data-report-navigation]") return null;
         if (selector === "[data-direction-mix]") return null;
+        if (selector === "[data-opening-weekday-mix]") return null;
         if (selector === "[data-mistake-patterns]") return null;
         if (selector === "[data-emotion-patterns]") return null;
         if (selector === "[data-setup-performance]") return null;

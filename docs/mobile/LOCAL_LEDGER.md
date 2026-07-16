@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + governed derived reports + trade-browser scope/facets + local restore · 2026-07-15
+Status: implemented execution + versioned trade/day review + governed derived reports + trade-browser scope/facets + local restore · 2026-07-16
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -216,8 +216,9 @@ today in the current UI; persisted dates remain immutable when editing. Exact
 same-submission retries are idempotent, changed reuse or stale heads fail
 closed, and a lost response is reconciled by date plus the prepared revision.
 Demo entries are fictional and read-only. The daily process score is descriptive
-self-report evidence only; performance, Direction Mix, Plan Check, Setup
-Breakdown, Mistake Patterns, and Emotion Patterns do not consume it.
+self-report evidence only; performance, Direction Mix, Opening Weekday Mix,
+Plan Check, Setup Breakdown, Mistake Patterns, and Emotion Patterns do not
+consume it.
 
 The editor treats a deterministic `entry_changed` separately from uncertain
 persistence. It retains the raw date/headline/note/emotion/score/tag form,
@@ -338,9 +339,9 @@ Scope and visibility state are session-only: they are not stored in SQLite,
 browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
 changes or reload, and affects Trades plus the Dashboard calendar only.
-Dashboard headline metrics, equity, review progress, Direction Mix, Plan Check,
-Mistake Patterns, Emotion Patterns, and Setup Breakdown consume the full
-snapshot.
+Dashboard headline metrics, equity, review progress, Direction Mix, Opening
+Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, and Setup
+Breakdown consume the full snapshot.
 This slice changes no schema, migration, store, archive, or governed report
 definition/version.
 
@@ -401,16 +402,37 @@ limit belongs only to transient presentation. No report state, definition
 input, or result enters SQLite, browser journal state, export/restore, archive
 shape, or report-input digests; restore recomputes from existing inputs.
 
+Opening Weekday Mix v1 stays inside the same derived-report boundary. Its
+complete immutable builder consumes every current projection trade and groups
+only on the exact canonical `tradedOn` opening date already derived from the
+immutable ledger's `openedAtUs` in the workspace time zone.
+`opening-weekday-mix-report-v1` is pinned by SHA-256
+`6f205c00826d547f1f0640bec0acceac836e707c4a95287d2e35f4ae62e01cf8`.
+There are no exclusions: real Gregorian dates from 1970-01-01 through
+9999-12-31 map to fixed Monday-through-Sunday groups, all seven groups always
+exist, each trade contributes exactly once, and counts reconcile to the full
+projection. Later allocations, exits, and reviews do not move a trade.
+
+Stable subject IDs must be unique, trimmed, 1–256 code points, and C0/C1-free;
+direction and position status validate as scalar drill-down evidence or fail
+closed. Review content/state, results, currency, and Trade Browser scope are
+not read. Evidence uses opening date descending then stable subject ID. The
+25-contributor limit is presentation only. No report state or result enters
+SQLite, browser journal state, export/restore, archive shape, or report-input
+digests; restore recomputes from existing inputs. The report calculates no
+financial output, rate, comparison, rank, reward, target, causal claim,
+prediction, or advice.
+
 Reports Navigator v1 remains inside that same derived boundary. It adds no
 scope or result state: semantic in-page links target the existing Performance
-Summary, Journal Curve, Direction Mix, Plan Check, Mistake Patterns, Emotion
-Patterns, and Setup Breakdown markup, while the Dashboard shortcut may enter
-Plan Check directly. Activating a link scrolls and
+Summary, Journal Curve, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
+Patterns, Emotion Patterns, and Setup Breakdown markup, while the Dashboard
+shortcut may enter Plan Check directly. Activating a link scrolls and
 focuses current DOM only; open disclosure state survives because no report is
 rebuilt. The responsive top-bar position and clipped-control focus correction
 are presentation behavior only. No navigation value enters SQLite, browser
 journal state, local preferences, export/restore, archive digests, report-input
-digests, or governed definitions. All five report builders receive the full
+digests, or governed definitions. All six report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -420,8 +442,9 @@ trade-subject ID must resolve to exactly one trade in the reconciled full
 snapshot before Hermes renders an **Open trade** control, and activation repeats
 that exact validation against the current render snapshot. Symbols, visible
 labels, DOM position, and Trade Browser search are never identity fallback.
-The allowlisted Direction/Plan/Mistake/Emotion/Setup source and captured trigger
-live only in the current sheet closure and DOM attributes. They do not enter
+The allowlisted Direction/Opening-Weekday/Plan/Mistake/Emotion/Setup source and
+captured trigger live only in the current sheet closure and DOM attributes.
+They do not enter
 SQLite, browser journal state, Trade Browser state, preferences, URLs, exports,
 restores, digests, report definitions, or archives. Opening and closing perform
 no store operations. A review save uses the existing stable-subject review
@@ -670,6 +693,13 @@ status neutrality, result and authored-review neutrality, stable ordering,
 immutability, exact browser restore recomputation, 25-row pagination,
 count-only copy, stable-ID continuation, save-driven heading focus return,
 Trades-scope isolation, and 320/421px 200% reflow.
+Opening Weekday Mix coverage adds checksum, full-cohort conservation, fixed
+Monday-through-Sunday grouping and zero-count groups, canonical Gregorian date
+and stable-ID rejection, direction/position evidence validation, review/result/
+currency neutrality, workspace-local first-entry ownership, stable ordering,
+immutability, exact browser restore recomputation, 25-row pagination,
+anti-reward count-only copy, stable-ID continuation, save-driven heading focus
+return, Trades-scope isolation, and 320/421px 200% reflow.
 Reports Navigator coverage adds an
 ordered navigation landmark, direct Dashboard entry, return paths, live-header
 offset focus, preserved disclosure/DOM state, governed metric/curve/report
@@ -677,13 +707,13 @@ fingerprints, preference neutrality, 44-point controls, and fully visible
 keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
 Report Trade Continuation coverage adds exact render/activation identity,
-escaped source/action metadata, progressive Direction, Plan, Mistake, Emotion,
-and Setup row/group actions,
+escaped source/action metadata, progressive Direction, Opening Weekday, Plan,
+Mistake, Emotion, and Setup row/group actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
 fail-closed unknown identity before inert state, offline read-only inspection,
 retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
-trigger return, source-heading return after moving
-Direction/Plan/Setup/Mistake/Emotion evidence,
+trigger return, source-heading return after Direction/Opening-Weekday saves and
+after moving Plan/Setup/Mistake/Emotion evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit

@@ -408,6 +408,36 @@ test("report review saves return to the source heading when evidence moves", asy
     page.locator('[data-direction-mix-group="long"] [data-direction-mix-trade]'),
   ).toHaveCount(2);
 
+  const openingThursday = page.locator(
+    '[data-opening-weekday-mix-group="thursday"]',
+  );
+  await openingThursday.locator("summary").click();
+  const openingWeekdayAction = openingThursday.getByRole("button", {
+    name: /Open AAPL trade for the Thursday opening group/u,
+  });
+  await openingWeekdayAction.click();
+  const openingWeekdayDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(
+    openingWeekdayDialog.locator("[data-trade-review-report-context]"),
+  ).toHaveText(
+    "Opened from Opening weekday mix. This full-workspace report does not use or change your Trades filters.",
+  );
+  await openingWeekdayDialog.locator("#review-note")
+    .fill("Opening weekday report refresh.");
+  await openingWeekdayDialog.getByRole("button", {
+    name: "Save review changes",
+  }).click();
+
+  await expect(openingWeekdayDialog).toHaveCount(0);
+  await expect(page.locator("#opening-weekday-mix-title")).toBeFocused();
+  await expect(
+    page.locator(
+      '[data-opening-weekday-mix-group="thursday"] [data-opening-weekday-mix-trade]',
+    ),
+  ).toHaveCount(2);
+
   const followed = page.locator('[data-plan-check-group="followed"]');
   await followed.locator("summary").click();
   const planAction = followed.getByRole("button", {

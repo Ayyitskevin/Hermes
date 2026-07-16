@@ -20,6 +20,7 @@ import {
 import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
+import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { SessionJournalStore } from "./session-journal-store";
 
@@ -256,6 +257,9 @@ describe("browser session trade reviews", () => {
       const beforeMistakes = buildMistakePatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeOpeningWeekdays = buildOpeningWeekdayMixReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
       const beforeEmotions = buildEmotionPatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
@@ -277,6 +281,9 @@ describe("browser session trade reviews", () => {
       const afterMistakes = buildMistakePatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
+      const afterOpeningWeekdays = buildOpeningWeekdayMixReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
       const afterEmotions = buildEmotionPatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
@@ -296,6 +303,7 @@ describe("browser session trade reviews", () => {
         tradeSubjectIds: [tradeSubjectId],
       });
       expect(afterDirection).toEqual(beforeDirection);
+      expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
       expect(beforeMistakes.groups.map((group) => [
         group.mistake,
         group.tradeSubjectIds,

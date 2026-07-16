@@ -36,6 +36,7 @@ export function reviewTradeAction(trade: TradePreview, label?: string): string {
 export type TradeReviewReportSource =
   | "plan-check"
   | "direction-mix"
+  | "opening-weekday-mix"
   | "mistake-patterns"
   | "emotion-patterns"
   | "setup-performance";
@@ -45,6 +46,10 @@ const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
   "direction-mix": Object.freeze({
     label: "Direction mix",
     targetId: "direction-mix-title",
+  }),
+  "opening-weekday-mix": Object.freeze({
+    label: "Opening weekday mix",
+    targetId: "opening-weekday-mix-title",
   }),
   "mistake-patterns": Object.freeze({
     label: "Mistake patterns",

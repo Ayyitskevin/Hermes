@@ -20,6 +20,12 @@ const REPORT_DESTINATIONS = [
     returnLink: "[data-direction-mix] > .section-title .report-menu-link",
   },
   {
+    link: "Opening weekday mix",
+    target: "#opening-weekday-mix-title",
+    returnLink:
+      "[data-opening-weekday-mix] > .section-title .report-menu-link",
+  },
+  {
     link: "Plan check",
     target: "#plan-check-title",
     returnLink: "[data-plan-check] > .section-title .report-menu-link",
@@ -106,6 +112,20 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         evidence: attributes(
           "[data-direction-mix-trade]",
           "data-direction-mix-trade",
+        ),
+      },
+      openingWeekday: {
+        metadata: text(
+          "[data-opening-weekday-mix] .opening-weekday-mix-meta",
+        ),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-opening-weekday-mix-group] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-opening-weekday-mix-trade]",
+          "data-opening-weekday-mix-trade",
         ),
       },
       plan: {
@@ -257,6 +277,9 @@ test(
     const directionGroup = page.locator(
       '[data-direction-mix-group="long"]',
     );
+    const openingWeekdayGroup = page.locator(
+      '[data-opening-weekday-mix-group="wednesday"]',
+    );
     const planGroup = page.locator(
       '[data-plan-check-group="followed"]',
     );
@@ -270,11 +293,13 @@ test(
       '[data-setup-performance-group-index="0"]',
     );
     await directionGroup.locator("summary").click();
+    await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
     await emotionGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
@@ -301,6 +326,7 @@ test(
     await expect(menuHeading).toBeFocused();
     await expectUnobscured(menuHeading);
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
@@ -364,6 +390,95 @@ test(
     await expect(section).toContainText("counts every current trade once");
     await expect(section).toContainText("fixed long-then-short order");
     await expect(section).toContainText("does not read results, review fields, or Trades filters");
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "opening weekday mix reports every current trade once without rewarding frequency",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-opening-weekday-mix]");
+    await expect(section).toBeVisible();
+    const metadata = section.locator(".opening-weekday-mix-meta");
+    for (const expected of [
+      "opening-weekday-mix-report-v1",
+      "6f205c00826d547f1f0640bec0acceac836e707c4a95287d2e35f4ae62e01cf8",
+      "Current full-workspace projection",
+      "8 current trades",
+      "UTC",
+    ]) {
+      await expect(metadata).toContainText(expected);
+    }
+    await expect(
+      section.locator("[data-opening-weekday-mix-group] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ]);
+    await expect(
+      section.locator(
+        "[data-opening-weekday-mix-group] > summary .plan-check-summary-label span",
+      ).allTextContents(),
+    ).resolves.toEqual([
+      "1 current trade",
+      "1 current trade",
+      "3 current trades",
+      "3 current trades",
+      "0 current trades",
+      "0 current trades",
+      "0 current trades",
+    ]);
+    await expect(
+      section.locator("[data-opening-weekday-mix-trade]")
+        .evaluateAll((elements) => elements.map((element) => (
+          element.getAttribute("data-opening-weekday-mix-trade")
+        ))),
+    ).resolves.toEqual([
+      "demo-subject-amd",
+      "demo-subject-spy",
+      "demo-subject-meta",
+      "demo-subject-aapl",
+      "demo-subject-msft",
+      "demo-subject-qqq",
+      "demo-subject-nvda",
+      "demo-subject-tsla",
+    ]);
+    await expect(section.locator("dt").allTextContents())
+      .resolves.not.toContain("Currency");
+    for (const prohibited of [
+      "Cash expectancy",
+      "Wins",
+      "Win rate",
+      "Average R",
+      "Net P&L",
+      "Percent",
+    ]) {
+      await expect(section.getByText(prohibited, { exact: true }))
+        .toHaveCount(0);
+    }
+    await section.getByText("How this report works", { exact: true }).click();
+    await expect(section).toContainText(
+      "first-entry date already derived from the immutable ledger",
+    );
+    await expect(section).toContainText(
+      "fixed Monday-through-Sunday order",
+    );
+    await expect(section).toContainText(
+      "does not reward trade count or suggest that any weekday is better",
+    );
     expect(await localStorageSnapshot(page)).toEqual(storageBefore);
     expect(externalRequests).toEqual([]);
   },
@@ -527,6 +642,7 @@ test(
 
     const summaries = page.locator([
       "[data-direction-mix-group] > summary",
+      "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
       "[data-emotion-patterns-group-index] > summary",
@@ -557,6 +673,8 @@ test(
         "[data-report-overview] *",
         "[data-direction-mix]",
         "[data-direction-mix] *",
+        "[data-opening-weekday-mix]",
+        "[data-opening-weekday-mix] *",
         "[data-plan-check]",
         "[data-plan-check] *",
         "[data-mistake-patterns]",
@@ -610,16 +728,21 @@ test(
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".topbar")).toHaveCSS("position", "static");
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
+    const openingWeekdayGroup = page.locator(
+      '[data-opening-weekday-mix-group="wednesday"]',
+    );
     const followedGroup = page.locator('[data-plan-check-group="followed"]');
     const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
     const emotionGroup = page.locator(
       '[data-emotion-patterns-group-index="0"]',
     );
     await directionGroup.locator(":scope > summary").click();
+    await openingWeekdayGroup.locator(":scope > summary").click();
     await followedGroup.locator(":scope > summary").click();
     await mistakeGroup.locator(":scope > summary").click();
     await emotionGroup.locator(":scope > summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(followedGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
@@ -627,11 +750,13 @@ test(
     const controls = page.locator([
       "a[data-report-target]",
       "[data-direction-mix-group] > summary",
+      "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
       "[data-emotion-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
       '[data-direction-mix-group="long"][open] .report-trade-action',
+      '[data-opening-weekday-mix-group="wednesday"][open] .report-trade-action',
       '[data-plan-check-group="followed"][open] .report-trade-action',
       '[data-mistake-patterns-group-index="0"][open] .report-trade-action',
       '[data-emotion-patterns-group-index="0"][open] .report-trade-action',
@@ -669,6 +794,7 @@ test(
         "[data-report-navigation]",
         "[data-report-overview]",
         "[data-direction-mix]",
+        "[data-opening-weekday-mix]",
         "[data-plan-check]",
         "[data-mistake-patterns]",
         "[data-emotion-patterns]",
@@ -703,16 +829,21 @@ test(
 
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
+    const openingWeekdayGroup = page.locator(
+      '[data-opening-weekday-mix-group="wednesday"]',
+    );
     const planGroup = page.locator('[data-plan-check-group="followed"]');
     const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
     const emotionGroup = page.locator('[data-emotion-patterns-group-index="0"]');
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
     await directionGroup.locator("summary").click();
+    await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
     await emotionGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
@@ -778,6 +909,27 @@ test(
     await expect(directionDialog).toHaveCount(0);
     await expect(directionAction).toBeFocused();
     await expectUnobscured(directionAction);
+
+    const openingWeekdayAction = page.locator(
+      '[data-opening-weekday-mix-trade="demo-subject-aapl"] .report-trade-action',
+    );
+    await expect(openingWeekdayAction).toHaveAccessibleName(
+      "Open AAPL trade for the Wednesday opening group — Stock, Demo Brokerage, Jul 1 · Morning",
+    );
+    await openingWeekdayAction.click();
+    const openingWeekdayDialog = page.getByRole("dialog", {
+      name: /AAPL trade review · Stock · Demo Brokerage · Jul 1 · Morning/u,
+    });
+    await expect(openingWeekdayDialog).toBeVisible();
+    await expect(
+      openingWeekdayDialog.locator("[data-trade-review-report-context]"),
+    ).toHaveText(
+      "Opened from Opening weekday mix. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(openingWeekdayDialog).toHaveCount(0);
+    await expect(openingWeekdayAction).toBeFocused();
+    await expectUnobscured(openingWeekdayAction);
 
     const mistakeAction = page.locator(
       '[data-mistake-patterns-trade="demo-subject-spy"] .report-trade-action',
@@ -893,6 +1045,7 @@ test(
     });
 
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
     await expect(emotionGroup).toHaveAttribute("open", "");
@@ -1017,6 +1170,44 @@ for (const viewport of [
       await expect(action).toBeFocused();
       await expectUnobscured(action);
       await expectTouchTarget(action);
+
+      const openingWeekdayGroup = page.locator(
+        '[data-opening-weekday-mix-group="wednesday"]',
+      );
+      await openingWeekdayGroup.locator(":scope > summary").click();
+      const openingWeekdayAction = openingWeekdayGroup.locator(
+        '[data-opening-weekday-mix-trade="demo-subject-aapl"] .report-trade-action',
+      );
+      await openingWeekdayAction.focus();
+      await expect(openingWeekdayAction).toBeFocused();
+      await expectUnobscured(openingWeekdayAction);
+      await expectTouchTarget(openingWeekdayAction);
+      await expect(openingWeekdayAction).toHaveAccessibleName(
+        "Open AAPL trade for the Wednesday opening group — Stock, Demo Brokerage, Jul 1 · Morning",
+      );
+      await openingWeekdayAction.click();
+      const openingWeekdayDialog = page.getByRole("dialog", {
+        name: /AAPL trade review · Stock · Demo Brokerage · Jul 1 · Morning/u,
+      });
+      await expect(openingWeekdayDialog).toBeVisible();
+      await expect(
+        openingWeekdayDialog.locator("[data-trade-review-report-context]"),
+      ).toHaveText(
+        "Opened from Opening weekday mix. This full-workspace report does not use or change your Trades filters.",
+      );
+      const openingWeekdayOverflow = await openingWeekdayDialog.evaluate(
+        (element) => ({
+          document: document.documentElement.scrollWidth - window.innerWidth,
+          dialog: element.scrollWidth - element.clientWidth,
+        }),
+      );
+      expect(openingWeekdayOverflow.document).toBeLessThanOrEqual(1);
+      expect(openingWeekdayOverflow.dialog).toBeLessThanOrEqual(1);
+      await page.keyboard.press("Escape");
+      await expect(openingWeekdayDialog).toHaveCount(0);
+      await expect(openingWeekdayAction).toBeFocused();
+      await expectUnobscured(openingWeekdayAction);
+      await expectTouchTarget(openingWeekdayAction);
 
       const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
       await mistakeGroup.locator(":scope > summary").click();

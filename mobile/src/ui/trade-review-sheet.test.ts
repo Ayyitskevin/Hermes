@@ -95,6 +95,11 @@ describe("trade review sheet", () => {
       localWorkspace(),
       "direction-mix",
     );
+    const openingWeekdayHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "opening-weekday-mix",
+    );
     const html = tradeReviewSheetTemplate(trade(), localWorkspace(), "plan-check");
     const mistakeHtml = tradeReviewSheetTemplate(
       trade(),
@@ -111,6 +116,10 @@ describe("trade review sheet", () => {
       'data-trade-review-report-context="direction-mix"',
     );
     expect(directionHtml).toContain("Opened from Direction mix.");
+    expect(openingWeekdayHtml).toContain(
+      'data-trade-review-report-context="opening-weekday-mix"',
+    );
+    expect(openingWeekdayHtml).toContain("Opened from Opening weekday mix.");
     expect(html).toContain(
       "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
     );
@@ -417,6 +426,19 @@ describe("trade review sheet", () => {
     );
     expect(directionAction).toContain(
       "Open &lt;AAPL&gt; trade for the short direction group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+
+    const openingWeekdayAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "opening-weekday-mix",
+      "the Thursday opening group",
+    );
+    expect(openingWeekdayAction).toContain(
+      'data-trade-review-report-source="opening-weekday-mix"',
+    );
+    expect(openingWeekdayAction).toContain(
+      "Open &lt;AAPL&gt; trade for the Thursday opening group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
 
     const mistakeAction = reportTradeAction(

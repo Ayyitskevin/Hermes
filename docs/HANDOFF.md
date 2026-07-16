@@ -1,9 +1,140 @@
 # Hermes Journal — active mobile handoff
 
+Status: verified Opening Weekday Mix v1 ·
+updated 2026-07-16
+
+## Current handoff
+
+task: Deliver governed Opening Weekday Mix v1: reconcile every current trade
+into one fixed workspace-local opening-weekday cohort with stable trade
+evidence, without adding outcome interpretation, persistence, schema, archive,
+or native-readiness claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New canonical definition `opening-weekday-mix-report-v1` is pinned by
+  SHA-256
+  `6f205c00826d547f1f0640bec0acceac836e707c4a95287d2e35f4ae62e01cf8`.
+  Every current full-workspace projection trade is included exactly once with
+  no exclusions; all seven fixed groups always exist in Monday-through-Sunday
+  order and their counts must conserve the complete cohort.
+- The grouping input is only the canonical workspace-local `tradedOn` opening
+  date already derived from the immutable ledger's first entry timestamp.
+  Real Gregorian dates from 1970 through 9999 validate or fail closed. Later
+  allocations, exits, and reviews cannot regroup a trade.
+- Stable subject IDs must be unique, trimmed, 1–256 code points, and C0/C1-free.
+  Direction and position state are validated drill-down evidence only and fail
+  closed on unsupported runtime values. Reviews, results, currency, Daily
+  Journal scores, and Trade Browser account/date/day/search/facet state are not
+  consumed.
+- Evidence orders by opening date descending then stable subject ID. Report
+  metadata, groups, subject-ID arrays, and evidence are detached and deeply
+  frozen. The report exposes no P&L, currency, win rate, R, expectancy,
+  percentage, rate, comparison, ranking, frequency reward, target, causal
+  claim, prediction, or advice.
+- Reports places Opening Weekday Mix between Direction Mix and Plan Check. The
+  view reveals evidence in pages of at most 25, escapes every external
+  display/identity field, keeps zero-count groups visible, and describes
+  full-workspace scope and anti-reward neutrality directly in the UI.
+- Every contributor opens the exact stable-ID trade through the existing review
+  sheet with a weekday-specific accessible name. Ordinary close returns to the
+  exact trigger; save/refresh returns to the Opening Weekday Mix heading after
+  the report rebuild without changing membership or Trades state.
+- Navigation, keyboard/responsive behavior, report fingerprints, session-store
+  restore, review-edit neutrality, Daily Journal process-score neutrality, and
+  Trade Browser scope/facet isolation include Opening Weekday Mix.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
+  record six governed reports, fourteen Slice D increments, and eight report
+  destinations while keeping every native row NOT RUN.
+- No schema, migration, store command, archive/export shape, digest input,
+  financial formula/version, prior governed-report definition/checksum, native
+  source, credential, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 49 files, 555 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 63 production-Chromium
+  journeys passed, including exact weekday counts/order, fixed zero groups,
+  stable-ID continuation, save-driven heading return, restore equality, report
+  and Trades-filter isolation, keyboard reachability, and 320/421px 200% text.
+- `cd mobile && npm run ios:copy` plus `npm run verify:ios-sync` — exit 0;
+  Vite transformed 72 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `e5102706ea277988be618167fe8127f6733e886d876ce751f17d4c2a383f4f13`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- Three independent read-only contract, verification-design, and documentation
+  reviews found no implementation blocker after the active handoff, explicit
+  outcome-neutrality/code-point boundaries, responsive exact-trade action, and
+  source-document dates were corrected. Pre-existing native-security wording
+  and historical supersession debt remain a separate documentation slice.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `TradePreview.tradedOn` is the canonical workspace-local opening date already
+  derived from the immutable ledger's `openedAtUs`; the report never parses the
+  display-only session label or reinterprets the timestamp in another zone.
+- Governed reports intentionally consume the full-workspace snapshot. Trade
+  Browser account/date/day/search/facet state does not scope or mutate them.
+- Direction and position state identify current drill-down evidence only; their
+  values never change weekday membership or counts.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- HOLD native Opening Weekday Mix acceptance: repeat the checksum, fixed
+  1/1/3/3/0/0/0 demo counts, full-cohort conservation, UTC/local-date crossover,
+  25-row progression, exact-ID continuation, save/refresh focus, restore
+  equality, offline/lifecycle behavior, VoiceOver, hardware keyboard, 200%
+  Dynamic Type, and 320/421-width layout on a current Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining reports, and native restore/backup
+  acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Direction Mix v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Opening Weekday Mix v1 handoff above.
+
 Status: verified Direction Mix v1 ·
 updated 2026-07-15
 
-## Current handoff
+### Historical handoff
 
 task: Deliver governed Direction Mix v1: reconcile every current trade into a
 fixed count-only Long or Short cohort with stable trade evidence, without adding

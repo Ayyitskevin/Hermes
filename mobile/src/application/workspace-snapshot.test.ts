@@ -5,6 +5,7 @@ import { normalizeTrades } from "../core/normalize-trades";
 import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
+import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import type {
@@ -249,6 +250,19 @@ describe("journal workspace snapshot", () => {
       sessionLabel: "Jul 1 · 9:30 PM",
       accountLabel: "Main Brokerage",
     })]);
+    expect(buildOpeningWeekdayMixReport(snapshot).groups).toEqual([
+      expect.objectContaining({ weekday: "monday", tradeCount: 0 }),
+      expect.objectContaining({ weekday: "tuesday", tradeCount: 0 }),
+      expect.objectContaining({
+        weekday: "wednesday",
+        tradeCount: 1,
+        tradeSubjectIds: [expect.any(String)],
+      }),
+      expect.objectContaining({ weekday: "thursday", tradeCount: 0 }),
+      expect.objectContaining({ weekday: "friday", tradeCount: 0 }),
+      expect.objectContaining({ weekday: "saturday", tradeCount: 0 }),
+      expect.objectContaining({ weekday: "sunday", tradeCount: 0 }),
+    ]);
     expect(snapshot.trades[0]?.resultRMetric).toMatchObject({
       value: null,
       nullReason: "missing_initial_risk",
@@ -846,6 +860,9 @@ describe("journal workspace snapshot", () => {
     const { dailyJournal: _rescoredDailyJournal, ...rescoredWithoutDailyJournal } = rescored;
     expect(rescoredWithoutDailyJournal).toEqual(snapshotWithoutDailyJournal);
     expect(buildDirectionMixReport(rescored)).toEqual(buildDirectionMixReport(snapshot));
+    expect(buildOpeningWeekdayMixReport(rescored)).toEqual(
+      buildOpeningWeekdayMixReport(snapshot),
+    );
     expect(buildPlanAdherenceReport(rescored)).toEqual(buildPlanAdherenceReport(snapshot));
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));
