@@ -525,6 +525,19 @@ builders, progressive limits, and exact-total derivation and ownership remain
 unchanged; account/date/day/search/facets stay independently owned and
 untouched by opening or closing the continuation.
 
+Dashboard Recent Trade Continuation v1 uses the same stable-subject review
+boundary without adding report-origin semantics. The existing four newest
+projected subjects and their order remain full-workspace snapshot output. A
+row's escaped subject ID lives only in the current DOM and delegated-listener
+closure; symbol, labels, visible position, and row order are never identity
+fallback. Opening and ordinary close perform no store operation, the fictional
+demo exposes no save action, and a local save uses the existing prepared
+stable-subject review command. After confirmed commit and workspace reload,
+Dashboard rebuilds and the generic non-report continuation focuses
+`#screen`; no report-source context is synthesized. Trade Browser state,
+governed reports, SQLite, browser journal shape, URLs, preferences,
+export/restore shapes, archives, formulas, and digests are unchanged.
+
 Search and all seven facet selects share the same session boundary. Clear
 search and filters resets only those visibility controls and retains account/
 date/day scope; Clear all resets scope and visibility together. Neither action
@@ -821,10 +834,19 @@ retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
 trigger return, source-heading return after Review-Session-Coverage/Direction/
 Opening-Weekday saves and after moving Plan/Setup/Mistake/Emotion/Tag evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
+Dashboard Recent Trade Continuation coverage adds exact QQQ/META/SPY/AMD demo
+order, semantic asset/account/session context, distinct stable-ID targeting for
+duplicate AAPL sessions, read-only inspection, exact-trigger return, preference
+and network neutrality, focused tamper failure before inert state, local
+save/redraw/reopen evidence, stable-screen focus, keyboard activation,
+44-by-48 CSS-pixel controls, and unobscured no-overflow reflow at 320/421px with
+200% text.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low
 storage, near-limit memory, VoiceOver, hardware-keyboard, Dynamic Type, and
 physical-device SQLCipher behavior remain NOT RUN on Linux and unverified.
+Dashboard recent-trade native persistence, lifecycle, VoiceOver, hardware-
+keyboard, Dynamic Type, and duplicate-symbol acceptance also remain NOT RUN.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

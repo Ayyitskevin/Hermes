@@ -51,7 +51,7 @@ under the provisional identifier until that gate is cleared.
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
   Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
-  Review Session Coverage v1, Compact Trades
+  Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Compact Trades
   Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
@@ -91,7 +91,7 @@ decision.
 Five destinations:
 
 1. **Dashboard** — net P&L, versioned-risk-backed R, core metrics, curve,
-   calendar, process review, recent trades.
+   calendar, process review, actionable recent trades.
 2. **Trades** — search, filters, list/calendar views, trade detail, executions, notes, tags, screenshots.
 3. **Journal** — daily notes, trade reviews, templates, emotions/mistakes, playbooks, rules.
 4. **Reports** — currency expectancy, profit factor, drawdown, streaks, and
@@ -482,6 +482,19 @@ observed plugin/device behavior:
   and no overflow at 320 and 421 CSS pixels with 200% text. No route,
   browser-state, schema, store, archive, formula, checksum, cohort definition
   or eligibility rule, order, or pagination change.
+- Dashboard Recent Trade Continuation v1 keeps the existing four-row
+  full-workspace Dashboard cohort and newest-projection order, but gives every
+  semantic row an **Open trade** action backed only by its stable subject ID.
+  Asset class, account, and full session context distinguish duplicate symbols.
+  The demo is read-only and ordinary close restores the exact trigger; a local
+  save uses the existing review command, redraws Dashboard, announces the
+  result, and focuses the stable screen. Production Chromium proves exact
+  QQQ/META/SPY/AMD demo order, distinct duplicate-symbol targeting, focused
+  tamper failure before inert state, preference and network neutrality,
+  keyboard activation, 44-by-48 CSS-pixel targets, and unobscured no-overflow
+  reflow at 320 and 421 CSS pixels with 200% text. No report-source context,
+  route, Trade Browser state, schema, store contract, archive, digest, metric,
+  formula, checksum, cohort, or financial definition changed.
 - Real SQL.js schema/repository tests plus browser import/rollback coverage. The
   2026-07-13 Slice B Linux gate passed 248 Vitest tests and 19 Playwright
   journeys.
@@ -586,12 +599,14 @@ tier-by-tier claim. Reverify before public comparative positioning.
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
-v1, Opening Weekday Mix v1, Review Session Coverage v1, Compact Trades Filters
-v1, matching-runtime local restore, and all eight governed reports are
-implemented.
-Sixteen bounded Slice D increments are implemented in total; the fourteen
-presentation/projection increments other than Durable Daily Journal v1 and
-Report Trade Continuation v1 remain derived-only.
+v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
+Continuation v1, Compact Trades Filters v1, matching-runtime local restore, and
+all eight governed reports are implemented.
+Seventeen bounded Slice D increments are implemented in total; the fourteen
+presentation/projection increments remain derived-only. Durable Daily Journal,
+Report Trade Continuation, and Dashboard Recent Trade Continuation are the
+write-capable exceptions; both continuation increments reuse the existing
+versioned trade-review save path without changing its persistence contract.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

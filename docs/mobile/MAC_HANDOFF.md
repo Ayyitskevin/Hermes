@@ -366,6 +366,18 @@ and an App Store disclosure.
   background/foreground during preparation, force quit, and relaunch. Every
   uncertain path must stay retryable and must not report a saved file falsely.
 - Verify the Dashboard metric values reconcile with the eight bundled records.
+- Verify Dashboard Recent trades contains exactly QQQ, META, SPY, then AMD in
+  the fictional demo, with correct asset-class, account, full-session context,
+  and one **Open trade** action per row. The demo sheet must remain read-only
+  and omit report-origin copy. With duplicate symbols across local sessions or
+  accounts, confirm each action opens only its stable-ID trade. Close, Cancel,
+  Escape, and backdrop dismissal must restore the exact connected trigger; a
+  confirmed local save must persist through a Dashboard redraw, announce the
+  result, and focus the stable screen. Tamper one ID and confirm a focused error
+  appears before inert state or a store call. Repeat offline with VoiceOver,
+  hardware keyboard, 44-point targets, 320/421px at 200% Dynamic Type,
+  background/foreground, force quit, and relaunch. This native row remains NOT
+  RUN until recorded on the Mac/iPhone candidate.
 - In Reports, verify Review Session Coverage shows
   `review-session-coverage-report-v1`, checksum
   `8fafa15893363476f1d0433c8fbb70d3db000b6c4a75bfd9a621862c52244113`, exactly
@@ -577,6 +589,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | VoiceOver/Dynamic Type/keyboard/layout | status | settings + observed result |
 | Files export/restore/continued writes | status | archive digests + result |
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
+| Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 
     open: <every skipped, blocked, failed, or ambiguous item>
 
@@ -657,9 +670,10 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   and hardware-keyboard checks. Browser evidence does not prove those native
   behaviors. Review Session Coverage, Direction Mix, Opening Weekday Mix,
   Mistake Patterns, Emotion Patterns, Tag Patterns, and Report Trade
-  Continuation are browser-verified only; native
+  Continuation are browser-verified only. Dashboard Recent Trade Continuation
+  likewise has only browser-session evidence; native
   stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
-  activation, exact-trigger return, post-save heading fallback, offline
+  activation, exact-trigger return, post-save heading/screen fallback, offline
   lifecycle, Dynamic Type, and hardware-keyboard acceptance remain NOT RUN.
   Native Web Share/Files cancellation, save, reopen, custom MIME
   behavior, restore preview rollback, atomic commit, post-commit reconciliation,

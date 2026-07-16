@@ -251,6 +251,17 @@ submission-ready product:
   report heading. The report source is transient DOM context. No report-origin
   or selected-trade state is persisted; Trades state and the report,
   review-persistence, checksum, and archive contracts remain unchanged.
+- Dashboard Recent Trade Continuation v1 turns the unchanged four newest
+  projected Recent trades rows into semantic **Open trade** actions. Each row
+  exposes asset class, account, and full session context, while activation
+  resolves exactly one stable trade-subject ID and reuses the existing
+  review/detail sheet without routing through Trades or adding report-source
+  context. The fictional demo remains read-only; ordinary close returns to the
+  exact trigger; an explicit local save uses the existing review command,
+  redraws Dashboard, announces the result, and focuses the stable screen.
+  Tampered identity fails visibly before inert state or persistence. No route,
+  Trade Browser scope, report definition, schema, archive, digest, financial
+  formula, or persistence contract changed.
 - Trade Browser Scope v1 uses stable account IDs plus optional inclusive
   workspace-local allocation/activity dates to derive exact scoped P&L, trade,
   allocation, and activity-day evidence. Dashboard month navigation visits

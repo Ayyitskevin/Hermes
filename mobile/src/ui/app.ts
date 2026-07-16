@@ -174,9 +174,11 @@ function equityChart(snapshot: JournalWorkspaceSnapshot): string {
 function compactTradeRow(trade: TradePreview, currency: string): string {
   const tone = resultClass(trade.resultPnl);
   const interim = hasInterimPartialMetrics(trade) ? "Interim partial · " : "";
-  return `<article class="trade-row">
-    <div><strong>${escapeHtml(trade.symbol)}</strong><span>${escapeHtml(trade.setup)} · ${escapeHtml(trade.side)}</span></div>
+  const assetClass = trade.assetClass === "etf" ? "ETF" : "Stock";
+  return `<article class="trade-row" data-recent-trade="${escapeHtml(trade.tradeSubjectId)}">
+    <div class="trade-row-identity"><h3>${escapeHtml(trade.symbol)}</h3><span>${assetClass} · ${escapeHtml(trade.accountLabel)} · ${escapeHtml(trade.sessionLabel)}</span><span>${escapeHtml(trade.setup)} · ${escapeHtml(trade.side)}</span></div>
     <div class="numeric"><strong class="${tone}">${escapeHtml(signedCurrency(trade.resultPnl, currency))}</strong><span>${escapeHtml(interim)}${escapeHtml(signedR(trade.resultR, trade.status === "open" ? "Open" : "—"))} · ${escapeHtml(trade.sessionLabel.split(" · ")[0] ?? trade.sessionLabel)}</span></div>
+    <div class="trade-row-action">${reviewTradeAction(trade, "Open trade")}</div>
   </article>`;
 }
 

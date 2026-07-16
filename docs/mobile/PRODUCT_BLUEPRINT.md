@@ -139,7 +139,7 @@ pricing also requires explicit owner approval.
 The five destinations remain:
 
 1. **Dashboard** — review queue, headline P&L and risk-basis-backed R, one
-   insight, calendar, curve, recent trades.
+   insight, calendar, curve, actionable recent trades.
 2. **Trades** — search/filter, trade detail, executions, notes, tags, screenshots.
 3. **Journal** — daily reviews, templates, emotions/mistakes, playbooks, rules.
 4. **Reports** — currency expectancy, profit factor, drawdown, streaks, and
@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Sixteen bounded Slice D increments are implemented in the current workspace.
+Seventeen bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -739,6 +739,19 @@ no Trades scope, Daily Journal content, P&L, currency, outcomes, URL, persisted
 presentation state, archive, or digest and adds no persistence or financial
 definition.
 
+A seventeenth increment, Dashboard Recent Trade Continuation v1, makes the
+existing four newest projected Dashboard rows actionable without redefining
+their full-workspace cohort or order. Each semantic row exposes asset class,
+account, and full session context, and its **Open trade** action resolves one
+exact current trade only by stable subject ID before reusing the established
+review/detail sheet. Duplicate symbols remain distinguishable. The demo stays
+read-only; ordinary close returns to the exact connected trigger; an explicit
+local review save redraws Dashboard, announces the result, and uses the
+established non-report fallback to focus the stable screen. Invalid identity
+shows a focused error before inert state or persistence. No report-origin
+context, route, Trade Browser scope, report definition, formula, schema, store
+contract, archive, digest, or persisted presentation state was added.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -893,17 +906,18 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-sixteen Slice D increments add Plan Check, governed Setup Breakdown,
+seventeen Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
-v1, and Review Session Coverage v1. The fourteen presentation/projection
-increments other than
-Daily Journal and Report Trade Continuation remain derived-only. Report Trade
-Continuation reuses the existing versioned review save path without changing
-its persistence contract; Daily Journal adds checksum-pinned schema v4 and
-browser payload v2 while preserving the outer archive version. Final
+v1, Review Session Coverage v1, and Dashboard Recent Trade Continuation v1.
+The fourteen presentation/projection increments remain derived-only. Durable
+Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
+Continuation and Dashboard Recent Trade Continuation reuse the existing
+versioned trade-review save path without changing its persistence contract.
+Daily Journal preserves the outer archive version while browser payload v2
+carries its state. Final
 integration
 counts and publication state belong in the active `docs/HANDOFF.md`; this
 blueprint does not duplicate unfinalized evidence. Recovery Continuity adds
