@@ -338,6 +338,12 @@ p { line-height: 1.55; }
   scroll-margin-block: calc(5.25rem + env(safe-area-inset-top))
     calc(5.25rem + env(safe-area-inset-bottom));
 }
+.trade-review-open-error {
+  font-size: .8rem;
+  line-height: 1.45;
+  scroll-margin-block: calc(5.25rem + env(safe-area-inset-top))
+    calc(5.25rem + env(safe-area-inset-bottom));
+}
 .calendar-day-reflection {
   min-width: 0;
   padding: .85rem;
@@ -352,6 +358,7 @@ p { line-height: 1.55; }
 .calendar-day-reflection h3 {
   scroll-margin-top: calc(5.25rem + env(safe-area-inset-top));
 }
+#dashboard-review-progress-title,
 #calendar-day-filter-title,
 #daily-notes-title,
 [data-daily-entry-heading] {
@@ -517,6 +524,7 @@ p { line-height: 1.55; }
 .trade-scope-summary .section-title > strong.negative { color: var(--negative); }
 .trade-scope-summary:focus-visible,
 #calendar-month-title:focus-visible,
+#dashboard-review-progress-title:focus-visible,
 #calendar-day-filter-title:focus-visible,
 #calendar-day-reflection-title:focus-visible,
 #daily-notes-title:focus-visible,

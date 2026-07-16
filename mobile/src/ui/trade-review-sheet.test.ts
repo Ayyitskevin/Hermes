@@ -388,10 +388,13 @@ describe("trade review sheet", () => {
     const action = reviewTradeAction(trade());
     expect(action).toContain('data-review-trade="subject-1"');
     expect(action).toContain('aria-haspopup="dialog"');
+    expect(action).not.toContain("data-trade-review-origin");
     expect(action).toContain(
       'aria-label="Edit review for &lt;AAPL&gt; Stock, Demo Brokerage, Jul 1 · Morning"',
     );
     expect(reviewTradeAction(trade(), "Open <review>")).toContain("Open &lt;review&gt;");
+    expect(reviewTradeAction(trade(), "Review next trade", "dashboard-review-progress"))
+      .toContain('data-trade-review-origin="dashboard-review-progress"');
     expect(tradeReviewSaveFailureKind(new Error("preparation failed"))).toBe("retryable");
     expect(tradeReviewSaveFailureKind(
       new TradeReviewCommitStatusUncertainError(new Error("bridge response lost")),

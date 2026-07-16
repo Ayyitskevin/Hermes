@@ -305,6 +305,33 @@ error, and displayed month remain ephemeral UI state and do not enter schema
 v4, SQLite, browser journal persistence, export/restore, archives, digests,
 governed reports, or financial formulas.
 
+### Dashboard review return focus
+
+Dashboard Review Return Focus v1 is the twenty-third bounded Slice D increment
+and the nineteenth derived-only presentation/projection increment. It adds no
+ledger fact. The deeply frozen, fail-closed Review Queue projection remains the
+owner of the next exact Dashboard review in fixed **Drafts** then **Not
+started** order. Its waiting count is reconciled against
+`reviewProgress.pendingTrades`, which represents every unfinished closed trade;
+the clear state therefore requires zero drafts and zero not-started reviews.
+
+The Weekly Review Rhythm origin requires exactly one marked card and one
+focusable heading. While waiting, exactly one origin action must be contained by
+that card, and its stable trade subject must agree with both card and heading.
+A missing marker or malformed, duplicated, detached, tampered, or conflicting
+origin fails before modal markup, random submission identity, background
+inerting, or store work.
+
+After a confirmed direct save, exact-command replay, or known-commit
+refresh-only retry, Dashboard redraws and focus moves to the unique rebuilt
+waiting/clear heading. A missing or ambiguous rebuilt heading falls to the
+screen and never repeats persistence. Ordinary dismissal returns to the exact
+connected trigger; unresolved recovery retains modal ownership. Dashboard
+recent-trade, Reports, Trades, and Journal queue focus behavior remains
+unchanged. No focus or origin identity enters schema v4, SQLite, browser
+session state, export/restore, archives, digests, governed reports, formulas,
+routes, preferences, dependencies, or native source.
+
 ## Daily-journal sequence
 
 ```text
@@ -991,6 +1018,14 @@ disablement, generic tamper/ambiguity failure, selected reflection refresh,
 date-qualified focus/announcement, 44-point controls, 320/421px 200% reflow,
 and measured 844px sticky-chrome visibility without persistence or network
 work.
+Dashboard Review Return Focus coverage adds reconciled draft-first then
+not-started selection, direct draft/completion and final clear-state focus,
+exact replay, committed-refresh-only recovery, missing-origin and tampered/
+duplicate pre-open rejection before randomness or storage, exact cancel return,
+missing/duplicate rebuilt-heading screen fallback, unchanged recent-trade/
+report/queue behavior, network neutrality, 44-point controls, visible keyboard
+focus, and fully visible generic errors plus no overflow at 320/421px with 200%
+text.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low
@@ -998,6 +1033,9 @@ storage, near-limit memory, VoiceOver, hardware-keyboard, Dynamic Type, and
 physical-device SQLCipher behavior remain NOT RUN on Linux and unverified.
 Dashboard recent-trade native persistence, lifecycle, VoiceOver, hardware-
 keyboard, Dynamic Type, and duplicate-symbol acceptance also remain NOT RUN.
+Dashboard Review Return Focus native VoiceOver announcement, keyboard focus,
+safe-area and Dynamic Type layout, lifecycle, force-quit/relaunch, and
+multi-scene refresh/fallback acceptance also remain NOT RUN.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.

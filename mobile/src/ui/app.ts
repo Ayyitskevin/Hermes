@@ -1,5 +1,6 @@
 import { JournalApplication } from "../application/journal-application";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
+import { buildReviewQueue } from "../application/review-queue";
 import {
   buildTradeBrowser,
   EMPTY_TRADE_BROWSER_STATE,
@@ -244,11 +245,13 @@ function dashboardView(
   const performance = snapshot.performance;
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
   const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
-  const nextReview = snapshot.trades.find((trade) => (
-    trade.status === "closed" && trade.reviewStatus === "draft"
-  )) ?? snapshot.trades.find((trade) => (
-    trade.status === "closed" && trade.reviewStatus === "pending"
-  ));
+  const reviewQueue = buildReviewQueue(snapshot);
+  const nextReview = reviewQueue.groups[0].trades[0]
+    ?? reviewQueue.groups[1].trades[0];
+  const reviewProgressState = nextReview === undefined ? "clear" : "waiting";
+  const reviewProgressSubject = nextReview === undefined
+    ? ""
+    : ` data-dashboard-review-subject="${escapeHtml(nextReview.tradeSubjectId)}"`;
   return `<section class="screen-stack" aria-labelledby="dashboard-title">
     <div class="screen-heading">
       <div><p class="eyebrow">${escapeHtml(snapshot.accountLabel)} · ${escapeHtml(snapshot.periodLabel)}</p><h1 id="dashboard-title">Dashboard</h1></div>
@@ -259,11 +262,11 @@ function dashboardView(
       <strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>
       <span>${escapeHtml(signedR(performance.netR, "—"))} · ${countNoun(performance.tradeCount, "trade")} with realized P&amp;L${performance.rTradeCount === performance.tradeCount ? "" : ` · R on ${performance.rTradeCount}`}${hasInterimResults ? " · includes interim partial exits" : ""}</span>
     </article>
-    <article class="card review-progress-card">
-      <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2>${snapshot.reviewProgress.pendingTrades === 0 ? "Review queue clear" : `${countNoun(snapshot.reviewProgress.pendingTrades, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
-      <p>${snapshot.reviewProgress.completedTrades} completed · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
+    <article class="card review-progress-card" data-dashboard-review-progress="${reviewProgressState}"${reviewProgressSubject}>
+      <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2 id="dashboard-review-progress-title" data-dashboard-review-progress-title="${reviewProgressState}"${reviewProgressSubject} tabindex="-1">${reviewQueue.waitingTradeCount === 0 ? "Review queue clear" : `${countNoun(reviewQueue.waitingTradeCount, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
+      <p>${snapshot.reviewProgress.completedTrades} completed · ${countNoun(snapshot.reviewProgress.draftTrades, "draft")} · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
       <div class="quick-actions review-progress-actions">
-        ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade")}
+        ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade", "dashboard-review-progress")}
         <button class="text-button" type="button" data-route="reports" data-report-target="review-session-coverage-title">View session evidence</button>
       </div>
     </article>

@@ -198,6 +198,21 @@ submission-ready product:
   storage. No schema, store command, archive, digest, report, formula,
   preference, dependency, or native source changed; the same four write-capable
   exceptions remain.
+- Dashboard Review Return Focus v1 is the twenty-third bounded Slice D
+  increment and the nineteenth derived-only presentation/projection increment.
+  The Weekly Review Rhythm card now derives its exact next subject and
+  waiting/clear state from the fail-closed Review Queue projection: **Drafts**
+  first, then **Not started**, in canonical snapshot order. One exact Dashboard
+  card, focusable heading, origin action, and stable trade subject must agree
+  before sheet markup, random identity, inert state, or persistence.
+  Ordinary dismissal returns to the connected CTA. Confirmed direct save,
+  exact-command replay, and known-commit refresh retry redraw Dashboard,
+  announce the result, and focus the unique rebuilt rhythm heading. A missing
+  or duplicate rebuilt heading falls to the screen without another write;
+  unresolved recovery keeps modal ownership. Dashboard recent-trade, Reports,
+  Trades, and Journal queue focus behavior is unchanged. No schema, store
+  command, archive, digest, report, formula, route, preference, dependency, or
+  native source changed; the same four write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

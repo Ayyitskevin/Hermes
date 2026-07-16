@@ -385,6 +385,305 @@ test("trade reviews persist exact risk metrics, edit immutably, and clear an ato
   await expect(page.getByRole("heading", { name: "Review queue clear" })).toBeVisible();
 });
 
+test("Dashboard review saves return focus to the exact rebuilt review rhythm", async ({ page }) => {
+  const externalRequests = logExternalRequests(page);
+  await importTwoClosedTrades(page);
+  await installPreparedReviewCounters(page);
+
+  const rhythm = page.locator("[data-dashboard-review-progress]").first();
+  const heading = page.locator("#dashboard-review-progress-title");
+  let nextReview = rhythm.locator(
+    'button[data-trade-review-origin="dashboard-review-progress"]',
+  );
+  await expect(rhythm).toHaveAttribute("data-dashboard-review-progress", "waiting");
+  await expect(heading).toHaveText("2 reviews waiting");
+  await expect(nextReview).toHaveAttribute("data-review-trade", /.+/u);
+  await expect(nextReview).toHaveAccessibleName(/Review next trade for AAPL Stock/u);
+  const exactSubject = await nextReview.getAttribute("data-review-trade");
+  if (exactSubject === null) throw new Error("Dashboard review action has no exact subject.");
+  const storageBefore = await page.evaluate(() => (
+    Object.entries(localStorage).sort(([left], [right]) => left.localeCompare(right))
+  ));
+
+  const expectOpenErrorWithinChrome = async (
+    error: Locator,
+    viewportWidth: number,
+  ) => {
+    const geometry = await error.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const topbar = document.querySelector<HTMLElement>(".topbar")?.getBoundingClientRect();
+      const tabbar = document.querySelector<HTMLElement>(".tabbar")?.getBoundingClientRect();
+      return {
+        active: document.activeElement === element,
+        top: bounds.top,
+        bottom: bounds.bottom,
+        topbarBottom: topbar?.bottom ?? 0,
+        tabbarTop: tabbar?.top ?? window.innerHeight,
+        documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+    const evidence = JSON.stringify({ viewportWidth, ...geometry });
+    expect(geometry.active, evidence).toBe(true);
+    expect(geometry.top, evidence).toBeGreaterThanOrEqual(geometry.topbarBottom - 1);
+    expect(geometry.bottom, evidence).toBeLessThanOrEqual(geometry.tabbarTop + 1);
+    expect(geometry.documentOverflow, evidence).toBeLessThanOrEqual(1);
+  };
+
+  await nextReview.evaluate((element) => {
+    element.removeAttribute("data-trade-review-origin");
+  });
+  const unmarkedNextReview = rhythm.locator("button[data-review-trade]");
+  await unmarkedNextReview.click();
+  let openError = page.locator("[data-trade-review-open-error]");
+  await expect(openError).toBeFocused();
+  await expect(page.locator("#trade-review")).toHaveCount(0);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  expect(await preparedReviewCounters(page)).toEqual({
+    valueReads: "0",
+    randomIds: "0",
+  });
+  await unmarkedNextReview.evaluate((element) => {
+    element.setAttribute("data-trade-review-origin", "dashboard-review-progress");
+  });
+  await openError.evaluate((element) => {
+    element.remove();
+  });
+
+  await page.setViewportSize({ width: 421, height: 568 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  await rhythm.evaluate((element) => {
+    element.setAttribute("data-dashboard-review-subject", "tampered-subject");
+  });
+  await nextReview.click();
+  openError = page.locator("[data-trade-review-open-error]");
+  await expect(openError).toBeFocused();
+  await expectOpenErrorWithinChrome(openError, 421);
+  await expect(page.locator("#trade-review")).toHaveCount(0);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  expect(await preparedReviewCounters(page)).toEqual({
+    valueReads: "0",
+    randomIds: "0",
+  });
+  expect(await page.evaluate(() => (
+    Object.entries(localStorage).sort(([left], [right]) => left.localeCompare(right))
+  ))).toEqual(storageBefore);
+  await openError.evaluate((element) => {
+    element.remove();
+  });
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await rhythm.evaluate((element, subject) => {
+    element.setAttribute("data-dashboard-review-subject", subject);
+    const clone = element.cloneNode(true);
+    element.insertAdjacentElement("afterend", clone as Element);
+  }, exactSubject);
+  await nextReview.click();
+  openError = page.locator("[data-trade-review-open-error]");
+  await expect(openError).toBeFocused();
+  await expectOpenErrorWithinChrome(openError, 320);
+  await expect(page.locator("#trade-review")).toHaveCount(0);
+  await expect(page.locator("[data-dashboard-review-progress]")).toHaveCount(2);
+  expect(await preparedReviewCounters(page)).toEqual({
+    valueReads: "0",
+    randomIds: "0",
+  });
+  await page.locator("[data-dashboard-review-progress]").nth(1).evaluate((element) => {
+    element.remove();
+  });
+  await openError.evaluate((element) => {
+    element.remove();
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.testTextScale;
+  });
+  await nextReview.click();
+  let dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(nextReview).toBeFocused();
+
+  await nextReview.click();
+  dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await dialog.locator("#review-note").fill("Keep this exact Dashboard review in progress.");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(heading).toBeFocused();
+  await expect(heading).toHaveText("2 reviews waiting");
+  await expect(rhythm).toContainText(/1 draft ·/u);
+  nextReview = rhythm.locator(
+    'button[data-trade-review-origin="dashboard-review-progress"]',
+  );
+  await expect(nextReview).toHaveAccessibleName(/Continue next review for AAPL Stock/u);
+
+  await nextReview.click();
+  dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await dialog.getByRole("button", { name: "Mark reviewed" }).click();
+  await expect(heading).toBeFocused();
+  await expect(heading).toHaveText("1 review waiting");
+  await expect(nextReview).toHaveAccessibleName(/Review next trade for MSFT Stock/u);
+
+  for (const width of [421, 320]) {
+    await page.setViewportSize({ width, height: 568 });
+    await page.evaluate(() => {
+      document.documentElement.dataset.testTextScale = "200";
+    });
+    const layout = await nextReview.evaluate((element) => {
+      const button = element.getBoundingClientRect();
+      const card = element.closest<HTMLElement>("[data-dashboard-review-progress]");
+      return {
+        width: button.width,
+        height: button.height,
+        cardOverflow: (card?.scrollWidth ?? 0) - (card?.clientWidth ?? 0),
+        documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+    expect(layout.width, JSON.stringify({ viewportWidth: width, ...layout })).toBeGreaterThanOrEqual(44);
+    expect(layout.height, JSON.stringify({ viewportWidth: width, ...layout })).toBeGreaterThanOrEqual(44);
+    expect(layout.cardOverflow, JSON.stringify({ viewportWidth: width, ...layout })).toBeLessThanOrEqual(1);
+    expect(layout.documentOverflow, JSON.stringify({ viewportWidth: width, ...layout })).toBeLessThanOrEqual(1);
+  }
+
+  await nextReview.click();
+  dialog = page.getByRole("dialog", { name: "MSFT trade review" });
+  await dialog.locator("#review-note").fill("Finish the last Dashboard review.");
+  const finalSave = dialog.getByRole("button", { name: "Mark reviewed" });
+  await finalSave.focus();
+  await page.keyboard.press("Enter");
+  await expect(heading).toBeFocused();
+  await expect(heading).toHaveText("Review queue clear");
+  await expect(rhythm).toHaveAttribute("data-dashboard-review-progress", "clear");
+  await expect(rhythm.locator(
+    'button[data-trade-review-origin="dashboard-review-progress"]',
+  )).toHaveCount(0);
+  await expect(rhythm.getByRole("button", { name: "Open review journal" })).toBeVisible();
+  const focusLayout = await heading.evaluate((element) => {
+    const title = element.getBoundingClientRect();
+    const topbar = document.querySelector<HTMLElement>(".topbar")?.getBoundingClientRect();
+    const tabbar = document.querySelector<HTMLElement>(".tabbar")?.getBoundingClientRect();
+    const card = element.closest<HTMLElement>("[data-dashboard-review-progress]");
+    const style = window.getComputedStyle(element);
+    return {
+      active: document.activeElement === element,
+      titleTop: title.top,
+      titleBottom: title.bottom,
+      topbarBottom: topbar?.bottom ?? 0,
+      tabbarTop: tabbar?.top ?? window.innerHeight,
+      cardOverflow: (card?.scrollWidth ?? 0) - (card?.clientWidth ?? 0),
+      documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: Number.parseFloat(style.outlineWidth),
+    };
+  });
+  expect(focusLayout.active, JSON.stringify(focusLayout)).toBe(true);
+  expect(focusLayout.titleTop, JSON.stringify(focusLayout))
+    .toBeGreaterThanOrEqual(focusLayout.topbarBottom - 1);
+  expect(focusLayout.titleBottom, JSON.stringify(focusLayout))
+    .toBeLessThanOrEqual(focusLayout.tabbarTop + 1);
+  expect(focusLayout.cardOverflow, JSON.stringify(focusLayout)).toBeLessThanOrEqual(1);
+  expect(focusLayout.documentOverflow, JSON.stringify(focusLayout)).toBeLessThanOrEqual(1);
+  expect(focusLayout.outlineStyle, JSON.stringify(focusLayout)).toBe("solid");
+  expect(focusLayout.outlineWidth, JSON.stringify(focusLayout)).toBeGreaterThanOrEqual(2);
+  await expect(page.locator("#route-announcer")).toHaveText("MSFT review completed.");
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+  expect(externalRequests).toEqual([]);
+});
+
+test("Dashboard review focus falls back when the rebuilt heading is missing or duplicated", async ({ page }) => {
+  const externalRequests = logExternalRequests(page);
+  await importTwoClosedTrades(page);
+  const dashboardAction = page.locator(
+    '[data-dashboard-review-progress] button[data-trade-review-origin="dashboard-review-progress"]',
+  );
+  const dashboardHeadings = page.locator("[data-dashboard-review-progress-title]");
+  const installPostRefreshMutation = async (mutation: "duplicate" | "remove") => {
+    await page.evaluate((nextMutation) => {
+      const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+      const getter = descriptor?.get;
+      const setter = descriptor?.set;
+      if (descriptor === undefined || getter === undefined || setter === undefined) {
+        throw new Error("Element.innerHTML is not instrumentable.");
+      }
+      Object.defineProperty(Element.prototype, "innerHTML", {
+        configurable: descriptor.configurable,
+        enumerable: descriptor.enumerable,
+        get: getter,
+        set(this: Element, value: string) {
+          setter.call(this, value);
+          if (this.id !== "screen") return;
+          Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+          const heading = this.querySelector<HTMLElement>(
+            "[data-dashboard-review-progress-title]",
+          );
+          if (heading === null) {
+            throw new Error("Dashboard review heading was not rebuilt.");
+          }
+          if (nextMutation === "duplicate") {
+            heading.insertAdjacentElement("afterend", heading.cloneNode(true) as Element);
+            return;
+          }
+          heading.remove();
+        },
+      });
+    }, mutation);
+  };
+
+  await dashboardAction.click();
+  let dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await dialog.locator("#review-note").fill("Keep this Dashboard review as a draft.");
+  await installPostRefreshMutation("duplicate");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator("#screen")).toBeFocused();
+  await expect(dashboardHeadings).toHaveCount(2);
+  await expect(page.locator("#route-announcer")).toHaveText("AAPL review draft saved.");
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+
+  await dashboardHeadings.nth(1).evaluate((element) => {
+    element.remove();
+  });
+  await expect(dashboardHeadings).toHaveCount(1);
+  await expect(dashboardAction)
+    .toHaveAccessibleName(/Continue next review for AAPL Stock/u);
+  await dashboardAction.click();
+  dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await dialog.locator("#review-note").fill("Complete this Dashboard review once.");
+  await installPostRefreshMutation("remove");
+  await dialog.getByRole("button", { name: "Mark reviewed" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator("#screen")).toBeFocused();
+  await expect(dashboardHeadings).toHaveCount(0);
+  await expect(page.locator("#route-announcer")).toHaveText("AAPL review completed.");
+  await expect(page.locator("body")).not.toHaveClass(/modal-open/u);
+  await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+
+  const data = reviewArchiveData(await exportJournal(page));
+  expect(data.reviewVersions).toHaveLength(2);
+  expect(data.reviewVersions).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      version: 1,
+      state: "draft",
+      note: "Keep this Dashboard review as a draft.",
+    }),
+    expect.objectContaining({
+      version: 2,
+      state: "completed",
+      note: "Complete this Dashboard review once.",
+    }),
+  ]));
+  const completed = data.reviewVersions.find((version) => (
+    version.version === 2 && version.state === "completed"
+  ));
+  if (completed === undefined) throw new Error("Expected one completed Dashboard review.");
+  expect(data.reviewHeads).toEqual([[completed.tradeSubjectId, completed.id]]);
+  expect(data.reviewSubmissions).toHaveLength(2);
+  expect(externalRequests).toEqual([]);
+});
+
 test("review queue groups unfinished work and restores focus after each regroup", async ({ page }) => {
   await importTwoClosedTrades(page);
   await page.getByRole("button", { name: "Journal", exact: true }).click();
@@ -1107,8 +1406,15 @@ test("an uncertain trade review replays only its exact frozen batch until commit
   const externalRequests = logExternalRequests(page);
   await importTwoClosedTrades(page);
   await context.setOffline(true);
-  await page.getByRole("button", { name: "Trades", exact: true }).click();
-  const dialog = await openTradeReview(page, "AAPL");
+  const dashboardHeading = page.locator("#dashboard-review-progress-title");
+  const dashboardAction = page.locator(
+    '[data-dashboard-review-progress] button[data-trade-review-origin="dashboard-review-progress"]',
+  );
+  await expect(dashboardAction)
+    .toHaveAccessibleName(/Review next trade for AAPL Stock/u);
+  await dashboardAction.click();
+  const dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await expect(dialog).toBeVisible();
   const localDraft = {
     setup: "Exact opening range",
     emotion: "Alert",
@@ -1249,6 +1555,11 @@ test("an uncertain trade review replays only its exact frozen batch until commit
     randomIds: "0",
   });
   await expect(page.locator("#route-announcer")).toHaveText("AAPL review completed.");
+  await expect(dashboardHeading).toBeFocused();
+  await expect(dashboardHeading).toHaveText("1 review waiting");
+  await expect(dashboardAction)
+    .toHaveAccessibleName(/Review next trade for MSFT Stock/u);
+
   const data = reviewArchiveData(await exportJournal(page));
   expect(data.reviewVersions).toEqual([
     expect.objectContaining({
@@ -2073,8 +2384,15 @@ test("a proven trade review commit retries only the failed journal refresh", asy
   const externalRequests = logExternalRequests(page);
   await importTwoClosedTrades(page);
   await context.setOffline(true);
-  await page.getByRole("button", { name: "Trades", exact: true }).click();
-  const dialog = await openTradeReview(page, "AAPL");
+  const dashboardHeading = page.locator("#dashboard-review-progress-title");
+  const dashboardAction = page.locator(
+    '[data-dashboard-review-progress] button[data-trade-review-origin="dashboard-review-progress"]',
+  );
+  await expect(dashboardAction)
+    .toHaveAccessibleName(/Review next trade for AAPL Stock/u);
+  await dashboardAction.click();
+  const dialog = page.getByRole("dialog", { name: "AAPL trade review" });
+  await expect(dialog).toBeVisible();
   await dialog.locator("#review-setup").fill("Refresh-only setup");
   await dialog.locator("#review-tags").fill("Refresh only");
   await dialog.locator("#review-note").fill(
@@ -2161,8 +2479,10 @@ test("a proven trade review commit retries only the failed journal refresh", asy
   expect(await page.evaluate(() => (
     document.documentElement.dataset.reviewCommitMapReads
   ))).toBe("0");
-  await expect(page.locator("#screen")).toBeFocused();
-  await expect(tradeCard(page, "AAPL")).toContainText("completed");
+  await expect(dashboardHeading).toBeFocused();
+  await expect(dashboardHeading).toHaveText("1 review waiting");
+  await expect(dashboardAction)
+    .toHaveAccessibleName(/Review next trade for MSFT Stock/u);
 
   const data = reviewArchiveData(await exportJournal(page));
   expect(data.reviewVersions).toEqual([

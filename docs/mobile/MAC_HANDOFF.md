@@ -263,6 +263,25 @@ and an App Store disclosure.
   keyboard, background/foreground, force quit/relaunch, and 200% Dynamic Type at
   320 and 421 CSS pixels before marking Review Queue Focus native acceptance
   PASS.
+- On Dashboard, build interleaved closed drafts and not-started reviews and
+  confirm Weekly Review Rhythm chooses the first exact draft, then the first
+  not-started trade, in canonical Review Queue order. Its heading must show the
+  reconciled all-unfinished count and eventually **Review queue clear**.
+  Ordinary Cancel/Escape/backdrop dismissal must return to the exact connected
+  CTA. After a direct draft/completion, exact-command replay, and known-commit
+  refresh-only retry, confirm the result announcement precedes focus on the
+  unique rebuilt rhythm heading without opening the next trade automatically.
+  Remove or duplicate the rebuilt heading and confirm focus falls to the screen
+  without another store call. Remove the origin marker, alter the exact subject,
+  duplicate the card/action, and add a conflicting source; each must expose one
+  fully visible focused generic error before modal markup, random identity,
+  background inerting, or persistence. Uncertain, stale, blocked, and
+  committed-but-not-refreshed states must retain modal ownership. Dashboard
+  recent-trade, Reports, Trades, and Journal queue return behavior must remain
+  unchanged. Repeat with VoiceOver, hardware keyboard, safe areas,
+  background/foreground, force-quit/relaunch, two scenes, and 200% Dynamic Type
+  at 320 and 421 CSS pixels before marking Dashboard Review Return Focus native
+  acceptance PASS.
 - With VoiceOver and a hardware keyboard, confirm focus remains inside the
   review sheet through rule removal and returns to its trigger on close.
   While a save is pending, confirm every editable control is disabled.
@@ -661,6 +680,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Files export/restore/continued writes | status | archive digests + result |
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
+| Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -731,6 +751,14 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   first-surviving-group or queue-title focus after both queue-origin
   single-review and batch refreshes, recovery-state focus ownership, and zero
   queue-specific durable state.
+- Dashboard Review Return Focus v1 has only Linux/Chromium origin, focus,
+  fallback, and narrow-layout evidence. Native VoiceOver announcement/order,
+  hardware-keyboard visible focus, safe-area/chrome positioning,
+  background/foreground, force-quit/relaunch, multi-scene refresh, and
+  320/421-width 200% Dynamic Type are NOT RUN. Keep native acceptance held
+  until direct save, exact replay, known-commit refresh-only, exact-trigger
+  dismissal, missing/duplicate-heading fallback, malformed-origin rejection,
+  and every unresolved recovery state are observed without a repeated write.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

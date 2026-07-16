@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-two bounded Slice D increments are implemented in the current workspace.
+Twenty-three bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -843,6 +843,29 @@ persistence work. This is the eighteenth derived-only presentation/projection
 increment and changes no route, preference, preset, schema, store command,
 archive, digest, governed report, formula, dependency, or native source.
 
+A twenty-third increment, Dashboard Review Return Focus v1, closes the
+Dashboard's primary review-loop context gap without changing review
+persistence. The existing deeply frozen, fail-closed `buildReviewQueue`
+projection remains the sole owner of the next exact review: **Drafts** first,
+then **Not started**, preserving canonical snapshot order.
+`reviewProgress.pendingTrades` remains the already reconciled all-unfinished
+waiting count despite its historical field name.
+
+The Weekly Review Rhythm origin requires one exact card, one focusable heading,
+and, while waiting, one marked review action whose stable trade subject agrees
+with the card and heading before modal creation, random submission identity,
+background inerting, or persistence. Confirmed direct save, exact-command
+replay, and known-commit refresh-only recovery redraw Dashboard, announce the
+result, and focus the unique rebuilt waiting/clear heading. Missing or duplicate
+post-refresh headings fall to the screen without another write. Ordinary
+connected-trigger dismissal, unresolved recovery ownership, and Dashboard recent-trade,
+Reports, Trades, and Journal queue return behavior remain unchanged. This is
+the nineteenth derived-only presentation/projection increment. It changes no
+queue cohort or order, review command or receipt, schema, store, archive,
+digest, governed report, formula, route, preference, dependency, or native
+source. Five tabs, ten report targets, eight governed reports, and the same four
+write-capable exceptions remain unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -997,15 +1020,16 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-twenty-two Slice D increments add Plan Check, governed Setup Breakdown,
+twenty-three Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
-Daily Reflection Return Focus v1, and Exact Scoped Activity-Day Stepper v1.
-The eighteen presentation/projection increments remain derived-only. Durable
+Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1, and
+Dashboard Review Return Focus v1.
+The nineteen presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path, while Calendar-Day Reflection Continuation

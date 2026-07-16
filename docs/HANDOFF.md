@@ -1,8 +1,168 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Exact Scoped Activity-Day Stepper v1 · updated 2026-07-16
+Status: verified Dashboard Review Return Focus v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Dashboard Review Return Focus v1: return a confirmed Weekly
+Review Rhythm save to the exact rebuilt Dashboard review heading while
+preserving fail-closed review-queue ordering, exact origin identity, existing
+review recovery ownership, and every persistence, report, archive, digest,
+route, preference, and financial definition.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Dashboard now derives its one next-review CTA and waiting/clear display from
+  the existing deeply frozen, fail-closed `buildReviewQueue` projection.
+  **Drafts** remain first, **Not started** second, and canonical snapshot order
+  is retained within each group. The reconciled waiting count includes every
+  unfinished closed review; the heading becomes **Review queue clear** only
+  when that projection is empty.
+- Weekly Review Rhythm renders one structurally marked card and one
+  programmatically focusable heading. While waiting, the card, heading, sole
+  marked origin action, and stable trade subject must agree. A missing origin
+  marker is invalid when a review action still appears inside the Dashboard
+  rhythm card; malformed, duplicated, detached, tampered, unknown, or
+  conflicting origin structure is rejected before modal markup, random
+  submission identity, background inerting, or persistence.
+- Dashboard-origin open failures use one compact generic alert positioned
+  between measured top and bottom chrome. The alert receives visible focus,
+  remains fully readable at 320/421 CSS pixels with 200% text, and exposes no
+  private adapter detail.
+- Ordinary Cancel, Escape, close-button, and backdrop dismissal return to the
+  exact connected Dashboard CTA. After a confirmed direct save,
+  exact-command replay, or known-commit refresh-only retry redraws Dashboard,
+  the result is announced and focus moves to the unique rebuilt Weekly Review
+  Rhythm heading showing the new waiting/clear state.
+- Missing or duplicate post-refresh rhythm headings fall to the unique screen
+  after the confirmed write without repeating persistence. Uncertain, stale,
+  blocked, and committed-but-not-refreshed states retain their existing modal
+  ownership; Hermes does not auto-open the next trade.
+- Dashboard recent-trade rows, report-origin reviews, Trades actions, and
+  Journal queue actions retain their prior focus and recovery behavior. The
+  touched Dashboard summary also uses correct singular/plural draft copy.
+- Production Chromium proves removed-origin, subject-tamper, and duplicated-card
+  rejection before randomness/storage; direct draft and completion; final
+  clear-state focus; exact-trigger cancel; exact replay; committed-refresh-only
+  recovery; missing/duplicate rebuilt-heading screen fallback; one immutable
+  review chain; no network work; 44-point actions; visible keyboard focus;
+  fully visible failure alerts; and no overflow at 320/421 pixels with 200%
+  text.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, and
+  this active handoff now cover twenty-three bounded Slice D increments,
+  nineteen derived-only presentation/projection increments, and the same four
+  write-capable exceptions. Schema v4, five tabs, ten report targets, and eight
+  governed reports remain unchanged.
+- No migration, new store command, review receipt or recovery contract,
+  export/restore shape, archive or digest input, governed report
+  version/checksum/cohort/formula, route, preference, preset, dependency,
+  credential, native source, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 691 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 77 production-Chromium journeys
+  passed after missing-origin, narrow-error, visible-focus, and archive-order
+  hardening.
+- cd mobile && npm run build — exit 0; Vite transformed 78 modules. The existing
+  >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  b42f5a50ea63638f52368b6877a989026c922e127ab53dec2627b877facec7dc.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --check, native/lock drift, and handoff-structure checks — exit 0.
+  The active handoff preserves thirty historical milestone markers and thirty-
+  one complete task/stage/lane/produced/verified/assumptions/open schema blocks.
+- Initial independent technical/security and UX/accessibility reviews found a
+  missing-origin bypass, absent visible heading focus, narrow-error occlusion,
+  and one order-sensitive archive assertion; each finding was reproduced and
+  closed before the full gate.
+- Final independent technical/security, product, and UX/accessibility
+  re-reviews found no open P0-P3 issue after the fixes and fresh verification
+  above.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `buildReviewQueue` remains the sole coherent owner of unfinished review
+  classification and order. `reviewProgress.pendingTrades` intentionally means
+  every closed review not yet completed and is reconciled against drafts plus
+  not-started trades despite its historical field name.
+- Durable review state remains owned by JournalApplication/JournalStore.
+  Dashboard origin markers, focus targets, alerts, and waiting/clear rendering
+  are transient DOM presentation only.
+- Origin validation occurs before modal creation and command preparation.
+  Return focus occurs only after confirmed persistence and an awaited fresh
+  Dashboard render; fallback focus never invokes persistence.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, safe-area, SQLCipher, Keychain,
+  or physical-iPhone evidence.
+
+open:
+
+- HOLD native Dashboard Review Return Focus acceptance: repeat exact
+  draft-first/not-started order, waiting/clear heading, connected-trigger
+  dismissal, direct save, exact replay, known-commit refresh-only return,
+  missing/duplicate-heading fallback, malformed-origin rejection, unresolved
+  recovery ownership, visible errors/focus, and unchanged recent/report/queue
+  behavior with VoiceOver, hardware keyboard, safe areas, 320/421-width 200%
+  Dynamic Type, background/foreground, force-quit/relaunch, and two scenes.
+- HOLD native Exact Scoped Activity-Day Stepper, Daily Reflection Return Focus,
+  Calendar-Day Reflection Continuation, Review Queue Focus, Exact Setup Facet,
+  Dashboard Recent Trade Continuation, and Review Session Coverage acceptance;
+  browser evidence does not satisfy their Mac/iPhone rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit current main after publication and choose the next bounded,
+  persistence-neutral product slice; the continuous user goal remains active.
+
+## Prior milestone — Exact Scoped Activity-Day Stepper v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Dashboard Review Return Focus v1 handoff above.
+
+Status: verified Exact Scoped Activity-Day Stepper v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Exact Scoped Activity-Day Stepper v1: move a selected Trades day
 to the exact previous or next retained account/date-scoped activity session

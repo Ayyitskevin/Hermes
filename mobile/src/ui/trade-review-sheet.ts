@@ -27,10 +27,17 @@ function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
   return trade.assetClass === "etf" ? "ETF" : "Stock";
 }
 
-export function reviewTradeAction(trade: TradePreview, label?: string): string {
+export type TradeReviewDisplayOrigin = "dashboard-review-progress";
+
+export function reviewTradeAction(
+  trade: TradePreview,
+  label?: string,
+  origin?: TradeReviewDisplayOrigin,
+): string {
   const action = label ?? (trade.reviewStatus === "pending" ? "Review trade" : "Edit review");
   const accessibleName = `${action} for ${trade.symbol} ${assetClassLabel(trade)}, ${trade.accountLabel}, ${trade.sessionLabel}`;
-  return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
+  const originAttribute = origin === undefined ? "" : ` data-trade-review-origin="${origin}"`;
+  return `<button class="secondary-button" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}"${originAttribute} aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">${escapeHtml(action)}</button>`;
 }
 
 export type TradeReviewReportSource =
@@ -494,6 +501,83 @@ function tradeReviewReportSource(
   }
   return null;
 }
+const DASHBOARD_REVIEW_PROGRESS_ORIGIN: TradeReviewDisplayOrigin =
+  "dashboard-review-progress";
+
+interface DashboardReviewProgressContext {
+  readonly heading: HTMLElement;
+  readonly action: HTMLButtonElement | null;
+}
+
+function dashboardReviewProgressContext(
+  root: HTMLElement,
+): DashboardReviewProgressContext | null {
+  const containers = Array.from(root.querySelectorAll<HTMLElement>(
+    "[data-dashboard-review-progress]",
+  ));
+  const headings = Array.from(root.querySelectorAll<HTMLElement>(
+    "[data-dashboard-review-progress-title]",
+  ));
+  const actions = Array.from(root.querySelectorAll<HTMLButtonElement>(
+    `button[data-trade-review-origin="${DASHBOARD_REVIEW_PROGRESS_ORIGIN}"]`,
+  ));
+  const container = containers[0];
+  const heading = headings[0];
+  if (
+    containers.length !== 1
+    || headings.length !== 1
+    || container === undefined
+    || heading === undefined
+    || !container.contains(heading)
+    || heading.id !== "dashboard-review-progress-title"
+  ) {
+    return null;
+  }
+
+  const state = container.dataset.dashboardReviewProgress;
+  const headingState = heading.dataset.dashboardReviewProgressTitle;
+  const containerSubject = container.dataset.dashboardReviewSubject;
+  const headingSubject = heading.dataset.dashboardReviewSubject;
+  if (state === "clear") {
+    if (
+      headingState !== "clear"
+      || containerSubject !== undefined
+      || headingSubject !== undefined
+      || actions.length !== 0
+    ) {
+      return null;
+    }
+    return { heading, action: null };
+  }
+  const action = actions[0];
+  if (
+    state !== "waiting"
+    || headingState !== "waiting"
+    || containerSubject === undefined
+    || containerSubject.length === 0
+    || headingSubject !== containerSubject
+    || actions.length !== 1
+    || action === undefined
+    || !container.contains(action)
+    || action.dataset.reviewTrade !== containerSubject
+  ) {
+    return null;
+  }
+  return { heading, action };
+}
+
+function dashboardReviewProgressOrigin(
+  root: HTMLElement,
+  trigger: HTMLButtonElement,
+): boolean | null {
+  const origin = trigger.dataset.tradeReviewOrigin;
+  if (origin === undefined) {
+    return trigger.closest(".review-progress-card, [data-dashboard-review-progress]") === null
+      ? false : null;
+  }
+  if (origin !== DASHBOARD_REVIEW_PROGRESS_ORIGIN) return null;
+  return dashboardReviewProgressContext(root)?.action === trigger ? true : null;
+}
 
 function showTradeReviewOpenError(
   root: HTMLElement,
@@ -506,7 +590,46 @@ function showTradeReviewOpenError(
   error.setAttribute("role", "alert");
   error.tabIndex = -1;
   error.textContent = "Hermes could not open this exact trade because its stable local identity is unavailable.";
-  trigger.insertAdjacentElement("afterend", error);
+  const dashboardCard = trigger.closest<HTMLElement>(".review-progress-card");
+  if (dashboardCard !== null && root.contains(dashboardCard)) {
+    error.classList.add("trade-review-open-error");
+    dashboardCard.append(error);
+    error.scrollIntoView({ behavior: "auto", block: "center" });
+    const topbar = root.querySelector<HTMLElement>(".topbar");
+    const topbarRect = topbar?.getBoundingClientRect();
+    const topbarPosition = topbar === null
+      ? ""
+      : window.getComputedStyle(topbar).position;
+    const topBoundary = (
+      (topbarPosition === "sticky" || topbarPosition === "fixed")
+      && topbarRect !== undefined
+      && topbarRect.bottom > 0
+    ) ? topbarRect.bottom : 0;
+    const tabbar = root.querySelector<HTMLElement>(".tabbar");
+    const tabbarRect = tabbar?.getBoundingClientRect();
+    const tabbarPosition = tabbar === null
+      ? ""
+      : window.getComputedStyle(tabbar).position;
+    const bottomBoundary = (
+      (tabbarPosition === "sticky" || tabbarPosition === "fixed")
+      && tabbarRect !== undefined
+      && tabbarRect.top < window.innerHeight
+    ) ? tabbarRect.top : window.innerHeight;
+    const margin = 8;
+    const minimumTop = topBoundary + margin;
+    const maximumBottom = bottomBoundary - margin;
+    const errorRect = error.getBoundingClientRect();
+    const availableHeight = Math.max(0, maximumBottom - minimumTop);
+    const desiredTop = errorRect.height <= availableHeight
+      ? Math.min(Math.max(errorRect.top, minimumTop), maximumBottom - errorRect.height)
+      : minimumTop;
+    const delta = errorRect.top - desiredTop;
+    if (Math.abs(delta) > 1) {
+      window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+    }
+  } else {
+    trigger.insertAdjacentElement("afterend", error);
+  }
   error.focus({ preventScroll: true });
 }
 
@@ -514,6 +637,7 @@ function focusAfterTradeReviewRefresh(
   root: HTMLElement,
   reportSource: TradeReviewReportSource | undefined,
   reviewQueueOrigin: boolean,
+  dashboardReviewOrigin: boolean,
 ): void {
   let target: HTMLElement | null = null;
   if (reportSource !== undefined) {
@@ -522,6 +646,8 @@ function focusAfterTradeReviewRefresh(
   } else if (reviewQueueOrigin) {
     target = root.querySelector<HTMLElement>("[data-review-queue-group-title]")
       ?? root.querySelector<HTMLElement>("#review-queue-title");
+  } else if (dashboardReviewOrigin) {
+    target = dashboardReviewProgressContext(root)?.heading ?? null;
   }
   if (target !== null) {
     const topbarBottom = root.querySelector<HTMLElement>(".topbar")
@@ -564,7 +690,20 @@ export function bindTradeReviewActions(
       if (trigger === null || !root.contains(trigger)) return;
       const reportSource = tradeReviewReportSource(trigger);
       const trade = resolveTradeReviewTrigger(snapshot, trigger);
-      if (reportSource === null || trade === null) {
+      const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
+      const dashboardReviewOrigin = dashboardReviewProgressOrigin(
+        root,
+        trigger,
+      );
+      const originConflict = dashboardReviewOrigin === true && (
+        reportSource !== undefined || reviewQueueOrigin
+      );
+      if (
+        reportSource === null
+        || trade === null
+        || dashboardReviewOrigin === null
+        || originConflict
+      ) {
         showTradeReviewOpenError(root, trigger);
         return;
       }
@@ -603,7 +742,6 @@ export function bindTradeReviewActions(
       }
       setBackgroundInert(true);
       const returnFocus = trigger;
-      const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
       const initialFingerprint = formFingerprint(form);
       const invalidReviewIdentity = trade.reviewStatus === "pending"
         ? trade.reviewId !== null || trade.reviewVersion !== null
@@ -755,7 +893,7 @@ export function bindTradeReviewActions(
         uncertain = false;
         backdrop.remove();
         setBackgroundInert(false);
-        focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
+        focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
       };
 
       const close = (force = false) => {
@@ -768,7 +906,7 @@ export function bindTradeReviewActions(
         backdrop.remove();
         setBackgroundInert(false);
         if (returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
-        else focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
+        else focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
         button.addEventListener("click", () => close());
@@ -809,7 +947,7 @@ export function bindTradeReviewActions(
             uncertain = false;
             backdrop.remove();
             setBackgroundInert(false);
-            focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin);
+            focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
           } catch {
             showCommittedRefreshFailure();
           }
