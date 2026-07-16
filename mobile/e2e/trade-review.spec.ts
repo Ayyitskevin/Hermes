@@ -473,6 +473,37 @@ test("report review saves return to the source heading when evidence moves", asy
   await expect(early.locator('[data-mistake-patterns-trade]')).toContainText("AAPL");
   await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toHaveCount(1);
   await expect(retainedLate.locator('[data-mistake-patterns-trade]')).toContainText("MSFT");
+
+  const focused = page.locator("[data-emotion-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Focused" }) });
+  await focused.locator("summary").click();
+  const emotionAction = focused.getByRole("button", {
+    name: /Open AAPL trade for saved emotion Focused/u,
+  });
+  await emotionAction.click();
+  const emotionDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(emotionDialog.locator("[data-trade-review-report-context]"))
+    .toHaveText(
+      "Opened from Emotion patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+  await emotionDialog.locator("#review-emotion").fill("Calm");
+  await emotionDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(emotionDialog).toHaveCount(0);
+  await expect(page.locator("#emotion-patterns-title")).toBeFocused();
+  const emotionSection = page.locator("[data-emotion-patterns]");
+  await expect(emotionSection.getByText("2 trades of 2 trades", { exact: true }))
+    .toBeVisible();
+  const calm = emotionSection.locator("[data-emotion-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Calm" }) });
+  const retainedFocused = emotionSection.locator("[data-emotion-patterns-group-index]")
+    .filter({ has: page.locator("summary", { hasText: "Focused" }) });
+  await expect(calm.locator('[data-emotion-patterns-trade]')).toHaveCount(1);
+  await expect(calm.locator('[data-emotion-patterns-trade]')).toContainText("AAPL");
+  await expect(retainedFocused.locator('[data-emotion-patterns-trade]')).toHaveCount(1);
+  await expect(retainedFocused.locator('[data-emotion-patterns-trade]')).toContainText("MSFT");
 });
 
 test("a proven batch tag commit retries only the failed journal refresh", async ({ page, context }) => {

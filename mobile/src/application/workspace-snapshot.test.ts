@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
+import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
@@ -846,6 +847,7 @@ describe("journal workspace snapshot", () => {
     expect(buildPlanAdherenceReport(rescored)).toEqual(buildPlanAdherenceReport(snapshot));
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));
+    expect(buildEmotionPatternsReport(rescored)).toEqual(buildEmotionPatternsReport(snapshot));
     expect(() => workspaceSnapshotFromLedger(ledger({
       dailyEntries: [...dailyEntries, { ...dailyEntries[0]!, id: "duplicate-head" }],
     }))).toThrow(/more than one head/);

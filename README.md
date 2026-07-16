@@ -42,7 +42,8 @@ subscription or second lifetime-unlock purchase. The proposed Core scope is:
 - Manual trade entry and generic broker CSV import.
 - Accounts, executions, partial exits, fees, and currency-separated P&L.
 - Searchable trades, calendar, daily/trade notes, tags, screenshots, and playbooks.
-- Win rate, profit factor, drawdown, streak, setup, mistake, and tag reports.
+- Win rate, profit factor, drawdown, streak, setup, mistake, emotion, and tag
+  reports.
 - On-device storage plus versioned export, restore, and delete-all-data controls.
 - Deterministic planning tools that do not require a hosted service.
 
@@ -89,7 +90,8 @@ submission-ready product:
   can explicitly save a draft or completed reflection on trading and no-trade
   days, edit only through an optimistic successor version, and optionally add a
   headline, note, emotion, tags, and a clearly self-reported process score that
-  never enters performance or Plan Check analytics.
+  never enters performance, Plan Check, Setup Breakdown, Mistake Patterns, or
+  Emotion Patterns analytics.
 - Daily Journal Stale-Head Recovery v1 keeps the unsaved form intact after a
   deterministic optimistic conflict, blocks the obsolete save, loads and shows
   the newer local head, and requires separate consent to use it as the base
@@ -179,9 +181,16 @@ submission-ready product:
   stable label code-unit order, pages are bounded to five groups and 25
   contributors, and every row opens the exact stable-ID trade without showing
   P&L, win rate, R, expectancy, rank, causation, or advice.
+- Emotion Patterns v1 is a checksum-pinned, count-only projection over the one
+  exact optional emotion on each current completed review head. Open and closed
+  trades are equally eligible; pending/draft reviews and completed reviews
+  without an emotion reconcile separately. Every included trade contributes to
+  exactly one stable code-unit-ordered group. Pages are bounded to five groups
+  and 25 contributors, every row opens the exact stable-ID trade, and the report
+  shows no P&L, rate, intensity, rank, causation, prediction, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
-  Plan Check, Mistake Patterns, and Setup Breakdown in one semantic,
-  DOM-ordered report menu.
+  Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown in one
+  semantic, DOM-ordered report menu.
   Dashboard opens Plan Check directly; every section returns to the menu; jumps
   preserve open evidence disclosures and move visible focus below live chrome.
   At iPhone widths the redundant top bar scrolls with content so 200% text and
@@ -190,8 +199,8 @@ submission-ready product:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
 - Report Trade Continuation v1 adds an **Open trade** action to every Plan Check,
-  Mistake Patterns, and Setup Breakdown contributor. It resolves exactly one
-  current trade by the stable subject ID and reuses the existing review/detail
+  Mistake Patterns, Emotion Patterns, and Setup Breakdown contributor. It
+  resolves exactly one trade by stable subject ID and reuses the review/detail
   sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
   routing through or clearing Trades. Delegated activation covers contributors
@@ -208,8 +217,8 @@ submission-ready product:
   and keeps whole-trade realized-to-date P&L separate from scoped allocation
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
-  progress, Plan Check, Mistake Patterns, and Setup Breakdown remain
-  whole-workspace.
+  progress, Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown
+  remain whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

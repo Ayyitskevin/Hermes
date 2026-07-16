@@ -370,8 +370,23 @@ mistake-name code-unit order, and evidence uses traded date descending then
 stable subject ID. Presentation renders five groups and 25 contributors per
 action. The report contains no P&L, win rate, R, expectancy, rate, ranking,
 causal, predictive, or advisory output. A dedicated browser archive test proves
-all three governed reports recompute identically after export and restore. No
+all four governed reports recompute identically after export and restore. No
 schema, archive, or digest-shape change is included.
+
+The count-only Emotion Patterns report uses definition
+`emotion-patterns-report-v1`, pinned by checksum
+`d674eceb0d641512f106f9f1c6b37e23fe1a2ecd0d43e54b7e48865fa594adb4`.
+It consumes the current projection and current completed review heads without a
+position-state, realized-result, currency, or outcome condition. Pending/draft
+reviews are excluded first; completed heads without the one optional exact
+emotion are excluded next. Each included trade belongs to exactly one emotion
+group, so included trades and assignments must reconcile exactly. Saved values
+are validated without normalization or repair, groups use stable emotion-name
+code-unit order, and evidence uses traded date descending then stable subject
+ID. Presentation renders five groups and 25 contributors per action. The report
+contains no P&L, win rate, R, expectancy, rate, intensity, ranking, causal,
+predictive, or advisory output. It is derived-only and adds no schema, archive,
+or digest-shape change.
 
 The third increment turns Dashboard trading days into a bounded evidence
 drill-down in Trades. Calendar membership is derived from normalized allocation
@@ -389,7 +404,8 @@ trading or no-trade date, then edit it only by appending an optimistic immutable
 successor. The workspace-local date is durable identity. Headline, note,
 emotion, tags, and a self-reported process score are optional, but every version
 requires at least one authored signal; the score is excluded from performance,
-Plan Check, Setup Breakdown, and Mistake Patterns analytics. Schema v4 adds immutable versions,
+Plan Check, Setup Breakdown, Mistake Patterns, and Emotion Patterns analytics.
+Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
 v2 and native schema-v4 exports/restores preserve the complete chain, validate
 the content-bound revision, and reject legacy payloads rather than guessing at
@@ -512,7 +528,8 @@ or report scope, and vocabulary/playbook management remain separate work.
 
 An eighth increment, Reports Navigator v1, reorganizes only the existing
 Reports presentation. Its semantic menu follows DOM order—Performance Summary,
-Journal Curve, Plan Check, then Setup Breakdown—and every destination has a
+Journal Curve, Plan Check, Mistake Patterns, Emotion Patterns, then Setup
+Breakdown—and every destination has a
 stable focusable heading plus a return path. Dashboard's existing Plan Check
 shortcut lands on that heading. In-page jumps measure the live top chrome,
 scroll without animation, then focus without a second scroll; opened report
@@ -525,18 +542,19 @@ exclusions, exact values, ordering, pagination, archive inputs, and state/report
 digests are unchanged.
 
 A ninth increment, Report Trade Continuation v1, completes the explainable
-pattern-to-trade loop without adding a route or detail surface. Every Plan Check
-and Setup Breakdown contributor emits **Open trade** only after its stable
-trade-subject ID resolves to exactly one current trade. The existing review
-sheet opens in place with an allowlisted transient report source; its action and
-heading qualify duplicate symbols by asset class, account, and session.
-One replaceable delegated listener covers initially rendered and progressively
-appended contributors and setup groups. Rendering requires exactly one stable-ID
+pattern-to-trade loop without adding a route or detail surface. Every Plan
+Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown contributor emits
+**Open trade** only after its stable trade-subject ID resolves to exactly one
+current trade. The existing review sheet opens in place with an allowlisted
+transient report source; its action and heading qualify duplicate symbols by
+asset class, account, and session. One replaceable delegated listener covers
+initially rendered and progressively appended contributors and report groups.
+Rendering requires exactly one stable-ID
 match and aborts an incoherent report; activation-time blank, unknown,
 duplicate, or tampered identity/source data shows a focused error before inert
 state or persistence. Close returns to the exact connected trigger; a save or
 reconciliation refresh that rebuilds Reports focuses the originating Plan or
-Setup heading because the contributor may have moved or left its cohort. The
+pattern heading because the contributor may have moved or left its cohort. The
 full-workspace reports do not consume or change Trade Browser
 account/date/day/search/facet state. No URL, selected-trade state, schema,
 migration, store, archive, digest input, formula, definition, checksum, cohort
@@ -565,6 +583,18 @@ and query do not count. No disclosure value enters Trade Browser state,
 preferences, stores, SQLite, URLs, exports/restores, archives, report inputs,
 digests, or governed formulas/definitions.
 
+A twelfth increment, Emotion Patterns v1, adds the governed count-and-evidence
+projection described above between Mistake Patterns and Setup Breakdown. Each
+included trade contributes exactly one saved emotion to one stable group; the
+builder returns the complete immutable report while the view progressively
+reveals five groups and 25 contributors per action. Contributors reuse stable-ID
+in-place continuation with emotion-specific accessible names. Ordinary close
+returns to the exact trigger; an explicit review save that moves or removes an
+assignment returns to the Emotion Patterns heading after the report rebuild.
+The allowlisted source is transient DOM context. The report consumes no Trade
+Browser scope, search, facets, URL, persisted presentation state, archive, or
+digest, and adds no financial or behavioral interpretation.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -578,8 +608,8 @@ remain separate gates.
 
 Still open in Slice D:
 
-- Drawdown, streak, time/day, symbol, direction, tag, emotion, and
-  remaining report families with reconciled drill-down, plus saved scope
+- Drawdown, streak, time/day, symbol, direction, tag, and remaining report
+  families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
   management, and fuller vocabulary/playbook management.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
@@ -718,12 +748,12 @@ across 26 files, 21 Playwright journeys, the production build, Capacitor iOS
 sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
-empty-journal-only restore and idempotent exact-retry reconciliation. The eleven
+empty-journal-only restore and idempotent exact-retry reconciliation. The twelve
 Slice D increments add Plan Check, governed Setup Breakdown, allocation-day
 calendar evidence, Durable Daily Journal v1, Trade Browser Scope v1, Structured
 Trades Facets v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade
-Continuation v1, Mistake Patterns v1, and Compact Trades Filters v1. The nine presentation/projection
-increments other than
+Continuation v1, Mistake Patterns v1, Compact Trades Filters v1, and Emotion
+Patterns v1. The ten presentation/projection increments other than
 Daily Journal and Report Trade Continuation remain derived-only. Report Trade
 Continuation reuses the existing versioned review save path without changing
 its persistence contract; Daily Journal adds checksum-pinned schema v4 and

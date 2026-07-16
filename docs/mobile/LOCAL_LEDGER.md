@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + exact-command recovery + derived trade-browser scope/facets + local restore · 2026-07-15
+Status: implemented execution + versioned trade/day review + governed derived reports + trade-browser scope/facets + local restore · 2026-07-15
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -216,8 +216,8 @@ today in the current UI; persisted dates remain immutable when editing. Exact
 same-submission retries are idempotent, changed reuse or stale heads fail
 closed, and a lost response is reconciled by date plus the prepared revision.
 Demo entries are fictional and read-only. The daily process score is descriptive
-self-report evidence only; performance, Plan Check, and Setup Breakdown do not
-consume it.
+self-report evidence only; performance, Plan Check, Setup Breakdown, Mistake
+Patterns, and Emotion Patterns do not consume it.
 
 The editor treats a deterministic `entry_changed` separately from uncertain
 persistence. It retains the raw date/headline/note/emotion/score/tag form,
@@ -339,7 +339,7 @@ browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
 changes or reload, and affects Trades plus the Dashboard calendar only.
 Dashboard headline metrics, equity, review progress, Plan Check, Mistake
-Patterns, and Setup Breakdown continue to consume the full workspace snapshot.
+Patterns, Emotion Patterns, and Setup Breakdown consume the full snapshot.
 This slice changes no schema, migration, store, archive, or governed report
 definition/version.
 
@@ -364,15 +364,34 @@ then stable subject ID. Five-group and
 definition input, or result enters SQLite, browser journal state, export/restore,
 archive shape, or report-input digests; restore recomputes from existing inputs.
 
+Emotion Patterns v1 stays inside the same derived-report boundary. Its complete
+immutable builder consumes current projection trades and the one optional exact
+emotion from coherent current completed review heads; open and closed positions
+are equally eligible and no P&L, currency, risk, result, or outcome evidence is
+read. `emotion-patterns-report-v1` is pinned by SHA-256
+`d674eceb0d641512f106f9f1c6b37e23fe1a2ecd0d43e54b7e48865fa594adb4`.
+Pending/draft reviews and completed heads without an emotion are mutually
+exclusive exclusions. Each included trade contributes exactly one assignment to
+exactly one group, so included trades and assignments must reconcile.
+
+Completed-head IDs, stable subject IDs, and the existing saved-review emotion
+normalization/limit invariants fail closed. The report never repairs or
+normalizes stored values. Exact emotions use code-unit group order; evidence uses
+traded date descending then stable subject ID. Five-group and 25-contributor
+limits belong only to transient presentation. No report state, definition input,
+or result enters SQLite, browser journal state, export/restore, archive shape,
+or report-input digests; restore recomputes from existing inputs.
+
 Reports Navigator v1 remains inside that same derived boundary. It adds no
 scope or result state: semantic in-page links target the existing Performance
-Summary, Journal Curve, Plan Check, Mistake Patterns, and Setup Breakdown
-markup, while the Dashboard shortcut may enter Plan Check directly. Activating a link scrolls and
+Summary, Journal Curve, Plan Check, Mistake Patterns, Emotion Patterns, and
+Setup Breakdown markup, while the Dashboard shortcut may enter Plan Check
+directly. Activating a link scrolls and
 focuses current DOM only; open disclosure state survives because no report is
 rebuilt. The responsive top-bar position and clipped-control focus correction
 are presentation behavior only. No navigation value enters SQLite, browser
 journal state, local preferences, export/restore, archive digests, report-input
-digests, or governed definitions. All three report builders receive the full
+digests, or governed definitions. All four report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -382,7 +401,7 @@ trade-subject ID must resolve to exactly one trade in the reconciled full
 snapshot before Hermes renders an **Open trade** control, and activation repeats
 that exact validation against the current render snapshot. Symbols, visible
 labels, DOM position, and Trade Browser search are never identity fallback.
-The allowlisted Plan/Mistake/Setup source and captured trigger node live only in
+The allowlisted Plan/Mistake/Emotion/Setup source and captured trigger live only in
 the current sheet closure and DOM attributes. They do not enter SQLite, browser
 journal state, Trade Browser state, preferences, URLs, exports, restores,
 digests, report definitions, or archives. Opening and closing perform no store
@@ -618,6 +637,12 @@ exact evidence, totals, or calendar state. Compact Trades Filters coverage adds
 zero-to-seven counts, native pointer/keyboard disclosure behavior, query-only
 clear access, final-facet collapse/focus, retained stale-value opening,
 report/storage neutrality, 44-point controls, and 320/421px 200% reflow.
+Emotion Patterns coverage adds checksum, cohort conservation, open/closed and
+result neutrality, current-head movement, normalization/identity fail-closed
+tables, stable order, immutability, real-store updates, process-score
+independence, exact browser restore recomputation, five/25 pagination, count-only
+copy, stable-ID continuation, save-driven regrouping, heading focus return, and
+320/421px 200% reflow.
 Reports Navigator coverage adds an
 ordered navigation landmark, direct Dashboard entry, return paths, live-header
 offset focus, preserved disclosure/DOM state, governed metric/curve/report
@@ -625,12 +650,12 @@ fingerprints, preference neutrality, 44-point controls, and fully visible
 keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
 Report Trade Continuation coverage adds exact render/activation identity,
-escaped source/action metadata, progressive Plan, Mistake, and Setup row/group
-actions,
+escaped source/action metadata, progressive Plan, Mistake, Emotion, and Setup
+row/group actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
 fail-closed unknown identity before inert state, offline read-only inspection,
 retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
-trigger return, source-heading return after moving Plan/Setup/Mistake evidence,
+trigger return, source-heading return after moving Plan/Setup/Mistake/Emotion evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Native Files selection, lifecycle/
 interruption, Daily Journal relaunch and migration, low-storage, near-limit

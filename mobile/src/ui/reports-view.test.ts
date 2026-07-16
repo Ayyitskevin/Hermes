@@ -153,6 +153,7 @@ describe("reports presentation", () => {
       "cumulative-result-title",
       "plan-check-title",
       "mistake-patterns-title",
+      "emotion-patterns-title",
       "setup-performance-title",
     ] as const;
 
@@ -163,8 +164,8 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(5);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(5);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(6);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(6);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
@@ -175,6 +176,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#mistake-patterns-title"'),
     );
     expect(html.indexOf('href="#mistake-patterns-title"')).toBeLessThan(
+      html.indexOf('href="#emotion-patterns-title"'),
+    );
+    expect(html.indexOf('href="#emotion-patterns-title"')).toBeLessThan(
       html.indexOf('href="#setup-performance-title"'),
     );
     expect(html.indexOf("data-report-overview")).toBeLessThan(
@@ -184,6 +188,9 @@ describe("reports presentation", () => {
       html.indexOf("data-mistake-patterns"),
     );
     expect(html.indexOf("data-mistake-patterns")).toBeLessThan(
+      html.indexOf("data-emotion-patterns"),
+    );
+    expect(html.indexOf("data-emotion-patterns")).toBeLessThan(
       html.indexOf("data-setup-performance"),
     );
   });
@@ -242,7 +249,7 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all three versioned evidence reports with the existing headline context", () => {
+  it("renders all four versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain('<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>');
@@ -283,11 +290,18 @@ describe("reports presentation", () => {
     expect(html).toContain("mistake-patterns-report-v1");
     expect(html).toContain("2 unique trades of 8 trades");
     expect(html).toContain("2 saved mistake assignments");
+    expect(html).toContain('data-emotion-patterns');
+    expect(html).toContain('<h2 id="emotion-patterns-title" class="report-target" tabindex="-1">Emotion patterns</h2>');
+    expect(html).toContain("emotion-patterns-report-v1");
+    expect(html).toContain("8 current assignments");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(18);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(26);
     expect(html).toContain('data-trade-review-report-source="plan-check"');
     expect(html).toContain(
       'data-trade-review-report-source="mistake-patterns"',
+    );
+    expect(html).toContain(
+      'data-trade-review-report-source="emotion-patterns"',
     );
     expect(html).toContain(
       'data-trade-review-report-source="setup-performance"',
@@ -296,6 +310,7 @@ describe("reports presentation", () => {
     for (const trade of DEMO_WORKSPACE.trades) {
       expect(html).toContain(`data-plan-check-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-setup-performance-trade="${trade.tradeSubjectId}"`);
+      expect(html).toContain(`data-emotion-patterns-trade="${trade.tradeSubjectId}"`);
     }
     expect(html).toContain('data-mistake-patterns-trade="demo-subject-spy"');
     expect(html).toContain('data-mistake-patterns-trade="demo-subject-tsla"');
@@ -459,6 +474,7 @@ describe("reports presentation", () => {
       querySelector(selector: string): unknown {
         if (selector === "[data-report-navigation]") return null;
         if (selector === "[data-mistake-patterns]") return null;
+        if (selector === "[data-emotion-patterns]") return null;
         if (selector === "[data-setup-performance]") return null;
         expect(selector).toBe("[data-plan-check]");
         return planCheck;

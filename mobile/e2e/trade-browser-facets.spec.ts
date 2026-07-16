@@ -56,6 +56,14 @@ async function reportFingerprint(page: Page): Promise<unknown> {
           "data-mistake-patterns-trade",
         ),
       },
+      emotions: {
+        metadata: text("[data-emotion-patterns] .emotion-patterns-meta"),
+        groups: text("[data-emotion-patterns] .emotion-patterns-groups"),
+        evidence: attributes(
+          "[data-emotion-patterns-trade]",
+          "data-emotion-patterns-trade",
+        ),
+      },
       setup: {
         metadata: text("[data-setup-performance] .setup-performance-meta"),
         groups: text("[data-setup-performance] .setup-performance-groups"),
@@ -183,6 +191,7 @@ test("exact card facets compose with search and scope without changing totals or
   const storageBefore = await localStorageSnapshot(page);
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   await expect(page.locator("[data-plan-check]")).toContainText("8 of 8 trades");
+  await expect(page.locator("[data-emotion-patterns]")).toContainText("8 trades of 8 trades");
   await expect(page.locator("[data-setup-performance]")).toContainText("8 of 8 trades");
   const reportsBefore = await reportFingerprint(page);
   await page.getByRole("button", { name: "Dashboard", exact: true }).click();

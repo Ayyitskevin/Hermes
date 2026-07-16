@@ -1,9 +1,142 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Compact Trades Filters v1 ·
+Status: verified Emotion Patterns v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver governed Emotion Patterns v1: show count-only exact saved-emotion
+patterns with stable trade evidence on iPhone, without adding outcome
+interpretation, persistence, schema, archive, or native-readiness claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New checksum-pinned definition `emotion-patterns-report-v1` with canonical
+  SHA-256
+  `d674eceb0d641512f106f9f1c6b37e23fe1a2ecd0d43e54b7e48865fa594adb4`
+  consumes the current projection and current completed review heads only.
+- Open and closed trades are equally eligible. Pending/draft reviews are
+  excluded first; completed heads without the one optional exact emotion are
+  excluded next. Every included trade contributes one assignment to exactly one
+  group, so included-trade and assignment totals conserve exactly.
+- Stable subject/head identities and the repository's saved-review
+  normalization/limit contract fail closed. Conflicting canonical displays,
+  malformed identities, incoherent completed heads, and invalid stored emotion
+  values throw rather than being normalized, repaired, or dropped.
+- Groups use stable emotion-name code-unit order. Evidence uses traded date
+  descending then stable subject ID. The complete report is immutable;
+  presentation reveals at most five groups and 25 contributors per action.
+- The report is explicitly count-only: it exposes no P&L, currency, win rate, R,
+  expectancy, rate, intensity, performance rank, causal claim, prediction,
+  trading advice, or behavioral score.
+- Reports places Emotion Patterns between Mistake Patterns and Setup Breakdown.
+  Every contributor opens the exact stable-ID trade through the existing review
+  sheet with an emotion-specific accessible name. Ordinary close returns to the
+  exact trigger; a saved emotion change rebuilds evidence and returns focus to
+  the Emotion Patterns heading.
+- Existing report navigation, delegated continuation, Trade Browser
+  scope/facets, real session-store current-head movement, browser archive
+  restore, and Daily Journal process-score independence now include Emotion
+  Patterns. Production-browser checks cover exact demo facts, offline behavior,
+  focus, escaping, pagination, and 320/421px layout at 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
+  record the fourth governed report while keeping every native row NOT RUN.
+- No schema, migration, store command, archive/export shape, digest input,
+  financial formula/version, existing governed-report definition/checksum,
+  native source, credential, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 45 files, 512 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 61 production-Chromium
+  journeys passed, including exact Emotion counts, restore/store movement,
+  report isolation, stable-ID continuation, saved regrouping, and responsive
+  focus/layout paths.
+- `cd mobile && npm run test:e2e -- e2e/reports-navigation.spec.ts` — exit 0
+  after the 421px review correction; all 8 Reports journeys passed.
+- `cd mobile && npm run ios:copy && npm run verify:ios-sync` — exit 0; Vite
+  transformed 68 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `6dc00d39ebc0e109772f89aac720f074b9efda01ecde60741cb592ff1b04bd92`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- Three independent read-only reviews found no remaining code, UI, architecture,
+  financial, security, privacy, persistence, archive, schema, or documentation
+  blocker. Their Mac-handoff insertion and 421px evidence findings were
+  corrected; a proposed Emotion-only Unicode-policy change was reclassified as
+  incompatible with the authoritative cross-cutting saved-vocabulary contract.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- The current `TradePreview.emotion` is the one optional exact emotion on the
+  coherent current review head. Older immutable review versions and unused
+  vocabulary do not compete.
+- Governed reports intentionally consume the full-workspace snapshot. Trade
+  Browser account/date/day/search/facet state does not scope or mutate them.
+- The repository's canonical vocabulary contract currently means NFC,
+  trim/collapsed whitespace, bounded case-folded identity, and C0/C1-control
+  rejection. Strengthening invisible/bidirectional-format policy would require a
+  coordinated writer, restore, all-report, checksum/version, and compatibility
+  slice—not an Emotion-only divergence.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- HOLD native Emotion Patterns acceptance: repeat exact counts/checksum,
+  open/closed neutrality, five/25 progressive controls, stable-ID continuation,
+  saved regrouping/focus, restore equality, offline/lifecycle behavior,
+  VoiceOver, hardware keyboard, 200% Dynamic Type, and 320/421-width layout on a
+  current Mac/iPhone.
+- MED — treat any stronger invisible/bidirectional vocabulary policy as a
+  coordinated cross-cutting contract/version/compatibility decision.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining reports, and native restore/backup
+  acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Compact Trades Filters v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Emotion Patterns v1 handoff above.
+
+Status: verified Compact Trades Filters v1 ·
+updated 2026-07-15
+
+### Historical handoff
 
 task: Deliver Compact Trades Filters v1: shorten the primary iPhone Trades path
 without changing exact card-filter behavior, scope, persistence, reports, or

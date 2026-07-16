@@ -25,6 +25,11 @@ const REPORT_DESTINATIONS = [
     returnLink: "[data-mistake-patterns] > .section-title .report-menu-link",
   },
   {
+    link: "Emotion patterns",
+    target: "#emotion-patterns-title",
+    returnLink: "[data-emotion-patterns] > .section-title .report-menu-link",
+  },
+  {
     link: "Setup breakdown",
     target: "#setup-performance-title",
     returnLink: "[data-setup-performance] > .section-title .report-menu-link",
@@ -108,6 +113,18 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         evidence: attributes(
           "[data-mistake-patterns-trade]",
           "data-mistake-patterns-trade",
+        ),
+      },
+      emotions: {
+        metadata: text("[data-emotion-patterns] .emotion-patterns-meta"),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-emotion-patterns-group-index] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-emotion-patterns-trade]",
+          "data-emotion-patterns-trade",
         ),
       },
       setup: {
@@ -226,14 +243,19 @@ test(
     const mistakeGroup = page.locator(
       '[data-mistake-patterns-group-index="0"]',
     );
+    const emotionGroup = page.locator(
+      '[data-emotion-patterns-group-index="0"]',
+    );
     const setupGroup = page.locator(
       '[data-setup-performance-group-index="0"]',
     );
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
+    await emotionGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
+    await expect(emotionGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
 
     for (const [index, destination] of REPORT_DESTINATIONS.entries()) {
@@ -258,6 +280,7 @@ test(
     await expectUnobscured(menuHeading);
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
+    await expect(emotionGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-navigation-sentinel",
@@ -318,6 +341,65 @@ test(
 );
 
 test(
+  "emotion patterns reports exact current-head counts without outcome metrics",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-emotion-patterns]");
+    await expect(section).toBeVisible();
+    const metadata = section.locator(".emotion-patterns-meta");
+    for (const expected of [
+      "emotion-patterns-report-v1",
+      "d674eceb0d641512f106f9f1c6b37e23fe1a2ecd0d43e54b7e48865fa594adb4",
+      "Current completed review heads",
+      "8 trades of 8 trades",
+      "8 current assignments",
+      "0 pending or draft · 0 completed without a saved emotion",
+    ]) {
+      await expect(metadata).toContainText(expected);
+    }
+    await expect(
+      section.locator("[data-emotion-patterns-group-index] > summary strong")
+        .allTextContents(),
+    ).resolves.toEqual([
+      "Calm",
+      "Focused",
+      "Hesitant",
+      "Impatient",
+      "Patient",
+    ]);
+    await expect(
+      section.locator("[data-emotion-patterns-trade]").evaluateAll((elements) => (
+        elements.map((element) => element.getAttribute("data-emotion-patterns-trade"))
+      )),
+    ).resolves.toEqual([
+      "demo-subject-meta",
+      "demo-subject-aapl",
+      "demo-subject-msft",
+      "demo-subject-amd",
+      "demo-subject-qqq",
+      "demo-subject-spy",
+      "demo-subject-tsla",
+      "demo-subject-nvda",
+    ]);
+    await expect(section.locator("dt").allTextContents()).resolves.not.toContain("Currency");
+    for (const prohibited of ["Cash expectancy", "Wins", "Win rate", "Average R", "Exact net P&L"]) {
+      await expect(section.getByText(prohibited, { exact: true })).toHaveCount(0);
+    }
+    await section.getByText("How this report works", { exact: true }).click();
+    await expect(section).toContainText("counts once in exactly one emotion group");
+    await expect(section).toContainText("never count or performance rank");
+    await expect(section).toContainText("do not read results");
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
   "report navigation and disclosures stay reachable at 320px and 200% text",
   async ({ page, context }) => {
     const externalRequests = logExternalRequests(page);
@@ -372,6 +454,7 @@ test(
     const summaries = page.locator([
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
+      "[data-emotion-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
     ].join(", "));
     for (let index = 0; index < await summaries.count(); index += 1) {
@@ -401,6 +484,8 @@ test(
         "[data-plan-check] *",
         "[data-mistake-patterns]",
         "[data-mistake-patterns] *",
+        "[data-emotion-patterns]",
+        "[data-emotion-patterns] *",
         "[data-setup-performance]",
         "[data-setup-performance] *",
       ].join(", ")))
@@ -449,18 +534,25 @@ test(
     await expect(page.locator(".topbar")).toHaveCSS("position", "static");
     const followedGroup = page.locator('[data-plan-check-group="followed"]');
     const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
+    const emotionGroup = page.locator(
+      '[data-emotion-patterns-group-index="0"]',
+    );
     await followedGroup.locator(":scope > summary").click();
     await mistakeGroup.locator(":scope > summary").click();
+    await emotionGroup.locator(":scope > summary").click();
     await expect(followedGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
+    await expect(emotionGroup).toHaveAttribute("open", "");
 
     const controls = page.locator([
       "a[data-report-target]",
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
+      "[data-emotion-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
       '[data-plan-check-group="followed"][open] .report-trade-action',
       '[data-mistake-patterns-group-index="0"][open] .report-trade-action',
+      '[data-emotion-patterns-group-index="0"][open] .report-trade-action',
     ].join(", "));
     const controlCount = await controls.count();
     expect(controlCount).toBeGreaterThanOrEqual(10);
@@ -496,6 +588,7 @@ test(
         "[data-report-overview]",
         "[data-plan-check]",
         "[data-mistake-patterns]",
+        "[data-emotion-patterns]",
         "[data-setup-performance]",
       ].join(", "))).map((element) => element.scrollWidth - element.clientWidth),
     }));
@@ -528,12 +621,15 @@ test(
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     const planGroup = page.locator('[data-plan-check-group="followed"]');
     const mistakeGroup = page.locator('[data-mistake-patterns-group-index="0"]');
+    const emotionGroup = page.locator('[data-emotion-patterns-group-index="0"]');
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
+    await emotionGroup.locator("summary").click();
     await setupGroup.locator("summary").click();
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
+    await expect(emotionGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await page.locator("[data-plan-check]").evaluate((element) => {
       element.dataset.tradeContinuationSentinel = "preserved";
@@ -596,6 +692,26 @@ test(
     await expect(mistakeDialog).toHaveCount(0);
     await expect(mistakeAction).toBeFocused();
     await expectUnobscured(mistakeAction);
+
+    const emotionAction = page.locator(
+      '[data-emotion-patterns-trade="demo-subject-meta"] .report-trade-action',
+    );
+    await expect(emotionAction).toHaveAccessibleName(
+      "Open META trade for saved emotion Calm — Stock, Demo Brokerage, Jul 8 · Morning",
+    );
+    await emotionAction.click();
+    const emotionDialog = page.getByRole("dialog", {
+      name: /META trade review · Stock · Demo Brokerage · Jul 8 · Morning/u,
+    });
+    await expect(emotionDialog).toBeVisible();
+    await expect(emotionDialog.locator("[data-trade-review-report-context]"))
+      .toHaveText(
+        "Opened from Emotion patterns. This full-workspace report does not use or change your Trades filters.",
+      );
+    await page.keyboard.press("Escape");
+    await expect(emotionDialog).toHaveCount(0);
+    await expect(emotionAction).toBeFocused();
+    await expectUnobscured(emotionAction);
 
     await action.evaluate((element) => {
       const clone = element.cloneNode(true) as HTMLButtonElement;
@@ -673,6 +789,7 @@ test(
 
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
+    await expect(emotionGroup).toHaveAttribute("open", "");
     await expect(setupGroup).toHaveAttribute("open", "");
     await expect(page.locator("[data-plan-check]")).toHaveAttribute(
       "data-trade-continuation-sentinel",

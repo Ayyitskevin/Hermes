@@ -19,6 +19,7 @@ import {
 } from "../application/prepare-trade-review";
 import type { PreparedJournalRestore } from "../application/journal-restore";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
+import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
@@ -170,18 +171,21 @@ describe("browser session user-data restore", () => {
     const destination = new SessionJournalStore();
     try {
       const beforeSnapshot = workspaceSnapshotFromLedger(await source.store.load());
+      const beforeEmotions = buildEmotionPatternsReport(beforeSnapshot);
       const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
+      const afterEmotions = buildEmotionPatternsReport(afterSnapshot);
       const afterMistakes = buildMistakePatternsReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
       expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
 
+      expect(afterEmotions).toEqual(beforeEmotions);
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
       expect(afterMistakes).toEqual(beforeMistakes);
@@ -199,6 +203,24 @@ describe("browser session user-data restore", () => {
       expect(afterMistakes.groups[0]?.evidence[0]).toMatchObject({
         symbol: "NVDA",
         mistake: "Late scale-out",
+      });
+      expect(afterEmotions.metadata).toMatchObject({
+        includedTradeCount: 1,
+        exclusions: {
+          incompleteReview: 0,
+          noEmotionAssigned: 0,
+        },
+      });
+      expect(afterEmotions.groups).toEqual([
+        expect.objectContaining({
+          emotion: "Focused",
+          tradeCount: 1,
+          tradeSubjectIds: [expect.any(String)],
+        }),
+      ]);
+      expect(afterEmotions.groups[0]?.evidence[0]).toMatchObject({
+        symbol: "NVDA",
+        emotion: "Focused",
       });
       expect(afterPlan.metadata.includedTradeCount).toBe(1);
       expect(afterPlan.groups[0]).toMatchObject({

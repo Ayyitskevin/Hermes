@@ -7,6 +7,10 @@ import {
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import {
+  bindEmotionPatternsView,
+  emotionPatternsSection,
+} from "./emotion-patterns-view";
+import {
   bindMistakePatternsView,
   mistakePatternsSection,
 } from "./mistake-patterns-view";
@@ -26,6 +30,7 @@ const REPORT_TARGET_IDS = Object.freeze([
   "performance-summary-title",
   "plan-check-title",
   "mistake-patterns-title",
+  "emotion-patterns-title",
   "setup-performance-title",
   "cumulative-result-title",
 ] as const);
@@ -39,6 +44,7 @@ function reportNavigation(): string {
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
       <li><a class="report-navigation-link" href="#mistake-patterns-title" data-report-target="mistake-patterns-title">Mistake patterns</a></li>
+      <li><a class="report-navigation-link" href="#emotion-patterns-title" data-report-target="emotion-patterns-title">Emotion patterns</a></li>
       <li><a class="report-navigation-link" href="#setup-performance-title" data-report-target="setup-performance-title">Setup breakdown</a></li>
     </ul>
   </nav>`;
@@ -358,6 +364,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
     </section>
     ${planCheckSection(snapshot)}
     ${mistakePatternsSection(snapshot)}
+    ${emotionPatternsSection(snapshot)}
     ${setupPerformanceSection(snapshot)}
   </section>`;
 }
@@ -368,6 +375,7 @@ export function bindReportsView(
 ): void {
   bindReportNavigation(root);
   bindMistakePatternsView(root, snapshot);
+  bindEmotionPatternsView(root, snapshot);
   bindSetupPerformanceView(root, snapshot);
   const planCheck = root.querySelector<HTMLElement>("[data-plan-check]");
   if (planCheck === null) return;

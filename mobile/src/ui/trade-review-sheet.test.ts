@@ -96,6 +96,11 @@ describe("trade review sheet", () => {
       localWorkspace(),
       "mistake-patterns",
     );
+    const emotionHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "emotion-patterns",
+    );
 
     expect(html).toContain(
       "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
@@ -109,6 +114,10 @@ describe("trade review sheet", () => {
       'data-trade-review-report-context="mistake-patterns"',
     );
     expect(mistakeHtml).toContain("Opened from Mistake patterns.");
+    expect(emotionHtml).toContain(
+      'data-trade-review-report-context="emotion-patterns"',
+    );
+    expect(emotionHtml).toContain("Opened from Emotion patterns.");
   });
 
   it("renders complete escaped evidence for one coherent saved review", () => {
@@ -399,6 +408,19 @@ describe("trade review sheet", () => {
     );
     expect(mistakeAction).toContain(
       "Open &lt;AAPL&gt; trade for saved mistake Early entry — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+
+    const emotionAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "emotion-patterns",
+      "saved emotion Focused",
+    );
+    expect(emotionAction).toContain(
+      'data-trade-review-report-source="emotion-patterns"',
+    );
+    expect(emotionAction).toContain(
+      "Open &lt;AAPL&gt; trade for saved emotion Focused — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
 
     expect(() => reportTradeAction(snapshot, "missing", "plan-check")).toThrow(

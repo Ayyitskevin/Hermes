@@ -17,6 +17,7 @@ import {
   type PreparedTradeReview,
   type TradeReviewInput,
 } from "../application/prepare-trade-review";
+import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
 import { SessionJournalStore } from "./session-journal-store";
@@ -251,18 +252,25 @@ describe("browser session trade reviews", () => {
       const beforeMistakes = buildMistakePatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeEmotions = buildEmotionPatternsReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
 
       const edited = await store.commitTradeReviews(batch("setup-edited", [
         review("b", tradeSubjectId, {
           expectedPreviousReviewId: firstHead.id,
           setup: "Pullback",
           mistakes: ["Late scale-out"],
+          emotion: "Calm",
         }),
       ]));
       const after = buildSetupPerformanceReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
       const afterMistakes = buildMistakePatternsReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
+      const afterEmotions = buildEmotionPatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
 
@@ -288,6 +296,14 @@ describe("browser session trade reviews", () => {
         group.mistake,
         group.tradeSubjectIds,
       ])).toEqual([["Late scale-out", [tradeSubjectId]]]);
+      expect(beforeEmotions.groups.map((group) => [
+        group.emotion,
+        group.tradeSubjectIds,
+      ])).toEqual([["Focused", [tradeSubjectId]]]);
+      expect(afterEmotions.groups.map((group) => [
+        group.emotion,
+        group.tradeSubjectIds,
+      ])).toEqual([["Calm", [tradeSubjectId]]]);
     } finally {
       await store.close();
     }
