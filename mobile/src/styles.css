@@ -320,6 +320,10 @@ p { line-height: 1.55; }
 .calendar-day-reflection h3 {
   scroll-margin-top: calc(5.25rem + env(safe-area-inset-top));
 }
+#daily-notes-title,
+[data-daily-entry-heading] {
+  scroll-margin-top: calc(5.25rem + env(safe-area-inset-top));
+}
 .calendar-day-reflection-state {
   color: var(--cyan);
   font: 700 .82rem/1.35 "B612 Mono", monospace;
@@ -482,6 +486,8 @@ p { line-height: 1.55; }
 #calendar-month-title:focus-visible,
 #calendar-day-filter-title:focus-visible,
 #calendar-day-reflection-title:focus-visible,
+#daily-notes-title:focus-visible,
+[data-daily-entry-heading]:focus-visible,
 .form-error[tabindex="-1"]:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;

@@ -257,6 +257,28 @@ does not mark Review Session Coverage. No schema, migration, store command,
 archive/export shape, digest, report, formula, preference, dependency, or
 native source changes.
 
+### Daily-reflection return focus
+
+Daily Reflection Return Focus v1 is the twenty-first bounded Slice D increment
+and the seventeenth derived-only presentation/projection increment. It changes
+no Daily Journal command or stored fact. Every current reflection card rendered
+in Journal carries the canonical ISO date already owned by its current head and
+a programmatically focusable heading. The stable **Daily notes** heading is also
+focusable as a structural fallback.
+
+After direct save, exact-command replay, or known-commit refresh-only recovery,
+the binder uses the successfully prepared command's `isoDate`; after
+preparation it does not reread the mutable date input, revert to the pre-open
+generic default, or substitute authored text or a rotating entry-version ID.
+Journal first redraws from a fresh workspace snapshot, then requires one
+matching card and one matching heading before focusing it. Missing or ambiguous
+structural evidence falls back to **Daily notes**, then the screen, and never
+causes a second persistence call. Calendar-origin reflection and selected-day
+focus retain precedence. Ordinary close returns to its connected trigger, while
+uncertain, stale, blocked, and committed-but-not-refreshed states retain their
+existing modal ownership. No focus identity enters schema v4, SQLite, browser
+session state, exports/restores, archives, digests, reports, or formulas.
+
 ## Daily-journal sequence
 
 ```text
@@ -931,6 +953,11 @@ demo/future read-only behavior, preserved Trade Browser state, direct
 draft/completed continuation, structural post-refresh focus, unchanged Review
 Session Coverage, 44-point actions, and internal/document no-overflow evidence
 at 320px with 200% text.
+Daily Reflection Return Focus coverage adds exact canonical date identities on
+Journal cards/headings, direct create/edit and stale-success return, a successful
+frozen-command replay, committed-refresh-only return, exact-heading absence
+fallback to **Daily notes**, retained cancel/recovery ownership, focus visibility,
+and unchanged calendar-origin behavior without another persistence call.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

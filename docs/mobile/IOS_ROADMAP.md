@@ -53,7 +53,7 @@ under the provisional identifier until that gate is cleared.
   Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
   Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
-  v1, Compact Trades Filters v1, export, and
+  v1, Daily Reflection Return Focus v1, Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -477,6 +477,18 @@ observed plugin/device behavior:
   formula, archive, digest, preference, dependency, or native-source changes.
   Native VoiceOver, keyboard, Dynamic Type, lifecycle, and physical-device
   persistence acceptance remain held.
+- Daily Reflection Return Focus v1 gives every current Journal reflection card
+  an exact date identity and focusable heading. After direct save, exact replay,
+  or confirmed-commit refresh retry, Journal redraws and focus returns to the
+  unique same-date heading from the prepared command, then **Daily notes**, then
+  the screen. Post-refresh focus for generic creation follows its validated
+  prepared date without rereading mutable DOM or reverting to the pre-open
+  default. Calendar-origin precedence,
+  cancel return, and unresolved recovery ownership are unchanged. The slice is
+  presentation-only and adds no persistence, schema, store command, archive,
+  digest, report, formula, preference, dependency, or native source. Native
+  VoiceOver, hardware-keyboard, lifecycle, and Dynamic Type acceptance remain
+  held.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -641,9 +653,10 @@ v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
 v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
 Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
-Reflection Continuation v1, Compact Trades Filters v1,
+Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
+Filters v1,
 matching-runtime local restore, and all eight governed reports are implemented.
-Twenty bounded Slice D increments are implemented in total; the sixteen
+Twenty-one bounded Slice D increments are implemented in total; the seventeen
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade

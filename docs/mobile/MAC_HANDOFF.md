@@ -275,6 +275,19 @@ and an App Store disclosure.
   the newest unused date, an edited entry's date is immutable, and each explicit
   draft/completed save appends one version while one current head remains per
   date. No autosave may occur after accepting discard.
+- In Journal, repeat a direct create, direct edit, exact-command replay, and
+  known-commit refresh-only recovery. After each confirmed refresh, focus must
+  return to the one rebuilt reflection heading whose canonical date equals the
+  prepared command, not to the top of the screen. For generic creation, change
+  the editable date before preparation and confirm the saved date—not the
+  pre-open default—owns focus. Remove or duplicate the exact rebuilt heading in
+  an instrumented candidate and confirm focus falls to **Daily notes**, then the
+  screen if that stable heading is also unavailable, without another write.
+  Ordinary Cancel/Escape/backdrop dismissal must return to the connected trigger;
+  uncertain, stale, blocked, and committed-but-not-refreshed states must retain
+  modal focus. Repeat with VoiceOver, a hardware keyboard, background/foreground,
+  force quit/relaunch, and 200% Dynamic Type at 320 and 421 CSS pixels before
+  marking Daily Reflection Return Focus native acceptance PASS.
 - From Dashboard, open an exact activity date into Trades. Confirm the nested
   **Daily reflection** region states that the record belongs to the whole
   workspace date, remains separate from trade reviews, and does not mark the
@@ -633,6 +646,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Files export/restore/continued writes | status | archive digests + result |
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
+| Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 
     open: <every skipped, blocked, failed, or ambiguous item>
 
@@ -709,6 +723,13 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   row held until the procedure above proves exact selected-date ownership,
   demo/future noninteraction, scope/facet retention, structural focus, unchanged
   Review Session Coverage, and one immutable current head per date.
+- Daily Reflection Return Focus v1 has only Linux/Chromium structural focus and
+  fallback evidence. Native VoiceOver announcement, hardware-keyboard focus,
+  measured sticky-chrome visibility, background/foreground, force-quit/relaunch,
+  two-scene refresh, and 320/421-width 200% Dynamic Type are NOT RUN. Keep native
+  acceptance held until direct save, exact replay, known-commit refresh-only,
+  missing/ambiguous-heading fallback, cancel return, and every unresolved
+  recovery state are observed without a repeated write.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

@@ -1,8 +1,168 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Calendar-Day Reflection Continuation v1 · updated 2026-07-16
+Status: verified Daily Reflection Return Focus v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Daily Reflection Return Focus v1: return post-save Journal focus
+to the exact rebuilt daily-reflection heading identified by the successfully
+prepared command date, with fail-closed structural fallbacks and no persistence,
+schema, report, archive, digest, preference, or financial-definition change.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Every rendered current Journal reflection is validated before markup and owns
+  a canonical ISO-date card identity plus one programmatically focusable,
+  ISO-derived heading identity. The heading's accessible name appends its
+  escaped display date and canonical year, so repeated authored titles and
+  untitled **Daily reflection** entries remain distinguishable. The enclosing
+  article is named by that exact heading.
+- The stable **Daily notes** heading is programmatically focusable. After a
+  direct save, successful replay of a frozen exact command, or refresh-only
+  recovery for a proven commit, Journal redraws before focus resolution. The
+  resolver uses the successfully prepared command's validated `isoDate`, then
+  requires exactly one same-date card and exactly one same-date heading.
+- A missing or ambiguous exact target falls to exactly one **Daily notes**
+  heading, then exactly one screen. Duplicate fallbacks are rejected rather
+  than first-matched. Focus recovery is presentation-only and cannot issue or
+  repeat a persistence command.
+- Generic creation still reads the user's editable date while preparing the
+  command. After preparation, focus never rereads that mutable DOM field or
+  reverts to its pre-open newest-unoccupied default. Existing-entry continuation
+  keeps its immutable date, and no path uses the rotating entry-version ID as
+  presentation identity.
+- Calendar-origin continuation retains first precedence for the same-date
+  reflection/selected-day heading. Connected-trigger cancel return and modal
+  ownership during uncertain, stale, blocked, and committed-but-not-refreshed
+  recovery remain unchanged.
+- Exact and fallback headings use the established safe-area-aware sticky-chrome
+  scroll offset and visible focus outline. Production Chromium proves a
+  changed generic date, date-qualified accessible names, direct create/edit,
+  exact replay, stale-success and committed-refresh return, a missing exact
+  target, ambiguous exact and fallback identities, final screen fallback, no
+  external request, no horizontal overflow, and unobscured focus at 320, 421,
+  and sticky-header 844 CSS pixels with 200% text.
+- The restore-continuation journey now asserts the rebuilt restored entry's
+  canonical card/heading identity and focus instead of the superseded generic
+  screen return. Its archive, immutable history, and successor checks are
+  unchanged.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
+  cover twenty-one bounded Slice D increments, seventeen derived-only
+  presentation/projection increments, and the same four write-capable
+  exceptions: Durable Daily Journal, Report Trade Continuation, Dashboard
+  Recent Trade Continuation, and Calendar-Day Reflection Continuation.
+- No schema, migration, store command, Daily Journal preparation/commit
+  algorithm, export/restore shape, archive or digest input, governed report
+  version/checksum/definition, formula, preference, dependency, native source,
+  credential, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 688 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npx playwright test e2e/daily-journal.spec.ts — exit 0; all 9
+  Daily Journal journeys passed after final hardening. The changed-date,
+  exact-replay, sticky-width, and ambiguity journey also passed 1/1 in focused
+  execution.
+- cd mobile && npx playwright test e2e/user-data-restore.spec.ts --grep
+  "restores a daily draft" — exit 0; the affected restore-continuation journey
+  passed after migrating its focus assertion.
+- cd mobile && npm run test:e2e — exit 0; all 73 production-Chromium journeys
+  passed. An earlier 72/73 run exposed only the superseded restore screen-focus
+  assertion; the affected journey and then the complete suite passed after that
+  evidence was corrected.
+- cd mobile && npm run build — exit 0; Vite transformed 78 modules. The existing
+  >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  1c823721b2b472f8b6ceb1166af363303af5b0771a554f28d922cd0091cb9df0.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --exit-code -- mobile/ios mobile/package-lock.json and git diff
+  --check — exit 0; no tracked native/lock drift or whitespace errors.
+- Independent product, technical, UX/accessibility, and skeptical source
+  reviews passed after closing the non-discriminating editable-date assertion,
+  date-less accessible name, sticky-width evidence, and ambiguous fallback
+  gaps. The final reviews found no open P0-P3 issue.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `JournalWorkspaceSnapshot.dailyJournal` remains the coherent canonical
+  current-head projection with one validated head per workspace-local date.
+- The successfully prepared Daily Journal command remains the sole owner of the
+  saved ISO date, normalized content, immutable versioning, optimistic head,
+  and idempotent submission identity. Focus consumes that result only after a
+  confirmed commit and successful refresh.
+- Daily reflections remain whole-workspace-date records. Account/activity/day
+  scope, query, and all eight exact facets neither alter their write identity
+  nor create separate reflections.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, SQLCipher, Keychain, or
+  physical-iPhone evidence.
+
+open:
+
+- HOLD native Daily Reflection Return Focus acceptance: repeat direct create,
+  changed-date generic create, edit, exact-command replay, known-commit
+  refresh-only recovery, missing/ambiguous structural fallback, ordinary
+  cancel, and every unresolved recovery state with VoiceOver, hardware keyboard,
+  background/foreground, force-quit/relaunch, two-scene races, measured sticky
+  chrome, and 320/421-width 200% Dynamic Type. Prove one write and the same
+  prepared-date current head after each accepted save.
+- HOLD native Calendar-Day Reflection Continuation, Review Queue Focus, Exact
+  Setup Facet, Dashboard Recent Trade Continuation, and Review Session Coverage
+  acceptance; their detailed procedures remain in historical handoffs and the
+  Mac checklist. Browser evidence does not satisfy those native rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit Exact Scoped Activity-Day Stepper v1 as the next bounded,
+  persistence-neutral product slice after publication.
+
+## Prior milestone — Calendar-Day Reflection Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Daily Reflection Return Focus v1 handoff above.
+
+Status: verified Calendar-Day Reflection Continuation v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Calendar-Day Reflection Continuation v1: continue the exact
 whole-workspace Daily Journal record from the selected activity-day card without

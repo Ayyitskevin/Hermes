@@ -309,7 +309,12 @@ export function validateDailyJournalPreview(entry: DailyJournalPreview): void {
 function focusAfterDailyJournalRefresh(
   root: HTMLElement,
   calendarOriginDate: string | null,
+  savedIsoDate: string | null = null,
 ): void {
+  const focusTarget = (target: HTMLElement): void => {
+    target.scrollIntoView?.({ behavior: "auto", block: "start" });
+    target.focus({ preventScroll: true });
+  };
   if (calendarOriginDate !== null) {
     const card = Array.from(
       root.querySelectorAll<HTMLElement>("[data-calendar-day-filter]"),
@@ -318,12 +323,36 @@ function focusAfterDailyJournalRefresh(
       ?? card?.querySelector<HTMLElement>("#calendar-day-filter-title")
       ?? null;
     if (target !== null) {
-      target.scrollIntoView?.({ behavior: "auto", block: "start" });
-      target.focus({ preventScroll: true });
+      focusTarget(target);
       return;
     }
   }
-  root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+  if (savedIsoDate !== null) {
+    const exactDate = validateDailyJournalIsoDate(savedIsoDate);
+    const cards = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-daily-entry-card]"),
+    ).filter((candidate) => candidate.dataset.dailyEntryCard === exactDate);
+    if (cards.length === 1) {
+      const headings = Array.from(
+        cards[0]?.querySelectorAll<HTMLElement>("[data-daily-entry-heading]") ?? [],
+      ).filter((candidate) => candidate.dataset.dailyEntryHeading === exactDate);
+      if (headings.length === 1 && headings[0] !== undefined) {
+        focusTarget(headings[0]);
+        return;
+      }
+    }
+    const dailyNotes = Array.from(
+      root.querySelectorAll<HTMLElement>("#daily-notes-title"),
+    );
+    if (dailyNotes.length === 1 && dailyNotes[0] !== undefined) {
+      focusTarget(dailyNotes[0]);
+      return;
+    }
+  }
+  const screens = Array.from(root.querySelectorAll<HTMLElement>("#screen"));
+  if (screens.length === 1 && screens[0] !== undefined) {
+    screens[0].focus({ preventScroll: true });
+  }
 }
 
 export function bindDailyJournalActions(
@@ -486,6 +515,7 @@ export function bindDailyJournalActions(
       let conflictIsoDate: string | null = null;
       let latestCandidate: DailyJournalPreview | null = null;
       let uncertainPrepared: PreparedDailyJournalEntry | null = null;
+      let committedIsoDate: string | null = null;
       let attemptedState: "draft" | "completed" = entry?.state ?? "draft";
       setBackgroundInert(true);
       heading.focus({ preventScroll: true });
@@ -632,7 +662,7 @@ export function bindDailyJournalActions(
             await refresh("Journal reloaded after the saved daily reflection could not refresh.");
             backdrop.remove();
             setBackgroundInert(false);
-            focusAfterDailyJournalRefresh(root, calendarOriginDate);
+            focusAfterDailyJournalRefresh(root, calendarOriginDate, committedIsoDate);
           } catch {
             showCommittedRefreshFailure();
           }
@@ -655,6 +685,7 @@ export function bindDailyJournalActions(
         try {
           await application.commitDailyJournalSafely(prepared);
           committed = true;
+          committedIsoDate = prepared.isoDate;
           uncertainPrepared = null;
         } catch (caught) {
           const failureKind = dailyJournalSaveFailureKind(caught);
@@ -673,7 +704,7 @@ export function bindDailyJournalActions(
           await refresh("Journal reloaded after confirming the exact daily reflection save.");
           backdrop.remove();
           setBackgroundInert(false);
-          focusAfterDailyJournalRefresh(root, calendarOriginDate);
+          focusAfterDailyJournalRefresh(root, calendarOriginDate, prepared.isoDate);
         } catch {
           showCommittedRefreshFailure();
         }
@@ -790,6 +821,7 @@ export function bindDailyJournalActions(
           status.textContent = "Saving daily reflection on device";
           await application.commitDailyJournalSafely(prepared);
           committed = true;
+          committedIsoDate = prepared.isoDate;
           uncertainPrepared = null;
           status.textContent = "Daily reflection saved; refreshing journal";
           try {
@@ -801,7 +833,7 @@ export function bindDailyJournalActions(
           saving = false;
           backdrop.remove();
           setBackgroundInert(false);
-          focusAfterDailyJournalRefresh(root, calendarOriginDate);
+          focusAfterDailyJournalRefresh(root, calendarOriginDate, prepared.isoDate);
         } catch (caught) {
           const failureKind = dailyJournalSaveFailureKind(caught);
           if (failureKind === "uncertain") {

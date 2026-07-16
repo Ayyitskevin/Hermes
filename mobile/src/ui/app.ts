@@ -22,6 +22,7 @@ import {
 import {
   bindDailyJournalActions,
   dailyJournalAction,
+  validateDailyJournalPreview,
   workspaceTodayIsoDate,
 } from "./daily-journal-sheet";
 import {
@@ -293,13 +294,14 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
     </article>
     ${reviewQueueSection(snapshot)}
     <section aria-labelledby="daily-notes-title">
-      <div class="section-title"><h2 id="daily-notes-title">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
+      <div class="section-title"><h2 id="daily-notes-title" tabindex="-1">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
       <article class="card daily-journal-intro">
         <div><p class="card-label">DAY-LEVEL PROCESS</p><h3>Reflect beyond individual trades</h3><p>${escapeHtml(dailyModeCopy)}</p></div>
         ${dailyAction}
       </article>
       <div class="journal-list">
         ${snapshot.dailyJournal.map((entry) => {
+          validateDailyJournalPreview(entry);
           const session = snapshot.calendar.find((candidate) => candidate.isoDate === entry.isoDate);
           const context = session === undefined
             ? "No executions recorded"
@@ -308,8 +310,10 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
           const score = entry.processScorePct === null
             ? ""
             : `<strong aria-label="Self-reported process score ${entry.processScorePct} percent">${entry.processScorePct}% process</strong>`;
-          return `<article class="card journal-note">
-          <div class="journal-note-heading"><div><p class="card-label">${escapeHtml(entry.dateLabel)} · ${escapeHtml(context)}</p><h3>${escapeHtml(entry.title ?? "Daily reflection")}</h3></div>${score}</div>
+          const headingId = `daily-entry-heading-${entry.isoDate}`;
+          const accessibleDateLabel = `${entry.dateLabel}, ${entry.isoDate.slice(0, 4)}`;
+          return `<article class="card journal-note" data-daily-entry-card="${escapeHtml(entry.isoDate)}" aria-labelledby="${escapeHtml(headingId)}">
+          <div class="journal-note-heading"><div><p class="card-label">${escapeHtml(entry.dateLabel)} · ${escapeHtml(context)}</p><h3 id="${escapeHtml(headingId)}" data-daily-entry-heading="${escapeHtml(entry.isoDate)}" tabindex="-1">${escapeHtml(entry.title ?? "Daily reflection")}<span class="sr-only"> · ${escapeHtml(accessibleDateLabel)}</span></h3></div>${score}</div>
           <div class="daily-entry-meta"><span class="status-chip review-${entry.state}">${escapeHtml(entry.state)}</span>${emotion}</div>
           <p class="daily-entry-note">${entry.note.length === 0 ? "No written note." : escapeHtml(entry.note)}</p>
           <div class="tag-row">${entry.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>

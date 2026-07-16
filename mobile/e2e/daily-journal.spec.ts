@@ -7,6 +7,30 @@ import { parseJournalArchive } from "../src/application/journal-archive";
 const BASE_ORIGIN = "http://127.0.0.1:4173";
 const ONBOARDING_KEY = "hermes.journal.onboarding.v2";
 
+function journalDateLabel(isoDate: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${isoDate}T12:00:00.000Z`));
+}
+
+function journalHeadingDateLabel(isoDate: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${isoDate}T12:00:00.000Z`));
+}
+
+function previousIsoDate(isoDate: string): string {
+  const date = new Date(`${isoDate}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
 async function establishLocalJournal(page: Page): Promise<void> {
   await page.addInitScript((key) => window.localStorage.setItem(key, "complete"), ONBOARDING_KEY);
   await page.goto("/");
@@ -83,12 +107,7 @@ test("daily reflection creates, validates, completes, and returns focus without 
   await dialog.locator("#daily-entry-score").fill("88");
   await dialog.locator("#daily-entry-tags").fill("Patient, No trade");
   const firstDate = await dialog.locator("#daily-entry-date").inputValue();
-  const firstDateLabel = new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(`${firstDate}T12:00:00.000Z`));
+  const firstDateLabel = journalDateLabel(firstDate);
 
   const pending = await dialog.getByRole("button", { name: "Save draft" }).evaluate((element) => {
     (element as HTMLButtonElement).click();
@@ -113,17 +132,35 @@ test("daily reflection creates, validates, completes, and returns focus without 
   await expect(card).toContainText("draft");
   await expect(card).toContainText("88% process");
   await expect(card).toContainText("No executions recorded");
+  await expect(card).toHaveAttribute("data-daily-entry-card", firstDate);
+  const firstHeading = card.getByRole("heading", { name: "Protected the process" });
+  await expect(firstHeading).toHaveAttribute("data-daily-entry-heading", firstDate);
+  await expect(firstHeading).toHaveAccessibleName(
+    `Protected the process · ${journalHeadingDateLabel(firstDate)}`,
+  );
+  await expect(firstHeading).toBeFocused();
+  await expect(firstHeading).toBeInViewport();
 
   await page.getByRole("button", { name: "Write another date" }).click();
   const anotherDialog = page.getByRole("dialog", { name: "New daily reflection" });
-  const anotherDate = await anotherDialog.locator("#daily-entry-date").inputValue();
+  const anotherDefaultDate = await anotherDialog.locator("#daily-entry-date").inputValue();
+  const anotherDate = previousIsoDate(anotherDefaultDate);
   expect(anotherDate).not.toBe(firstDate);
+  await anotherDialog.locator("#daily-entry-date").fill(anotherDate);
+  await expect(anotherDialog.locator("#daily-entry-date")).toHaveValue(anotherDate);
   await anotherDialog.locator("#daily-entry-note").fill("No setup met the plan.");
   await anotherDialog.getByRole("button", { name: "Save draft" }).click();
   await expect(anotherDialog).toHaveCount(0);
   await expect(page.locator(".journal-note")).toHaveCount(2);
-  await expect(page.locator(".journal-note").filter({ hasText: "No setup met the plan." }))
-    .toBeVisible();
+  const anotherCard = page.locator(".journal-note").filter({ hasText: "No setup met the plan." });
+  await expect(anotherCard).toBeVisible();
+  await expect(anotherCard).toHaveAttribute("data-daily-entry-card", anotherDate);
+  const anotherHeading = anotherCard.getByRole("heading", { name: "Daily reflection" });
+  await expect(anotherHeading).toHaveAccessibleName(
+    `Daily reflection · ${journalHeadingDateLabel(anotherDate)}`,
+  );
+  await expect(anotherHeading).toBeFocused();
+  await expect(page.locator(`[data-daily-entry-card="${anotherDefaultDate}"]`)).toHaveCount(0);
 
   const edit = card.getByRole("button", { name: /Edit daily reflection for/u });
   await edit.click();
@@ -151,7 +188,218 @@ test("daily reflection creates, validates, completes, and returns focus without 
   await expect(completed).toContainText(
     "Stayed patient; no setup met the plan.",
   );
+  await expect(completed).toHaveAttribute("data-daily-entry-card", immutableDate);
+  const completedHeading = completed.getByRole("heading", {
+    name: `Daily reflection · ${journalHeadingDateLabel(immutableDate)}`,
+  });
+  await expect(completedHeading).toHaveAttribute("data-daily-entry-heading", immutableDate);
+  await expect(completedHeading).toBeFocused();
+  await expect(completedHeading).toBeInViewport();
+});
+
+test("an uncertain exact daily save returns focus to its prepared Journal date", async ({ page, context }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      (url.protocol === "http:" || url.protocol === "https:")
+      && url.origin !== BASE_ORIGIN
+    ) externalRequests.push(request.url());
+  });
+  await establishLocalJournal(page);
+  await context.setOffline(true);
+
+  await page.getByRole("button", { name: "Write daily reflection" }).click();
+  const dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const isoDate = await dialog.locator("#daily-entry-date").inputValue();
+  await dialog.locator("#daily-entry-headline").fill("Exact retry returns here");
+  await dialog.locator("#daily-entry-note").fill(
+    "The frozen command should rebuild Journal and return to this exact date.",
+  );
+
+  await page.evaluate(() => {
+    const originalNow = Date.now.bind(Date);
+    let failuresRemaining = 2;
+    document.documentElement.dataset.dailyReturnFocusClockFailures = "0";
+    Object.defineProperty(Date, "now", {
+      configurable: true,
+      value: () => {
+        const stack = new Error().stack ?? "";
+        if (
+          failuresRemaining > 0
+          && /commitDailyJournal(?:Entry|Safely)/u.test(stack)
+        ) {
+          failuresRemaining -= 1;
+          const root = document.documentElement;
+          root.dataset.dailyReturnFocusClockFailures = String(
+            Number(root.dataset.dailyReturnFocusClockFailures ?? "0") + 1,
+          );
+          throw new Error("injected exact-retry response loss");
+        }
+        return originalNow();
+      },
+    });
+  });
+
+  await dialog.getByRole("button", { name: "Complete reflection" }).click();
+  const error = dialog.locator("#daily-entry-error");
+  const exactRetry = dialog.getByRole("button", { name: "Retry this exact save" });
+  await expect(error).toContainText("retry the same save");
+  await expect(error).toBeFocused();
+  await expect.poll(() => page.evaluate(() => (
+    document.documentElement.dataset.dailyReturnFocusClockFailures
+  ))).toBe("2");
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  await exactRetry.click();
+  await expect(dialog).toHaveCount(0);
+  const card = page.locator(`[data-daily-entry-card="${isoDate}"]`);
+  await expect(card).toContainText("Exact retry returns here");
+  await expect(card).toContainText("completed");
+  const heading = card.getByRole("heading", { name: "Exact retry returns here" });
+  await expect(heading).toHaveAttribute("data-daily-entry-heading", isoDate);
+  await expect(heading).toHaveAccessibleName(
+    `Exact retry returns here · ${journalHeadingDateLabel(isoDate)}`,
+  );
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  const exactFocusEvidence = await heading.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const topbar = document.querySelector<HTMLElement>(".topbar")?.getBoundingClientRect();
+    const tabbar = document.querySelector<HTMLElement>(".tabbar")?.getBoundingClientRect();
+    const card = element.closest<HTMLElement>("[data-daily-entry-card]");
+    return {
+      top: bounds.top,
+      bottom: bounds.bottom,
+      topbarBottom: topbar?.bottom ?? 0,
+      tabbarTop: tabbar?.top ?? window.innerHeight,
+      documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      cardOverflow: card === null ? null : card.scrollWidth - card.clientWidth,
+    };
+  });
+  expect(exactFocusEvidence.top, JSON.stringify(exactFocusEvidence))
+    .toBeGreaterThanOrEqual(exactFocusEvidence.topbarBottom - 1);
+  expect(exactFocusEvidence.bottom, JSON.stringify(exactFocusEvidence))
+    .toBeLessThanOrEqual(exactFocusEvidence.tabbarTop + 1);
+  expect(exactFocusEvidence.documentOverflow, JSON.stringify(exactFocusEvidence))
+    .toBeLessThanOrEqual(1);
+  expect(exactFocusEvidence.cardOverflow, JSON.stringify(exactFocusEvidence))
+    .toBeLessThanOrEqual(1);
+  await expect(page.locator("#route-announcer")).toContainText(
+    "Journal reloaded after confirming the exact daily reflection save.",
+  );
+
+  await page.getByRole("button", { name: "Write another date" }).click();
+  const fallbackDialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const fallbackDefaultDate = await fallbackDialog.locator("#daily-entry-date").inputValue();
+  const fallbackDate = previousIsoDate(fallbackDefaultDate);
+  await fallbackDialog.locator("#daily-entry-date").fill(fallbackDate);
+  await expect(fallbackDialog.locator("#daily-entry-date")).toHaveValue(fallbackDate);
+  expect(fallbackDate).not.toBe(fallbackDefaultDate);
+  await fallbackDialog.locator("#daily-entry-note").fill(
+    "Use the stable Daily notes heading when the exact rebuilt heading is unavailable.",
+  );
+  await page.evaluate((date) => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        setter.call(this, value);
+        if (this.id !== "screen") return;
+        Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+        Array.from(this.querySelectorAll<HTMLElement>("[data-daily-entry-heading]"))
+          .find((candidate) => candidate.dataset.dailyEntryHeading === date)
+          ?.removeAttribute("data-daily-entry-heading");
+      },
+    });
+  }, fallbackDate);
+  await page.setViewportSize({ width: 844, height: 568 });
+  await fallbackDialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(fallbackDialog).toHaveCount(0);
+  await expect(page.locator(`[data-daily-entry-card="${fallbackDate}"]`)).toContainText(
+    "Use the stable Daily notes heading",
+  );
+  const dailyNotesHeading = page.getByRole("heading", { name: "Daily notes" });
+  await expect(dailyNotesHeading).toBeFocused();
+  await expect(dailyNotesHeading).toBeInViewport();
+  for (const width of [844, 320, 421]) {
+    await page.setViewportSize({ width, height: 568 });
+    await dailyNotesHeading.evaluate((element) => {
+      element.scrollIntoView({ behavior: "auto", block: "start" });
+      element.focus({ preventScroll: true });
+    });
+    const fallbackFocusEvidence = await dailyNotesHeading.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const topbar = document.querySelector<HTMLElement>(".topbar")?.getBoundingClientRect();
+      const tabbar = document.querySelector<HTMLElement>(".tabbar")?.getBoundingClientRect();
+      return {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        topbarBottom: topbar?.bottom ?? 0,
+        tabbarTop: tabbar?.top ?? window.innerHeight,
+        documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+    expect(fallbackFocusEvidence.top, `${width}px: ${JSON.stringify(fallbackFocusEvidence)}`)
+      .toBeGreaterThanOrEqual(fallbackFocusEvidence.topbarBottom - 1);
+    expect(fallbackFocusEvidence.bottom, `${width}px: ${JSON.stringify(fallbackFocusEvidence)}`)
+      .toBeLessThanOrEqual(fallbackFocusEvidence.tabbarTop + 1);
+    expect(
+      fallbackFocusEvidence.documentOverflow,
+      `${width}px: ${JSON.stringify(fallbackFocusEvidence)}`,
+    ).toBeLessThanOrEqual(1);
+  }
+
+  await page.getByRole("button", { name: "Write another date" }).click();
+  const ambiguousDialog = page.getByRole("dialog", { name: "New daily reflection" });
+  const ambiguousDate = await ambiguousDialog.locator("#daily-entry-date").inputValue();
+  await ambiguousDialog.locator("#daily-entry-note").fill(
+    "Fall through to the screen when rebuilt focus evidence is ambiguous.",
+  );
+  await page.evaluate((date) => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        setter.call(this, value);
+        if (this.id !== "screen") return;
+        Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+        const exactCard = Array.from(
+          this.querySelectorAll<HTMLElement>("[data-daily-entry-card]"),
+        ).find((candidate) => candidate.dataset.dailyEntryCard === date);
+        const exactHeading = Array.from(
+          exactCard?.querySelectorAll<HTMLElement>("[data-daily-entry-heading]") ?? [],
+        ).find((candidate) => candidate.dataset.dailyEntryHeading === date);
+        exactHeading?.insertAdjacentElement("afterend", exactHeading.cloneNode(true) as Element);
+        const dailyNotes = this.querySelector<HTMLElement>("#daily-notes-title");
+        dailyNotes?.insertAdjacentElement("afterend", dailyNotes.cloneNode(true) as Element);
+      },
+    });
+  }, ambiguousDate);
+  await ambiguousDialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(ambiguousDialog).toHaveCount(0);
+  await expect(page.locator(`[data-daily-entry-card="${ambiguousDate}"]`).first()).toContainText(
+    "Fall through to the screen",
+  );
   await expect(page.locator("#screen")).toBeFocused();
+  expect(externalRequests).toEqual([]);
 });
 
 test("calendar day continues the exact workspace reflection without changing trade-browser state or review coverage", async ({ page }) => {
@@ -616,6 +864,8 @@ test("an uncertain daily reflection retries the exact command and enters stale r
   await expect(finalCard).toContainText(localDraft.note);
   await expect(finalCard).toContainText("completed");
   await expect(finalCard).toContainText("94% process");
+  await expect(finalCard).toHaveAttribute("data-daily-entry-card", isoDate);
+  await expect(finalCard.getByRole("heading", { name: localDraft.headline })).toBeFocused();
 
   await page.getByRole("button", { name: "More", exact: true }).click();
   const exportAction = page.locator("#user-data-export");
@@ -971,7 +1221,11 @@ test("a proven daily reflection commit retries only the failed journal refresh",
   );
   await expect(card).toContainText("completed");
   await expect(card).toContainText("91% process");
-  await expect(page.locator("#screen")).toBeFocused();
+  await expect(card).toHaveAttribute("data-daily-entry-card", isoDate);
+  const heading = card.getByRole("heading", { name: "Commit proven before refresh" });
+  await expect(heading).toHaveAttribute("data-daily-entry-heading", isoDate);
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
 
   await page.getByRole("button", { name: "More", exact: true }).click();
   const exportAction = page.locator("#user-data-export");

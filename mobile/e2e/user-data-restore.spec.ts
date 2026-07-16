@@ -253,7 +253,12 @@ test("restores a daily draft offline, continues its immutable history, and resto
     await editor.locator("#daily-entry-tags").fill("Patient, Recovery verified");
     await editor.getByRole("button", { name: "Complete reflection" }).click();
     await expect(page.locator("#route-announcer")).toContainText("saved on device.");
-    await expect(page.locator("#screen")).toBeFocused();
+    await expect(restoredDaily).toHaveAttribute("data-daily-entry-card", dailyDate);
+    const continuedHeading = restoredDaily.getByRole("heading", {
+      name: "Recovery checkpoint",
+    });
+    await expect(continuedHeading).toHaveAttribute("data-daily-entry-heading", dailyDate);
+    await expect(continuedHeading).toBeFocused();
 
     const completedDaily = page.locator(".journal-note").filter({
       hasText: "Recovery checkpoint",

@@ -167,9 +167,22 @@ submission-ready product:
   account/date/day scope, query, and all eight exact facets. A daily reflection
   belongs to the whole workspace date and never marks its trading session
   reviewed. No schema, store command, report, formula, archive, digest,
-  preference, dependency, or native source changed; the sixteen derived-only
-  increments, schema v4, five tabs, ten report targets, and eight governed
-  reports remain unchanged.
+  preference, dependency, or native source changed; the sixteen earlier
+  derived-only increments, schema v4, five tabs, ten report targets, and eight
+  governed reports remained unchanged in that slice.
+- Daily Reflection Return Focus v1 is the twenty-first bounded Slice D
+  increment and the seventeenth derived-only presentation increment. Every
+  current Journal reflection card now owns its canonical date identity and a
+  programmatically focusable heading. After a direct save, exact-command replay,
+  or confirmed-commit refresh retry redraws Journal, focus returns to the unique
+  rebuilt heading for the date captured by the prepared command, then to the
+  stable **Daily notes** heading, then the screen. Post-refresh focus never
+  rereads the mutable date field or reverts to its pre-open default; it uses the
+  validated date already captured by the prepared command, not the rotating
+  entry-version ID.
+  Calendar-origin focus, ordinary cancel return, and unresolved recovery
+  ownership remain unchanged. No persistence, schema, store command, archive,
+  digest, report, formula, preference, dependency, or native source changed.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
