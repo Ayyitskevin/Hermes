@@ -111,6 +111,24 @@ and an App Store disclosure.
 - Retry the same manual submission during an interrupted/double-tap scenario and
   confirm only one execution and one projection generation are created. Enter a
   genuinely identical second fill separately and confirm it is retained.
+- Before saving a manual fill, repeat **Review execution** with invalid account,
+  symbol, decimal, time-zone, and UTC-offset inputs. For each failure, record
+  that the unchanged field-specific inline alert is announced and visibly
+  focused inside the sheet, every authored control value remains exact, the
+  form and modal keep ownership, the background remains inert, and review/save
+  stays unavailable. Confirm the sheet keeps its one open-time submission ID
+  without creating or rotating another identity and performs no commit, SQLite,
+  or network work. Correct the value and verify the unchanged review/save path;
+  then separately verify Cancel, Escape, close-button, and backdrop return to
+  their exact connected trigger. Repeat with VoiceOver, hardware and onscreen
+  keyboards and safe areas at 320- and 421-point widths with 200% Dynamic Type.
+  While the originating scene remains alive, repeat background/foreground and
+  two-scene checks and preserve its exact values, modal, focus, and one identity.
+  Record whether the inner sheet alone scrolls to keep the alert and adjacent
+  keyboard targets visible; neither the window nor backdrop may scroll. Then
+  force quit after a failed attempt and relaunch: no execution, command, or
+  transient form/modal/alert/focus/identity state may return. Opening Manual
+  Entry must create a fresh sheet with a fresh open-time identity.
 - Simulate a committed SQLite transaction whose bridge response never reaches
   the WebView, terminate the app, and relaunch. Confirm startup reports the
   already-saved fill, acknowledges its encrypted v2 command record only after
@@ -681,6 +699,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
+| Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -759,6 +778,21 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   until direct save, exact replay, known-commit refresh-only, exact-trigger
   dismissal, missing/duplicate-heading fallback, malformed-origin rejection,
   and every unresolved recovery state are observed without a repeated write.
+- Manual Entry Validation Focus v1 has only Linux/Chromium focus, geometry,
+  value-retention, storage/request-neutrality, correction, and dismissal
+  evidence. Native VoiceOver announcement/order, hardware- and onscreen-keyboard
+  focus, safe-area/chrome positioning, live-scene background/foreground and
+  two-scene coordination, force-quit/relaunch, SQLite observation, and
+  320/421-width 200% Dynamic Type are NOT RUN. Keep native acceptance held until
+  invalid account, symbol, decimal, time-zone, and offset cases preserve every
+  authored value, form/modal ownership, inert background, unavailable
+  review/save, the single open-time submission identity, and exact-trigger
+  return while the originating scene remains alive and the focused alert stays
+  visible through inner-sheet-only scrolling. Correction must reach the
+  unchanged save path without any failed-attempt commit, SQLite, or network
+  work. A separate force-quit/relaunch must restore no execution, command, or
+  transient UI state; reopening Manual Entry must create a fresh sheet and fresh
+  open-time identity.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

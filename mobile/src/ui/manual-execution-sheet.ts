@@ -70,7 +70,7 @@ function sheetTemplate(
           <label>Workspace currency<input id="manual-currency" name="currency" type="text" maxlength="3" value="${escapeHtml(snapshot.currencyCode)}" autocapitalize="characters" ${lockWorkspace ? "readonly" : ""} required /></label>
         </div>
         <p class="helper-text">The IANA time zone resolves local time. Add a UTC offset only when a daylight-saving clock hour occurs twice.</p>
-        <p class="form-error" id="manual-entry-error" role="alert" hidden></p>
+        <p class="form-error" id="manual-entry-error" role="alert" tabindex="-1" hidden></p>
         <div class="quick-actions">
           <button class="secondary-button" type="button" data-manual-close>Cancel</button>
           <button class="primary-button" type="submit">Review execution</button>
@@ -235,8 +235,10 @@ export function bindManualExecutionActions(
           review.querySelector<HTMLElement>("#manual-review-title")?.focus();
           save.focus();
         } catch (error) {
-          prepareError.hidden = false;
           prepareError.textContent = error instanceof Error ? error.message : "Check the execution values.";
+          prepareError.hidden = false;
+          prepareError.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+          prepareError.focus({ preventScroll: true });
         }
       });
       save.addEventListener("click", async () => {

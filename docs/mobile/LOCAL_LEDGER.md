@@ -332,6 +332,33 @@ unchanged. No focus or origin identity enters schema v4, SQLite, browser
 session state, export/restore, archives, digests, governed reports, formulas,
 routes, preferences, dependencies, or native source.
 
+### Manual-entry validation focus
+
+Manual Entry Validation Focus v1 is the twenty-fourth bounded Slice D increment
+and the twentieth derived-only presentation/focus increment. It adds no ledger
+fact, revision, receipt, preparation algorithm, command, or store behavior. Raw
+authored values remain owned by the manual form DOM; the sheet binder still
+owns its single submission ID plus prepared, saving, and uncertain state; and
+durable execution truth remains owned by JournalApplication and JournalStore.
+The inline error, focus target, and sheet scroll position are transient UI
+feedback only.
+
+The sheet still creates one submission ID when it opens. If **Review
+execution** synchronously fails existing normalization, timestamp/decimal, or
+preparation validation, Hermes preserves every authored value and modal
+ownership, leaves review/save unavailable, exposes the unchanged field-specific
+message in `#manual-entry-error`, and centers and focuses that alert. The
+failure creates or rotates no additional identity and reaches no commit, store,
+SQLite, browser persistence, export/restore, archive, digest, report, formula,
+or network path.
+
+Correction continues through the unchanged preparation, review, persistence,
+and recovery contract. Exact-trigger dismissal return is unchanged. Production
+Chromium proves the focus, narrow-sheet geometry, value retention,
+storage/request neutrality, correction, and dismissal contract; native
+VoiceOver, hardware and onscreen keyboards, safe areas, lifecycle, and
+320/421-width 200% Dynamic Type remain separate held evidence.
+
 ## Daily-journal sequence
 
 ```text
@@ -851,7 +878,10 @@ tamper detection, offset-to-IANA matching, DST gap/fold handling, fee
 precision/range limits, exact two-fill P&L, schema-backed response-loss
 reconciliation, replay idempotency, failed-close atomicity, manual/CSV
 asset-class and receipt ownership separation, save-time dismissal guards,
-two-step browser review, focus restoration, and manual-only receipt truthfulness.
+two-step browser review, focus restoration, pre-review validation-alert focus,
+320/421-width 200% inner-sheet centering without backdrop/window scroll,
+authored-value retention, storage/request neutrality, correction, exact-trigger
+dismissal return, and manual-only receipt truthfulness.
 Slice B coverage adds v2→v3 upgrade/replay, immutable one-link review heads,
 tamper detection, idempotent retry, stale-head rejection, all-or-nothing batch
 rollback, stable-subject survival, exact metric reconciliation, editable review

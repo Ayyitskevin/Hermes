@@ -1,8 +1,167 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Dashboard Review Return Focus v1 · updated 2026-07-16
+Status: verified Manual Entry Validation Focus v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Manual Entry Validation Focus v1: keep synchronous
+manual-preparation validation feedback visible and focused inside the sheet
+while preserving every authored value, modal ownership, the single open-time
+submission identity, unchanged correction/dismissal paths, and every
+persistence, report, archive, digest, route, preference, and financial
+definition.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- When **Review execution** synchronously fails existing preparation
+  validation, the manual form remains rendered, every authored control value is
+  retained, the screen remains inert behind the modal, and the review/save
+  surface stays unavailable. Existing field-specific copy remains owned by the
+  existing `#manual-entry-error` alert.
+- The alert is now programmatically focusable with `tabindex="-1"`. Hermes
+  unhides it, centers it with `scrollIntoView` inside the independently
+  scrolling sheet, then gives it visible focus without a second scroll. The
+  scoped focus outline is also visible for pointer-triggered programmatic focus,
+  which does not consistently match `:focus-visible`.
+- The sheet still creates one submission ID when it opens. A validation failure
+  creates or rotates no additional identity and calls no commit, store, or
+  network path. Durable execution truth remains owned by JournalApplication and
+  JournalStore; values, alert state, focus, and scroll position remain transient
+  DOM presentation.
+- Correcting the rejected value continues through the unchanged normalization,
+  timestamp/decimal validation, preparation, review, persistence, and recovery
+  path. Cancel, Escape, close-button, and backdrop dismissal retain their exact
+  connected-trigger return behavior.
+- Production Chromium now covers the failure and correction contract at 320
+  and 421 CSS pixels with 200% text: visible focused alert and outline,
+  inner-sheet-only centering, zero horizontal overflow, retained values,
+  retained form/modal/inert ownership, unavailable review/save, adjacent Tab
+  reachability, unchanged local storage, zero requests, successful correction,
+  Save focus, and exact Escape return.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, and
+  this active handoff now cover twenty-four bounded Slice D increments, twenty
+  derived-only presentation/projection increments, and the same four
+  write-capable exceptions. Schema v4, five tabs, ten report targets, and eight
+  governed reports remain unchanged.
+- No migration, new store command, preparation/receipt/recovery contract,
+  execution or review fact, export/restore shape, archive or digest input,
+  governed report version/checksum/cohort/formula, route, preference, preset,
+  dependency, credential, native source, destructive workflow, or public
+  comparative claim changed.
+
+verified:
+
+- Regression-first browser proof — the two impacted journeys initially failed
+  on the missing alert focus target, then passed after the implementation.
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 691 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 78 production-Chromium journeys
+  passed, including all 5 focused Manual Entry journeys.
+- cd mobile && npm run ios:copy — exit 0; Vite transformed 78 modules and copied
+  the production bundle. The existing >500 kB chunk warning remains visible.
+- cd mobile && npm run verify:ios-sync — exit 0 before and after sync; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  cdf2241ebbca72135531a6c0342e7c9e29e8c1d40f233b38946abced30582f15.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- Native/lock drift, documentation structure, and whitespace checks passed.
+  Exactly nine intended files changed; the handoff preserves one current
+  section, thirty-one historical milestone/snapshot markers, and thirty-two
+  complete schema blocks.
+- Final independent product/docs, technical/security, and UX/accessibility
+  reviews found no open P0-P3 issue. The product review's one P2 lifecycle-
+  wording finding was corrected and passed focused re-review.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- Existing preparation validation and field-specific messages remain the sole
+  owners of manual-input acceptance. This slice changes presentation after a
+  synchronous failure; it does not introduce field-level `aria-invalid`
+  mapping or first-invalid-control focus.
+- Manual form controls own raw authored values. The binder closure owns its one
+  submission ID plus prepared, saving, and uncertain state. JournalApplication
+  and JournalStore remain the only durable execution owners.
+- `application.prepareManual()` still runs synchronously after the open-time
+  submission identity exists. Its failure occurs before commit/store/network
+  work; correction resubmits through the same preparation and save path.
+- The existing `#manual-entry-error` owns pre-review validation feedback,
+  `#manual-save-error` owns save failures, and the route announcer owns
+  confirmed success feedback. Account-list load failure remains a separate
+  existing alert path outside this slice.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware/onscreen-keyboard, lifecycle, Dynamic Type, safe-area, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
+  publication before the milestone can be closed.
+- HOLD native Manual Entry Validation Focus acceptance: repeat invalid account,
+  symbol, decimal, time-zone, and offset failures with VoiceOver, hardware and
+  onscreen keyboards, safe areas, 320/421-width 200% Dynamic Type,
+  background/foreground, and two live scenes. While the originating scene
+  remains alive, preserve every value, form/modal/inert ownership, unavailable
+  review/save, the single open-time identity, inner-sheet-only scroll, exact
+  correction, zero failed-attempt commit/SQLite/network work, and exact-trigger
+  return. After a failed attempt, force-quit/relaunch separately: no execution,
+  command, authored form, modal, alert, focus, or open-time identity may be
+  restored, and opening Manual Entry must start a fresh sheet with a fresh
+  identity.
+- HOLD native Dashboard Review Return Focus, Exact Scoped Activity-Day Stepper,
+  Daily Reflection Return Focus, Calendar-Day Reflection Continuation, Review
+  Queue Focus, Exact Setup Facet, Dashboard Recent Trade Continuation, and
+  Review Session Coverage acceptance; browser evidence does not satisfy their
+  Mac/iPhone rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- After this slice is published, hosted CI is exact, and ORACLE filing is
+  verified, stop at the clean boundary; do not begin a subsequent slice.
+
+## Prior milestone — Dashboard Review Return Focus v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Manual Entry Validation Focus v1 handoff above.
+
+Status: verified Dashboard Review Return Focus v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Dashboard Review Return Focus v1: return a confirmed Weekly
 Review Rhythm save to the exact rebuilt Dashboard review heading while
@@ -158,7 +317,7 @@ open:
 ## Prior milestone — Exact Scoped Activity-Day Stepper v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Dashboard Review Return Focus v1 handoff above.
+> Dashboard Review Return Focus v1 historical milestone above.
 
 Status: verified Exact Scoped Activity-Day Stepper v1 · updated 2026-07-16
 

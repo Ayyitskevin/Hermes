@@ -213,6 +213,21 @@ submission-ready product:
   Trades, and Journal queue focus behavior is unchanged. No schema, store
   command, archive, digest, report, formula, route, preference, dependency, or
   native source changed; the same four write-capable exceptions remain.
+- Manual Entry Validation Focus v1 is the twenty-fourth bounded Slice D
+  increment and the twentieth derived-only presentation/focus increment. When
+  **Review execution** synchronously fails the existing preparation validation,
+  Hermes keeps the form and modal ownership, preserves every authored value,
+  leaves review/save unavailable, and moves visible focus to the unchanged
+  field-specific inline alert centered inside the scrolling sheet. The one
+  submission ID is still created when the sheet opens; this failure creates or
+  rotates no additional identity and performs no commit, store, or network
+  work. Corrected review and exact-trigger dismissal retain their existing
+  paths. Production Chromium covers the focus, geometry, value, storage,
+  request, correction, and dismissal contract at 320/421 CSS pixels with 200%
+  text; native VoiceOver, keyboard, safe-area, and Dynamic Type acceptance
+  remains held. No schema, store command, archive, digest, report, formula,
+  route, preference, dependency, or native source changed; the same four
+  write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

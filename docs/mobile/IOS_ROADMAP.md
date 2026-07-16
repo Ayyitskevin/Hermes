@@ -54,8 +54,8 @@ under the provisional identifier until that gate is cleared.
   Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
-  Dashboard Review Return Focus v1,
-  Compact Trades Filters v1, export, and matching-runtime local restore are
+  Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, Compact
+  Trades Filters v1, export, and matching-runtime local restore are
   implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -516,6 +516,22 @@ observed plugin/device behavior:
   archive, digest, report, formula, route, preference, dependency, or native
   source. Native VoiceOver, hardware-keyboard, safe-area, lifecycle,
   multi-scene, and 320/421-width 200% Dynamic Type acceptance remain held.
+- Manual Entry Validation Focus v1 keeps the authored manual form and modal
+  ownership when **Review execution** synchronously fails existing preparation
+  validation. Review/save remains unavailable, the unchanged field-specific
+  message stays in the existing inline alert, and visible programmatic focus
+  moves to that alert after it is centered inside the scrolling sheet. The
+  sheet still creates one submission ID on open; validation focus creates or
+  rotates no additional identity and performs no commit, store, or network
+  work. Correction resumes the unchanged normalization, validation,
+  preparation, review, persistence, and recovery path, while every exact
+  dismissal trigger retains its prior return target. Production Chromium covers
+  values, ownership, focus, narrow reflow, storage/request neutrality,
+  correction, and dismissal. The slice is presentation-only and adds no schema,
+  store command, archive, digest, report, formula, route, preference,
+  dependency, or native source. Native VoiceOver, hardware and onscreen
+  keyboards, safe areas, lifecycle, and 320/421-width 200% Dynamic Type remain
+  held.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -682,11 +698,11 @@ v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
 Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
-Focus v1,
-matching-runtime local restore, and all eight governed reports are implemented.
-Twenty-three bounded Slice D increments are implemented in total; the nineteen
-presentation/projection increments remain derived-only. Durable Daily Journal,
-Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
+Focus v1, Manual Entry Validation Focus v1, matching-runtime local restore, and
+all eight governed reports are implemented. Twenty-four bounded Slice D
+increments are implemented in total; the twenty presentation/projection
+increments remain derived-only. Durable Daily Journal, Report Trade
+Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade
 continuations reuse the existing versioned trade-review path; the calendar-day
 continuation reuses the existing Daily Journal path without changing either

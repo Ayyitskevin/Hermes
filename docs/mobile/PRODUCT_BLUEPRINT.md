@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-three bounded Slice D increments are implemented in the current workspace.
+Twenty-four bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -866,6 +866,29 @@ digest, governed report, formula, route, preference, dependency, or native
 source. Five tabs, ten report targets, eight governed reports, and the same four
 write-capable exceptions remain unchanged.
 
+Manual Entry Validation Focus v1 is the twenty-fourth bounded Slice D increment
+and the twentieth derived-only presentation/focus increment. When **Review
+execution** synchronously fails existing preparation validation, Hermes keeps
+the manual form and modal ownership, preserves every authored control value,
+leaves the review/save surface unavailable, exposes the unchanged field-specific
+message in the existing inline alert, and moves visible programmatic focus to
+that alert. The sheet's single submission ID is still created on open;
+validation focus creates or rotates no additional identity. The failure path
+performs no commit, store, or network work.
+
+Correction and successful review continue through the unchanged normalization,
+timestamp/decimal validation, preparation, review, persistence, and recovery
+paths. Cancel, Escape, close-button, and backdrop dismissal retain their exact
+connected-trigger return. Production Chromium proves visible alert focus,
+inner-sheet centering without backdrop or window scrolling, authored-value and
+modal ownership retention, unavailable review/save controls, storage/request
+neutrality, correction, and dismissal at 320/421 CSS pixels with 200% text.
+Native VoiceOver, hardware-keyboard, onscreen-keyboard, safe-area, lifecycle,
+and Dynamic Type acceptance remain held. No schema, store command, archive,
+digest, governed report, formula, route, preference, dependency, or native
+source changed; five tabs, ten report targets, eight governed reports, and the
+same four write-capable exceptions remain unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1020,16 +1043,16 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-twenty-three Slice D increments add Plan Check, governed Setup Breakdown,
+twenty-four Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
-Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1, and
-Dashboard Review Return Focus v1.
-The nineteen presentation/projection increments remain derived-only. Durable
+Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
+Dashboard Review Return Focus v1, and Manual Entry Validation Focus v1.
+The twenty presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path, while Calendar-Day Reflection Continuation
