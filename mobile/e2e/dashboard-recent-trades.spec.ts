@@ -146,8 +146,19 @@ test("duplicate Dashboard symbols keep distinct stable identities and qualified 
   expect(identities.every(({ row, action }) => row !== null && row === action)).toBe(true);
   expect(new Set(identities.map(({ row }) => row)).size).toBe(2);
 
-  for (const session of ["Jul 9 · 10:30 AM", "Jul 8 · 10:30 AM"]) {
-    const action = recentTrades(page).getByRole("button", {
+  const contextPrefix = "Stock · Primary brokerage · ";
+  const contexts = await rows.evaluateAll((elements) => elements.map((element) => (
+    element.querySelector(".trade-row-identity span")?.textContent ?? ""
+  )));
+  expect(contexts[0]).toMatch(/^Stock · Primary brokerage · Jul 9 · /u);
+  expect(contexts[1]).toMatch(/^Stock · Primary brokerage · Jul 8 · /u);
+
+  for (const [index, context] of contexts.entries()) {
+    if (!context.startsWith(contextPrefix)) {
+      throw new Error("The duplicate-symbol row has no exact visible trade context.");
+    }
+    const session = context.slice(contextPrefix.length);
+    const action = rows.nth(index).getByRole("button", {
       name: "Open trade for AAPL Stock, Primary brokerage, " + session,
       exact: true,
     });
