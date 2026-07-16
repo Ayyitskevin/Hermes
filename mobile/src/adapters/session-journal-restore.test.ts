@@ -19,6 +19,7 @@ import {
 } from "../application/prepare-trade-review";
 import type { PreparedJournalRestore } from "../application/journal-restore";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
+import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
@@ -171,6 +172,7 @@ describe("browser session user-data restore", () => {
     const destination = new SessionJournalStore();
     try {
       const beforeSnapshot = workspaceSnapshotFromLedger(await source.store.load());
+      const beforeDirection = buildDirectionMixReport(beforeSnapshot);
       const beforeEmotions = buildEmotionPatternsReport(beforeSnapshot);
       const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
@@ -178,6 +180,7 @@ describe("browser session user-data restore", () => {
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
+      const afterDirection = buildDirectionMixReport(afterSnapshot);
       const afterEmotions = buildEmotionPatternsReport(afterSnapshot);
       const afterMistakes = buildMistakePatternsReport(afterSnapshot);
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
@@ -185,10 +188,20 @@ describe("browser session user-data restore", () => {
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
       expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
 
+      expect(afterDirection).toEqual(beforeDirection);
       expect(afterEmotions).toEqual(beforeEmotions);
       expect(afterPlan).toEqual(beforePlan);
       expect(afterSetup).toEqual(beforeSetup);
       expect(afterMistakes).toEqual(beforeMistakes);
+      expect(afterDirection.metadata.totalTradeCount).toBe(1);
+      expect(afterDirection.groups).toEqual([
+        expect.objectContaining({
+          direction: "long",
+          tradeCount: 1,
+          tradeSubjectIds: [expect.any(String)],
+        }),
+        expect.objectContaining({ direction: "short", tradeCount: 0 }),
+      ]);
       expect(afterMistakes.metadata).toMatchObject({
         includedTradeCount: 1,
         totalAssignmentCount: 1,

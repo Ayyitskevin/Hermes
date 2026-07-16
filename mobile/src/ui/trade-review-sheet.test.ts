@@ -90,6 +90,11 @@ describe("trade review sheet", () => {
   });
 
   it("labels exact report origins without changing the trade or browser scope", () => {
+    const directionHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "direction-mix",
+    );
     const html = tradeReviewSheetTemplate(trade(), localWorkspace(), "plan-check");
     const mistakeHtml = tradeReviewSheetTemplate(
       trade(),
@@ -102,6 +107,10 @@ describe("trade review sheet", () => {
       "emotion-patterns",
     );
 
+    expect(directionHtml).toContain(
+      'data-trade-review-report-context="direction-mix"',
+    );
+    expect(directionHtml).toContain("Opened from Direction mix.");
     expect(html).toContain(
       "&lt;AAPL&gt; trade review · Stock · Demo Brokerage · Jul 1 · Morning",
     );
@@ -396,6 +405,19 @@ describe("trade review sheet", () => {
       "Open &lt;AAPL&gt; trade — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
     expect(action).not.toContain('data-review-trade="subject-1"');
+
+    const directionAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "direction-mix",
+      "the short direction group",
+    );
+    expect(directionAction).toContain(
+      'data-trade-review-report-source="direction-mix"',
+    );
+    expect(directionAction).toContain(
+      "Open &lt;AAPL&gt; trade for the short direction group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
 
     const mistakeAction = reportTradeAction(
       snapshot,

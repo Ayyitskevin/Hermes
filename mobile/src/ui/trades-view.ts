@@ -306,7 +306,7 @@ function scopeSummary(browser: TradeBrowserResult, currency: string): string {
       <strong class="${resultClass(browser.contributionPnl)}">${escapeHtml(signedCurrency(browser.contributionPnl, currency))}</strong>
     </div>
     <p>${countNoun(browser.evidence.length, "contributing trade")} · ${countNoun(browser.allocationCount, "allocation")} · ${countNoun(browser.activityDayCount, "activity day")}. This exact scoped contribution is separate from each card's whole-trade realized-to-date result.</p>
-    <p class="scope-boundary">Dashboard headline metrics, review progress, equity curve, Plan Check, and Setup Breakdown remain whole-workspace.</p>
+    <p class="scope-boundary">Dashboard headline metrics, review progress, equity curve, Direction Mix, Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown remain whole-workspace.</p>
   </article>`;
 }
 

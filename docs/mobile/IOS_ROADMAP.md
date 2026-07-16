@@ -50,8 +50,8 @@ under the provisional identifier until that gate is cleared.
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
-  Patterns v1, Compact Trades Filters v1, export, and matching-runtime local
-  restore are implemented.
+  Patterns v1, Direction Mix v1, Compact Trades Filters v1, export, and
+  matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
   restore; Exact-Command Recovery proves an ambiguous daily save retains and
@@ -237,8 +237,8 @@ Delivered in the current vertical slice:
   completed saves, optional headline/note/emotion/tags/self-reported process
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from performance,
-  Plan Check, Setup Breakdown, Mistake Patterns, and Emotion Patterns
-  analytics.
+  Direction Mix, Plan Check, Setup Breakdown, Mistake Patterns, and Emotion
+  Patterns analytics.
 - Daily Journal Stale-Head Recovery v1 preserves the raw form after a
   deterministic optimistic conflict, disables the obsolete submission, loads
   one fresh local snapshot, and displays its different newer head before the
@@ -339,6 +339,18 @@ Delivered in the current vertical slice:
   and 25 contributors per action. No financial, rate, intensity, rank, causal,
   predictive, advisory, schema, store, archive, or digest-shape change is
   included.
+- Direction Mix v1 is a count-only report over every trade in the current
+  full-workspace projection. Definition `direction-mix-report-v1` is pinned by
+  SHA-256
+  `0a55af9905699cc62746c99b5b4e7dd664588d8b526eefb207e9fb2bb77b3ab2`.
+  It has no exclusions: every unique, valid stable-ID trade appears once in the
+  fixed Long then Short groups, including zero-count groups. Position and review
+  status are validated evidence only and do not change inclusion, grouping, or
+  ordering; authored review content, results, currency, and Trades filters are
+  not consumed. Evidence uses traded date descending then stable subject ID and
+  presentation reveals 25 contributors per action. No financial, percentage,
+  rate, rank, causal, predictive, advisory, schema, store, archive, or
+  digest-shape change is included.
 - Trade Browser Scope v1 derives an all-account or stable single-account view
   over optional inclusive workspace-local allocation/activity dates. Exact
   contribution P&L, trade, allocation, and day counts reconcile from calendar
@@ -347,7 +359,7 @@ Delivered in the current vertical slice:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and all four governed reports intentionally remain whole-workspace.
+  and all five governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -376,8 +388,9 @@ Delivered in the current vertical slice:
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
   stale refresh, report/storage neutrality, 44-point controls, and no overflow
   at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
-- Reports Navigator v1 exposes Performance Summary, Journal Curve, Plan Check,
-  Mistake Patterns, Emotion Patterns, and Setup Breakdown in semantic DOM order.
+- Reports Navigator v1 exposes Performance Summary, Journal Curve, Direction
+  Mix, Plan Check, Mistake Patterns, Emotion Patterns, and Setup Breakdown in
+  semantic DOM order.
   Dashboard enters
   Plan Check directly, every section returns to the menu, and jumps preserve
   opened disclosures while moving focus below measured chrome without animation. At
@@ -391,9 +404,9 @@ Delivered in the current vertical slice:
   fingerprints. This adds no schema, store, archive, digest input, formula,
   checksum, cohort, evidence-order, or pagination change.
 - Report Trade Continuation v1 opens the existing exact trade review/detail
-  sheet in place from every Plan Check, Mistake Patterns, Emotion Patterns, and
-  Setup Breakdown contributor. Stable subject IDs are validated at render and
-  activation; asset
+  sheet in place from every Direction Mix, Plan Check, Mistake Patterns,
+  Emotion Patterns, and Setup Breakdown contributor. Stable subject IDs are
+  validated at render and activation; asset
   class, account, and session disambiguate duplicate symbols; a replaceable
   delegated listener
   covers progressively appended rows and groups. A missing or duplicate
@@ -511,8 +524,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
-v1, Mistake Patterns v1, Emotion Patterns v1, Compact Trades Filters v1,
-matching-runtime local restore, and all four governed reports are implemented.
+v1, Mistake Patterns v1, Emotion Patterns v1, Direction Mix v1, Compact Trades
+Filters v1, matching-runtime local restore, and all five governed reports are
+implemented.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

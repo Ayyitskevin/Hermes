@@ -1,9 +1,135 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Emotion Patterns v1 ·
+Status: verified Direction Mix v1 ·
 updated 2026-07-15
 
 ## Current handoff
+
+task: Deliver governed Direction Mix v1: reconcile every current trade into a
+fixed count-only Long or Short cohort with stable trade evidence, without adding
+outcome interpretation, persistence, schema, archive, or native-readiness
+claims.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- New canonical definition `direction-mix-report-v1` is pinned by SHA-256
+  `0a55af9905699cc62746c99b5b4e7dd664588d8b526eefb207e9fb2bb77b3ab2`.
+  Every current full-workspace projection trade is included exactly once with
+  no exclusions; both fixed groups always exist in Long-then-Short order and
+  their counts must conserve the complete cohort.
+- Direction is the only grouping field. Position and review status are
+  validated evidence only and cannot affect inclusion, grouping, or ordering.
+  Authored review content, result fields, currency, and Trade Browser
+  account/date/day/search/facet state are not consumed.
+- Stable subject IDs must be unique, trimmed, 1–256 code points, and C0/C1-free.
+  Direction, position state, and review state fail closed on unsupported runtime
+  values. Evidence orders by traded date descending then subject ID; report
+  metadata, groups, ID arrays, and evidence are detached and deeply frozen.
+- The report is explicitly count-only: it exposes no P&L, currency, win rate, R,
+  expectancy, percentage, rate, performance rank, causal claim, prediction,
+  trading advice, or behavioral score.
+- Reports places Direction Mix between Journal Curve and Plan Check. The view
+  always shows Long and Short, reveals evidence in pages of at most 25, escapes
+  every external display/identity field, and describes full-workspace scope and
+  neutrality directly in the UI.
+- Every contributor opens the exact stable-ID trade through the existing review
+  sheet with a direction-specific accessible name. Ordinary close returns to
+  the exact trigger; save/refresh returns to the Direction Mix heading after the
+  report rebuild without changing Trades state.
+- Navigation, keyboard/responsive behavior, report fingerprints, session-store
+  restore, review-edit neutrality, Daily Journal process-score neutrality, and
+  Trade Browser scope/facet isolation include Direction Mix.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff now
+  record five governed reports, thirteen Slice D increments, and seven report
+  destinations while keeping every native row NOT RUN.
+- No schema, migration, store command, archive/export shape, digest input,
+  financial formula/version, existing governed-report definition/checksum,
+  native source, credential, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 47 files, 530 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 62 production-Chromium
+  journeys passed, including exact Direction counts/order, fixed zero groups,
+  stable-ID continuation, save-driven heading return, restore equality, report
+  and Trades-filter isolation, keyboard reachability, and 320/421px 200% text.
+- `cd mobile && npm run ios:copy` plus `npm run verify:ios-sync` — exit 0;
+  Vite transformed 70 modules, 6 production files matched the iOS public copy
+  byte-for-byte with SHA-256
+  `879a14b301f45154d4b641e38a66d149edca8bc4350e3f6ebd910709e2cce364`,
+  generated Capacitor identity/SQLite registration and tracked drift passed,
+  and every native evidence row remained NOT RUN.
+- `cd mobile && npm run ios:sync` — exit 0 as a Linux compatibility check;
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods and xcodebuild because neither is installed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `git diff --exit-code -- mobile/ios mobile/package-lock.json` and `git diff
+  --check` — exit 0; no tracked native/lock drift or whitespace errors.
+- Three independent read-only contract, integration, and documentation reviews
+  found no remaining blocker after the evidence-only input contract, exhaustive
+  runtime status validation, and C1-control test gaps were corrected and the
+  checksum was repinned.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- `TradePreview.side` is the canonical exact Long/Short direction of each
+  current projected trade. Direction Mix does not infer direction from
+  executions, results, symbols, setup, or review content.
+- Governed reports intentionally consume the full-workspace snapshot. Trade
+  Browser account/date/day/search/facet state does not scope or mutate them.
+- Position and review status are present solely to identify current evidence
+  state during drill-down; their values never change membership or counts.
+- Browser evidence uses production Chromium. It is not native WKWebView,
+  VoiceOver, hardware-keyboard, second-scene, relaunch, Dynamic Type, SQLCipher,
+  Keychain, or physical-iPhone evidence.
+
+open:
+
+- HOLD native Direction Mix acceptance: repeat the checksum, fixed 6/2 demo
+  counts, full-cohort conservation, 25-row progression, exact-ID continuation,
+  save/refresh focus, restore equality, offline/lifecycle behavior, VoiceOver,
+  hardware keyboard, 200% Dynamic Type, and 320/421-width layout on a current
+  Mac/iPhone.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining reports, and native restore/backup
+  acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Emotion Patterns v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Direction Mix v1 handoff above.
+
+Status: verified Emotion Patterns v1 ·
+updated 2026-07-15
+
+### Historical handoff
 
 task: Deliver governed Emotion Patterns v1: show count-only exact saved-emotion
 patterns with stable trade evidence on iPhone, without adding outcome

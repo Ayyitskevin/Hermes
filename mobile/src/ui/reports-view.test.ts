@@ -151,6 +151,7 @@ describe("reports presentation", () => {
       "reports-navigation-title",
       "performance-summary-title",
       "cumulative-result-title",
+      "direction-mix-title",
       "plan-check-title",
       "mistake-patterns-title",
       "emotion-patterns-title",
@@ -164,12 +165,15 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(6);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(6);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(7);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(7);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
     expect(html.indexOf('href="#cumulative-result-title"')).toBeLessThan(
+      html.indexOf('href="#direction-mix-title"'),
+    );
+    expect(html.indexOf('href="#direction-mix-title"')).toBeLessThan(
       html.indexOf('href="#plan-check-title"'),
     );
     expect(html.indexOf('href="#plan-check-title"')).toBeLessThan(
@@ -182,6 +186,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#setup-performance-title"'),
     );
     expect(html.indexOf("data-report-overview")).toBeLessThan(
+      html.indexOf("data-direction-mix"),
+    );
+    expect(html.indexOf("data-direction-mix")).toBeLessThan(
       html.indexOf("data-plan-check"),
     );
     expect(html.indexOf("data-plan-check")).toBeLessThan(
@@ -249,9 +256,15 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all four versioned evidence reports with the existing headline context", () => {
+  it("renders all five versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
+    expect(html).toContain("data-direction-mix");
+    expect(html).toContain(
+      '<h2 id="direction-mix-title" class="report-target" tabindex="-1">Direction mix</h2>',
+    );
+    expect(html).toContain("direction-mix-report-v1");
+    expect(html).toContain("8 current trades");
     expect(html).toContain('<section class="card plan-check-card" aria-labelledby="plan-check-title" data-plan-check>');
     expect(html).toContain('<h2 id="plan-check-title" class="report-target" tabindex="-1">Plan check</h2>');
     expect(html).toContain("FICTIONAL DEMO");
@@ -295,7 +308,8 @@ describe("reports presentation", () => {
     expect(html).toContain("emotion-patterns-report-v1");
     expect(html).toContain("8 current assignments");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(26);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(34);
+    expect(html).toContain('data-trade-review-report-source="direction-mix"');
     expect(html).toContain('data-trade-review-report-source="plan-check"');
     expect(html).toContain(
       'data-trade-review-report-source="mistake-patterns"',
@@ -308,6 +322,7 @@ describe("reports presentation", () => {
     );
 
     for (const trade of DEMO_WORKSPACE.trades) {
+      expect(html).toContain(`data-direction-mix-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-plan-check-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-setup-performance-trade="${trade.tradeSubjectId}"`);
       expect(html).toContain(`data-emotion-patterns-trade="${trade.tradeSubjectId}"`);
@@ -473,6 +488,7 @@ describe("reports presentation", () => {
     const root = {
       querySelector(selector: string): unknown {
         if (selector === "[data-report-navigation]") return null;
+        if (selector === "[data-direction-mix]") return null;
         if (selector === "[data-mistake-patterns]") return null;
         if (selector === "[data-emotion-patterns]") return null;
         if (selector === "[data-setup-performance]") return null;

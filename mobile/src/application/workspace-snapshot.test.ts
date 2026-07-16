@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
+import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
@@ -844,6 +845,7 @@ describe("journal workspace snapshot", () => {
     const { dailyJournal: _dailyJournal, ...snapshotWithoutDailyJournal } = snapshot;
     const { dailyJournal: _rescoredDailyJournal, ...rescoredWithoutDailyJournal } = rescored;
     expect(rescoredWithoutDailyJournal).toEqual(snapshotWithoutDailyJournal);
+    expect(buildDirectionMixReport(rescored)).toEqual(buildDirectionMixReport(snapshot));
     expect(buildPlanAdherenceReport(rescored)).toEqual(buildPlanAdherenceReport(snapshot));
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));

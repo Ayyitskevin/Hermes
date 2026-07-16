@@ -386,6 +386,28 @@ test("report review saves return to the source heading when evidence moves", asy
   await completeReview(page, "MSFT", "10");
   await page.getByRole("button", { name: "Reports", exact: true }).click();
 
+  const longDirection = page.locator('[data-direction-mix-group="long"]');
+  await longDirection.locator("summary").click();
+  const directionAction = longDirection.getByRole("button", {
+    name: /Open AAPL trade for the long direction group/u,
+  });
+  await directionAction.click();
+  const directionDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(directionDialog.locator("[data-trade-review-report-context]"))
+    .toHaveText(
+      "Opened from Direction mix. This full-workspace report does not use or change your Trades filters.",
+    );
+  await directionDialog.locator("#review-note").fill("Direction report refresh.");
+  await directionDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(directionDialog).toHaveCount(0);
+  await expect(page.locator("#direction-mix-title")).toBeFocused();
+  await expect(
+    page.locator('[data-direction-mix-group="long"] [data-direction-mix-trade]'),
+  ).toHaveCount(2);
+
   const followed = page.locator('[data-plan-check-group="followed"]');
   await followed.locator("summary").click();
   const planAction = followed.getByRole("button", {

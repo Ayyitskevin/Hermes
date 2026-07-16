@@ -7,6 +7,10 @@ import {
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import {
+  bindDirectionMixView,
+  directionMixSection,
+} from "./direction-mix-view";
+import {
   bindEmotionPatternsView,
   emotionPatternsSection,
 } from "./emotion-patterns-view";
@@ -28,6 +32,7 @@ export const PLAN_CHECK_EVIDENCE_PAGE_SIZE = 25 as const;
 const REPORT_TARGET_IDS = Object.freeze([
   "reports-navigation-title",
   "performance-summary-title",
+  "direction-mix-title",
   "plan-check-title",
   "mistake-patterns-title",
   "emotion-patterns-title",
@@ -42,6 +47,7 @@ function reportNavigation(): string {
     <ul class="report-navigation-list">
       <li><a class="report-navigation-link" href="#performance-summary-title" data-report-target="performance-summary-title">Performance summary</a></li>
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
+      <li><a class="report-navigation-link" href="#direction-mix-title" data-report-target="direction-mix-title">Direction mix</a></li>
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
       <li><a class="report-navigation-link" href="#mistake-patterns-title" data-report-target="mistake-patterns-title">Mistake patterns</a></li>
       <li><a class="report-navigation-link" href="#emotion-patterns-title" data-report-target="emotion-patterns-title">Emotion patterns</a></li>
@@ -362,6 +368,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
       </div>
       <article class="card chart-card" aria-labelledby="cumulative-result-title"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2 id="cumulative-result-title" class="report-target" tabindex="-1">Cumulative result</h2></div><div class="report-section-actions"><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>${reportMenuLink()}</div></div>${equityChart(snapshot)}</article>
     </section>
+    ${directionMixSection(snapshot)}
     ${planCheckSection(snapshot)}
     ${mistakePatternsSection(snapshot)}
     ${emotionPatternsSection(snapshot)}
@@ -374,6 +381,7 @@ export function bindReportsView(
   snapshot: JournalWorkspaceSnapshot,
 ): void {
   bindReportNavigation(root);
+  bindDirectionMixView(root, snapshot);
   bindMistakePatternsView(root, snapshot);
   bindEmotionPatternsView(root, snapshot);
   bindSetupPerformanceView(root, snapshot);

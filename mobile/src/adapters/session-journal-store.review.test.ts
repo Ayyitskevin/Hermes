@@ -17,6 +17,7 @@ import {
   type PreparedTradeReview,
   type TradeReviewInput,
 } from "../application/prepare-trade-review";
+import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
@@ -249,6 +250,9 @@ describe("browser session trade reviews", () => {
       const before = buildSetupPerformanceReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeDirection = buildDirectionMixReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
       const beforeMistakes = buildMistakePatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
@@ -265,6 +269,9 @@ describe("browser session trade reviews", () => {
         }),
       ]));
       const after = buildSetupPerformanceReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
+      const afterDirection = buildDirectionMixReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
       const afterMistakes = buildMistakePatternsReport(
@@ -288,6 +295,7 @@ describe("browser session trade reviews", () => {
         cashExpectancyExact: "10",
         tradeSubjectIds: [tradeSubjectId],
       });
+      expect(afterDirection).toEqual(beforeDirection);
       expect(beforeMistakes.groups.map((group) => [
         group.mistake,
         group.tradeSubjectIds,

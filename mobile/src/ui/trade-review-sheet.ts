@@ -35,12 +35,17 @@ export function reviewTradeAction(trade: TradePreview, label?: string): string {
 
 export type TradeReviewReportSource =
   | "plan-check"
+  | "direction-mix"
   | "mistake-patterns"
   | "emotion-patterns"
   | "setup-performance";
 
 const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
   "plan-check": Object.freeze({ label: "Plan check", targetId: "plan-check-title" }),
+  "direction-mix": Object.freeze({
+    label: "Direction mix",
+    targetId: "direction-mix-title",
+  }),
   "mistake-patterns": Object.freeze({
     label: "Mistake patterns",
     targetId: "mistake-patterns-title",
