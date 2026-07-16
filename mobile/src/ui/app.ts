@@ -89,6 +89,7 @@ function viewFilterAnnouncement(browser: TradeBrowserResult): string {
     || browser.state.direction !== "all"
     || browser.state.positionState !== "all"
     || browser.state.reviewState !== "all"
+    || browser.state.setup !== null
     || browser.state.mistake !== null
     || browser.state.emotion !== null
     || browser.state.tag !== null;
@@ -928,6 +929,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             direction: "all",
             positionState: "all",
             reviewState: "all",
+            setup: null,
             mistake: null,
             emotion: null,
             tag: null,

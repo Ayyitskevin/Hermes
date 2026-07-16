@@ -27,6 +27,7 @@ export interface TradeViewFilterInput {
   readonly direction: TradeBrowserDirectionFilter;
   readonly positionState: TradeBrowserPositionFilter;
   readonly reviewState: TradeBrowserReviewFilter;
+  readonly setup: string | null;
   readonly mistake: string | null;
   readonly emotion: string | null;
   readonly tag: string | null;
@@ -184,6 +185,7 @@ function exactViewFacetCount(browser: TradeBrowserResult): number {
     + Number(browser.state.direction !== "all")
     + Number(browser.state.positionState !== "all")
     + Number(browser.state.reviewState !== "all")
+    + Number(browser.state.setup !== null)
     + Number(browser.state.mistake !== null)
     + Number(browser.state.emotion !== null)
     + Number(browser.state.tag !== null);
@@ -237,6 +239,11 @@ function viewFilters(browser: TradeBrowserResult): string {
               <option value="pending" ${selected(browser.state.reviewState, "pending")}>Pending</option>
               <option value="draft" ${selected(browser.state.reviewState, "draft")}>Draft</option>
               <option value="completed" ${selected(browser.state.reviewState, "completed")}>Completed</option>
+            </select>
+          </label>
+          <label>Setup
+            <select id="trade-filter-setup" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.setup, browser.reviewFacetOptions.setups)}>
+              ${reviewFacetOptions(browser.state.setup, browser.reviewFacetOptions.setups, "All setups")}
             </select>
           </label>
           <label>Mistake
@@ -445,7 +452,7 @@ export function bindTradesView(
   );
 
   const facetControls = Array.from(root.querySelectorAll<HTMLSelectElement>(
-    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review, #trade-filter-mistake, #trade-filter-emotion, #trade-filter-tag",
+    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review, #trade-filter-setup, #trade-filter-mistake, #trade-filter-emotion, #trade-filter-tag",
   ));
   const filterError = root.querySelector<HTMLElement>("#trade-view-filter-error");
   const applyViewFilters = () => {
@@ -459,6 +466,7 @@ export function bindTradesView(
           ?.value as TradeBrowserPositionFilter ?? "all",
         reviewState: root.querySelector<HTMLSelectElement>("#trade-filter-review")
           ?.value as TradeBrowserReviewFilter ?? "all",
+        setup: root.querySelector<HTMLSelectElement>("#trade-filter-setup")?.value || null,
         mistake: root.querySelector<HTMLSelectElement>("#trade-filter-mistake")?.value || null,
         emotion: root.querySelector<HTMLSelectElement>("#trade-filter-emotion")?.value || null,
         tag: root.querySelector<HTMLSelectElement>("#trade-filter-tag")?.value || null,

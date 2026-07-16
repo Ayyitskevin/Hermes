@@ -1,8 +1,170 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Dashboard Recent Trade Continuation v1 · updated 2026-07-16
+Status: verified Exact Setup Facet v1 · updated 2026-07-16
 
 ## Current handoff
+
+task: Deliver Exact Setup Facet v1: add the exact current classified setup to
+the session-only Trades card-visibility layer without treating an absent setup
+as a classification or changing scope, Dashboard, Reports, persistence,
+archives, schemas, digests, or financial definitions.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- TradeBrowserState.setup is an ephemeral exact label or null. Available setup
+  options derive only from all current whole-workspace trades whose
+  hasClassifiedSetup flag is exactly true; saved-but-unused setup vocabulary,
+  account/date/day scope, query, and other facet results never influence the
+  option set.
+- Current setup projections fail closed unless classification is boolean, a
+  classified value exactly satisfies the saved-review NFC/single-line/
+  120-code-point normalization contract, and an absent value uses the exact
+  canonical **Unclassified** placeholder. An explicitly saved setup named
+  **Unclassified** remains a real exact option and match.
+- Setup options use stable code-unit order, detach from source objects, and are
+  deeply frozen. Exact matching additionally requires hasClassifiedSetup to be
+  true; the absent placeholder never matches the Setup facet even though
+  ordinary free-text search may still find displayed placeholder copy.
+- Trades now exposes the accessible **Setup** / #trade-filter-setup select
+  inside the existing native disclosure. The exact count spans zero through
+  eight: four fixed facets plus Setup, Mistake, Emotion, and Tag. An empty
+  classified option set disables the control; a retained valid value that loses
+  its last assignment remains enabled and visible as **not currently
+  assigned**, yielding zero cards.
+- Setup ANDs with all seven existing exact facets, normalized query, and
+  account/date/day scope. It changes visible cards only. Exact contribution
+  P&L, counts, calendar evidence, Dashboard, all eight governed reports, ten
+  report targets, five tabs, stores, archives, digests, and schema v4 remain
+  unchanged.
+- Valid selection survives internal navigation and a review-triggered workspace
+  refresh. **Clear search and filters** resets Setup while preserving scope;
+  **Clear all**, mode switches, and reload initialization reset the complete
+  ephemeral state. No preference or journal state was added.
+- Production Chromium now proves the eight-way AND, Setup-only announcement,
+  whole-workspace option refresh after a local review, stale-zero behavior
+  after reassignment, report and storage neutrality, report-continuation state
+  preservation, final-facet focus/collapse, mode reset, keyboard access,
+  44-point controls, and no overflow at 320 and 421 CSS pixels with 200% text.
+- README, product blueprint, roadmap, local-ledger contract, and Mac handoff
+  now cover eighteen Slice D increments, fifteen derived-only
+  presentation/projection increments, and the same three write-capable
+  exceptions: Durable Daily Journal, Report Trade Continuation, and Dashboard
+  Recent Trade Continuation. Eight governed reports, ten report targets, five
+  tabs, and schema v4 remain unchanged.
+- No schema, migration, store command, export/restore shape, archive input,
+  digest input, governed report version/checksum/definition, formula, native
+  source, credential, destructive workflow, or public comparative claim
+  changed.
+
+verified:
+
+- cd mobile && npm ci — exit 0; 164 packages installed, 165 audited, 0
+  vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 53 files, 655 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 70 production-Chromium journeys
+  passed. Focused reruns separately passed 28 application/UI tests and all 15
+  Trade-facet/Reports-navigation journeys.
+- cd mobile && npm run build — exit 0; Vite transformed 76 modules. The
+  existing >500 kB chunk warning remains visible.
+- cd mobile && npm run ios:copy plus npm run verify:ios-sync — exit 0; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  3053cc0d8eda62254db06ceaf0483d515baa7eb58ca01866e349d721499b6356.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- git diff --exit-code -- mobile/ios mobile/package-lock.json and git diff
+  --check — exit 0; no tracked native/lock drift or whitespace errors.
+- rg -c '^## Prior milestone' docs/HANDOFF.md and
+  rg -c '^> Historical snapshot' docs/HANDOFF.md — each returned 25.
+- Independent skeptical core, UI/E2E, and documentation reviews passed. The
+  implementation reviewers' three
+  non-blocking mutation-test gaps—archived Setup vocabulary, explicitly saved
+  **Unclassified** rendering, and Setup-only announcement classification—were
+  closed before the final clean gate.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence after
+  publication.
+
+assumptions:
+
+- JournalWorkspaceSnapshot.trades remains the canonical current projection, and
+  every coherent preview owns a boolean hasClassifiedSetup paired with either
+  one normalized saved setup or the exact absent **Unclassified** placeholder.
+- The review command remains the sole owner of setup classification and label
+  normalization. This visibility slice does not infer taxonomy from card text,
+  search, notes, playbooks, report membership, or unused vocabulary.
+- Free-text search intentionally continues to match the displayed
+  **Unclassified** placeholder; the new exact Setup facet intentionally does
+  not. An explicitly saved literal **Unclassified** satisfies both paths.
+- Browser evidence uses the ephemeral development store and production
+  Chromium. It is not native SQLite durability, WKWebView, VoiceOver,
+  hardware-keyboard, lifecycle, Dynamic Type, SQLCipher, Keychain, or
+  physical-iPhone evidence.
+
+open:
+
+- HOLD native Exact Setup Facet acceptance: repeat classified-only option
+  derivation across in/out-of-scope reviews, explicitly saved versus absent
+  **Unclassified**, all-eight AND composition, stale-zero refresh, internal
+  navigation, clear boundaries, mode/reload reset, announcements, VoiceOver,
+  hardware keyboard, 44-point controls, and 320/421-width 200% Dynamic Type on
+  a current Mac/iPhone.
+- HOLD native Dashboard Recent Trade Continuation acceptance: repeat exact
+  QQQ/META/SPY/AMD order, stable-ID duplicate-symbol targeting, read-only demo,
+  no report-origin copy, ordinary-close and save/redraw focus, tamper failure,
+  offline behavior, background/foreground, relaunch, VoiceOver, hardware
+  keyboard, 44-point controls, and 320/421-width 200% Dynamic Type.
+- HOLD native Review Session Coverage acceptance: repeat version/checksum,
+  exact 6/6/6/8 demo reconciliation, all three fixed groups, separate
+  conservation, mixed covered/uncovered contributors, no-trade-gap streak
+  continuity, 25-row progression, exact-ID continuation, ordinary-close and
+  save/refresh focus, restore equality, offline/lifecycle behavior, VoiceOver,
+  hardware keyboard, 200% Dynamic Type, and 320/421-width layout.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions. Durable opening instants plus the
+  workspace IANA zone are technically sufficient without a schema change once
+  that semantic decision is made.
+- HIGH — HUMAN GATE: the separate unpublished Symbol Breakdown draft still
+  needs a corrected current-review-head and draft/completed eligibility
+  definition before any approval.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery still requires an
+  approved durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin's unused HTTP-download bridge and database-
+  path console print before release. Do not claim zero native network
+  capability or console-path privacy while they remain.
+- Attachments, verified Delete All Data, saved presets, persistent/report
+  scope, fuller management, remaining report families, and native
+  restore/backup acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- Re-audit the next safe autonomous product slice after publication.
+
+## Prior milestone — Dashboard Recent Trade Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Exact Setup Facet v1 handoff above.
+
+Status: verified Dashboard Recent Trade Continuation v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Dashboard Recent Trade Continuation v1: turn the existing four
 full-workspace Dashboard Recent trades rows into exact stable-ID entry points

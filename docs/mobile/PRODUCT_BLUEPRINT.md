@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Seventeen bounded Slice D increments are implemented in the current workspace.
+Eighteen bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -752,6 +752,18 @@ shows a focused error before inert state or persistence. No report-origin
 context, route, Trade Browser scope, report definition, formula, schema, store
 contract, archive, digest, or persisted presentation state was added.
 
+An eighteenth increment, Exact Setup Facet v1, adds the current classified
+setup assignment to the same exact Trades card-visibility layer. Options derive
+only from whole-workspace `TradePreview` values whose `hasClassifiedSetup` flag
+is true; the canonical absent **Unclassified** placeholder is excluded, while
+an explicitly saved setup with that literal name remains a real exact option.
+Setup ANDs with the four fixed facets, Mistake, Emotion, Tag, normalized search,
+and account/date/day scope. A valid selection that loses its final assignment
+stays visible as **not currently assigned** and yields zero cards. The eight
+controls remain session-only and change no scope evidence or totals, calendar,
+Dashboard, governed report, store, archive, digest, schema, migration, or
+financial definition.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -906,13 +918,14 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-seventeen Slice D increments add Plan Check, governed Setup Breakdown,
+eighteen Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
 v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
-v1, Review Session Coverage v1, and Dashboard Recent Trade Continuation v1.
-The fourteen presentation/projection increments remain derived-only. Durable
+v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, and
+Exact Setup Facet v1. The fifteen presentation/projection increments remain
+derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path without changing its persistence contract.

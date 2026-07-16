@@ -289,7 +289,7 @@ submission-ready product:
   selected value loses its final current assignment, it remains visibly selected
   as not currently assigned and produces zero cards instead of broadening the
   view. Refresh retains valid session state; mode switches and reload reset it.
-- Compact Trades Filters v1 keeps that exact seven-facet contract while placing
+- Compact Trades Filters v1 keeps the exact facet contract while placing
   only the selects and their error region in a native disclosure. A clean view
   starts collapsed with an exact active-filter count; any fixed, dynamic, or
   retained stale facet opens on render, while search and account/date/day scope
@@ -297,6 +297,15 @@ submission-ready product:
   view, and clearing or resetting the final exact facet returns focus to the
   summary. Disclosure state is presentation-only—no preference, journal,
   archive, report, formula, or schema state was added.
+- Exact Setup Facet v1 extends that disclosure from seven to eight controls with
+  a classified-only Setup select derived from exact current `TradePreview`
+  assignments. The projection never treats the canonical absent
+  **Unclassified** placeholder as an assignment; an explicitly saved setup
+  named **Unclassified** remains a real exact choice. A retained setup whose
+  last assignment is removed stays visible as not currently assigned and yields
+  zero cards. The control composes with every existing facet, query, and scope,
+  remains session-only, and changes no scope totals, calendar, Dashboard,
+  report, store, archive, digest, schema, or financial definition.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production

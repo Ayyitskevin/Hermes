@@ -163,35 +163,39 @@ and an App Store disclosure.
 - Search scoped trades by symbol, account, setup, side, status, review state,
   mistake, emotion, or tag. Confirm search changes visible cards only and never
   the exact scope summary.
-- Apply asset-class, direction, position-state, review-state, Mistake, Emotion,
-  and Tag facets in combination with normalized search and account/date/day
-  scope. Confirm all seven AND against exact current trade fields, change visible
-  cards only, expose the asset-class chip, and leave exact scope P&L/counts, the
+- Apply asset-class, direction, position-state, review-state, Setup, Mistake,
+  Emotion, and Tag facets in combination with normalized search and account/
+  date/day scope. Confirm all eight AND against exact current trade fields,
+  change visible cards only, expose the asset-class chip, and leave exact scope
+  P&L/counts, the
   calendar, Dashboard, Review Session Coverage, Direction Mix, Opening Weekday
   Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
   Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
 - Confirm the exact-filter disclosure starts collapsed with **none active**,
-  leaves all seven selects out of the keyboard/VoiceOver order, and keeps the
+  leaves all eight selects out of the keyboard/VoiceOver order, and keeps the
   search description plus **Clear search and filters** reachable. A query or
   account/date/day scope alone must not open or increment it. Toggle with
   pointer, VoiceOver, Enter, and Space; then activate each facet and confirm the
-  exact count reaches seven. Reset the final facet and use the combined clear
+  exact count reaches eight. Reset the final facet and use the combined clear
   action separately: each must collapse and return visible focus to the
   summary while preserving the documented scope boundary. Repeat a rerender
-  with a retained stale Mistake, Emotion, and Tag; each must count and open.
+  with a retained stale Setup, Mistake, Emotion, and Tag; each must count and
+  open.
 - Assign review labels inside and outside the active account/date/day scope.
-  Confirm Mistake, Emotion, and Tag choices come from current `TradePreview`
-  assignments across the whole workspace—not unused vocabulary—use stable
+  Confirm Setup, Mistake, Emotion, and Tag choices come from current
+  `TradePreview` assignments across the whole workspace—not unused vocabulary—use stable
   code-unit order, and preserve saved-review normalization and limits. Confirm
+  Setup includes only `hasClassifiedSetup: true` assignments, keeps an explicitly
+  saved **Unclassified** value distinct from the absent placeholder, and that
   multi-valued mistake and tag assignments match any exact selected member.
-- With VoiceOver and a hardware keyboard, retain a well-formed Mistake, Emotion,
-  or Tag selection while another review removes its last current assignment and
-  refresh the Trades view. The selected option must remain visible as **not
+- With VoiceOver and a hardware keyboard, retain a well-formed Setup, Mistake,
+  Emotion, or Tag selection while another review removes its last current
+  assignment and refresh the Trades view. The selected option must remain visible as **not
   currently assigned**, focus and the exact value must remain understandable,
   and the result must contain zero cards without broadening account/date/day
-  evidence, totals, or calendar state. Repeat separately for all three selects.
+  evidence, totals, or calendar state. Repeat separately for all four selects.
 - With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
   state survives tab navigation and valid ledger refreshes. Clearing a selected
   day must retain account/range and card filters; Clear search and filters must
@@ -204,7 +208,7 @@ and an App Store disclosure.
   Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole
   workspace while only Trades and the Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
-  inputs, seven facet selects, month controls, day tiles, scope summary,
+  inputs, eight facet selects, month controls, day tiles, scope summary,
   contribution evidence, and focused destinations have no horizontal overflow
   or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
@@ -663,8 +667,9 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   Patterns, and Setup Breakdown, export generation, and Slice C-B local restore
   still need the persistence, response-loss, migration, accessibility, and
   lifecycle checks
-  above. Trade Browser Scope v1, Structured Trades Facets v1, and Dynamic Review
-  Facets v1 intentionally remain session-only; Compact Trades Filters v1 adds
+  above. Trade Browser Scope v1, Structured Trades Facets v1, Dynamic Review
+  Facets v1, and Exact Setup Facet v1 intentionally remain session-only;
+  Compact Trades Filters v1 adds
   no persisted disclosure state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native

@@ -51,8 +51,8 @@ under the provisional identifier until that gate is cleared.
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
   Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
-  Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Compact Trades
-  Filters v1, export, and
+  Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
+  Setup Facet v1, Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -437,10 +437,18 @@ observed plugin/device behavior:
   valid refresh state, reset on mode switch or reload, and never change exact
   scope evidence/totals, the calendar, Dashboard, governed Reports, schema,
   store, archive, or report definitions.
-- Compact Trades Filters v1 puts only those seven exact controls and their
+- Exact Setup Facet v1 adds a classified-only exact Setup select derived from
+  current whole-workspace `TradePreview` assignments. The canonical absent
+  **Unclassified** placeholder is excluded, but an explicitly saved setup with
+  that literal name remains a real option. Setup composes with the other seven
+  facets, normalized search, and scope; a stale valid selection stays visible
+  and yields zero cards. It is session-only and changes no scope evidence,
+  calendar, Dashboard, report, store, archive, digest, schema, or financial
+  definition.
+- Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
-  updates from zero through seven without counting query or account/date/day
+  updates from zero through eight without counting query or account/date/day
   scope. Search-only clear stays visible outside the disclosure. Resetting the
   final facet or using the combined clear action collapses and focuses the
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
@@ -600,9 +608,9 @@ Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
 v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
-Continuation v1, Compact Trades Filters v1, matching-runtime local restore, and
-all eight governed reports are implemented.
-Seventeen bounded Slice D increments are implemented in total; the fourteen
+Continuation v1, Exact Setup Facet v1, Compact Trades Filters v1,
+matching-runtime local restore, and all eight governed reports are implemented.
+Eighteen bounded Slice D increments are implemented in total; the fifteen
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, and Dashboard Recent Trade Continuation are the
 write-capable exceptions; both continuation increments reuse the existing

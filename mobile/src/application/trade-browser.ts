@@ -38,6 +38,8 @@ export interface TradeBrowserState {
   readonly direction: TradeBrowserDirectionFilter;
   readonly positionState: TradeBrowserPositionFilter;
   readonly reviewState: TradeBrowserReviewFilter;
+  /** Exact current classified setup, or null for every assigned setup. */
+  readonly setup: string | null;
   /** Exact current trade-review labels, or null for every assigned value. */
   readonly mistake: string | null;
   readonly emotion: string | null;
@@ -55,6 +57,7 @@ export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
   direction: "all",
   positionState: "all",
   reviewState: "all",
+  setup: null,
   mistake: null,
   emotion: null,
   tag: null,
@@ -79,6 +82,7 @@ export interface TradeBrowserCalendar {
 }
 
 export interface TradeBrowserReviewFacetOptions {
+  readonly setups: readonly string[];
   readonly mistakes: readonly string[];
   readonly emotions: readonly string[];
   readonly tags: readonly string[];
@@ -122,6 +126,8 @@ const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
   month: "long",
   timeZone: "UTC",
 });
+
+const UNCLASSIFIED_SETUP_PLACEHOLDER = "Unclassified";
 
 function stableCompare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -253,6 +259,29 @@ function validateCurrentOptionalReviewLabel(
   }
 }
 
+function validateCurrentSetup(trade: TradePreview): void {
+  if (typeof trade.hasClassifiedSetup !== "boolean") {
+    throw new Error(
+      `Trade ${trade.tradeSubjectId} setup classification must be boolean.`,
+    );
+  }
+  if (!trade.hasClassifiedSetup) {
+    if (trade.setup !== UNCLASSIFIED_SETUP_PLACEHOLDER) {
+      throw new Error(
+        `Trade ${trade.tradeSubjectId} unclassified setup must use the canonical ${UNCLASSIFIED_SETUP_PLACEHOLDER} placeholder.`,
+      );
+    }
+    return;
+  }
+  const normalized = normalizedReviewLabel(
+    trade.setup,
+    `Trade ${trade.tradeSubjectId} setup`,
+  );
+  if (normalized !== trade.setup) {
+    throw new Error(`Trade ${trade.tradeSubjectId} setup is not normalized.`);
+  }
+}
+
 function freezeMetricEvidence(
   metric: TradePreview["resultRMetric"],
 ): TradePreview["resultRMetric"] {
@@ -349,6 +378,7 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
       ["pending", "draft", "completed"] as const,
       `Trade ${trade.tradeSubjectId} review state`,
     );
+    validateCurrentSetup(trade);
     validateCurrentReviewLabels(trade.mistakes, "mistakes", trade.tradeSubjectId);
     validateCurrentOptionalReviewLabel(trade.emotion, "emotion", trade.tradeSubjectId);
     validateCurrentReviewLabels(trade.tags, "tags", trade.tradeSubjectId);
@@ -366,15 +396,18 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
 function reviewFacetOptions(
   trades: ReadonlyMap<string, TradePreview>,
 ): TradeBrowserReviewFacetOptions {
+  const setups = new Set<string>();
   const mistakes = new Set<string>();
   const emotions = new Set<string>();
   const tags = new Set<string>();
   for (const trade of trades.values()) {
+    if (trade.hasClassifiedSetup) setups.add(trade.setup);
     for (const mistake of trade.mistakes) mistakes.add(mistake);
     if (trade.emotion !== null) emotions.add(trade.emotion);
     for (const tag of trade.tags) tags.add(tag);
   }
   return Object.freeze({
+    setups: Object.freeze([...setups].sort(stableCompare)),
     mistakes: Object.freeze([...mistakes].sort(stableCompare)),
     emotions: Object.freeze([...emotions].sort(stableCompare)),
     tags: Object.freeze([...tags].sort(stableCompare)),
@@ -542,6 +575,7 @@ function matchesFacets(
     | "direction"
     | "positionState"
     | "reviewState"
+    | "setup"
     | "mistake"
     | "emotion"
     | "tag"
@@ -552,6 +586,8 @@ function matchesFacets(
     && (facets.direction === "all" || trade.side === facets.direction)
     && (facets.positionState === "all" || trade.status === facets.positionState)
     && (facets.reviewState === "all" || trade.reviewStatus === facets.reviewState)
+    && (facets.setup === null
+      || (trade.hasClassifiedSetup && trade.setup === facets.setup))
     && (facets.mistake === null || trade.mistakes.includes(facets.mistake))
     && (facets.emotion === null || trade.emotion === facets.emotion)
     && (facets.tag === null || trade.tags.includes(facets.tag));
@@ -611,6 +647,7 @@ export function buildTradeBrowser(
     ["all", "pending", "draft", "completed"] as const,
     "Review state",
   );
+  const setup = canonicalReviewFacet(input.setup, "Setup filter");
   const mistake = canonicalReviewFacet(input.mistake, "Mistake filter");
   const emotion = canonicalReviewFacet(input.emotion, "Emotion filter");
   const tag = canonicalReviewFacet(input.tag, "Tag filter");
@@ -657,6 +694,7 @@ export function buildTradeBrowser(
         direction,
         positionState,
         reviewState,
+        setup,
         mistake,
         emotion,
         tag,
@@ -704,6 +742,7 @@ export function buildTradeBrowser(
     direction,
     positionState,
     reviewState,
+    setup,
     mistake,
     emotion,
     tag,
@@ -718,6 +757,7 @@ export function buildTradeBrowser(
       || direction !== "all"
       || positionState !== "all"
       || reviewState !== "all"
+      || setup !== null
       || mistake !== null
       || emotion !== null
       || tag !== null,

@@ -138,6 +138,7 @@ test("exact card facets compose with search and scope without changing totals or
   const direction = page.getByRole("combobox", { name: "Direction" });
   const positionState = page.getByRole("combobox", { name: "Position state" });
   const reviewState = page.getByRole("combobox", { name: "Review state" });
+  const setup = page.getByRole("combobox", { name: "Setup" });
   const mistake = page.getByRole("combobox", { name: "Mistake" });
   const emotion = page.getByRole("combobox", { name: "Emotion" });
   const tag = page.getByRole("combobox", { name: "Tag" });
@@ -182,6 +183,17 @@ test("exact card facets compose with search and scope without changing totals or
 
   await filterSummary.click();
   await expect(filterDisclosure).toHaveAttribute("open", "");
+  await setup.selectOption("Breakout");
+  await expect(activeFilterCount).toHaveText("· 1 active filter");
+  await page.getByRole("button", { name: "Apply scope" }).click();
+  await expect(page.locator("#route-announcer")).toContainText(
+    "Card filters show",
+  );
+  await expect(setup).toHaveValue("Breakout");
+  await setup.selectOption("");
+  await expect(activeFilterCount).toHaveText("· none active");
+  await expect(filterSummary).toBeFocused();
+  await filterSummary.click();
   await assetClass.selectOption("etf");
   await expect(activeFilterCount).toHaveText("· 1 active filter");
   await direction.selectOption("long");
@@ -190,12 +202,14 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(activeFilterCount).toHaveText("· 3 active filters");
   await reviewState.selectOption("completed");
   await expect(activeFilterCount).toHaveText("· 4 active filters");
-  await mistake.selectOption("Chased entry");
+  await setup.selectOption("Breakout");
   await expect(activeFilterCount).toHaveText("· 5 active filters");
-  await emotion.selectOption("Impatient");
+  await mistake.selectOption("Chased entry");
   await expect(activeFilterCount).toHaveText("· 6 active filters");
-  await tag.selectOption("Stopped on plan");
+  await emotion.selectOption("Impatient");
   await expect(activeFilterCount).toHaveText("· 7 active filters");
+  await tag.selectOption("Stopped on plan");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
   await expect(count).toHaveText("Showing 1 of 8 trades");
   await expect(page.locator(".trade-card:visible")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "SPY", exact: true })).toBeVisible();
@@ -234,12 +248,13 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(direction).toHaveValue("long");
   await expect(positionState).toHaveValue("closed");
   await expect(reviewState).toHaveValue("completed");
+  await expect(setup).toHaveValue("Breakout");
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
   await expect(count).toHaveText("Showing 1 of 8 trades");
   await expect(filterDisclosure).toHaveAttribute("open", "");
-  await expect(activeFilterCount).toHaveText("· 7 active filters");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
 
   await page.getByRole("combobox", { name: "Account" }).selectOption("demo-account-swing");
   await page.getByRole("button", { name: "Apply scope" }).click();
@@ -248,10 +263,11 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(count).toHaveText("Showing 1 of 3 trades");
   await expect(assetClass).toHaveValue("etf");
   await expect(direction).toHaveValue("long");
+  await expect(setup).toHaveValue("Breakout");
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
-  await expect(activeFilterCount).toHaveText("· 7 active filters");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
 
   await expect(page.getByRole("heading", { name: "SPY", exact: true })).toBeVisible();
   await search.fill("QQQ");
@@ -261,6 +277,7 @@ test("exact card facets compose with search and scope without changing totals or
   }).click();
   await expect(page.getByRole("combobox", { name: "Asset class" })).toHaveValue("etf");
   await expect(page.getByRole("combobox", { name: "Direction" })).toHaveValue("long");
+  await expect(setup).toHaveValue("Breakout");
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
@@ -277,6 +294,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(filterDisclosure).not.toHaveAttribute("open", "");
   await expect(activeFilterCount).toHaveText("· none active");
   await expect(search).toHaveValue("");
+  await expect(page.locator("#trade-filter-setup")).toHaveValue("");
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
   await expect(page.locator("#trade-filter-emotion")).toHaveValue("");
   await expect(page.locator("#trade-filter-tag")).toHaveValue("");
@@ -305,6 +323,7 @@ test("exact card facets compose with search and scope without changing totals or
 
   await filterSummary.click();
   await page.getByRole("combobox", { name: "Direction" }).selectOption("short");
+  await setup.selectOption("Reversal");
   await tag.selectOption("Plan followed");
   await page.getByRole("button", { name: "Clear all" }).click();
   await expect(page.getByRole("combobox", { name: "Account" })).toBeFocused();
@@ -322,12 +341,14 @@ test("exact card facets compose with search and scope without changing totals or
 
   await filterSummary.click();
   await page.getByRole("combobox", { name: "Asset class" }).selectOption("etf");
+  await setup.selectOption("Breakout");
   await mistake.selectOption("Chased entry");
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Return to my journal" }).click();
   await page.getByRole("button", { name: "Explore demo journal" }).click();
   await page.getByRole("button", { name: "Trades", exact: true }).click();
   await expect(page.locator("#trade-filter-asset-class")).toHaveValue("all");
+  await expect(page.locator("#trade-filter-setup")).toHaveValue("");
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
   await expect(count).toHaveText("Showing 8 trades");
   await expect(filterDisclosure).not.toHaveAttribute("open", "");
@@ -350,6 +371,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   const direction = page.getByRole("combobox", { name: "Direction" });
   const positionState = page.getByRole("combobox", { name: "Position state" });
   const reviewState = page.getByRole("combobox", { name: "Review state" });
+  const setup = page.getByRole("combobox", { name: "Setup" });
   const mistake = page.getByRole("combobox", { name: "Mistake" });
   const emotion = page.getByRole("combobox", { name: "Emotion" });
   const tag = page.getByRole("combobox", { name: "Tag" });
@@ -363,6 +385,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(filterDisclosure).not.toHaveAttribute("open", "");
   await expect(activeFilterCount).toHaveText("· none active");
   await filterSummary.click();
+  await expect(setup).toBeDisabled();
   await expect(mistake).toBeDisabled();
   await expect(emotion).toBeDisabled();
   await expect(tag).toBeDisabled();
@@ -380,6 +403,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
 
   await page.locator(".trade-card:visible").getByRole("button", { name: /Review trade/u }).click();
   const dialog = page.getByRole("dialog", { name: /AAPL trade review/u });
+  await dialog.locator("#review-setup").fill("Opening range");
   await dialog.locator("#review-mistakes").fill("Late scale-out");
   await dialog.locator("#review-emotion").fill("Focused");
   await dialog.locator("#review-tags").fill("A+ setup");
@@ -392,9 +416,11 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(reviewState).toHaveValue("pending");
   await expect(search).toHaveValue("aapl");
   await expect(count).toHaveText("Showing 0 of 1 trade");
+  await expect(setup).toBeEnabled();
   await expect(mistake).toBeEnabled();
   await expect(emotion).toBeEnabled();
   await expect(tag).toBeEnabled();
+  await expect(setup.locator('option[value="Opening range"]')).toHaveText("Opening range");
   await expect(mistake.locator('option[value="Late scale-out"]')).toHaveText("Late scale-out");
   await expect(emotion.locator('option[value="Focused"]')).toHaveText("Focused");
   await expect(tag.locator('option[value="A+ setup"]')).toHaveText("A+ setup");
@@ -402,15 +428,17 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(activeFilterCount).toHaveText("· 3 active filters");
 
   await reviewState.selectOption("draft");
+  await setup.selectOption("Opening range");
   await mistake.selectOption("Late scale-out");
   await emotion.selectOption("Focused");
   await tag.selectOption("A+ setup");
-  await expect(activeFilterCount).toHaveText("· 6 active filters");
+  await expect(activeFilterCount).toHaveText("· 7 active filters");
   await expect(page.getByRole("heading", { name: "AAPL", exact: true })).toBeVisible();
   await expect(count).toHaveText("Showing 1 of 1 trade");
 
   await page.locator(".trade-card:visible").getByRole("button", { name: /Edit review/u }).click();
   const editDialog = page.getByRole("dialog", { name: /AAPL trade review/u });
+  await editDialog.locator("#review-setup").fill("Pullback continuation");
   await editDialog.locator("#review-mistakes").fill("Early exit");
   await editDialog.locator("#review-emotion").fill("Frustrated");
   await editDialog.locator("#review-tags").fill("Review next");
@@ -418,9 +446,13 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await editDialog.getByRole("button", { name: "Save draft" }).click();
   await expect(editDialog).toHaveCount(0);
 
+  await expect(setup).toHaveValue("Opening range");
   await expect(mistake).toHaveValue("Late scale-out");
   await expect(emotion).toHaveValue("Focused");
   await expect(tag).toHaveValue("A+ setup");
+  await expect(setup.locator("option:checked")).toHaveText(
+    "Opening range (not currently assigned)",
+  );
   await expect(mistake.locator("option:checked")).toHaveText(
     "Late scale-out (not currently assigned)",
   );
@@ -430,18 +462,21 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(tag.locator("option:checked")).toHaveText(
     "A+ setup (not currently assigned)",
   );
+  await expect(setup.locator('option[value="Pullback continuation"]'))
+    .toHaveText("Pullback continuation");
   await expect(mistake.locator('option[value="Early exit"]')).toHaveText("Early exit");
   await expect(emotion.locator('option[value="Frustrated"]')).toHaveText("Frustrated");
   await expect(tag.locator('option[value="Review next"]')).toHaveText("Review next");
   await expect(count).toHaveText("Showing 0 of 1 trade");
   await expect(scopeSummary).toContainText("+$10.00");
   await expect(filterDisclosure).toHaveAttribute("open", "");
-  await expect(activeFilterCount).toHaveText("· 6 active filters");
+  await expect(activeFilterCount).toHaveText("· 7 active filters");
 
   await page.getByRole("button", { name: "Clear search and filters" }).click();
   await expect(filterSummary).toBeFocused();
   await expect(filterDisclosure).not.toHaveAttribute("open", "");
   await expect(activeFilterCount).toHaveText("· none active");
+  await expect(page.locator("#trade-filter-setup")).toHaveValue("");
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
   await expect(page.locator("#trade-filter-emotion")).toHaveValue("");
   await expect(page.locator("#trade-filter-tag")).toHaveValue("");
@@ -483,11 +518,12 @@ test("compact exact facets toggle accessibly and reflow at 320px and 421px with 
   await expect(assetClass).toBeFocused();
 
   await assetClass.selectOption("etf");
+  await page.getByRole("combobox", { name: "Setup" }).selectOption("Breakout");
   await page.getByRole("combobox", { name: "Mistake" }).selectOption("Chased entry");
   await page.getByRole("combobox", { name: "Emotion" }).selectOption("Impatient");
   await page.getByRole("combobox", { name: "Tag" }).selectOption("Stopped on plan");
-  await expect(activeFilterCount).toHaveText("· 4 active filters");
-  await expect(filters.locator("select")).toHaveCount(7);
+  await expect(activeFilterCount).toHaveText("· 5 active filters");
+  await expect(filters.locator("select")).toHaveCount(8);
   await expect(filters).toContainText(
     "They never change allocation scope, P&L totals, the calendar, Dashboard metrics, or Reports.",
   );

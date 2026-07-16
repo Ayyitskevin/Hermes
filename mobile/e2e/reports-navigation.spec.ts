@@ -235,6 +235,7 @@ async function tradeBrowserFingerprint(page: Page): Promise<unknown> {
       "trade-filter-direction",
       "trade-filter-position",
       "trade-filter-review",
+      "trade-filter-setup",
       "trade-filter-mistake",
       "trade-filter-emotion",
       "trade-filter-tag",
@@ -1200,6 +1201,7 @@ test(
     await page.getByRole("combobox", { name: "Direction" }).selectOption("short");
     await page.getByRole("combobox", { name: "Position state" }).selectOption("closed");
     await page.getByRole("combobox", { name: "Review state" }).selectOption("completed");
+    await page.getByRole("combobox", { name: "Setup" }).selectOption("Reversal");
     await page.getByRole("searchbox", { name: "Search scoped trades" }).fill("qqq");
     const browserBefore = await tradeBrowserFingerprint(page);
 

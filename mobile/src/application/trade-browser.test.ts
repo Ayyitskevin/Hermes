@@ -175,12 +175,14 @@ describe("trade browser", () => {
       direction: "short",
       positionState: "closed",
       reviewState: "completed",
+      setup: "Reversal",
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
     });
 
     expect(browser.state).toMatchObject({
+      setup: "Reversal",
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
@@ -202,6 +204,7 @@ describe("trade browser", () => {
     const visibleSymbols = (
       snapshot: JournalWorkspaceSnapshot,
       filters: {
+        readonly setup?: string;
         readonly mistake?: string;
         readonly emotion?: string;
         readonly tag?: string;
@@ -211,6 +214,9 @@ describe("trade browser", () => {
       ...filters,
     }).visibleEvidence.map(({ trade }) => trade.symbol).sort();
 
+    expect(visibleSymbols(DEMO_WORKSPACE, {
+      setup: "Reversal",
+    })).toEqual(["QQQ", "TSLA"]);
     expect(visibleSymbols(DEMO_WORKSPACE, {
       mistake: "Early entry",
     })).toEqual(["TSLA"]);
@@ -289,7 +295,7 @@ describe("trade browser", () => {
     const snapshot: JournalWorkspaceSnapshot = {
       ...DEMO_WORKSPACE,
       reviewOptions: Object.freeze({
-        setups: Object.freeze([]),
+        setups: Object.freeze(["Archived setup"]),
         mistakes: Object.freeze(["Historical mistake"]),
         emotions: Object.freeze(["Day-only emotion"]),
         tags: Object.freeze(["Archived tag"]),
@@ -304,6 +310,7 @@ describe("trade browser", () => {
     });
 
     expect(browser.reviewFacetOptions).toEqual({
+      setups: ["Breakout", "Pullback", "Reversal"],
       mistakes: ["Chased entry", "Early entry"],
       emotions: ["Calm", "Focused", "Hesitant", "Impatient", "Patient"],
       tags: [
@@ -321,24 +328,38 @@ describe("trade browser", () => {
         "Target held",
       ],
     });
+    expect(browser.reviewFacetOptions.setups).toContain("Breakout");
+    expect(browser.reviewFacetOptions.setups).not.toContain("Archived setup");
     expect(browser.reviewFacetOptions.mistakes).toContain("Chased entry");
     expect(browser.reviewFacetOptions.tags).not.toContain("Archived tag");
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["META"]);
   });
 
   it("retains well-formed stale review selections and yields zero visible matches", () => {
+    const setupOnly = buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "No longer assigned setup",
+    });
     const browser = buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "No longer assigned setup",
       mistake: "No longer assigned mistake",
       emotion: "No longer assigned emotion",
       tag: "No longer assigned tag",
     });
 
+    expect(setupOnly.state.setup).toBe("No longer assigned setup");
+    expect(setupOnly.reviewFacetOptions.setups).not.toContain(setupOnly.state.setup);
+    expect(setupOnly.evidence).toHaveLength(8);
+    expect(setupOnly.visibleEvidence).toEqual([]);
+    expect(setupOnly.contributionPnlExact).toBe("310");
     expect(browser.state).toMatchObject({
+      setup: "No longer assigned setup",
       mistake: "No longer assigned mistake",
       emotion: "No longer assigned emotion",
       tag: "No longer assigned tag",
     });
+    expect(browser.reviewFacetOptions.setups).not.toContain(browser.state.setup);
     expect(browser.reviewFacetOptions.mistakes).not.toContain(browser.state.mistake);
     expect(browser.reviewFacetOptions.emotions).not.toContain(browser.state.emotion);
     expect(browser.reviewFacetOptions.tags).not.toContain(browser.state.tag);
@@ -352,17 +373,72 @@ describe("trade browser", () => {
   it("normalizes selected review labels with the saved-review label contract", () => {
     const browser = buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "  Reversal  ",
       mistake: "  Early   entry  ",
       emotion: " Impatient ",
       tag: " Invalidation   respected ",
     });
 
     expect(browser.state).toMatchObject({
+      setup: "Reversal",
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
     });
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["TSLA"]);
+  });
+
+  it("keeps a saved literal Unclassified setup distinct from the absent placeholder", () => {
+    const classified = {
+      ...demoTrade("AAPL"),
+      setup: "Unclassified",
+      hasClassifiedSetup: true,
+    };
+    const absent = {
+      ...demoTrade("MSFT"),
+      setup: "Unclassified",
+      hasClassifiedSetup: false,
+    };
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: [
+        classified,
+        absent,
+        ...DEMO_WORKSPACE.trades.slice(2),
+      ],
+    };
+
+    const exact = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "Unclassified",
+    });
+    const search = buildTradeBrowser(snapshot, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      query: "unclassified",
+    });
+    const placeholdersOnly = buildTradeBrowser({
+      ...snapshot,
+      trades: snapshot.trades.map((trade) => (
+        trade.tradeSubjectId === classified.tradeSubjectId
+          ? { ...trade, hasClassifiedSetup: false }
+          : trade
+      )),
+    });
+
+    expect(exact.reviewFacetOptions.setups).toContain("Unclassified");
+    expect(exact.visibleEvidence.map(({ trade }) => trade.tradeSubjectId)).toEqual([
+      classified.tradeSubjectId,
+    ]);
+    expect(search.visibleEvidence.map(({ trade }) => trade.tradeSubjectId)).toEqual([
+      classified.tradeSubjectId,
+      absent.tradeSubjectId,
+    ]);
+    expect(exact.reviewFacetOptions.setups.filter((setup) => setup === "Unclassified"))
+      .toHaveLength(1);
+    expect(placeholdersOnly.reviewFacetOptions.setups).not.toContain("Unclassified");
+    expect(exact.evidence).toHaveLength(8);
+    expect(exact.contributionPnlExact).toBe("310");
+    expect(exact.hasViewFilters).toBe(true);
   });
 
   it("aggregates multi-day and zero-P&L activity without double-counting a trade", () => {
@@ -553,6 +629,8 @@ describe("trade browser", () => {
     const source = demoTrade("AAPL");
     const mutableTrade = {
       ...source,
+      setup: "Detached setup",
+      hasClassifiedSetup: true,
       mistakes: ["Detached mistake"],
       emotion: "Detached emotion",
       tags: ["Detached tag"],
@@ -563,17 +641,22 @@ describe("trade browser", () => {
     };
     const browser = buildTradeBrowser(snapshot);
 
+    mutableTrade.setup = "Mutated setup";
+    mutableTrade.hasClassifiedSetup = false;
     mutableTrade.mistakes.push("Mutated mistake");
     mutableTrade.emotion = "Mutated emotion";
     mutableTrade.tags.push("Mutated tag");
 
+    expect(browser.reviewFacetOptions.setups).toContain("Detached setup");
     expect(browser.reviewFacetOptions.mistakes).toContain("Detached mistake");
     expect(browser.reviewFacetOptions.emotions).toContain("Detached emotion");
     expect(browser.reviewFacetOptions.tags).toContain("Detached tag");
+    expect(browser.reviewFacetOptions.setups).not.toContain("Mutated setup");
     expect(browser.reviewFacetOptions.mistakes).not.toContain("Mutated mistake");
     expect(browser.reviewFacetOptions.emotions).not.toContain("Mutated emotion");
     expect(browser.reviewFacetOptions.tags).not.toContain("Mutated tag");
     expect(Object.isFrozen(browser.reviewFacetOptions)).toBe(true);
+    expect(Object.isFrozen(browser.reviewFacetOptions.setups)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.mistakes)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.emotions)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.tags)).toBe(true);
@@ -637,6 +720,22 @@ describe("trade browser", () => {
     })).toThrow(/Review state.*not a supported/i);
     expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      setup: 7 as never,
+    })).toThrow(/Setup filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "",
+    })).toThrow(/Setup filter.*1-120/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "line\nbreak",
+    })).toThrow(/Setup filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "x".repeat(121),
+    })).toThrow(/Setup filter.*1-120/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
       mistake: 7 as never,
     })).toThrow(/Mistake filter.*single-line/i);
     expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
@@ -671,6 +770,21 @@ describe("trade browser", () => {
       expect(() => buildTradeBrowser(malformed)).toThrow(
         new RegExp(`Trade .* ${label}.*not a supported`, "i"),
       );
+    }
+
+    for (const [setup, hasClassifiedSetup, expected] of [
+      [" Breakout ", true, /setup.*not normalized/i],
+      ["line\nbreak", true, /setup.*single-line/i],
+      ["Breakout", false, /unclassified setup.*canonical Unclassified placeholder/i],
+      ["Unclassified", "yes", /setup classification.*boolean/i],
+    ] as const) {
+      const malformed = {
+        ...DEMO_WORKSPACE,
+        trades: DEMO_WORKSPACE.trades.map((trade, index) => (
+          index === 0 ? { ...trade, setup, hasClassifiedSetup } : trade
+        )),
+      } as unknown as JournalWorkspaceSnapshot;
+      expect(() => buildTradeBrowser(malformed)).toThrow(expected);
     }
 
     for (const [field, value, expected] of [

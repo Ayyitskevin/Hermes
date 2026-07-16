@@ -328,9 +328,20 @@ instead of clearing it or broadening. Unsupported or malformed labels fail
 closed. Dynamic facets do not trim or recompute exact scope evidence, totals,
 calendar, Dashboard, or governed report inputs.
 
-Compact Trades Filters v1 changes only how those seven exact controls are
-revealed. Its active count derives from the existing four fixed and three
-dynamic facet values. The native disclosure renders closed at zero and open for
+Exact Setup Facet v1 adds one more exact current-review projection without
+inventing a setup taxonomy. Its options derive across the complete workspace
+only from `TradePreview.setup` values whose `hasClassifiedSetup` flag is true.
+An absent assignment must retain the exact canonical **Unclassified**
+placeholder and is excluded; an explicitly saved setup with that same literal
+name remains a distinct real assignment. Setup reuses the saved-review label
+normalization and limit contract, stable code-unit ordering, detachment, and
+deep freezing. It ANDs with the existing seven facets, search, and scope. A
+valid stale selection stays visible and returns zero cards without changing
+evidence, totals, the calendar, Dashboard, or governed reports.
+
+Compact Trades Filters v1 changes only how those eight exact controls are
+revealed. Its active count derives from the four fixed and four current-review
+facet values. The native disclosure renders closed at zero and open for
 any active value, including a valid stale dynamic selection; search and
 account/date/day scope are excluded. In-place selection changes update the
 count, and returning the last facet to its default collapses with focus on the
@@ -538,7 +549,7 @@ Dashboard rebuilds and the generic non-report continuation focuses
 governed reports, SQLite, browser journal shape, URLs, preferences,
 export/restore shapes, archives, formulas, and digests are unchanged.
 
-Search and all seven facet selects share the same session boundary. Clear
+Search and all eight facet selects share the same session boundary. Clear
 search and filters resets only those visibility controls and retains account/
 date/day scope; Clear all resets scope and visibility together. Neither action
 mutates ledger state.
@@ -776,10 +787,12 @@ composition, scope/report isolation under facets, distinct clear semantics,
 session retention/reset, and 320px/200% reflow. Dynamic Review Facets coverage
 adds current-assignment-only option derivation across the whole workspace,
 saved-review normalization/limit enforcement, stable deeply frozen choices,
-seven-facet/search/scope AND composition, multi-valued mistake/tag matching,
+eight-facet/search/scope AND composition, classified-only Setup options,
+explicit saved-versus-absent **Unclassified** handling, multi-valued
+mistake/tag matching,
 and a retained stale selection that yields zero visible cards without changing
 exact evidence, totals, or calendar state. Compact Trades Filters coverage adds
-zero-to-seven counts, native pointer/keyboard disclosure behavior, query-only
+zero-to-eight counts, native pointer/keyboard disclosure behavior, query-only
 clear access, final-facet collapse/focus, retained stale-value opening,
 report/storage neutrality, 44-point controls, and 320/421px 200% reflow.
 Emotion Patterns coverage adds checksum, cohort conservation, open/closed and

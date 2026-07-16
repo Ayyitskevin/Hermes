@@ -45,6 +45,7 @@ describe("trades view", () => {
       direction: "long",
       positionState: "closed",
       reviewState: "completed",
+      setup: "Breakout",
       mistake: "Chased entry",
       emotion: "Impatient",
       tag: "Stopped on plan",
@@ -53,11 +54,14 @@ describe("trades view", () => {
 
     expect(html).toContain('id="trade-filter-asset-class"');
     expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
-    expect(html).toContain("· 7 active filters");
+    expect(html).toContain("· 8 active filters");
     expect(html).toContain('<option value="etf" selected>ETF</option>');
     expect(html).toContain('<option value="long" selected>Long</option>');
     expect(html).toContain('<option value="closed" selected>Closed</option>');
     expect(html).toContain('<option value="completed" selected>Completed</option>');
+    expect(html).toContain("<label>Setup");
+    expect(html).toContain('id="trade-filter-setup"');
+    expect(html).toContain('<option value="Breakout" selected>Breakout</option>');
     expect(html).toContain('id="trade-filter-mistake"');
     expect(html).toContain('<option value="Chased entry" selected>Chased entry</option>');
     expect(html).toContain('id="trade-filter-emotion"');
@@ -79,6 +83,7 @@ describe("trades view", () => {
   it("escapes current review labels and preserves a selected stale value", () => {
     const escapedTrade = {
       ...DEMO_WORKSPACE.trades[0]!,
+      setup: 'Opening <range> & "fast"',
       mistakes: ['Late <scale-out> & "hesitation"'],
       emotion: "Focused & calm",
       tags: ["A+ <setup>"],
@@ -89,10 +94,17 @@ describe("trades view", () => {
     };
     const browser = buildTradeBrowser(snapshot, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "Retired <setup>",
       mistake: "Retired <mistake>",
     });
     const html = tradesView(snapshot, browser);
 
+    expect(html).toContain(
+      'value="Opening &lt;range&gt; &amp; &quot;fast&quot;"',
+    );
+    expect(html).toContain(
+      '<option value="Retired &lt;setup&gt;" selected>Retired &lt;setup&gt; (not currently assigned)</option>',
+    );
     expect(html).toContain(
       'value="Late &lt;scale-out&gt; &amp; &quot;hesitation&quot;"',
     );
@@ -105,7 +117,7 @@ describe("trades view", () => {
       '<option value="Retired &lt;mistake&gt;" selected>Retired &lt;mistake&gt; (not currently assigned)</option>',
     );
     expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
-    expect(html).toContain("· 1 active filter");
+    expect(html).toContain("· 2 active filters");
     expect(html).toContain("Showing 0 of 8 trades");
   });
 
@@ -142,6 +154,8 @@ describe("trades view", () => {
       ...DEMO_WORKSPACE,
       trades: DEMO_WORKSPACE.trades.map((trade) => ({
         ...trade,
+        setup: "Unclassified",
+        hasClassifiedSetup: false,
         mistakes: [],
         emotion: null,
         tags: [],
@@ -149,16 +163,40 @@ describe("trades view", () => {
     };
     const emptyHtml = tradesView(snapshot, buildTradeBrowser(snapshot));
 
+    expect(emptyHtml).toMatch(/id="trade-filter-setup"[^>]* disabled/);
+    expect(emptyHtml).not.toContain('<option value="Unclassified"');
     expect(emptyHtml).toMatch(/id="trade-filter-mistake"[^>]* disabled/);
     expect(emptyHtml).toMatch(/id="trade-filter-emotion"[^>]* disabled/);
     expect(emptyHtml).toMatch(/id="trade-filter-tag"[^>]* disabled/);
 
+    const classifiedSnapshot = {
+      ...snapshot,
+      trades: snapshot.trades.map((trade, index) => (
+        index === 0
+          ? { ...trade, hasClassifiedSetup: true }
+          : trade
+      )),
+    };
+    const classifiedHtml = tradesView(
+      classifiedSnapshot,
+      buildTradeBrowser(classifiedSnapshot),
+    );
+    expect(classifiedHtml).not.toMatch(/id="trade-filter-setup"[^>]* disabled/);
+    expect(classifiedHtml).toMatch(
+      /<option value="Unclassified"[^>]*>Unclassified<\/option>/,
+    );
+
     const staleHtml = tradesView(snapshot, buildTradeBrowser(snapshot, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      setup: "Retired setup",
       tag: "Retired tag",
     }));
+    expect(staleHtml).not.toMatch(/id="trade-filter-setup"[^>]* disabled/);
     expect(staleHtml).not.toMatch(/id="trade-filter-tag"[^>]* disabled/);
     expect(staleHtml).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
+    expect(staleHtml).toContain(
+      '<option value="Retired setup" selected>Retired setup (not currently assigned)</option>',
+    );
     expect(staleHtml).toContain(
       '<option value="Retired tag" selected>Retired tag (not currently assigned)</option>',
     );
