@@ -319,7 +319,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-four bounded Slice D increments are implemented in the current workspace.
+Twenty-five bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -889,6 +889,31 @@ digest, governed report, formula, route, preference, dependency, or native
 source changed; five tabs, ten report targets, eight governed reports, and the
 same four write-capable exceptions remain unchanged.
 
+CSV Preview Feedback Focus v1 is the twenty-fifth bounded Slice D increment and
+the twenty-first derived-only presentation/focus increment. An explicit
+**Preview CSV** submission that has no file, exceeds the existing 5 MiB pre-read
+limit, cannot read its file, or fails synchronous preparation clears any stale
+prepared/commit surface, preserves authored account, time zone, currency, and
+selected-file ownership when present, retains the existing message, and visibly
+focuses the status between app chrome. A ready or invalid prepared preview
+instead focuses its exact title; invalid mapping and issues remain open without
+a commit action, while ready counts, mapping, and commit remain unchanged.
+
+A monotonic preview generation plus selected-File identity prevents a delayed
+resolve or rejection from replacing newer options, file ownership, content, or
+focus. Ordinary input/file changes do not move focus, and mapping rerenders keep
+their changed-selector/final-commit targets. Production Chromium proves early
+failure at 320 CSS pixels with 200% text; ready/invalid preview, visible focus,
+and mapping completion at 320/421/568 pixels with 200% text; delayed-read
+cancellation at the 390x844 default scale; retained inputs/file; no horizontal
+overflow; local-storage/request/import-history neutrality; and correction to the
+unchanged commit path. Native VoiceOver, hardware-keyboard, safe-area,
+lifecycle, and Dynamic Type acceptance remain held. No schema, store command,
+receipt, archive, digest,
+governed report, formula, route, preference, dependency, or native source
+changed; five tabs, ten report targets, eight governed reports, and the same four
+write-capable exceptions remain unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1043,7 +1068,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-twenty-four Slice D increments add Plan Check, governed Setup Breakdown,
+twenty-five Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1051,8 +1076,9 @@ v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
 Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
-Dashboard Review Return Focus v1, and Manual Entry Validation Focus v1.
-The twenty presentation/projection increments remain derived-only. Durable
+Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, and CSV
+Preview Feedback Focus v1. The twenty-one presentation/projection increments
+remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path, while Calendar-Day Reflection Continuation

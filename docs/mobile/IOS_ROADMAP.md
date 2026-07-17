@@ -54,9 +54,9 @@ under the provisional identifier until that gate is cleared.
   Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
-  Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, Compact
-  Trades Filters v1, export, and matching-runtime local restore are
-  implemented.
+  Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
+  Preview Feedback Focus v1, Compact Trades Filters v1, export, and
+  matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
   restore; Exact-Command Recovery proves an ambiguous daily save retains and
@@ -532,6 +532,23 @@ observed plugin/device behavior:
   dependency, or native source. Native VoiceOver, hardware and onscreen
   keyboards, safe areas, lifecycle, and 320/421-width 200% Dynamic Type remain
   held.
+- CSV Preview Feedback Focus v1 makes every explicit **Preview CSV** outcome
+  visibly own its feedback focus. Missing, over-5-MiB, unreadable, or
+  synchronously rejected files clear stale preview/commit state, retain
+  authored account/time-zone/currency and selected-file ownership when
+  present, keep existing copy, and focus the status. Ready and invalid
+  previews focus their exact title; invalid mapping/issues remain open with no
+  commit, while ready counts/mapping/commit and remapping focus targets remain
+  unchanged. A monotonic generation plus selected-file identity ignores late
+  read resolves/rejections after options or file ownership changes, so stale
+  work cannot replace current content or focus. Production Chromium covers
+  early errors at 320px/200% text; ready/invalid outcomes and mapping completion
+  at 320/421/568px with 200% text; delayed reads at the 390x844 default scale;
+  and retained inputs/file plus storage/request/import-history neutrality. The
+  slice is presentation-only and adds no schema, store command, receipt, archive,
+  digest, report, formula, route, preference, dependency, or native source.
+  Native VoiceOver, hardware keyboard, safe areas, lifecycle, multi-scene,
+  SQLite observation, and Dynamic Type remain held.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -698,9 +715,10 @@ v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
 Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
-Focus v1, Manual Entry Validation Focus v1, matching-runtime local restore, and
-all eight governed reports are implemented. Twenty-four bounded Slice D
-increments are implemented in total; the twenty presentation/projection
+Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
+matching-runtime local restore, and all eight governed reports are implemented.
+Twenty-five bounded Slice D increments are implemented in total; the twenty-one
+presentation/projection
 increments remain derived-only. Durable Daily Journal, Report Trade
 Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade

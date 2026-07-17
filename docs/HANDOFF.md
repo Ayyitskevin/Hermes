@@ -1,8 +1,153 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Manual Entry Validation Focus v1 · updated 2026-07-16
+Status: verified CSV Preview Feedback Focus v1 · updated 2026-07-17
 
 ## Current handoff
+
+task: Deliver CSV Preview Feedback Focus v1: make every explicit CSV preview
+outcome visibly own its feedback focus while preserving authored inputs,
+selected-file ownership, current asynchronous intent, existing mapping/commit
+behavior, and every durable ledger, receipt, report, archive, digest, route,
+preference, and financial definition.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Explicit **Preview CSV** outcomes now own visible feedback. Missing-file,
+  over-5-MiB, read, and synchronous preparation failures clear transient stale
+  preview/commit state, retain authored account/time-zone/currency plus the
+  selected file when present, keep existing copy, and focus the live status.
+  Ready and invalid prepared previews focus their exact title.
+- `#import-status` and `#preview-title` are programmatically focusable and have
+  a scoped pointer-safe focus outline. The shared focus handoff scrolls its
+  target to the center, then focuses without a second scroll so status, title,
+  and final mapping commit remain visible between app chrome.
+- A monotonic preview generation plus exact selected-File identity now guards
+  `File.text()`. Any input/file change or newer submit supersedes an in-flight
+  read; its late resolve or rejection returns silently and cannot replace newer
+  content, file ownership, status, preview, commit availability, or focus.
+- Invalid previews retain open mapping/issues and no commit. Ready counts,
+  mapping, and commit behavior remain unchanged. Mapping rerenders still focus
+  the changed selector until the last required mapping, then focus the existing
+  commit action. Ordinary input/file changes retain their current control focus.
+- Production Chromium covers early failures at 320 CSS pixels/200% text;
+  ready/invalid preview and final mapping at 320/421/568 pixels/200% text;
+  static and sticky chrome; stale option/file reads; retained values/file;
+  stale-surface removal; no horizontal overflow; unchanged local storage, zero
+  external requests, empty import history, and correction to the existing commit
+  path without committing in the new tests.
+- README, product blueprint, roadmap, local-ledger contract, Mac handoff, and
+  this active handoff now cover twenty-five bounded Slice D increments,
+  twenty-one derived-only presentation/projection increments, and the same four
+  write-capable exceptions. Schema v4, five tabs, ten report targets, and eight
+  governed reports remain unchanged.
+- No migration, store command, receipt/recovery contract, execution/review/day
+  fact, export/restore shape, archive or digest input, governed report version/
+  checksum/cohort/formula, route, preference, preset, dependency, credential,
+  native source, destructive workflow, or public comparative claim changed.
+
+verified:
+
+- Regression-first focus proof: the three original targeted CSV journeys failed
+  on the missing status/title focus targets, then passed after implementation.
+- Independent review found and reproduced an asynchronous stale-read blocker.
+  Its delayed-read journey first failed because an options change left the old
+  read active; after the generation/file-identity guard, all four targeted CSV
+  journeys passed. Final technical/security and UX/accessibility re-reviews
+  reported no remaining P0-P3 findings.
+- cd mobile && npm ci — exit 0; 164 packages installed, 0 vulnerabilities.
+- cd mobile && npm run typecheck — exit 0.
+- cd mobile && npm run test:boundary — exit 0; 1 file, 2 tests passed.
+- cd mobile && npm test — exit 0; 55 files, 691 tests passed.
+- cd mobile && npm run test:ios-sync — exit 0; all 8 verifier tests passed.
+- cd mobile && npm run test:e2e — exit 0; all 80 production-Chromium journeys
+  passed.
+- cd mobile && npm run ios:copy — exit 0; Vite transformed 78 modules and copied
+  the production bundle. The existing >500 kB chunk warning remains visible.
+- cd mobile && npm run verify:ios-sync — exit 0 before and after sync; 6
+  production files matched the iOS public copy byte-for-byte with SHA-256
+  305d130a92feb527be97a1263da5e5429da4d14059f972c11ef3506cce6da5ee.
+  Generated Capacitor identity/SQLite registration and tracked drift passed;
+  every native evidence row remained NOT RUN.
+- cd mobile && npm run ios:sync — exit 0 as a Linux compatibility check;
+  Capacitor found only @capacitor-community/sqlite@8.1.0 and explicitly skipped
+  CocoaPods and xcodebuild because neither is installed.
+- cd mobile && npm audit --omit=dev — exit 0; 0 vulnerabilities.
+- Native/lock drift, documentation structure, and whitespace checks passed.
+  Exactly nine intended files changed; this handoff preserves one current
+  section, thirty-two historical milestone/snapshot markers, and thirty-three
+  complete schema blocks.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/UI slice does
+  not touch legacy Python and this checkout has no complete project venv. The
+  hosted Legacy Python safety job must provide independent evidence.
+
+assumptions:
+
+- The form DOM remains the owner of authored import controls and selected-file
+  identity. The binder owns transient raw source text, source name, prepared
+  preview, preview generation, and focus. JournalApplication and JournalStore
+  remain the only durable execution owners after explicit commit.
+- The preview generation is monotonic for the binder lifetime and increments on
+  every submit, governed option input, and file change. Both generation and
+  selected-File identity must still match after asynchronous read completion;
+  stale completion intentionally performs no UI, preparation, or durable work.
+- `#import-status` owns early failure/live feedback; `#preview-title` owns a
+  successfully prepared ready/invalid result; mapping selectors and the existing
+  commit action retain remap focus ownership.
+- Browser local-storage/request/import-history evidence and inspected pre-commit
+  control flow support write neutrality. This does not replace native SQLite,
+  WKWebView, VoiceOver, lifecycle, SQLCipher, Keychain, or physical-device proof.
+
+open:
+
+- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
+  publication before the milestone can be closed.
+- HOLD native CSV Preview Feedback Focus acceptance: repeat missing, over-5-MiB,
+  read, preparation, stale-option-read, and stale-file-read outcomes with
+  VoiceOver, hardware keyboard, safe areas, 320/421-width 200% Dynamic Type,
+  wider sticky chrome, background/foreground, force-quit/relaunch, and two live
+  scenes. Preserve exact values/file/focus, reject superseded completion, expose
+  no stale commit or failed-attempt SQLite/network work, retain mapping targets,
+  and prove correction reaches the unchanged commit path.
+- HOLD native Manual Entry Validation Focus, Dashboard Review Return Focus,
+  Exact Scoped Activity-Day Stepper, Daily Reflection Return Focus, Calendar-Day
+  Reflection Continuation, Review Queue Focus, Exact Setup Facet, Dashboard
+  Recent Trade Continuation, and Review Session Coverage acceptance; browser
+  evidence does not satisfy their Mac/iPhone rows.
+- HOLD the separate Opening Time Mix candidate until its governed grouping is
+  explicit: four broad named bands and 24 workspace-local clock hours are
+  materially different product definitions.
+- HIGH — HUMAN GATE: the unpublished Symbol Breakdown draft needs a corrected
+  current-review-head and draft/completed eligibility definition.
+- HIGH — HUMAN GATE: define generic-CSV asset-class semantics before broader
+  ETF/options/futures/crypto file-coverage claims.
+- HIGH — HUMAN GATE: atomic batch exact-command recovery requires an approved
+  durable batch receipt plus schema/migration/export/restore behavior.
+- HIGH — SECURITY/HUMAN GATE: decide whether to remove, wrap, or explicitly
+  accept the pinned SQLite plugin HTTP-download bridge and database-path console
+  print before release.
+- Attachments, verified Delete All Data, saved presets, persistent/report scope,
+  fuller management, remaining report families, and native restore/backup
+  acceptance remain separate.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim native readiness, broader CSV support, broker sync, execution,
+  hosted Connect, Android, recurring AI, TestFlight, App Store submission,
+  pricing, or public comparative positioning from this milestone.
+- After publication, exact hosted CI, and ORACLE filing, stop at the clean
+  boundary; do not begin another slice.
+
+## Prior milestone — Manual Entry Validation Focus v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active CSV Preview Feedback Focus v1 handoff above.
+
+Status: verified Manual Entry Validation Focus v1 · updated 2026-07-16
+
+### Historical handoff
 
 task: Deliver Manual Entry Validation Focus v1: keep synchronous
 manual-preparation validation feedback visible and focused inside the sheet
@@ -157,7 +302,7 @@ open:
 ## Prior milestone — Dashboard Review Return Focus v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active Manual Entry Validation Focus v1 handoff above.
+> Manual Entry Validation Focus v1 historical milestone above.
 
 Status: verified Dashboard Review Return Focus v1 · updated 2026-07-16
 

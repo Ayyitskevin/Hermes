@@ -101,6 +101,19 @@ and an App Store disclosure.
 - Complete all three welcome pages; force quit and confirm completion persists.
 - Choose **Start my journal** and confirm the empty journal is primary. Separately
   choose the demo and confirm `DEMO` remains visible and every result is fictional.
+- Exercise **Preview CSV** with no file, a file larger than 5 MiB, an induced
+  read failure, and synchronous account/time-zone/currency/preparation
+  rejection. Confirm the existing status is announced, visibly outlined, and
+  focused clear of safe-area/app chrome; stale preview/commit state is removed;
+  authored controls and the selected file remain exact when present; and no
+  receipt, SQLite, or network work occurs. Delay a read, then change options and
+  the selected file: the late resolve/rejection must not replace current
+  content, file ownership, or focus. Confirm ready and invalid previews focus
+  their exact title, invalid mapping/issues remain open with no commit, the final
+  required mapping still focuses the unchanged commit action, and ordinary
+  file/input changes do not move focus. Repeat with VoiceOver, hardware keyboard,
+  safe areas, background/foreground, two scenes, and 320/421-point 200% Dynamic
+  Type; also verify sticky-chrome positioning at a wider layout.
 - Import a two-fill CSV, confirm the preview/mapping/receipt, force quit, relaunch,
   and reconcile the closed-trade P&L including both fees.
 - Re-import the same file and confirm no duplicate execution or performance.
@@ -700,6 +713,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
+| CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -793,6 +807,17 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   work. A separate force-quit/relaunch must restore no execution, command, or
   transient UI state; reopening Manual Entry must create a fresh sheet and fresh
   open-time identity.
+- CSV Preview Feedback Focus v1 has only Linux/Chromium focus, geometry,
+  retained-input, stale-preview-removal, stale-read cancellation, mapping,
+  local-storage/request, and narrow/sticky-layout evidence. Native VoiceOver
+  announcement/order, hardware-keyboard focus, safe-area/chrome positioning,
+  background/foreground, force-quit/relaunch, two-scene behavior, SQLite
+  observation, and 320/421-width 200% Dynamic Type are NOT RUN. Keep native
+  acceptance held until every early failure and ready/invalid preview outcome
+  preserves exact input/file ownership, exposes no stale commit surface or
+  failed-attempt durable work, ignores superseded asynchronous completion,
+  retains existing mapping targets, and lets correction reach the unchanged
+  commit path.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

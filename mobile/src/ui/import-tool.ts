@@ -39,7 +39,7 @@ export function importTool(snapshot: JournalWorkspaceSnapshot): string {
       </div>
       <p class="helper-text">Timestamps without an offset use the selected IANA time zone. The first journal version intentionally prevents mixed-currency aggregation.</p>
       <button class="primary-button" type="submit">Preview CSV</button>
-      <p id="import-status" class="result-count" role="status" aria-live="polite"></p>
+      <p id="import-status" class="result-count" role="status" aria-live="polite" tabindex="-1"></p>
       <div id="import-preview"></div>
     </form>
   </article>`;
@@ -81,7 +81,7 @@ function preparedPreviewTemplate(prepared: PreparedCsvImport): string {
     ${headers.map((header, index) => `<option value="${index}" ${mapping?.[field.id] === index ? "selected" : ""}>${escapeHtml(header || `Column ${index + 1}`)}</option>`).join("")}
   </select></label>`).join("");
   return `<section class="import-preview-card" aria-labelledby="preview-title">
-    <div class="section-title"><div><p class="card-label">VALIDATION PREVIEW</p><h3 id="preview-title">${preview.status === "ready" ? "Ready to import" : "Needs attention"}</h3></div><span>${preview.validRows} valid · ${preview.rejectedRows} rejected · ${preview.skippedRows} skipped</span></div>
+    <div class="section-title"><div><p class="card-label">VALIDATION PREVIEW</p><h3 id="preview-title" tabindex="-1">${preview.status === "ready" ? "Ready to import" : "Needs attention"}</h3></div><span>${preview.validRows} valid · ${preview.rejectedRows} rejected · ${preview.skippedRows} skipped</span></div>
     ${headers.length === 0 ? "" : `<details class="mapping-details" ${preview.status === "invalid" ? "open" : ""}><summary>Review column mapping</summary><div class="field-grid">${selects}</div></details>`}
     ${issueRows.length === 0 ? "" : `<ul class="issue-list">${issueRows}${remainingIssueCount === 0 ? "" : `<li>And ${remainingIssueCount} more issues. Correct the source file or mapping and preview again.</li>`}</ul>`}
     ${sampleRows.length === 0 ? "" : `<div class="report-table" role="table" aria-label="Execution preview"><div class="report-row report-header" role="row"><span role="columnheader">Symbol</span><span role="columnheader">Side</span><span role="columnheader">Qty</span><span role="columnheader">Price</span></div>${sampleRows}</div>`}
@@ -103,6 +103,20 @@ export function bindImportForm(
   let rawInput: string | null = null;
   let sourceName: string | null = null;
   let prepared: PreparedCsvImport | null = null;
+  let previewGeneration = 0;
+  let previewing = false;
+
+  const focusFeedback = (target: HTMLElement): void => {
+    target.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+    target.focus({ preventScroll: true });
+  };
+
+  const clearPreparedFile = (): void => {
+    prepared = null;
+    rawInput = null;
+    sourceName = null;
+    previewContainer.innerHTML = "";
+  };
 
   const selection = (mapping?: CsvHeaderMapping) => ({
     rawInput: rawInput ?? "",
@@ -151,13 +165,18 @@ export function bindImportForm(
       }
     });
     if (focusField !== undefined) {
-      if (next.preview.status === "ready") commitButton?.focus();
-      else previewContainer.querySelector<HTMLSelectElement>(`[data-csv-field="${focusField}"]`)?.focus();
+      const target = next.preview.status === "ready"
+        ? commitButton
+        : previewContainer.querySelector<HTMLSelectElement>(`[data-csv-field="${focusField}"]`);
+      if (target !== null) focusFeedback(target);
     }
   };
 
   const invalidateOptions = (): void => {
-    if (prepared === null) return;
+    const wasPreviewing = previewing;
+    previewGeneration += 1;
+    previewing = false;
+    if (prepared === null && !wasPreviewing) return;
     prepared = null;
     previewContainer.innerHTML = "";
     status.textContent = "Import options changed. Preview the CSV again before committing.";
@@ -167,37 +186,50 @@ export function bindImportForm(
   }
 
   fileInput.addEventListener("change", () => {
-    prepared = null;
-    rawInput = null;
-    sourceName = null;
-    previewContainer.innerHTML = "";
+    previewGeneration += 1;
+    previewing = false;
+    clearPreparedFile();
     const file = fileInput.files?.[0];
     status.textContent = file === undefined ? "Choose a CSV file." : `${file.name} selected. Preview it before import.`;
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const previewAttempt = ++previewGeneration;
+    previewing = false;
     const file = fileInput.files?.[0];
     if (file === undefined) {
+      clearPreparedFile();
       status.textContent = "Choose a CSV file first.";
+      focusFeedback(status);
       return;
     }
     if (file.size > DEFAULT_CSV_LIMITS.maxBytes) {
+      clearPreparedFile();
       status.textContent = `CSV is ${file.size} bytes; the limit is ${DEFAULT_CSV_LIMITS.maxBytes} bytes.`;
-      previewContainer.innerHTML = "";
+      focusFeedback(status);
       return;
     }
     status.textContent = "Reading and validating locally…";
+    previewing = true;
     try {
-      rawInput = await file.text();
+      const nextRawInput = await file.text();
+      if (previewAttempt !== previewGeneration || fileInput.files?.[0] !== file) return;
+      previewing = false;
+      rawInput = nextRawInput;
       sourceName = file.name.trim() || "broker.csv";
       renderPrepared(application.prepareCsv(selection()));
       status.textContent = prepared?.preview.status === "ready"
         ? "Preview is ready. Confirm the mapping and execution count."
         : "Resolve the preview errors before import.";
+      const previewTitle = previewContainer.querySelector<HTMLElement>("#preview-title");
+      if (previewTitle !== null) focusFeedback(previewTitle);
     } catch (error) {
-      previewContainer.innerHTML = "";
+      if (previewAttempt !== previewGeneration || fileInput.files?.[0] !== file) return;
+      previewing = false;
+      clearPreparedFile();
       status.textContent = error instanceof Error ? error.message : "Could not preview this CSV.";
+      focusFeedback(status);
     }
   });
 }

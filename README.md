@@ -228,6 +228,25 @@ submission-ready product:
   remains held. No schema, store command, archive, digest, report, formula,
   route, preference, dependency, or native source changed; the same four
   write-capable exceptions remain.
+- CSV Preview Feedback Focus v1 is the twenty-fifth bounded Slice D increment
+  and the twenty-first derived-only presentation/focus increment. Every
+  explicit **Preview CSV** outcome now owns visible feedback focus: missing,
+  oversized, unreadable, or synchronously rejected files focus the existing
+  status while clearing stale preview/commit state; ready and invalid previews
+  focus their exact title. Authored account, time zone, currency, and selected
+  file remain intact, and a generation/file-identity guard prevents late reads
+  from replacing current input, content, or focus. Ordinary input/file changes
+  do not steal focus, while mapping rerenders retain their changed-selector and
+  final-commit targets. Production Chromium covers early failure at 320 CSS
+  pixels with 200% text; ready/invalid preview, mapping completion, and visible
+  focus at 320/421/568 pixels with 200% text; delayed-read cancellation at the
+  390x844 default scale; and retained inputs, stale-preview removal, no overflow,
+  local-storage/request/import-history neutrality, plus unchanged correction to
+  the existing commit path.
+  Native VoiceOver, hardware-keyboard, safe-area, lifecycle, and Dynamic Type
+  acceptance remain held. No schema, store command, archive, digest, report,
+  formula, route, preference, dependency, or native source changed; the same
+  four write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

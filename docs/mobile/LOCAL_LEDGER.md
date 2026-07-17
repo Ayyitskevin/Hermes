@@ -359,6 +359,30 @@ storage/request neutrality, correction, and dismissal contract; native
 VoiceOver, hardware and onscreen keyboards, safe areas, lifecycle, and
 320/421-width 200% Dynamic Type remain separate held evidence.
 
+### CSV-preview feedback focus
+
+CSV Preview Feedback Focus v1 is the twenty-fifth bounded Slice D increment
+and the twenty-first derived-only presentation/focus increment. It adds no
+ledger fact, revision, receipt, preparation algorithm, command, or store
+behavior. Authored import values and the selected file remain owned by the
+form DOM; raw source text, source name, and prepared preview remain transient
+binder state; durable execution truth remains owned by JournalApplication and
+JournalStore only after the unchanged explicit commit path. Status/title focus,
+outline, scroll position, and preview markup remain transient UI feedback.
+
+On an explicit **Preview CSV** submission, missing-file, pre-read size,
+file-read, or synchronous preparation failure clears any stale prepared/commit
+surface, preserves authored inputs and the selected file when present, keeps
+the existing message, and visibly focuses the status. A ready or invalid
+prepared preview instead focuses its exact title; invalid mapping/issues remain
+open without a commit action, while ready counts, mapping, and commit remain
+unchanged. A monotonic generation plus selected-file identity ignores stale
+asynchronous resolve/reject completion after options or file ownership changes.
+Ordinary input/file changes do not move focus, and mapping rerenders retain
+their prior changed-selector/final-commit targets. No failure or preview path
+commits, writes SQLite/browser journal state, creates a receipt, or changes an
+archive, digest, governed report, formula, or network contract.
+
 ## Daily-journal sequence
 
 ```text
@@ -870,8 +894,14 @@ deduplication, changed-payload atomic rollback, partial-exit timing, projection
 generations, receipt rollback, and exact rollback/re-import restoration. Browser
 tests exercise file selection, preview invalidation, commit, dashboard
 reconciliation, account-attributed history, mapping focus, persistent mutation
-announcements, user-confirmed rollback, and restoration. Regression fixtures
-also cover overlapping receipts, dependent rollback atomicity, stable trade
+announcements, user-confirmed rollback, and restoration. CSV-preview feedback
+coverage adds missing/over-5-MiB/read/preparation failure, status/title focus,
+retained authored inputs and selected-file ownership, stale preview/commit
+removal, early-failure focus at 320px/200% text, stale asynchronous completion
+cancellation at the 390x844 default scale, ready/invalid mapping state plus
+final-commit focus at 320/421/568px with 200% text, and local-storage/request/
+import-history neutrality. Regression fixtures also cover overlapping receipts,
+dependent rollback atomicity, stable trade
 subjects, equal-timestamp cross-batch ordering, reversed restore order, causal
 clock rollback, and immutable input-head digests. Manual-entry coverage adds
 tamper detection, offset-to-IANA matching, DST gap/fold handling, fee
@@ -1066,6 +1096,10 @@ keyboard, Dynamic Type, and duplicate-symbol acceptance also remain NOT RUN.
 Dashboard Review Return Focus native VoiceOver announcement, keyboard focus,
 safe-area and Dynamic Type layout, lifecycle, force-quit/relaunch, and
 multi-scene refresh/fallback acceptance also remain NOT RUN.
+CSV Preview Feedback Focus native VoiceOver announcement/order, hardware-
+keyboard focus, safe-area/chrome layout, lifecycle, force-quit/relaunch,
+multi-scene behavior, SQLite observation, and 320/421-width 200% Dynamic Type
+also remain NOT RUN; browser evidence must not be treated as native acceptance.
 
 See [the iOS roadmap](IOS_ROADMAP.md) for remaining product work and
 [the Mac handoff](MAC_HANDOFF.md) for native acceptance.
