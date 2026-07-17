@@ -197,6 +197,77 @@ test("daily reflection creates, validates, completes, and returns focus without 
   await expect(completedHeading).toBeInViewport();
 });
 
+test("daily reflection rhythm recomputes missing to draft to completed through existing saves", async ({ page }) => {
+  await establishLocalJournal(page);
+  const rhythm = page.locator("[data-daily-reflection-rhythm]");
+  const session = rhythm.locator('[data-reflection-session="2026-07-09"]');
+  await expect(rhythm).toContainText("0 of 1 completed");
+  await expect(rhythm).toContainText("No current completed run");
+  await expect(session).toHaveAccessibleName(
+    "Thursday, July 9, 2026: missing daily reflection",
+  );
+
+  await page.getByRole("button", { name: "Write daily reflection" }).click();
+  let dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  await dialog.locator("#daily-entry-date").fill("2026-07-09");
+  await dialog.locator("#daily-entry-note").fill("Review the recorded session without rating the result.");
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rhythm).toContainText("0 of 1 completed");
+  await expect(session).toHaveAccessibleName(
+    "Thursday, July 9, 2026: draft daily reflection",
+  );
+
+  const card = page.locator('[data-daily-entry-card="2026-07-09"]');
+  await card.getByRole("button", { name: /Edit daily reflection/u }).click();
+  dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  await dialog.getByRole("button", { name: "Complete reflection" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rhythm).toContainText("1 of 1 completed");
+  await expect(rhythm).toContainText("1-session current run");
+  await expect(session).toHaveAccessibleName(
+    "Thursday, July 9, 2026: completed daily reflection",
+  );
+});
+
+test("fictional daily reflection rhythm stays offline, read-only, and reflows at 200%", async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.origin !== BASE_ORIGIN) externalRequests.push(request.url());
+  });
+  await page.addInitScript((key) => window.localStorage.setItem(key, "complete"), ONBOARDING_KEY);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore demo journal" }).click();
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  await page.evaluate(() => {
+    document.documentElement.dataset.testTextScale = "200";
+  });
+  const storageBefore = await localStorageSnapshot(page);
+  const rhythm = page.locator("[data-daily-reflection-rhythm]");
+  await expect(rhythm).toContainText("2 of 6 completed");
+  await expect(rhythm).toContainText("2-session current run");
+  await expect(rhythm.locator("[data-reflection-session]")).toHaveCount(6);
+  await expect(rhythm.getByRole("button")).toHaveCount(0);
+
+  for (const width of [320, 421]) {
+    await page.setViewportSize({ width, height: 844 });
+    const geometry = await rhythm.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        left: bounds.left,
+        right: bounds.right,
+        documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+    expect(geometry.left, `${width}px rhythm left`).toBeGreaterThanOrEqual(-1);
+    expect(geometry.right, `${width}px rhythm right`).toBeLessThanOrEqual(width + 1);
+    expect(geometry.documentOverflow, `${width}px document overflow`).toBeLessThanOrEqual(1);
+  }
+  expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+  expect(externalRequests).toEqual([]);
+});
+
 test("an uncertain exact daily save returns focus to its prepared Journal date", async ({ page, context }) => {
   const externalRequests: string[] = [];
   page.on("request", (request) => {

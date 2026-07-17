@@ -18,6 +18,11 @@ import {
 } from "./calendar-day-view";
 import { bindImportForm, importTool } from "./import-tool";
 import {
+  focusImportReceiptAfterRefresh,
+  importReceiptHistorySection,
+  latestImportReceiptCard,
+} from "./import-receipt-view";
+import {
   bindManualExecutionActions,
   manualCaptureCard,
   manualExecutionAction,
@@ -28,6 +33,7 @@ import {
   validateDailyJournalPreview,
   workspaceTodayIsoDate,
 } from "./daily-journal-sheet";
+import { dailyReflectionRhythmSection } from "./daily-reflection-rhythm-view";
 import {
   bindTradeReviewActions,
   reviewTradeAction,
@@ -322,6 +328,7 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
       <span>${snapshot.reviewProgress.pendingTrades} waiting · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.streakSessions} consecutive reviewed sessions</span>
     </article>
     ${reviewQueueSection(snapshot)}
+    ${dailyReflectionRhythmSection(snapshot)}
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title" tabindex="-1">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
       <article class="card daily-journal-intro">
@@ -394,35 +401,14 @@ function sizingTool(): string {
   </article>`;
 }
 
-function latestImportReceipt(snapshot: JournalWorkspaceSnapshot): string {
-  if (snapshot.importHistory.length === 0) return "";
-  return `<article class="card import-receipt">
-    <p class="card-label">${snapshot.importSummary.rolledBack ? "LATEST RECEIPT · ROLLED BACK" : "LATEST IMPORT RECEIPT"}</p>
-    <h2>${escapeHtml(snapshot.importSummary.sourceLabel)}</h2>
-    <p>${escapeHtml(snapshot.importSummary.importedAtLabel)} · ${escapeHtml(snapshot.importSummary.accountLabel)}</p>
-    <div class="receipt-metrics">
-      <div><strong>${snapshot.importSummary.executions}</strong><span>${snapshot.importSummary.executions === 1 ? "execution" : "executions"}</span></div>
-      <div><strong>${snapshot.importSummary.rejectedRows}</strong><span>rejected</span></div>
-      <div><strong>${snapshot.importSummary.skippedRows}</strong><span>skipped</span></div>
-    </div>
-  </article>`;
-}
-
 function moreView(snapshot: JournalWorkspaceSnapshot, persistence: JournalApplication["persistence"]): string {
   const activeHistory = snapshot.importHistory.filter((receipt) => !receipt.rolledBack);
   return `<section class="screen-stack" aria-labelledby="more-title">
     <div class="screen-heading"><div><p class="eyebrow">DATA + TOOLS</p><h1 id="more-title">More</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
     ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Manual entry and CSV import stay in your private journal; demo records are never written to the ledger.</p></article>` : manualCaptureCard()}
     ${snapshot.provenance === "demo" ? "" : importTool(snapshot)}
-    ${latestImportReceipt(snapshot)}
-    ${snapshot.importHistory.length === 0 ? "" : `<section aria-labelledby="import-history-title">
-      <div class="section-title"><h2 id="import-history-title">Import history</h2><span>${snapshot.importHistory.length} receipts</span></div>
-      <div class="journal-list">${snapshot.importHistory.map((receipt) => `<article class="card import-history-row">
-        <div class="section-title"><div><p class="card-label">${receipt.rolledBack ? "ROLLED BACK" : "COMMITTED"}</p><h3>${escapeHtml(receipt.sourceLabel)}</h3></div><strong>${countNoun(receipt.executions, "execution")}</strong></div>
-        <p>${escapeHtml(receipt.importedAtLabel)} · ${escapeHtml(receipt.accountLabel)} · ${countNoun(receipt.warningCount, "warning")} · ${receipt.skippedRows} skipped</p>
-        ${receipt.receiptId !== null && !receipt.rolledBack ? `<button class="text-button" type="button" data-rollback-receipt="${escapeHtml(receipt.receiptId)}">Roll back this import</button>` : ""}
-      </article>`).join("")}</div>
-    </section>`}
+    ${latestImportReceiptCard(snapshot)}
+    ${importReceiptHistorySection(snapshot)}
     ${snapshot.provenance === "demo" ? "" : userDataExportCard(persistence)}
     ${snapshot.provenance === "demo" ? "" : userDataRestoreCard(snapshot.provenance === "empty", persistence)}
     ${sizingTool()}
@@ -557,7 +543,7 @@ function bindRollbacks(
       try {
         await application.rollbackImport(receiptId, "User confirmed rollback from the import history.");
         await refresh("Import rolled back. Its immutable receipt remains in history.");
-        root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+        focusImportReceiptAfterRefresh(root, receiptId);
       } catch (error) {
         button.disabled = false;
         window.alert(error instanceof Error ? error.message : "The rollback could not be completed.");

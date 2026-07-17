@@ -1,8 +1,168 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified CSV Preview Feedback Focus v1 · updated 2026-07-17
+Status: verified TradeZella Benefit Parity Foundation v1 · updated 2026-07-17
 
 ## Current handoff
+
+task: Deliver a source-backed TradeZella Benefit Parity Foundation v1 and two
+bounded local-first benefits—Import Receipt Reconciliation v1 and Daily
+Reflection Rhythm v1—without claiming literal suite parity or changing Hermes's
+schema, financial definitions, durable command ownership, network boundary, or
+native-readiness status.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- A dated capability/popularity benchmark now separates advertised TradeZella
+  capabilities, public sentiment/traffic signals, inference, and Hermes roadmap
+  decisions. Twenty unique benefit domains reconcile to 6 shipped,
+  6 prioritize-local, 6 gated-funded, and 2 intentional non-goals. Public
+  evidence supports awareness and satisfaction, not paid-user scale, retention,
+  profitability, trader outcomes, or which factor causes popularity.
+- The `docs/mobile/tradezella-parity/` report directory contains the canonical
+  JSON artifact, capability ledger, three SQL queries, builder, and portable
+  HTML. The HTML embeds the artifact and its rendered/query snapshots. The
+  repository-local builder applies fail-loud scrollbar-safe patches to the
+  installed analytics reader and semantic fallback without modifying the
+  plugin, then browser-checks both enhanced and script-stripped surfaces.
+- Current first-party pricing is dated to the July 14, 2026 effective help
+  article: Essential $35 monthly/$315 yearly, Pro $59/$531, and Ultra $99/$891.
+  Stale public price and undefined 50+/300+ report/data denominators remain
+  labeled as conflicting marketing surfaces. Broker marketing's 500+ claim is
+  kept distinct from the current operational help list's 13 sync connections and
+  39 file-upload rows, including 2 marked coming soon.
+- **Import Receipt Reconciliation v1** projects immutable receipt counts into
+  source, accepted, rejected, skipped, new-or-restored execution versions,
+  already-present rows, and warnings. Conservation is exact; duplicate copy no
+  longer implies a new write; fictional demo history is explicitly read-only;
+  and exact live rollback returns visible keyboard focus to the rebuilt receipt.
+- **Daily Reflection Rhythm v1** classifies the latest seven strict,
+  chronological, unique trading-session dates as completed, draft, or missing
+  from current daily heads and computes only the maximal completed suffix ending
+  at the latest session. It ignores P&L, outcomes, trade-review state, note
+  content, tags, emotion, and process score; no-trade reflection remains
+  separate. Missing → draft → completed continuation reuses the existing Daily
+  Journal editor and save path.
+- README, product blueprint, iOS roadmap, local-ledger contract, Mac handoff,
+  competitive analysis, and this handoff now cover 27 bounded Slice D
+  increments, 23 derived-only presentation/projection increments, and the same
+  4 write-capable exceptions. Schema v4, five tabs, ten report targets, eight
+  Hermes-governed reports, and every existing durable owner remain unchanged.
+- No migration, archive/digest/export/restore shape, import/review/day write
+  command, governed-report formula/cohort/version/checksum, credential,
+  dependency, native source, destructive workflow, broker permission, order
+  execution, advice surface, or public profit leaderboard was added.
+
+verified:
+
+- Regression-first product proof: the new unit suites initially failed because
+  the projections did not exist. Three targeted browser journeys then failed on
+  the old ambiguous accepted-row announcement and missing demo read-only copy;
+  the same journeys passed after the focused UX correction.
+- Independent technical/security review reported no P0-P3 findings and kept
+  native readiness held. Independent UX/accessibility review found the receipt
+  copy/demo gaps; after correction, its critical 320px/200%-text keyboard
+  rollback journey passed and final re-review reported no remaining P0-P3.
+- Independent evidence review reconciled all 20 unique domains and 6/6/6/2
+  dispositions, then caught the stale handoff/pricing, unsupported governance
+  and causal wording, source-denominator leakage, and fallback-overflow path.
+  The dated source copy, factual observations, artifact timestamps, current
+  handoff, and both report surfaces were corrected before publication.
+- `jq` reconciliation of `capability-ledger.json` — 20 total, 20 unique IDs;
+  gated-funded 6, intentional-non-goal 2, prioritize-local 6, shipped 6.
+- `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
+  report.html` — exit 0; validation, packaging, and browser
+  verification passed for 11 blocks, 1 chart, 1 metric strip, and 1 table;
+  source dialog/keyboard semantic click passed at 1440/390 widths. Script-stripped
+  fallback QA passed with desktop client/scroll 1425/1425 and mobile 375/375.
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 0 vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 59 files, 721 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 84 production-Chromium journeys
+  passed after the final UX correction.
+- `cd mobile && npm run ios:copy`, `npm run verify:ios-sync`,
+  `npm run ios:sync`, then `npm run verify:ios-sync` — exit 0. Vite transformed
+  82 modules; the existing >500 kB warning remains. Six production files matched
+  the iOS public copy byte-for-byte with SHA-256
+  201c9b18e25cf5251d76c5d622d061be62400f800d5e9331f756a2a3d72188dc.
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly skipped
+  CocoaPods/xcodebuild on Linux; every native acceptance row remained NOT RUN.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- JSON syntax, builder syntax, generated-bundle drift, documentation schema
+  counts, and `git diff --check` passed. This handoff preserves one current
+  section, 33 historical milestone/snapshot markers, and 34 complete schema
+  blocks.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job remains required.
+
+assumptions:
+
+- “Benefit parity” means a source-backed benefit taxonomy plus an original
+  Hermes disposition, not completion of every TradeZella feature, entitlement,
+  integration, or commercial service. The chart is a decision count, never a
+  feature-completion percentage.
+- TradeZella's official help/product pages establish advertised capability;
+  Trustpilot, Semrush, affiliate, comparison, and marketing counts are dated,
+  directional evidence with selection, estimation, commercial, and denominator
+  caveats. No public source establishes representative user scale or causality.
+- The official pricing help article is the current July 14 snapshot; all
+  competitor price, entitlement, integration, mobile, and security claims must
+  be reverified immediately before external comparison.
+- Receipt reconciliation is limited to fields exposed consistently by both
+  existing store adapters. It cannot display raw source rows/issues or split
+  created from restored versions without a separately approved contract.
+- Reflection rhythm owns no durable state and creates no trading-frequency,
+  risk, P&L, or score incentive. Current daily heads and session dates remain the
+  source of truth.
+- Browser and Linux bundle evidence does not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
+  publication before this milestone can be passed downstream.
+- Six local-first priorities remain, in order: guided activation/account
+  overview; saved views; named broker CSV packs with cleared fixtures;
+  playbook/template management; deeper reports behind definition gates; and
+  native lifecycle/attachments behind Mac/iPhone evidence and deletion approval.
+- Credentialed broker/prop sync, licensed replay, reproducible backtesting,
+  private AI, mentor/community services, and pricing/packaging remain
+  gated-funded domains requiring explicit product, rights, security, privacy,
+  commercial, moderation, recurring-cost, and human decisions.
+- HOLD all native acceptance. CocoaPods, Xcode compile, Simulator, physical
+  iPhone, SQLite/SQLCipher/Keychain, Files/photos, safe areas, interruption,
+  background/foreground, force-quit/relaunch, multi-scene, VoiceOver, and
+  Dynamic Type were NOT RUN.
+- Existing human gates remain: Symbol Breakdown eligibility; generic-CSV
+  asset-class semantics; atomic batch durable recovery; approved Delete All
+  Data; and removal, wrapping, or explicit acceptance of the pinned SQLite
+  plugin's HTTP-download bridge and database-path console print.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim complete TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active. After publication, exact
+  hosted CI, and ORACLE filing, the next bounded local candidate is guided
+  activation/account overview; none of the gated-funded or native work is
+  authorized by this handoff.
+
+## Prior milestone — CSV Preview Feedback Focus v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active TradeZella Benefit Parity Foundation v1 handoff above.
+
+Status: verified CSV Preview Feedback Focus v1 · updated 2026-07-17
+
+### Historical handoff
 
 task: Deliver CSV Preview Feedback Focus v1: make every explicit CSV preview
 outcome visibly own its feedback focus while preserving authored inputs,

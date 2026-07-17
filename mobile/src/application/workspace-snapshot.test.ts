@@ -278,6 +278,19 @@ describe("journal workspace snapshot", () => {
     });
     expect(snapshot.importHistory.map((receipt) => receipt.receiptId))
       .toEqual(["latest-import", "older-import"]);
+    expect(snapshot.importHistory[0]).toMatchObject({
+      sourceRows: 3,
+      acceptedRows: 2,
+      executionVersions: 2,
+      warningCount: 1,
+      rolledBackAtLabel: "Rolled back Jul 2, 2026 · 10:00 PM",
+    });
+    expect(snapshot.importHistory[1]).toMatchObject({
+      sourceRows: 1,
+      acceptedRows: 1,
+      executionVersions: 1,
+      rolledBackAtLabel: null,
+    });
     expect(snapshot.dailyJournal).toEqual([]);
     expect(snapshot.playbooks).toEqual([]);
   });

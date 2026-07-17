@@ -595,6 +595,46 @@ p { line-height: 1.55; }
 }
 .review-queue-item h4 { margin: .45rem 0 0; overflow-wrap: anywhere; font-size: 1.1rem; }
 .review-queue-item p { margin: .2rem 0 0; color: var(--muted); font-size: .78rem; }
+.reflection-rhythm-card { display: grid; gap: .85rem; border-color: rgb(92 225 230 / 22%); }
+.reflection-rhythm-card p { margin: 0; color: var(--muted); }
+.reflection-rhythm-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(6.5rem, 100%), 1fr));
+  gap: .55rem;
+}
+.reflection-rhythm-totals span {
+  min-width: 0;
+  padding: .6rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  display: grid;
+  gap: .2rem;
+  color: var(--muted);
+  font-size: .7rem;
+}
+.reflection-rhythm-totals strong { color: var(--text); font: 700 1rem/1.2 "B612 Mono", monospace; }
+.reflection-rhythm-strip {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(5.5rem, 100%), 1fr));
+  gap: .45rem;
+}
+.reflection-rhythm-session {
+  min-width: 0;
+  padding: .6rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  display: grid;
+  gap: .25rem;
+}
+.reflection-rhythm-session span { color: var(--muted); font-size: .68rem; }
+.reflection-rhythm-session strong { font: 700 .76rem/1.3 "B612 Mono", monospace; overflow-wrap: anywhere; }
+.reflection-rhythm-session.reflection-completed { border-color: rgb(92 225 230 / 36%); background: rgb(92 225 230 / 6%); }
+.reflection-rhythm-session.reflection-draft { border-color: rgb(241 198 109 / 36%); background: rgb(241 198 109 / 6%); }
+.reflection-rhythm-session.reflection-missing { border-style: dashed; }
 .review-select { min-width: 44px; min-height: 44px; display: grid; place-items: center; }
 .review-select input { width: 1.2rem; min-height: 1.2rem; accent-color: var(--violet); }
 .batch-review-form { margin-top: .75rem; border-color: rgb(155 124 255 / 28%); }
@@ -782,6 +822,48 @@ p { line-height: 1.55; }
 .issue-list strong { font-family: "B612 Mono", monospace; font-size: .68rem; text-transform: uppercase; }
 .import-history-row { display: grid; gap: .6rem; }
 .import-history-row p { margin: 0; color: var(--muted); font-size: .8rem; }
+.import-history-row [data-import-receipt-heading]:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: .25rem;
+}
+.import-receipt-disclosure {
+  min-width: 0;
+  padding-top: .45rem;
+  border-top: 1px solid var(--line);
+}
+.import-receipt-disclosure summary {
+  min-height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #cdbfff;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.import-receipt-disclosure summary:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: .25rem;
+}
+.import-receipt-grid {
+  min-width: 0;
+  margin: .5rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
+  gap: .55rem;
+}
+.import-receipt-grid div {
+  min-width: 0;
+  padding: .6rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  display: grid;
+  gap: .2rem;
+}
+.import-receipt-grid dt { color: var(--muted); font-size: .68rem; overflow-wrap: anywhere; }
+.import-receipt-grid dd { margin: 0; font: 700 .95rem/1.25 "B612 Mono", monospace; }
+.import-receipt-disclosure[open] { display: grid; gap: .45rem; }
 .manual-capture-card { display: grid; gap: .75rem; border-color: rgb(155 124 255 / 25%); }
 .manual-capture-card > p { margin: 0; color: var(--muted); }
 .manual-entry-sheet { display: grid; gap: 1rem; }

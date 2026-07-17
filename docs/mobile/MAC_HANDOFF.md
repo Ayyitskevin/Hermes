@@ -714,6 +714,8 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
 | CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
+| Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
+| Daily Reflection Rhythm | status | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + demo/local continuation/layout/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -818,6 +820,24 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   failed-attempt durable work, ignores superseded asynchronous completion,
   retains existing mapping targets, and lets correction reach the unchanged
   commit path.
+- Import Receipt Reconciliation v1 has only Linux/Chromium count,
+  disclosure, focus, reflow, demo-boundary, and storage/request-neutrality
+  evidence. Native VoiceOver announcement/order, hardware-keyboard disclosure
+  and focus, safe-area/chrome visibility, SQLite observation,
+  background/foreground, rollback interruption, force-quit/relaunch,
+  two-scene refresh, and 320/421-width 200% Dynamic Type are NOT RUN. Keep
+  native acceptance held until every displayed equation matches the immutable
+  receipt, demo remains noninteractive, and rollback focuses the one rebuilt
+  receipt without another write.
+- Daily Reflection Rhythm v1 has only Linux/Chromium projection, local-editor
+  continuation, reflow, demo-boundary, and storage/request-neutrality evidence.
+  Native VoiceOver announcement/order, hardware-keyboard navigation,
+  safe-area/chrome visibility, SQLite observation, background/foreground,
+  force-quit/relaunch, two-scene head refresh, and 320/421-width 200% Dynamic
+  Type are NOT RUN. Keep native acceptance held until canonical session/head
+  validation, completed/draft/missing totals, current completed suffix,
+  no-trade separation, and the non-performance copy are observed from live
+  device state without new persistence.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

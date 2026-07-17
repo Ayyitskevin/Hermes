@@ -712,10 +712,31 @@ function mapImport(
   validateReceiptCount(receipt.skippedRows, `import ${receipt.id} skipped rows`);
   validateReceiptCount(receipt.warningCount, `import ${receipt.id} warning count`);
   validateReceiptCount(receipt.executionCount, `import ${receipt.id} execution count`);
+  const categorizedRows = receipt.acceptedRows + receipt.rejectedRows + receipt.skippedRows;
+  invariant(
+    Number.isSafeInteger(categorizedRows) && categorizedRows === receipt.sourceRows,
+    `import ${receipt.id} source rows do not reconcile`,
+  );
+  invariant(
+    receipt.executionCount <= receipt.acceptedRows,
+    `import ${receipt.id} execution count exceeds accepted rows`,
+  );
+  const alreadyPresentRows = receipt.acceptedRows - receipt.executionCount;
+  invariant(
+    receipt.warningCount >= alreadyPresentRows,
+    `import ${receipt.id} warnings omit already-present accepted rows`,
+  );
+  let rolledBackAtLabel: string | null = null;
   if (receipt.rolledBackAtUs !== null) {
     const rolledBack = parseTimestampUs(receipt.rolledBackAtUs, `import ${receipt.id} rollback time`);
     const importedAt = parseTimestampUs(receipt.importedAtUs, `import ${receipt.id} time`);
     invariant(rolledBack >= importedAt, `import ${receipt.id} rollback predates its import`);
+    const rolledBackDay = zonedDay(
+      receipt.rolledBackAtUs,
+      timeZone,
+      `import ${receipt.id} rollback time`,
+    );
+    rolledBackAtLabel = `Rolled back ${rolledBackDay.dateLabel}, ${rolledBackDay.year} · ${rolledBackDay.timeLabel}`;
   }
   return {
     receiptId: receipt.id,
@@ -724,10 +745,14 @@ function mapImport(
     importedAtLabel: `Imported ${imported.dateLabel}, ${imported.year} · ${imported.timeLabel}`,
     executions: receipt.acceptedRows,
     accounts: accountCount,
+    sourceRows: receipt.sourceRows,
+    acceptedRows: receipt.acceptedRows,
+    executionVersions: receipt.executionCount,
     rejectedRows: receipt.rejectedRows,
     skippedRows: receipt.skippedRows,
     rolledBack: receipt.rolledBackAtUs !== null,
     warningCount: receipt.warningCount,
+    rolledBackAtLabel,
   };
 }
 

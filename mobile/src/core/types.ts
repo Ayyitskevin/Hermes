@@ -90,6 +90,7 @@ export interface ImportSummary {
   readonly accountLabel: string;
   readonly sourceLabel: string;
   readonly importedAtLabel: string;
+  /** Compatibility alias for accepted source rows, not newly written executions. */
   readonly executions: number;
   readonly accounts: number;
   readonly rejectedRows: number;
@@ -98,7 +99,13 @@ export interface ImportSummary {
 }
 
 export interface ImportHistoryPreview extends ImportSummary {
+  readonly receiptId: string;
+  readonly sourceRows: number;
+  readonly acceptedRows: number;
+  /** Immutable execution versions newly created or restored by this receipt. */
+  readonly executionVersions: number;
   readonly warningCount: number;
+  readonly rolledBackAtLabel: string | null;
 }
 
 export interface CalendarTradeContribution {

@@ -1,6 +1,6 @@
 # Hermes Journal competitive analysis
 
-Status: product research snapshot · verified 2026-07-12
+Status: product research snapshot · verified 2026-07-17
 
 This report separates sourced product facts from Hermes strategy. Prices,
 entitlements, integration counts, and store availability change; reverify them
@@ -26,33 +26,35 @@ provenance, private local ownership, and unusually clear pricing.
 | Area | Current official evidence |
 |---|---|
 | Product boundary | A journal/analytics product; users execute through a broker and transfer records afterward |
-| Pricing | Essential $29 monthly or $288 yearly; Premium/Pro $49 monthly or $399 yearly |
+| Pricing | Essential $35 monthly or $315 yearly; Pro $59 monthly or $531 yearly; Ultra $99 monthly or $891 yearly |
 | Capture | Auto-sync, broker files, generic CSV, and manual entry |
-| Coverage | Advertises 500+ brokers/platforms collectively across direct sync, file formats, MT4 aliases, and generic import |
+| Coverage | Marketing advertises 500+ brokers/platforms collectively; the current operational help list names 13 sync connections and 39 file-upload rows, including 2 marked coming soon. These are different denominators, not an audited 500+ adapter count |
 | Markets | Stocks, options, futures, forex, and crypto |
 | Journal | Notes/templates, tags/categories, screenshots, playbooks, rules, sharing |
-| Analytics | Dashboard, automatic execution charts, running P&L, MAE/MFE, exit analysis, and 50+ reports |
+| Analytics | Dashboard, automatic execution charts, running P&L, MAE/MFE, exit analysis, and documented report families; current marketing surfaces conflict between undefined 50+ report and 300+ Reports & Data denominators |
 | Expansion suite | Replay, backtesting, AI, mentors/spaces, education, and prop-firm tracking |
 | Audience | Beginner through advanced, prop, mentor, and community segments; not explicitly age-positioned |
 
-Official pricing materials currently disagree on some tier names and limits,
-including replay availability and account counts. Hermes should compare stable
-product-wide capabilities and public price points, not repeat an unstable
-tier-by-tier claim.
+The official pricing help article lists these three plans effective July 14, 2026
+and price points. The public pricing landing page may lag or present different
+limits, so Hermes should treat the help article as a dated first-party snapshot,
+reverify immediately before comparison, and avoid unstable entitlement claims.
 
 Sources:
 
-- [TradeZella pricing](https://www.tradezella.com/pricing)
-- [TradeZella pricing help](https://help.tradezella.com/en/articles/8911582-our-pricing)
+- [TradeZella pricing help — current dated plan snapshot](https://help.tradezella.com/en/articles/8911582-our-pricing)
+- [TradeZella public pricing page — may lag the help article](https://www.tradezella.com/pricing)
 - [TradeZella getting started](https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella)
 - [Supported brokers](https://www.tradezella.com/brokersupport)
 - [Current broker/platform list](https://help.tradezella.com/en/articles/10055421-list-of-supported-brokers-and-platforms)
 
 ## Mobile opening
 
-Evidence strongly suggests TradeZella remains a responsive web product rather
-than an official native iOS/Android application:
+Current first-party evidence says TradeZella remains a responsive web product
+rather than an official native iOS/Android application:
 
+- TradeZella's June 2026 TraderSync comparison calls TradeZella web-only and
+  says it has no native mobile apps.
 - Its public feedback board describes requested capabilities that are not
   currently native, and “Mobile App with Web Version Features” was its top
   feature request with 31 votes when checked.
@@ -61,10 +63,12 @@ than an official native iOS/Android application:
 - No official TradeZella App Store or Google Play listing was found or linked
   from its product site during this review.
 
-This is evidence, not proof that no private or region-limited build exists.
+Availability can change. This is current public evidence, not proof that no
+private or region-limited build exists.
 
 Sources:
 
+- [TradeZella's June 2026 TraderSync comparison](https://www.tradezella.com/vs/tradersync)
 - [TradeZella feature requests](https://tradezella.canny.io/feature-requests?sort=top)
 - [TradeZella changelog](https://tradezella.canny.io/changelog)
 
@@ -72,7 +76,7 @@ Sources:
 
 | Product | Current price signal | Mobile signal | Primary angle |
 |---|---|---|---|
-| [TradeZella](https://www.tradezella.com/pricing) | $29/$49 monthly; $288/$399 yearly | Responsive web; no official native listing found | Polished broad suite |
+| [TradeZella](https://help.tradezella.com/en/articles/8911582-our-pricing) | $35/$59/$99 monthly; $315/$531/$891 yearly | Responsive web; no official native listing found | Polished broad suite |
 | [TradesViz](https://www.tradesviz.com/pricing/) | Free; Pro about $19.99/month or $179/year | Official [iOS](https://apps.apple.com/us/app/tradesviz-trading-journal/id1643338387) and Android apps | Maximum analytics/options breadth |
 | [TraderSync](https://tradersync.com/pricing/) | About $29.95/$49.95/$79.95 monthly | Official iOS and Android apps; some workflows still point users to web | Incumbent journal/replay/AI suite |
 | [Tradervue](https://app.tradervue.com/signup?plan=1) | Free option; paid around $29.95/month | Web-first | Established professional reports and sharing |

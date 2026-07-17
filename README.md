@@ -57,6 +57,10 @@ amount in the trade's P&L currency; the position-size tool never supplies it.
 See [the product and technical blueprint](docs/mobile/PRODUCT_BLUEPRINT.md) for
 the target audience, differentiation, stack decision, delivery slices, product
 metrics, and the gates for any optional hosted service.
+The source-backed
+[TradeZella capability benchmark and Hermes parity roadmap](docs/mobile/tradezella-parity/report.html)
+records the benefit translation, evidence limits, explicit dispositions, and
+next local-first sequence.
 
 ## Current status
 
@@ -247,6 +251,29 @@ submission-ready product:
   acceptance remain held. No schema, store command, archive, digest, report,
   formula, route, preference, dependency, or native source changed; the same
   four write-capable exceptions remain.
+- Import Receipt Reconciliation v1 is the twenty-sixth bounded Slice D
+  increment and the twenty-second derived-only presentation/projection
+  increment. The latest receipt and every import-history row now distinguish
+  source, accepted, rejected, skipped, new-or-restored, already-present, and
+  warning counts from the immutable receipt. Fail-closed conservation rejects
+  incoherent preview data, successful rollback returns focus to the exact
+  rebuilt receipt, and fictional demo receipts expose no rollback action.
+  Production Chromium proves the overlap/duplicate case, keyboard disclosure,
+  rollback focus, 320px/200% reflow, and storage/network neutrality. No schema,
+  store command, receipt fact, financial formula, archive, report, preference,
+  dependency, or native source changed.
+- Daily Reflection Rhythm v1 is the twenty-seventh bounded Slice D increment
+  and the twenty-third derived-only presentation/projection increment. It
+  classifies every canonical trading-session date from current day-review heads
+  as completed, draft, or missing, shows the latest seven in chronological
+  order, and computes only the maximal completed suffix ending at the latest
+  session. No-trade reflections remain separate. The projection ignores P&L,
+  trade counts/outcomes, trade-review state, note content, tags, emotion, and
+  process score; it creates no reward for trading frequency or profit.
+  Production Chromium proves demo and local edit continuation, 320/421px at
+  200% text, read-only demo behavior, and storage/network neutrality. No schema,
+  store command, archive, digest, report, formula, preference, dependency, or
+  native source changed; the same four write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

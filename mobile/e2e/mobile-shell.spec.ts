@@ -244,7 +244,7 @@ test("CSV preview commits exact executions and receipt rollback removes their pr
   await expect(page.getByText("+$18.00", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("1 trade with realized P&L", { exact: false })).toBeVisible();
   await expect(page.locator("#route-announcer")).toHaveText(
-    "2 executions accepted with a reversible receipt.",
+    "2 accepted rows = 2 new or restored execution versions + 0 already-present rows; reversible receipt created.",
   );
 
   await page.getByRole("button", { name: "More", exact: true }).click();

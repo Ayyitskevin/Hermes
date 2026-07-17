@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-16
+Status: active delivery roadmap · updated 2026-07-17
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -55,7 +55,8 @@ under the provisional identifier until that gate is cleared.
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
   Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
-  Preview Feedback Focus v1, Compact Trades Filters v1, export, and
+  Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
+  Rhythm v1, Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -64,10 +65,12 @@ under the provisional identifier until that gate is cleared.
   verified deletion, deeper reports, attachments, and Mac/device evidence
   remain incomplete.
 
-TradeZella currently advertises $29/$49 monthly plans and $288/$399 annual
-prices. That gives Hermes a large price wedge, but price alone is not the product:
-fast mobile review, user-owned data, reliable import, and trustworthy analytics
-must carry the value.
+TradeZella's current help-center pricing, reverified 2026-07-17, lists Essential
+at $35 monthly/$315 annually, Pro at $59/$531, and Ultra at $99/$891. That gives
+Hermes a large proposed price wedge, but price alone is not the product: fast
+mobile review, user-owned data, reliable import, and trustworthy analytics must
+carry the value. Public TradeZella pricing surfaces have conflicted; reverify
+before external comparative positioning.
 
 At the proposed $9.99 hypothesis, approximate developer proceeds are $6.99
 under Apple's standard 30%
@@ -549,6 +552,25 @@ observed plugin/device behavior:
   digest, report, formula, route, preference, dependency, or native source.
   Native VoiceOver, hardware keyboard, safe areas, lifecycle, multi-scene,
   SQLite observation, and Dynamic Type remain held.
+- Import Receipt Reconciliation v1 projects every immutable import receipt into
+  source, accepted, rejected, skipped, new-or-restored, already-present, and
+  warning counts with fail-closed conservation. A native disclosure exposes the
+  equations, fictional demo receipts offer no rollback, and successful local
+  rollback returns focus to the exact rebuilt receipt. Production Chromium
+  proves overlap/deduplication, keyboard disclosure, 320px/200% layout, focus,
+  and storage/network neutrality. The slice is presentation-only and adds no
+  schema, store command, receipt fact, archive, digest, report, formula, route,
+  preference, dependency, or native source.
+- Daily Reflection Rhythm v1 classifies canonical trading-session dates from
+  current daily heads as completed, draft, or missing, shows the latest seven
+  oldest-to-newest, and computes the maximal completed suffix ending at the
+  latest session. No-trade reflections stay separate. The projection ignores
+  P&L, trade count/outcome, trade-review state, note content, tags, emotion, and
+  process score. Production Chromium proves demo and local edit continuation,
+  320/421px at 200% text, read-only demo behavior, and storage/network
+  neutrality. The slice is presentation-only and adds no schema, store command,
+  archive, digest, report, formula, route, preference, dependency, or native
+  source.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -688,16 +710,17 @@ Parity means behavioral and data-contract parity, not pixel imitation of iOS.
 
 ## Competitive evidence
 
-Verified against official materials on 2026-07-09:
+Verified against official materials on 2026-07-17:
 
-- [TradeZella pricing and feature matrix](https://www.tradezella.com/pricing)
-- [TradeZella pricing help](https://help.tradezella.com/en/articles/8911582-our-pricing)
+- [TradeZella current pricing help](https://help.tradezella.com/en/articles/8911582-our-pricing)
 - [Generic CSV import](https://help.tradezella.com/en/articles/8239862-how-to-import-trades-from-unsupported-broker-into-tradezella-via-generic-csv-file-upload)
 - [Tags and cross-analysis](https://help.tradezella.com/en/articles/11595729-reports-tags)
 - [Strategies and rules](https://help.tradezella.com/en/articles/7020769-getting-started-with-strategies)
+- [TradeZella capability benchmark and Hermes parity roadmap](tradezella-parity/report.html)
 
-TradeZella's pricing pages currently disagree on some tier names/entitlements.
-Hermes benchmarks the documented product-wide capability set, not an unstable
+Public TradeZella pricing surfaces have disagreed on tiers and entitlements.
+Hermes uses the current help article for the dated price observation and
+benchmarks the documented product-wide capability set, not an unstable
 tier-by-tier claim. Reverify before public comparative positioning.
 
 ## Launch blockers outside Linux implementation
@@ -716,11 +739,11 @@ Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
-matching-runtime local restore, and all eight governed reports are implemented.
-Twenty-five bounded Slice D increments are implemented in total; the twenty-one
-presentation/projection
-increments remain derived-only. Durable Daily Journal, Report Trade
-Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
+Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, matching-runtime
+local restore, and all eight governed reports are implemented. Twenty-seven
+bounded Slice D increments are implemented in total; the twenty-three
+presentation/projection increments remain derived-only. Durable Daily Journal,
+Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade
 continuations reuse the existing versioned trade-review path; the calendar-day
 continuation reuses the existing Daily Journal path without changing either

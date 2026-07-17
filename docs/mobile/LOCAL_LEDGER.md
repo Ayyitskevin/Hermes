@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + review-queue focus + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-16
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-17
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -382,6 +382,46 @@ Ordinary input/file changes do not move focus, and mapping rerenders retain
 their prior changed-selector/final-commit targets. No failure or preview path
 commits, writes SQLite/browser journal state, creates a receipt, or changes an
 archive, digest, governed report, formula, or network contract.
+
+### Import-receipt reconciliation
+
+Import Receipt Reconciliation v1 is the twenty-sixth bounded Slice D increment
+and the twenty-second derived-only presentation/projection increment. The
+immutable import receipt remains the source of truth. The workspace snapshot
+now carries source rows, accepted rows, created-or-restored execution versions,
+rollback timestamp display evidence, and the pre-existing compatibility
+accepted-row alias. A pure fail-closed projection requires source rows to equal
+accepted plus rejected plus skipped; accepted rows to equal new-or-restored
+execution versions plus already present; warnings to equal already-present
+warnings plus other preview warnings; and the rolled-back flag to agree with
+the presence of a rollback timestamp label.
+
+Counts must be non-negative safe integers; execution versions may not exceed
+accepted rows; warnings may not omit an already-present accepted row. No raw
+row content, issue message, or created-versus-restored split is claimed because
+those fields are not available through both store adapters. The receipt
+disclosure, exact rollback-return focus, and demo rollback suppression are
+transient presentation. They append no fact, change no head, and enter no
+archive, digest, financial projection, or governed report.
+
+### Daily-reflection rhythm projection
+
+Daily Reflection Rhythm v1 is the twenty-seventh bounded Slice D increment and
+the twenty-third derived-only presentation/projection increment. The canonical
+workspace calendar and current daily-entry-head projection remain the only
+inputs. The pure projection requires strictly increasing unique Gregorian
+session dates, at most one current daily head per date, a draft/completed state,
+and completion-timestamp agreement. Each session becomes completed, draft, or
+missing; the current run is the maximal completed suffix ending at the latest
+session; display is bounded to the latest seven sessions in chronological
+order. Current daily heads outside the session-date set are counted separately
+as no-trade reflections.
+
+No rhythm fact, streak, preference, reward, or telemetry is stored. P&L, trade
+count/outcome, trade-review state, authored note content, tags, emotion, and
+process score are intentionally not inputs. Rebuilding the ledger snapshot
+rebuilds the rhythm, so export/restore equality follows only from the existing
+calendar and current-head contracts.
 
 ## Daily-journal sequence
 

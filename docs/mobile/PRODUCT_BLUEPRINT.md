@@ -1,6 +1,6 @@
 # Hermes Journal product and technical blueprint
 
-Status: authoritative mobile product blueprint · 2026-07-16
+Status: authoritative mobile product blueprint · 2026-07-17
 
 ## Executive decision
 
@@ -37,16 +37,23 @@ Working promise:
 > private, read-only, and affordable.
 
 Hermes competes with TradeZella on the core import → review → insight loop, not
-on feature count. TradeZella currently advertises $29/$49 monthly plans and
-$288/$399 annual plans, plus a broad web product spanning imports, analytics,
-replay, backtesting, AI, mentors, and prop-firm workflows. Hermes wins its wedge
-through a native-feeling phone workflow, clear ownership of local data, a much
-lower entry price, inspectable calculations, and an import history users can
-trust.
+on feature count. TradeZella's current help-center pricing, reverified
+2026-07-17, lists Essential at $35 monthly/$315 annually, Pro at $59/$531, and
+Ultra at $99/$891, with a broad web product spanning imports, analytics,
+replay, backtesting, AI, mentors, community, and prop-firm workflows. Hermes
+wins its wedge through a native-feeling phone workflow, clear ownership of
+local data, a much lower proposed entry price, inspectable calculations, and an
+import history users can trust. Public TradeZella pricing surfaces have
+conflicted; reverify immediately before any external comparison.
 
 TradeZella is a capability benchmark only. Hermes must not copy its name, trade
 dress, assets, copy, screenshots, or interaction design and must not imply an
 affiliation.
+The source-backed
+[capability benchmark and parity roadmap](tradezella-parity/report.html)
+translates twenty benefit domains into six shipped domains, six local
+priorities, six funded/human-gated domains, and two intentional non-goals.
+Those are decision-taxonomy counts, not feature-coverage percentages.
 
 ## Audience and jobs
 
@@ -319,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-five bounded Slice D increments are implemented in the current workspace.
+Twenty-seven bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -914,6 +921,38 @@ governed report, formula, route, preference, dependency, or native source
 changed; five tabs, ten report targets, eight governed reports, and the same four
 write-capable exceptions remain unchanged.
 
+Import Receipt Reconciliation v1 is the twenty-sixth bounded Slice D increment
+and the twenty-second derived-only presentation/projection increment. A
+fail-closed projection of each immutable import receipt distinguishes source,
+accepted, rejected, skipped, new-or-restored, already-present, total-warning,
+and other-warning counts. It enforces source-row conservation, accepted-row
+conservation, warning coverage for already-present rows, and rollback-state/
+timestamp agreement before rendering. The latest receipt no longer labels all
+accepted rows as executions; history exposes the exact equations in a native
+disclosure. Fictional demo receipts never expose rollback, and a successful
+local rollback returns focus to the exact unique rebuilt receipt heading with a
+screen fallback when that identity cannot be proven. Production Chromium proves
+the overlap case, keyboard disclosure, 320px/200% layout, exact focus, and
+storage/network neutrality. No schema, store command, receipt fact, archive,
+digest, governed report, formula, route, preference, dependency, or native
+source changed.
+
+Daily Reflection Rhythm v1 is the twenty-seventh bounded Slice D increment and
+the twenty-third derived-only presentation/projection increment. A deeply
+frozen fail-closed projection requires strictly increasing unique canonical
+trading-session dates and at most one valid current day-review head per date.
+It classifies every session completed, draft, or missing; counts the categories;
+bounds display to the latest seven oldest-to-newest; and computes only the
+maximal completed suffix ending at the latest trading session. Current heads on
+no-trade dates remain separate. It explicitly ignores P&L, trade count/outcome,
+trade-review state, notes, tags, emotion, and process score, so the cue rewards
+reflection completion rather than trading frequency, risk, or profit.
+Production Chromium proves the fictional six-session case and local
+missing→draft→completed continuation at 320/421px with 200% text, with no
+external request or new stored state. No schema, store command, archive, digest,
+governed report, formula, route, preference, dependency, or native source
+changed; the same four write-capable exceptions remain.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1068,7 +1107,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-twenty-five Slice D increments add Plan Check, governed Setup Breakdown,
+  twenty-seven Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1076,8 +1115,9 @@ v1, Emotion Patterns v1, Direction Mix v1, Opening Weekday Mix v1, Tag Patterns
 v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
 Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
-Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, and CSV
-Preview Feedback Focus v1. The twenty-one presentation/projection increments
+Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
+Preview Feedback Focus v1, Import Receipt Reconciliation v1, and Daily
+Reflection Rhythm v1. The twenty-three presentation/projection increments
 remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
@@ -1119,10 +1159,11 @@ recurring AI, or legacy cockpit extraction.
 
 ## Competitive and platform references
 
-- [TradeZella pricing and capability matrix](https://www.tradezella.com/pricing)
+- [TradeZella current pricing help](https://help.tradezella.com/en/articles/8911582-our-pricing)
 - [TradeZella getting-started workflow](https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella)
 - [TradeZella filter workflow](https://help.tradezella.com/en/articles/12417670-using-filters-in-tradezella)
 - [TradeZella feature requests](https://tradezella.canny.io/feature-requests?sort=top)
+- [TradeZella capability benchmark and Hermes parity roadmap](tradezella-parity/report.html)
 - [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - [Capacitor documentation](https://capacitorjs.com/docs)
 - [Supabase pricing](https://supabase.com/pricing)

@@ -153,9 +153,13 @@ export function bindImportForm(
       try {
         const result = await application.commitCsv(prepared);
         const alreadyPresent = result.receipt.acceptedRows - result.receipt.executionCount;
+        const reconciliation =
+          `${countNoun(result.receipt.acceptedRows, "accepted row")} = ` +
+          `${countNoun(result.receipt.executionCount, "new or restored execution version")} + ` +
+          countNoun(alreadyPresent, "already-present row");
         const announcement = result.outcome === "duplicate"
-          ? "This exact CSV was already imported; no records were duplicated."
-          : `${countNoun(result.receipt.acceptedRows, "execution")} accepted with a reversible receipt${alreadyPresent === 0 ? "." : `; ${countNoun(alreadyPresent, "execution")} already existed.`}`;
+          ? `This exact CSV was already imported; its existing receipt records ${reconciliation}. No records were duplicated.`
+          : `${reconciliation}; reversible receipt created.`;
         status.textContent = announcement;
         await refresh(announcement);
         root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });

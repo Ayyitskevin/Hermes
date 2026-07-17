@@ -1,0 +1,545 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-17",
+  "title": "TradeZella benefit translation ledger for Hermes Journal",
+  "scope": "A source-backed product decision ledger. TradeZella is a capability benchmark only; Hermes remains an original, local-first journal and does not copy TradeZella naming, copy, trade dress, or interaction design.",
+  "method": "Official TradeZella product and help pages establish advertised capabilities. Repository paths establish current Hermes behavior and holds. Dispositions are roadmap decisions, not estimates of market share, feature quality, retention, profitability, or causal impact.",
+  "disposition_definitions": {
+    "shipped": "Implemented in the current Hermes source with Linux test evidence; native-device claims remain limited to the repository's explicit acceptance gates.",
+    "prioritize-local": "High-value work that can preserve Hermes's local-first, deterministic product boundary, subject to the row's stated gate.",
+    "gated-funded": "Requires an explicit product, rights, security, privacy, commercial, moderation, or recurring-cost decision before implementation.",
+    "intentional-non-goal": "Deliberately excluded because it conflicts with Hermes's safety, product, or incentive boundary."
+  },
+  "capabilities": [
+    {
+      "id": "capture-manual-generic-csv",
+      "capability": "Manual execution capture and generic CSV import",
+      "benefit": "Lets a trader bring a session into the journal without sharing broker credentials and use one review workflow for manual and file-based records.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official onboarding workflow includes importing trades and reviewing the resulting journal workspace.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8239862-how-to-import-trades-from-unsupported-broker-into-tradezella-via-generic-csv-file-upload",
+          "observation": "The official help center documents a generic CSV path for unsupported brokers.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/manual-execution-sheet.ts",
+        "mobile/src/ui/import-tool.ts",
+        "mobile/src/application/journal-store.ts",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Stock/ETF manual executions and stock-only generic CSV preview and commit are implemented through the immutable local ledger. Other asset classes are not implied by the generic importer.",
+      "disposition": "shipped",
+      "rationale": "This is the entry point to the useful import-to-review loop and already fits Hermes's credential-free, offline boundary.",
+      "gate": "No new gate for the shipped stock/ETF boundary; any new asset class requires an explicit instrument, multiplier, fee, currency, and reconciliation contract.",
+      "success_metric": "In golden fixtures and end-to-end journeys, every source row is accepted, rejected, skipped, or deduplicated with an inspectable reason, and no capture path makes an external request."
+    },
+    {
+      "id": "import-provenance-reconciliation",
+      "capability": "Import preview, provenance, reconciliation, and rollback",
+      "benefit": "Turns import reliability from a hidden assumption into evidence a user can inspect and safely reverse.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/10055421-list-of-supported-brokers-and-platforms",
+          "observation": "The official list distinguishes supported connection and file-import paths, making source compatibility part of the product experience.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8239862-how-to-import-trades-from-unsupported-broker-into-tradezella-via-generic-csv-file-upload",
+          "observation": "The generic CSV workflow requires user mapping and validation before records enter the journal.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/import-tool.ts",
+        "mobile/src/application/import-receipt-reconciliation.ts",
+        "mobile/src/ui/import-receipt-view.ts",
+        "mobile/src/application/journal-store.ts",
+        "mobile/src/adapters/sqlite/sqlite-journal-store.ts",
+        "docs/mobile/LOCAL_LEDGER.md"
+      ],
+      "current_status": "Preview, exact raw-row provenance, deterministic deduplication, receipt attribution, atomic commit, dependency-aware rollback, and read-only receipt reconciliation are implemented. Import history now distinguishes source, accepted, rejected, skipped, new-or-restored, already-present, and warning counts without exposing a demo rollback action.",
+      "disposition": "shipped",
+      "rationale": "Hermes can differentiate on import trust without recurring data-provider cost or a broker credential surface.",
+      "gate": "Keep current immutable-fact, idempotency, exact-decimal, and rollback invariants; receipt UI expansion must not change stored financial semantics.",
+      "success_metric": "Fixture reconciliation conserves 100% of input rows by explicit outcome, duplicate replay is idempotent, and rollback followed by restoration reproduces the pinned derived state."
+    },
+    {
+      "id": "trade-detail-structured-review",
+      "capability": "Execution-linked trade detail and structured review",
+      "benefit": "Makes a short review actionable by keeping notes, setup, mistakes, emotion, tags, rules, and risk evidence beside the fills they describe.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/5860216-understanding-the-trade-page",
+          "observation": "The official trade-page guide describes executions, charts, notes, tags, attachments, and trade-level analysis in one workspace.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official daily workflow centers on importing, reviewing, and reflecting on trades.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/trade-review-sheet.ts",
+        "mobile/src/ui/trades-view.ts",
+        "mobile/src/application/journal-store.ts",
+        "docs/mobile/PRODUCT_BLUEPRINT.md"
+      ],
+      "current_status": "Immutable executions, stable trade subjects, versioned review heads, notes, exact vocabulary facets, playbooks, rule outcomes, and user-confirmed risk evidence are implemented. Screenshot attachments are tracked separately.",
+      "disposition": "shipped",
+      "rationale": "This is the central Hermes job and converts raw capture into reflection without altering execution facts.",
+      "gate": "No financial metric may be inferred from free-text review fields; percent and R remain available only with versioned, inspectable denominators.",
+      "success_metric": "A keyboard and touch user can complete and later edit a review in the target under-60-second flow while all annotations survive a projection rebuild and archive round trip."
+    },
+    {
+      "id": "dashboard-calendar-continuation",
+      "capability": "Action-oriented dashboard and calendar continuation",
+      "benefit": "Shows the next review task, a coherent session history, and a direct path from a day or recent trade back to its evidence.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official product tour identifies the dashboard, calendar, day view, trade view, and notebook as connected review surfaces.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/app.ts",
+        "mobile/src/ui/calendar-day-view.ts",
+        "mobile/src/ui/review-queue-view.ts",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "The Dashboard review queue, session streak, headline metrics, curve, calendar, recent-trade continuation, and calendar-day reflection continuation are implemented.",
+      "disposition": "shipped",
+      "rationale": "Hermes already has the mobile review continuity that translates the benchmark's dashboard breadth into a phone-first task flow.",
+      "gate": "Habit cues may reward completed review and process adherence only; they must not reward trade count, turnover, risk, or profit.",
+      "success_metric": "Every displayed day and recent-trade action resolves to the same current snapshot evidence, supports keyboard activation and focus return, and performs zero persistence until the user explicitly saves."
+    },
+    {
+      "id": "governed-reports-drilldown",
+      "capability": "Governed reports with trade-level drill-down",
+      "benefit": "Turns patterns into inspectable observations instead of unexplained scores by exposing definitions, exclusions, scope, and contributing trades.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/5829394-reports-overview-section",
+          "observation": "The official reports overview presents multiple performance and behavior analysis families.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/5860216-understanding-the-trade-page",
+          "observation": "The trade page connects aggregate analysis back to individual trade evidence.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/reports-view.ts",
+        "mobile/src/core/review-session-coverage-report.ts",
+        "mobile/src/core/plan-adherence-report.ts",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Ten report targets are navigable and eight are governed derived reports with bounded evidence continuation. Remaining report families and broader scope are open.",
+      "disposition": "shipped",
+      "rationale": "The current governed-report pattern delivers the benchmark's pattern-finding benefit while preserving Hermes's inspectable-calculation advantage.",
+      "gate": "Every new report requires a named definition version, checksum, conservation and exclusion rules, restore equality, and an explicit decision for incompatible inputs.",
+      "success_metric": "Every published governed report reproduces from the same current ledger snapshot, accounts for every eligible or excluded trade, and links each group to bounded underlying evidence."
+    },
+    {
+      "id": "filters-facets-saved-views",
+      "capability": "Reusable filters, exact facets, and saved views",
+      "benefit": "Reduces repeated navigation work and lets a trader compare the same review slice consistently over time.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/12417670-using-filters-in-tradezella",
+          "observation": "The official guide documents filtering the journal and reports across multiple trade attributes.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/trades-view.ts",
+        "mobile/src/ui/reports-view.ts",
+        "mobile/src/ui/app.ts",
+        "docs/HANDOFF.md"
+      ],
+      "current_status": "Exact current trade facets and scoped browser filters are implemented but ephemeral. Saved presets, reusable Journal filters, persistent scope, and report rescoping remain open.",
+      "disposition": "prioritize-local",
+      "rationale": "This is a low-recurring-cost way to make existing analytics faster to revisit and more useful without adding opaque calculations.",
+      "gate": "Define ownership, serialization, versioning, reset semantics, invalid-value behavior, and whether a saved scope may affect a governed report before persisting presets.",
+      "success_metric": "A saved view restores the exact account, date, search, and facet state after relaunch, fails closed on unsupported values, and never changes report membership without explicit scope disclosure."
+    },
+    {
+      "id": "broker-file-parser-packs",
+      "capability": "Named broker CSV parser packs",
+      "benefit": "Reduces column-mapping effort for common brokers while retaining a credential-free and explainable import path.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/10055421-list-of-supported-brokers-and-platforms",
+          "observation": "The official compatibility list identifies named broker and platform paths and the supported connection or file-import format for each entry.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8239862-how-to-import-trades-from-unsupported-broker-into-tradezella-via-generic-csv-file-upload",
+          "observation": "The official guide documents a mapped generic CSV fallback for unsupported brokers.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/application/prepare-csv-import.ts",
+        "mobile/src/core/csv.ts",
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Hermes has one mapped stock-only generic CSV contract. Prioritized named broker packs and their reconciliation fixtures are not implemented.",
+      "disposition": "prioritize-local",
+      "rationale": "File adapters improve time to first value without introducing broker secrets, hosted synchronization, or ongoing provider fees.",
+      "gate": "Each parser needs real-format fixtures cleared for repository use, explicit timezone and asset semantics, stable source identity, exact row reconciliation, and a maintained compatibility owner.",
+      "success_metric": "Each released parser imports its golden files with every row reconciled, repeated files idempotent, changed payloads explicit, and no silent fallback to generic stock semantics."
+    },
+    {
+      "id": "guided-activation-account-receipt",
+      "capability": "Guided activation, account overview, and import receipt continuation",
+      "benefit": "Shortens the distance from an empty journal to one trusted review and makes the result of the first import obvious.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official getting-started guide sequences dashboard orientation, import, trade review, journaling, reports, and practice tools.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "Current plan information makes account capacity and product access part of the activation decision.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/startup.ts",
+        "mobile/src/ui/app.ts",
+        "mobile/src/ui/import-tool.ts",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Hermes has private/demo onboarding, task entry points, and inspectable post-import receipt reconciliation. A fuller read-only account overview and more explicit first-review continuation remain open; current authored prompts already cover the basic reflection questions.",
+      "disposition": "prioritize-local",
+      "rationale": "Improving activation compounds the value of already-shipped capture and review capabilities without expanding financial scope.",
+      "gate": "Usability copy must remain educational rather than advisory; account and receipt surfaces must derive from the current snapshot and preserve demo/real-workspace separation.",
+      "success_metric": "In five moderated first-use sessions, at least four participants can create or import one fictional execution, reconcile its receipt, and open its review without facilitator correction; record time and failure points rather than claiming retention."
+    },
+    {
+      "id": "playbooks-rules-templates",
+      "capability": "Playbooks, strategy rules, and review templates",
+      "benefit": "Makes process expectations reusable so a trader can compare what was planned with what was recorded after the trade.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/7020769-getting-started-with-strategies",
+          "observation": "The official strategy workflow groups trades under reusable strategy definitions and rules.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/10371695-understanding-and-using-progress-tracker-rules",
+          "observation": "The official progress workflow uses required and custom process rules to structure daily reflection.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/application/journal-store.ts",
+        "mobile/src/ui/trade-review-sheet.ts",
+        "mobile/src/core/plan-adherence-report.ts",
+        "docs/mobile/PRODUCT_BLUEPRINT.md"
+      ],
+      "current_status": "Current playbooks, ordered rules, review assignments, and observational Plan Check reporting are implemented. User-facing template creation and fuller vocabulary/playbook management remain open.",
+      "disposition": "prioritize-local",
+      "rationale": "Templates reduce review effort and reinforce Hermes's process-first positioning without creating signals or recommendations.",
+      "gate": "Templates must never auto-classify a trade, overwrite review evidence, or present observational cohort differences as causal or statistically significant.",
+      "success_metric": "A user can create, edit, apply, and export a reusable template with ordered rules; every saved application is explicit, versioned, and reproduced after restore."
+    },
+    {
+      "id": "reflection-rhythm",
+      "capability": "Reflection rhythm and process accountability",
+      "benefit": "Makes unfinished reflection visible and supports a consistent review habit without encouraging more trades or larger risk.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/10352042-getting-started-with-the-progress-tracker",
+          "observation": "The official tracker organizes a prepare, trade, and reflect routine with daily progress visibility.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/10371695-understanding-and-using-progress-tracker-rules",
+          "observation": "The official rules guide describes process completion and daily rule evidence rather than only outcome metrics.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/application/daily-reflection-rhythm.ts",
+        "mobile/src/ui/daily-reflection-rhythm-view.ts",
+        "mobile/src/application/prepare-daily-journal.ts",
+        "mobile/src/ui/daily-journal-sheet.ts",
+        "mobile/src/ui/calendar-day-view.ts",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Versioned daily reflections for trading and no-trade dates, review queues, and trade-review coverage already exist. Daily Reflection Rhythm now classifies the latest seven trading sessions as completed, draft, or missing and derives the current completed suffix from exact current daily heads.",
+      "disposition": "shipped",
+      "rationale": "This translates a prominent accountability benefit into an original Hermes feature using existing local data and no new write path, performance field, or reward tied to trading outcomes.",
+      "gate": "The projection may measure reflection state only; it must exclude P&L, trade count, process score from performance, predictions, advice, and reward mechanics.",
+      "success_metric": "For the latest seven trading sessions, rendered completed, draft, or missing states exactly match current daily heads; streak calculation is deterministic, accessible at 320 px and 200% text, and uses no financial outcome field."
+    },
+    {
+      "id": "deeper-observational-reports",
+      "capability": "Deeper behavior, timing, excursion, and exit reports",
+      "benefit": "Helps a trader test narrower questions about timing and execution while preserving a trail to the records behind each observation.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/5829394-reports-overview-section",
+          "observation": "The official reports catalog spans performance, timing, and behavior views beyond a headline dashboard.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/5860216-understanding-the-trade-page",
+          "observation": "The official trade page exposes trade-level context used by detailed analysis, including execution and chart evidence.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/reports-view.ts",
+        "mobile/src/core/trade-metrics.ts",
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Eight governed local reports cover several setup, rule, review, tag, emotion, mistake, direction, and weekday questions. MAE/MFE, exit efficiency, additional time views, and fuller account comparisons are not defined.",
+      "disposition": "prioritize-local",
+      "rationale": "Additional deterministic reports deepen the core loop, but only where Hermes has the source data and a valid definition.",
+      "gate": "Do not publish excursion or exit metrics until price-path source rights, sampling, timezone, corporate-action, multiplier, fee, and missing-data semantics are versioned and fixture-backed.",
+      "success_metric": "Every added report has a checksum-pinned definition, exact eligibility and exclusion conservation, bounded drill-down, archive restore equality, and no causal or profitability claim."
+    },
+    {
+      "id": "native-mobile-data-lifecycle",
+      "capability": "Native-feeling mobile workflow, attachments, and complete data lifecycle",
+      "benefit": "Lets a phone-first user capture context, keep control of private records, and recover or remove them without relying on a hosted account.",
+      "tradezella_evidence": [
+        {
+          "url": "https://www.tradezella.com/vs/tradersync",
+          "observation": "TradeZella's official comparison identifies itself as web-based and states that it does not currently provide a mobile app; this is a first-party availability statement that can change.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://app.tradezella.com/information/privacy",
+          "observation": "The official privacy notice confirms that handling journal and account data is a material product obligation.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "mobile/src/ui/user-data-export.ts",
+        "mobile/src/ui/user-data-restore.ts",
+        "mobile/src/application/journal-archive.ts",
+        "docs/mobile/MAC_HANDOFF.md"
+      ],
+      "current_status": "The iPhone-first shell, offline design, versioned export, and matching-runtime empty-journal restore are implemented in source and Linux evidence. Native acceptance, nonempty migration evidence, attachment lifecycle, and verified Delete All Data remain held.",
+      "disposition": "prioritize-local",
+      "rationale": "A dependable native data lifecycle is Hermes's clearest structural advantage over a broad web subscription and should precede hosted expansion.",
+      "gate": "Mac/iPhone acceptance is required for SQLCipher and Keychain lifecycle, Files import/export, photos, interruption and low-storage behavior, VoiceOver, and Dynamic Type. Delete All Data is irreversible and requires explicit human approval and recovery evidence first.",
+      "success_metric": "On a current iPhone, export, empty-device restore, continued write, re-export, attachment add/remove, and approved delete-all journeys preserve or remove the documented database, Keychain, and file state exactly, including interruption tests and zero unintended network requests."
+    },
+    {
+      "id": "commercial-packaging-price-clarity",
+      "capability": "Clear product packaging and sustainable price boundary",
+      "benefit": "Reduces plan confusion and prevents local journal value from depending on an underfunded recurring service.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "As observed on 2026-07-17, the official help page lists Essential, Pro, and Ultra plans with different account, replay, AI-credit, agent, and automated-backtest entitlements; prices and entitlements are changeable product facts.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md",
+        "docs/mobile/COMPETITIVE_ANALYSIS.md"
+      ],
+      "current_status": "Hermes documents a one-time local Core and optional later Connect direction, but every price is an unapproved hypothesis and some research prose still carries older TradeZella prices.",
+      "disposition": "gated-funded",
+      "rationale": "Price clarity is a product benefit, but publishing a price or bundling ongoing costs requires current economics rather than competitor imitation.",
+      "gate": "Explicit owner approval after App Store commission, taxes, refunds, support, provider costs, willingness-to-pay, conversion, and retention evidence; update externally used competitor facts immediately before publication.",
+      "success_metric": "An owner-approved package maps every entitlement to a funded cost model, keeps all current local Core features usable without Connect, and contains no public price claim before the commercial gate passes."
+    },
+    {
+      "id": "broker-propfirm-hosted-sync",
+      "capability": "Read-only broker, multi-account, and prop-firm synchronization",
+      "benefit": "Removes recurring import work and keeps multiple account histories current.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/10055421-list-of-supported-brokers-and-platforms",
+          "observation": "The official compatibility list documents direct synchronization and file-based adapters across named brokers and platforms.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "Current plan information includes account limits and PropFirm Sync as packaged capabilities.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md",
+        "mobile/src/core/mobile-boundary.test.ts"
+      ],
+      "current_status": "Hermes intentionally has no broker credential, hosted synchronization, Plaid, or prop-firm connection path. Current app code and production policy prohibit external requests.",
+      "disposition": "gated-funded",
+      "rationale": "Synchronization is convenient but creates recurring provider cost, sensitive credential/data handling, reconciliation, revocation, deletion, and support obligations.",
+      "gate": "Approve a separately funded Connect model plus provider coverage, data rights, least-privilege read-only scope, threat model, privacy review, revocation/deletion, webhook idempotency, reconciliation, and support ownership. No order-write method is permitted.",
+      "success_metric": "Only after approval, every provider event is idempotently reconciled to immutable facts, stale or revoked connections fail visibly, deletion is verified, support cost stays inside the approved unit model, and penetration tests find no order-write capability."
+    },
+    {
+      "id": "licensed-trade-replay",
+      "capability": "Historical trade and session replay",
+      "benefit": "Lets a trader revisit decision timing against market movement and practice review outside live trading.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/7898284-trade-replay-2-0-a-powerful-tool-for-analyzing-trades-second-by-second",
+          "observation": "The official replay guide describes second-by-second review of an individual trade or trading day with journal context.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "Current plan entitlements meter replay quantity and granularity by tier.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Hermes has no licensed historical market-data store, playback engine, or replay entitlement model.",
+      "disposition": "gated-funded",
+      "rationale": "Replay can strengthen practice, but tick data rights, storage, bandwidth, market/session normalization, and recurring costs do not fit the unapproved one-time Core hypothesis.",
+      "gate": "Approve data vendors and redistribution rights, instrument/session semantics, corporate actions, storage and bandwidth economics, offline/cache policy, support ownership, and a funded entitlement model.",
+      "success_metric": "If approved, replayed timestamps and prices reconcile to licensed reference fixtures across supported sessions and instruments, disclose missing data, and remain analytically separate from actual execution facts."
+    },
+    {
+      "id": "deterministic-backtesting",
+      "capability": "Manual and automated backtesting",
+      "benefit": "Provides a structured environment to test a rule set on historical data before relying on it in live decisions.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/9854312-what-is-backtesting-in-tradezella",
+          "observation": "The official help center describes historical strategy testing as a product workflow.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "Current plans distinguish manual backtesting from metered automated-backtest sessions.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md"
+      ],
+      "current_status": "Hermes has a deterministic journal ledger and calculators but no historical market-data engine, fill simulator, strategy runner, or backtest result contract.",
+      "disposition": "gated-funded",
+      "rationale": "A credible backtester is a separate data and simulation product; reusing journal reports without execution, slippage, bias, and data-quality contracts would create misleading evidence.",
+      "gate": "Approve data rights and economics plus versioned strategy, universe, corporate-action, survivorship-bias, timestamp, spread, slippage, commission, fill, and reproducibility contracts. Results require prominent limitations and no advice framing.",
+      "success_metric": "If approved, a pinned strategy and dataset reproduce byte-stable event and result fixtures, expose all cost and fill assumptions, and fail closed on incomplete or unsupported market data."
+    },
+    {
+      "id": "opt-in-reflection-ai",
+      "capability": "AI-assisted journal retrieval and reflection",
+      "benefit": "Can reduce the effort of finding past notes and drafting questions from a large private journal.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/11201153-what-is-zella-ai-tradezella-s-ai-trading-assistant",
+          "observation": "The official guide presents an AI assistant that works with journal context and metered credits.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/8911582-our-pricing",
+          "observation": "Current plans meter AI credits and AI-related access by tier.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md",
+        "mobile/src/core/mobile-boundary.test.ts"
+      ],
+      "current_status": "Hermes uses deterministic code for calculations and has no model dependency, AI data egress, prompt store, or AI entitlement path.",
+      "disposition": "gated-funded",
+      "rationale": "Assistance may improve retrieval and reflection, but recurring compute, sensitive journal text, hallucination, advice risk, deletion, and auditability require a separate product boundary.",
+      "gate": "Approve local/BYOK or funded hosted architecture, explicit field-level consent, minimization, retention/deletion, vendor terms, prompt-injection defense, output labeling, evaluation, and a hard prohibition on model-generated calculations, predictions, or trade advice.",
+      "success_metric": "If approved, a red-team and golden-query suite demonstrates source-linked retrieval, explicit uncertainty, complete opt-out and deletion, zero silent data egress, and zero model-generated financial metric or order recommendation."
+    },
+    {
+      "id": "mentor-community-sharing",
+      "capability": "Mentor access, community spaces, and selective sharing",
+      "benefit": "Adds accountability and feedback from other people around a trader's journal and process.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/8293313-understanding-mentor-mode",
+          "observation": "The official mentor guide documents granting another person access to journal information for coaching and review.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/15490894-what-is-spaces-community-mentorship-leaderboards",
+          "observation": "The official Spaces guide combines community, mentorship, and leaderboard surfaces.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md",
+        "mobile/src/ui/user-data-export.ts"
+      ],
+      "current_status": "Hermes has user-controlled local export but no identity, hosted access control, private comments, public sharing, moderation, reporting, or community operations.",
+      "disposition": "gated-funded",
+      "rationale": "Human feedback can improve accountability, but private sharing and public community are distinct hosted products with sensitive-data, consent, abuse, moderation, and support obligations.",
+      "gate": "Approve identity and tenant isolation, granular revocable consent, least-privilege scopes, audit logs, deletion, safeguarding and moderation policy, abuse reporting, support staffing, and recurring economics. Public performance sharing remains excluded below.",
+      "success_metric": "If approved, permission tests prove that invited people can access only explicitly shared fields, revocation takes effect across every copy and cache, audit logs are complete, and moderation response targets are funded and measured."
+    },
+    {
+      "id": "trade-execution-and-advice",
+      "capability": "Order execution, custody, signals, and personalized trade advice",
+      "benefit": "Not a Hermes benefit target; keeping journaling separate from order placement protects the product's reflective and read-only trust boundary.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official workflow starts with trades performed elsewhere and then imported for journaling and review; this supports treating execution as outside the benchmarked journal loop.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "mobile/src/core/mobile-boundary.test.ts",
+        "mobile/src/ui/manual-execution-sheet.ts",
+        "docs/HANDOFF.md"
+      ],
+      "current_status": "Hermes stores user-entered or imported execution facts after the event and explicitly has no brokerage write endpoint, order method, custody, signal, prediction, or advice path.",
+      "disposition": "intentional-non-goal",
+      "rationale": "Adding execution or advice would conflict with the explicit product contract, expand regulatory and security exposure, and compromise the review-first purpose.",
+      "gate": "No implementation gate exists inside the Hermes Journal scope. Any proposal is a new product requiring human legal, financial, security, and infrastructure review outside this ledger.",
+      "success_metric": "The dependency boundary, content security policy, and source audit continue to prove no order create, route, modify, or cancel method and no personalized recommendation surface."
+    },
+    {
+      "id": "public-profit-leaderboards",
+      "capability": "Public P&L leaderboards and profit-driven engagement",
+      "benefit": "Not a Hermes benefit target; excluding public profit competition keeps incentives on reflection and process rather than overtrading or performative screenshots.",
+      "tradezella_evidence": [
+        {
+          "url": "https://help.tradezella.com/en/articles/15490894-what-is-spaces-community-mentorship-leaderboards",
+          "observation": "The official Spaces guide includes leaderboard functionality alongside community and mentorship.",
+          "confidence": "high"
+        }
+      ],
+      "hermes_evidence_paths": [
+        "docs/mobile/PRODUCT_BLUEPRINT.md",
+        "docs/mobile/IOS_ROADMAP.md",
+        "mobile/src/application/prepare-daily-journal.ts"
+      ],
+      "current_status": "Hermes has private local reflections and process-oriented review streaks. It has no public leaderboard, profit-sharing feed, trade-count reward, or gambling-like engagement mechanic.",
+      "disposition": "intentional-non-goal",
+      "rationale": "Profit competition can reward risk, turnover, selective disclosure, and social comparison instead of the consistent review habit Hermes is designed to support.",
+      "gate": "Remain excluded. A private user-controlled summary may be considered only after privacy, selective disclosure, accessibility, and non-gamification review; it may not become a ranking surface.",
+      "success_metric": "Product and analytics audits find no reward, streak, notification, ranking, or unlock keyed to P&L, trade count, turnover, risk taken, or public performance comparison."
+    }
+  ]
+}
