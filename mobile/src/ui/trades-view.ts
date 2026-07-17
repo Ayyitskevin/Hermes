@@ -279,9 +279,15 @@ function viewFilters(browser: TradeBrowserResult): string {
 }
 
 function scopeForm(snapshot: JournalWorkspaceSnapshot, browser: TradeBrowserResult): string {
-  const options = snapshot.accountOptions.map((account) => (
-    `<option value="${escapeHtml(account.id)}" ${browser.state.accountId === account.id ? "selected" : ""}>${escapeHtml(account.label)} · ${countNoun(account.tradeCount, "trade")}</option>`
-  )).join("");
+  const options = snapshot.accountOptions.map((account, index) => {
+    const duplicateCount = snapshot.accountOptions.filter((candidate) => (
+      candidate.label === account.label
+    )).length;
+    const identity = duplicateCount > 1
+      ? `${account.label} · account ${index + 1} of ${snapshot.accountOptions.length}`
+      : account.label;
+    return `<option value="${escapeHtml(account.id)}" ${browser.state.accountId === account.id ? "selected" : ""}>${escapeHtml(identity)} · ${countNoun(account.tradeCount, "trade")}</option>`;
+  }).join("");
   return `<form class="card trade-scope-form" id="trade-scope-form" novalidate>
     <div>
       <p class="card-label">TRADE BROWSER</p>

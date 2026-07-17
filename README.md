@@ -274,6 +274,20 @@ submission-ready product:
   200% text, read-only demo behavior, and storage/network neutrality. No schema,
   store command, archive, digest, report, formula, preference, dependency, or
   native source changed; the same four write-capable exceptions remain.
+- Guided Account Overview v1 is the twenty-eighth bounded Slice D increment
+  and the twenty-fourth derived-only presentation/projection increment.
+  Established and fictional-demo Dashboards list every retained account in the
+  snapshot's existing stable order, including zero-trade accounts, using only
+  its label and exact current derived-trade count. Each action resolves the
+  stable ledger account ID and rebuilds the existing Trade Browser from its
+  empty state plus that ID, so dates, selected day, search, and card facets
+  cannot remain as contradictory hidden filters. Success focuses and announces
+  the exact all-activity scope; stale, detached, or tampered identity fails
+  visibly without changing route or scope. The module adds no account mutation,
+  balance, account-level financial metric, activation preference, write
+  command, schema, archive, formula, dependency, native source, or network
+  path. The five-session moderated first-use target remains NOT RUN and is not
+  replaced by automated acceptance.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

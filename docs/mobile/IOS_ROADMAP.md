@@ -56,7 +56,7 @@ under the provisional identifier until that gate is cleared.
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
   Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
-  Rhythm v1, Compact Trades Filters v1, export, and
+  Rhythm v1, Guided Account Overview v1, Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -571,6 +571,20 @@ observed plugin/device behavior:
   neutrality. The slice is presentation-only and adds no schema, store command,
   archive, digest, report, formula, route, preference, dependency, or native
   source.
+- Guided Account Overview v1 adds a derived-only Dashboard path from every
+  retained account to its exact all-activity Trade Browser scope. Cards expose
+  only the stable-order label and current derived-trade count, retain honest
+  zero-trade accounts, and identify actions by stable ledger ID. Each action
+  resets dates, selected day, search, and card facets before routing, then
+  focuses and announces the exact scope. Stale or tampered identity fails
+  visibly without changing route or scope. Fictional-demo guidance is
+  explicitly read-only. Production Chromium proves keyboard continuation,
+  prior-filter reset, exact evidence count, focus/announcement, stale-ID
+  failure, storage/network neutrality, and 320px/200% reflow. The moderated
+  four-of-five first-use target remains NOT RUN. No account mutation,
+  account-level financial field, activation preference, schema, store command,
+  archive, digest, governed report, formula, dependency, native source, or
+  network path changed.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -739,9 +753,10 @@ Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
-Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, matching-runtime
-local restore, and all eight governed reports are implemented. Twenty-seven
-bounded Slice D increments are implemented in total; the twenty-three
+Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
+Overview v1, matching-runtime local restore, and all eight governed reports are
+implemented. Twenty-eight bounded Slice D increments are implemented in total;
+the twenty-four
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade

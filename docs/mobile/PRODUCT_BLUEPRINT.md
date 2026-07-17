@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-seven bounded Slice D increments are implemented in the current workspace.
+Twenty-eight bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -953,6 +953,29 @@ external request or new stored state. No schema, store command, archive, digest,
 governed report, formula, route, preference, dependency, or native source
 changed; the same four write-capable exceptions remain.
 
+Guided Account Overview v1 is the twenty-eighth bounded Slice D increment and
+the twenty-fourth derived-only presentation/projection increment. Established
+and fictional-demo Dashboards project every retained account in existing
+snapshot order, including zero-trade accounts, and display only the account
+label plus exact current derived-trade count. The stable ledger ID is action
+identity but not user-facing copy. Before rendering, the existing Trade Browser
+gate reconciles unique account IDs, labels, ownership, and counts.
+
+Each account action creates an exact candidate from the empty ephemeral Trade
+Browser state plus that one stable account ID. This intentionally clears prior
+dates, selected day, search, and exact card facets, then routes to Trades,
+focuses the rebuilt scope summary, and announces the all-activity count.
+Missing, detached, duplicated, or tampered identity fails visibly without
+changing route or scope. Dashboard totals and governed Reports remain
+whole-workspace; no account-level financial field or new formula is added.
+Fictional-demo guidance remains explicit and read-only. Production Chromium
+proves keyboard continuation, reset from conflicting prior filters, exact
+account evidence, focus/announcement, stale-ID failure, storage/network
+neutrality, and 320px/200% reflow. The separate moderated first-use result of at
+least four of five remains NOT RUN. No schema, store command, account mutation,
+archive, digest, governed-report definition, preference, dependency, native
+source, or network path changed.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1107,7 +1130,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-  twenty-seven Slice D increments add Plan Check, governed Setup Breakdown,
+  twenty-eight Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1116,9 +1139,9 @@ v1, Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
 Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
 Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
 Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
-Preview Feedback Focus v1, Import Receipt Reconciliation v1, and Daily
-Reflection Rhythm v1. The twenty-three presentation/projection increments
-remain derived-only. Durable
+Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
+Rhythm v1, and Guided Account Overview v1. The twenty-four
+presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing
 versioned trade-review save path, while Calendar-Day Reflection Continuation

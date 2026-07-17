@@ -202,7 +202,7 @@
     {
       "id": "guided-activation-account-receipt",
       "capability": "Guided activation, account overview, and import receipt continuation",
-      "benefit": "Shortens the distance from an empty journal to one trusted review and makes the result of the first import obvious.",
+      "benefit": "Is intended to provide a shorter, clearer path from an empty journal to one trusted review and make the result of the first import obvious.",
       "tradezella_evidence": [
         {
           "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
@@ -218,14 +218,16 @@
       "hermes_evidence_paths": [
         "mobile/src/ui/startup.ts",
         "mobile/src/ui/app.ts",
+        "mobile/src/application/account-overview.ts",
+        "mobile/src/ui/account-overview-view.ts",
         "mobile/src/ui/import-tool.ts",
         "docs/mobile/IOS_ROADMAP.md"
       ],
-      "current_status": "Hermes has private/demo onboarding, task entry points, and inspectable post-import receipt reconciliation. A fuller read-only account overview and more explicit first-review continuation remain open; current authored prompts already cover the basic reflection questions.",
+      "current_status": "Hermes has private/demo onboarding, task entry points, inspectable post-import receipt reconciliation, and a read-only stable-ID account overview that resets hidden filters before opening exact all-activity Trades evidence. Branch-specific manual/CSV continuation through the correct review and the moderated four-of-five result remain open; current authored prompts already cover the basic reflection questions.",
       "disposition": "prioritize-local",
-      "rationale": "Improving activation compounds the value of already-shipped capture and review capabilities without expanding financial scope.",
+      "rationale": "A clearer activation path is a bounded way to expose already-shipped capture and review capabilities without expanding financial scope; impact remains unmeasured.",
       "gate": "Usability copy must remain educational rather than advisory; account and receipt surfaces must derive from the current snapshot and preserve demo/real-workspace separation.",
-      "success_metric": "In five moderated first-use sessions, at least four participants can create or import one fictional execution, reconcile its receipt, and open its review without facilitator correction; record time and failure points rather than claiming retention."
+      "success_metric": "NOT RUN. In five moderated first-use sessions, at least four participants must create or import one fictional execution, reconcile its receipt on the CSV branch, enter the exact account scope, and open the correct review without facilitator correction; record path, time, and failure points rather than claiming retention."
     },
     {
       "id": "playbooks-rules-templates",

@@ -716,6 +716,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
 | Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
 | Daily Reflection Rhythm | status | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + demo/local continuation/layout/SQLite/network evidence |
+| Guided Account Overview | status | retained/zero-trade account order + stable-ID all-activity scope + filter reset + stale-ID failure + focus/announcement/layout/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -838,6 +839,15 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   validation, completed/draft/missing totals, current completed suffix,
   no-trade separation, and the non-performance copy are observed from live
   device state without new persistence.
+- Guided Account Overview v1 has only Linux/Chromium projection,
+  keyboard-routing, stale-ID, responsive-layout, storage, and request-neutrality
+  evidence. Native VoiceOver announcement/order, hardware-keyboard focus,
+  safe-area/chrome visibility, SQLite observation, background/foreground,
+  force-quit/relaunch, two-scene refresh, and 320/421-width 200% Dynamic Type
+  are NOT RUN. Keep native acceptance held until retained and zero-trade
+  accounts reconcile from live device state, exact stable-ID routing clears
+  transient filters without changing whole-workspace reports, and tampered
+  identity fails visibly without a write or broadened scope.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

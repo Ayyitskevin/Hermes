@@ -423,6 +423,33 @@ process score are intentionally not inputs. Rebuilding the ledger snapshot
 rebuilds the rhythm, so export/restore equality follows only from the existing
 calendar and current-head contracts.
 
+### Guided account overview
+
+Guided Account Overview v1 is the twenty-eighth bounded Slice D increment and
+the twenty-fourth derived-only presentation/projection increment. Its only
+inputs are the current snapshot's retained account options and current trade
+groups. The existing Trade Browser validation gate must reconcile unique stable
+account IDs, labels, trade ownership, and exact per-account trade counts before
+the overview renders. Output is deeply frozen and contains only provenance,
+stable action identity, account label, and current derived-trade count; no
+balance, P&L, return, win rate, equity, ranking, broker state, or inferred
+financial fact enters the projection.
+
+Every account remains visible in existing snapshot order, including a retained
+account with zero current trade projections. An account continuation starts
+from the empty ephemeral Trade Browser state plus exactly one stable ledger
+account ID. It intentionally clears prior activity dates, selected day, search,
+and exact card facets so the all-activity action and displayed count cannot be
+contradicted by hidden state. The existing Trades projection may then display
+its already-governed allocation evidence; Dashboard totals and Reports remain
+whole-workspace. Missing, detached, duplicated, or tampered identity fails
+closed and leaves route and browser scope unchanged.
+
+The guidance state is rebuilt from the current snapshot and never persisted as
+activation progress. Fictional-demo copy remains explicit and exposes no
+mutation control. The moderated four-of-five first-use target is separate human
+evidence and remains NOT RUN.
+
 ## Daily-journal sequence
 
 ```text

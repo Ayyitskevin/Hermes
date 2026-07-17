@@ -1,8 +1,170 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified TradeZella Benefit Parity Foundation v1 · updated 2026-07-17
+Status: verified Guided Account Overview v1 locally · hosted exact-commit CI
+pending · updated 2026-07-17
 
 ## Current handoff
+
+task: Deliver Guided Account Overview v1 as a derived-only activation path from
+the Dashboard into one exact existing Trade Browser account scope, while
+preserving Hermes's ledger ownership, governed definitions, local/offline
+boundary, and explicit native and human acceptance holds.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- A pure `buildAccountOverview` projection now lists every retained account in
+  the ledger's stable current order with its exact current derived trade count,
+  including zero-trade accounts. It owns no balance, buying-power, broker,
+  performance, or financial value and writes no state.
+- Every account action carries its stable ledger ID into the existing Trade
+  Browser and deliberately rebuilds from `EMPTY_TRADE_BROWSER_STATE` plus that
+  account. Dates, activity-day scope, search, and review facets are cleared so
+  the visible count cannot disagree with hidden filters. The exact summary is
+  scrolled clear of app chrome, focused, and announced.
+- The account/card/action binding fails closed on missing, stale, duplicated,
+  reordered, or coherently swapped identities. Candidate scope is validated
+  before assignment; a later render/focus failure restores the prior exact tab
+  and Trade Browser state rather than leaving a partial route transition.
+- Duplicate account labels are presentation-qualified as `account N of M` in
+  the exact destination summary and select options while unique labels remain
+  unchanged. Demo guidance is explicitly fictional/read-only, and all-zero
+  workspaces direct the user to add evidence before a review can exist.
+- Production Chromium covers the exact reset-all route, tampered/stale IDs,
+  post-assignment rollback, offline/storage invariants, and a 320 CSS-pixel / 200%
+  text keyboard journey through the exact account into its fictional read-only
+  review. Long duplicate labels remain inside the viewport.
+- README, product blueprint, iOS roadmap, local-ledger contract, Mac handoff,
+  parity artifact/report, roadmap SQL, and this handoff now cover 28 bounded
+  Slice D increments, 24 derived-only presentation/projection increments, and
+  the same 4 write-capable exceptions.
+- The broader guided activation/account/receipt domain remains
+  `prioritize-local`:
+  branch-specific continuation into the correct review and the moderated
+  4-of-5 activation gate were NOT RUN. The source-backed 20-domain benchmark
+  therefore remains 6 shipped, 6 prioritize-local, 6 gated-funded, and 2
+  intentional non-goals.
+- No migration, durable command, archive/digest/export/restore shape,
+  governed-report formula/cohort/version/checksum, account preference, balance
+  model, credential, dependency, native source, network path, destructive flow,
+  order execution, advice surface, or public profit ranking was added.
+
+verified:
+
+- Regression-first proof: targeted unit tests initially failed because the
+  account overview modules did not exist. The focused type/unit/Chromium suites
+  passed after the projection, binding, route, rollback, focus, and responsive
+  contracts were implemented.
+- Independent technical review found a coherent ID/position swap that could
+  route the wrong account and missing post-assignment rollback coverage. Both
+  were reproduced and fixed; technical re-review reported no remaining P0-P3.
+- Independent UX/accessibility review found ambiguous duplicate labels, false
+  all-zero review guidance, browser-local wording, a duplicate failure
+  announcement, and insufficient scaled journey depth. All were corrected;
+  UX re-review reported no remaining P0-P3.
+- Independent evidence review kept the broader capability at
+  `prioritize-local`, required a stale-ID browser journey, removed causal
+  benefit wording, and caught the stale active handoff. The journey, artifact,
+  generated report, and this handoff were corrected without changing the
+  6/6/6/2 disposition counts.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 61 files, 729 tests passed.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 89 production-Chromium journeys
+  passed, including 5 Guided Account Overview journeys.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- `cd mobile && npm run ios:copy`, `npm run verify:ios-sync`,
+  `npm run ios:sync`, then `npm run verify:ios-sync` — exit 0. Vite transformed
+  84 modules; the existing >500 kB warning remains. Six production files matched
+  the iOS public copy byte-for-byte with SHA-256
+  `3d160a77dda85950456619a733d6b1642d70fd52240091be4b9cf629495fc335`.
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly skipped
+  CocoaPods/xcodebuild on Linux; every native acceptance row remained NOT RUN.
+- `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
+  report.html` — exit 0; validation, packaging, source keyboard interaction,
+  1440/390 responsive checks, and script-stripped fallback checks passed for 11
+  blocks, 1 chart, 1 metric strip, and 1 table. Fallback client/scroll widths
+  reconciled at 1425/1425 desktop and 375/375 mobile.
+- `jq` reconciliation of `capability-ledger.json` — 20 total, 20 unique IDs;
+  shipped 6, prioritize-local 6, gated-funded 6, intentional-non-goal 2.
+- SHA-256: report HTML
+  `f2a8a760a3950ee17a65315fa42eec7791e52125441e547a2db9d9182213b533`;
+  artifact JSON
+  `27e245e75e80d84c6d853a4fb819b7dca9fd8821e86c0bc55410912bafda1ea4`;
+  capability ledger
+  `86c460b00207213f002516946f9f9c80e25c21cf5c18e7db1ca7e6f47d3edb11`;
+  priority SQL
+  `564f5d2066b81527b44f64d28d60bee728ed3a13e3c7a5b31c809d2f41aac45e`.
+- `node --check build-report.mjs` and `git diff --check` — exit 0.
+- Handoff topology checks — 1 current section, 34 prior-milestone markers, and
+  35 complete `task/stage/lane/produced/verified/assumptions/open` schema
+  blocks.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job remains required.
+
+assumptions:
+
+- “Deep link” here means exact in-app navigation into existing Trade Browser
+  state, not a URL router or externally addressable route.
+- Reset-all is intentional: retaining dates, day scope, search, or facets would
+  make the overview count disagree with hidden destination filters.
+- The current ledger snapshot and its retained account order remain the source
+  of truth. Duplicate-label qualification is presentation only and does not
+  alter durable IDs or labels.
+- This increment is intended to reduce activation ambiguity; no causal product
+  impact, completion-rate gain, or moderated usability threshold has been
+  measured yet.
+- Browser and Linux bundle evidence does not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
+  publication before this milestone can be passed downstream.
+- The branch-specific manual and generic-CSV activation paths must still be
+  moderated from capture (including CSV receipt reconciliation) through exact
+  account scope to the correct review. The required 4-of-5 completion gate is
+  NOT RUN and cannot be satisfied by automated browser tests.
+- Five further local-first priorities remain: saved views; named broker CSV
+  packs with cleared fixtures; playbook/template management; deeper reports
+  behind definition gates; and native lifecycle/attachments behind Mac/iPhone
+  evidence and deletion approval.
+- Credentialed broker/prop sync, licensed replay, reproducible backtesting,
+  private AI, mentor/community services, and pricing/packaging remain
+  gated-funded domains requiring explicit product, rights, security, privacy,
+  commercial, moderation, recurring-cost, and human decisions.
+- HOLD all native acceptance. CocoaPods, Xcode compile, Simulator, physical
+  iPhone, SQLite/SQLCipher/Keychain, Files/photos, safe areas, interruption,
+  background/foreground, force-quit/relaunch, multi-scene, VoiceOver, and
+  Dynamic Type were NOT RUN.
+- Existing human gates remain: Symbol Breakdown eligibility; generic-CSV
+  asset-class semantics; atomic batch durable recovery; approved Delete All
+  Data; and removal, wrapping, or explicit acceptance of the pinned SQLite
+  plugin's HTTP-download bridge and database-path console print.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active. Once exact hosted CI and
+  fleet filing are complete, the next autonomous local-first candidate is saved
+  views while the human branch-activation gate is scheduled separately.
+
+## Prior milestone — TradeZella Benefit Parity Foundation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Guided Account Overview v1 handoff above.
+
+Status: verified TradeZella Benefit Parity Foundation v1 · updated 2026-07-17
+
+### Historical handoff
 
 task: Deliver a source-backed TradeZella Benefit Parity Foundation v1 and two
 bounded local-first benefits—Import Receipt Reconciliation v1 and Daily
@@ -158,7 +320,7 @@ open:
 ## Prior milestone — CSV Preview Feedback Focus v1
 
 > Historical snapshot; current status and open items are superseded by the
-> active TradeZella Benefit Parity Foundation v1 handoff above.
+> active Guided Account Overview v1 handoff above.
 
 Status: verified CSV Preview Feedback Focus v1 · updated 2026-07-17
 

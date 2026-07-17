@@ -3,7 +3,7 @@
 WITH priority_roadmap(sequence, capability, first_increment, decision_gate, success_metric) AS (
   VALUES
     (1, 'Guided activation and account overview',
-      'Add a read-only account overview with exact deep links into the existing Trade Browser scope.',
+      'Moderate branch-specific manual and CSV paths from capture (plus CSV receipt reconciliation) through the shipped exact account scope to the correct review.',
       'No account mutation, financial aggregation, or advisory onboarding copy.',
       'At least four of five moderated first-use participants reach one trusted review without correction.'),
     (2, 'Reusable filters and saved views',

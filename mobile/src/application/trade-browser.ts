@@ -680,6 +680,21 @@ function dateLabel(from: string | null, through: string | null): string {
     : `From ${displayDate(from)}`;
 }
 
+function selectedAccountLabel(
+  snapshot: JournalWorkspaceSnapshot,
+  accountId: string,
+): string {
+  const index = snapshot.accountOptions.findIndex((option) => option.id === accountId);
+  const account = snapshot.accountOptions[index];
+  if (account === undefined) return "Unavailable account";
+  const duplicateCount = snapshot.accountOptions.filter((option) => (
+    option.label === account.label
+  )).length;
+  return duplicateCount > 1
+    ? `${account.label} · account ${index + 1} of ${snapshot.accountOptions.length}`
+    : account.label;
+}
+
 export function buildTradeBrowser(
   snapshot: JournalWorkspaceSnapshot,
   input: TradeBrowserState = EMPTY_TRADE_BROWSER_STATE,
@@ -803,8 +818,7 @@ export function buildTradeBrowser(
       : snapshot.accountOptions.length === 1
         ? snapshot.accountOptions[0]?.label ?? "All accounts"
         : "All accounts"
-    : snapshot.accountOptions.find((option) => option.id === input.accountId)?.label
-      ?? "Unavailable account";
+    : selectedAccountLabel(snapshot, input.accountId);
   const scopeDateLabel = dateLabel(activityFrom, activityThrough);
   const state = Object.freeze({
     accountId: input.accountId,

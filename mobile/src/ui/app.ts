@@ -2,6 +2,9 @@ import { JournalApplication } from "../application/journal-application";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
 import { buildReviewQueue } from "../application/review-queue";
 import {
+  buildExactAccountTradeScope,
+} from "../application/account-overview";
+import {
   buildTradeBrowser,
   EMPTY_TRADE_BROWSER_STATE,
   scopedActivityDayNeighbors,
@@ -12,6 +15,10 @@ import {
 import { escapeHtml } from "../core/html";
 import { sizePosition, type PositionSide } from "../core/sizing";
 import type { JournalWorkspaceSnapshot, TabId, TradePreview } from "../core/types";
+import {
+  accountOverviewSection,
+  bindAccountOverview,
+} from "./account-overview-view";
 import {
   calendarDayAnnouncement,
   calendarDaySection,
@@ -263,6 +270,7 @@ function dashboardView(
       <div><p class="eyebrow">${escapeHtml(snapshot.accountLabel)} · ${escapeHtml(snapshot.periodLabel)}</p><h1 id="dashboard-title">Dashboard</h1></div>
       <span class="source-label">${escapeHtml(snapshot.provenanceLabel)}</span>
     </div>
+    ${accountOverviewSection(snapshot)}
     <article class="result-card">
       <p class="card-label">NET P&amp;L</p>
       <strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>
@@ -948,6 +956,34 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     }
     tradeBrowserState = browser.state;
     if (screen) screen.innerHTML = viewFor(tab, snapshot, application.persistence, browser);
+    bindAccountOverview(root, snapshot, {
+      openAccount: (accountId) => {
+        const candidate = buildExactAccountTradeScope(snapshot, accountId);
+        const previousState = tradeBrowserState;
+        const previousTab = currentTab;
+        try {
+          tradeBrowserState = candidate.state;
+          render("trades", false);
+          const summary = root.querySelector<HTMLElement>("#trade-scope-summary");
+          if (summary === null) {
+            throw new Error("The exact account scope summary is unavailable.");
+          }
+          const topbarBottom = root.querySelector<HTMLElement>(".topbar")
+            ?.getBoundingClientRect().bottom ?? 0;
+          summary.style.scrollMarginTop = `${Math.max(16, Math.ceil(topbarBottom) + 16)}px`;
+          summary.scrollIntoView({ behavior: "auto", block: "start" });
+          summary.focus({ preventScroll: true });
+          announceStatus(
+            `Opened ${candidate.accountLabel} in Trades. All activity dates and ${countNoun(candidate.evidence.length, "current derived trade")}. Temporary dates, day, search, and card filters were cleared.`,
+          );
+        } catch (caught) {
+          tradeBrowserState = previousState;
+          render(previousTab, false);
+          throw caught;
+        }
+      },
+      announceFailure: announceStatus,
+    });
     root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
       const active = button.dataset.tab === tab;
       button.classList.toggle("active", active);
