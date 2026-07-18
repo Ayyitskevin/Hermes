@@ -24,6 +24,7 @@ describe("trades view", () => {
     expect(html).toContain('option value="demo-account-swing" selected');
     expect(html).toContain('name="account" aria-describedby="trade-scope-error"');
     expect(html).toContain('type="search" maxlength="200" aria-describedby="trade-search-error trade-view-filter-boundary"');
+    expect(html).toContain('placeholder="Search symbol, account, setup, playbook, or tag"');
     expect(html).toContain('value="2026-07-07"');
     expect(html).toContain('value="2026-07-09"');
     expect(html).toContain("Demo Swing · Jul 7, 2026–Jul 9, 2026");
@@ -53,12 +54,13 @@ describe("trades view", () => {
       mistake: "Chased entry",
       emotion: "Impatient",
       tag: "Stopped on plan",
+      playbook: "Breakout",
     });
     const html = tradesView(DEMO_WORKSPACE, browser);
 
     expect(html).toContain('id="trade-filter-asset-class"');
     expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
-    expect(html).toContain("· 8 active filters");
+    expect(html).toContain("· 9 active filters");
     expect(html).toContain('<option value="etf" selected>ETF</option>');
     expect(html).toContain('<option value="long" selected>Long</option>');
     expect(html).toContain('<option value="closed" selected>Closed</option>');
@@ -72,6 +74,8 @@ describe("trades view", () => {
     expect(html).toContain('<option value="Impatient" selected>Impatient</option>');
     expect(html).toContain('id="trade-filter-tag"');
     expect(html).toContain('<option value="Stopped on plan" selected>Stopped on plan</option>');
+    expect(html).toContain('id="trade-filter-playbook"');
+    expect(html).toContain('<option value="Breakout" selected>Breakout</option>');
     expect(html).toContain("change visible cards and search results");
     expect(html).toContain("never change allocation scope");
     expect(html).toContain("Showing 1 of 8 trades");
@@ -91,6 +95,7 @@ describe("trades view", () => {
       mistakes: ['Late <scale-out> & "hesitation"'],
       emotion: "Focused & calm",
       tags: ["A+ <setup>"],
+      playbook: 'Playbook <one> & "fast"',
     };
     const snapshot = {
       ...DEMO_WORKSPACE,
@@ -100,6 +105,7 @@ describe("trades view", () => {
       ...EMPTY_TRADE_BROWSER_STATE,
       setup: "Retired <setup>",
       mistake: "Retired <mistake>",
+      playbook: "Retired <playbook>",
     });
     const html = tradesView(snapshot, browser);
 
@@ -118,10 +124,16 @@ describe("trades view", () => {
     );
     expect(html).toContain('value="A+ &lt;setup&gt;"');
     expect(html).toContain(
+      'value="Playbook &lt;one&gt; &amp; &quot;fast&quot;"',
+    );
+    expect(html).toContain(
       '<option value="Retired &lt;mistake&gt;" selected>Retired &lt;mistake&gt; (not currently assigned)</option>',
     );
+    expect(html).toContain(
+      '<option value="Retired &lt;playbook&gt;" selected>Retired &lt;playbook&gt; (not currently assigned)</option>',
+    );
     expect(html).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
-    expect(html).toContain("· 2 active filters");
+    expect(html).toContain("· 3 active filters");
     expect(html).toContain("Showing 0 of 8 trades");
   });
 
@@ -163,6 +175,7 @@ describe("trades view", () => {
         mistakes: [],
         emotion: null,
         tags: [],
+        playbook: null,
       })),
     };
     const emptyHtml = tradesView(snapshot, buildTradeBrowser(snapshot));
@@ -172,6 +185,7 @@ describe("trades view", () => {
     expect(emptyHtml).toMatch(/id="trade-filter-mistake"[^>]* disabled/);
     expect(emptyHtml).toMatch(/id="trade-filter-emotion"[^>]* disabled/);
     expect(emptyHtml).toMatch(/id="trade-filter-tag"[^>]* disabled/);
+    expect(emptyHtml).toMatch(/id="trade-filter-playbook"[^>]* disabled/);
 
     const classifiedSnapshot = {
       ...snapshot,
@@ -194,15 +208,20 @@ describe("trades view", () => {
       ...EMPTY_TRADE_BROWSER_STATE,
       setup: "Retired setup",
       tag: "Retired tag",
+      playbook: "Retired playbook",
     }));
     expect(staleHtml).not.toMatch(/id="trade-filter-setup"[^>]* disabled/);
     expect(staleHtml).not.toMatch(/id="trade-filter-tag"[^>]* disabled/);
+    expect(staleHtml).not.toMatch(/id="trade-filter-playbook"[^>]* disabled/);
     expect(staleHtml).toMatch(/<details[^>]*data-trade-filter-disclosure[^>]* open>/);
     expect(staleHtml).toContain(
       '<option value="Retired setup" selected>Retired setup (not currently assigned)</option>',
     );
     expect(staleHtml).toContain(
       '<option value="Retired tag" selected>Retired tag (not currently assigned)</option>',
+    );
+    expect(staleHtml).toContain(
+      '<option value="Retired playbook" selected>Retired playbook (not currently assigned)</option>',
     );
   });
 

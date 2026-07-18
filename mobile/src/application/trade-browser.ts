@@ -44,6 +44,8 @@ export interface TradeBrowserState {
   readonly mistake: string | null;
   readonly emotion: string | null;
   readonly tag: string | null;
+  /** Exact current playbook assignment, or null for every assigned playbook. */
+  readonly playbook: string | null;
 }
 
 export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
@@ -61,6 +63,7 @@ export const EMPTY_TRADE_BROWSER_STATE: TradeBrowserState = Object.freeze({
   mistake: null,
   emotion: null,
   tag: null,
+  playbook: null,
 });
 
 export interface TradeBrowserEvidence {
@@ -86,6 +89,7 @@ export interface TradeBrowserReviewFacetOptions {
   readonly mistakes: readonly string[];
   readonly emotions: readonly string[];
   readonly tags: readonly string[];
+  readonly playbooks: readonly string[];
 }
 
 export interface TradeBrowserResult {
@@ -274,7 +278,7 @@ function hasControlCharacter(value: string): boolean {
 }
 
 /** Mirrors the normalized label contract used by prepareTradeReview. */
-function normalizedReviewLabel(raw: unknown, label: string): string {
+export function normalizedTradeReviewLabel(raw: unknown, label: string): string {
   if (typeof raw !== "string" || hasControlCharacter(raw)) {
     throw new Error(`${label} must use visible single-line text.`);
   }
@@ -292,7 +296,7 @@ function normalizedReviewLabel(raw: unknown, label: string): string {
 }
 
 function canonicalReviewFacet(raw: unknown, label: string): string | null {
-  return raw === null ? null : normalizedReviewLabel(raw, label);
+  return raw === null ? null : normalizedTradeReviewLabel(raw, label);
 }
 
 function validateCurrentReviewLabels(
@@ -307,7 +311,7 @@ function validateCurrentReviewLabels(
   }
   const identities = new Set<string>();
   for (const value of raw) {
-    const normalized = normalizedReviewLabel(
+    const normalized = normalizedTradeReviewLabel(
       value,
       `Trade ${tradeSubjectId} ${label} value`,
     );
@@ -328,7 +332,7 @@ function validateCurrentOptionalReviewLabel(
   tradeSubjectId: string,
 ): void {
   if (raw === null) return;
-  const normalized = normalizedReviewLabel(raw, `Trade ${tradeSubjectId} ${label}`);
+  const normalized = normalizedTradeReviewLabel(raw, `Trade ${tradeSubjectId} ${label}`);
   if (normalized !== raw) {
     throw new Error(`Trade ${tradeSubjectId} ${label} is not normalized.`);
   }
@@ -348,7 +352,7 @@ function validateCurrentSetup(trade: TradePreview): void {
     }
     return;
   }
-  const normalized = normalizedReviewLabel(
+  const normalized = normalizedTradeReviewLabel(
     trade.setup,
     `Trade ${trade.tradeSubjectId} setup`,
   );
@@ -457,6 +461,7 @@ function validateSnapshotIdentity(snapshot: JournalWorkspaceSnapshot): Map<strin
     validateCurrentReviewLabels(trade.mistakes, "mistakes", trade.tradeSubjectId);
     validateCurrentOptionalReviewLabel(trade.emotion, "emotion", trade.tradeSubjectId);
     validateCurrentReviewLabels(trade.tags, "tags", trade.tradeSubjectId);
+    validateCurrentOptionalReviewLabel(trade.playbook, "playbook", trade.tradeSubjectId);
     trades.set(trade.tradeSubjectId, freezeTradePreview(trade));
     counts.set(trade.accountId, (counts.get(trade.accountId) ?? 0) + 1);
   }
@@ -475,17 +480,20 @@ function reviewFacetOptions(
   const mistakes = new Set<string>();
   const emotions = new Set<string>();
   const tags = new Set<string>();
+  const playbooks = new Set<string>();
   for (const trade of trades.values()) {
     if (trade.hasClassifiedSetup) setups.add(trade.setup);
     for (const mistake of trade.mistakes) mistakes.add(mistake);
     if (trade.emotion !== null) emotions.add(trade.emotion);
     for (const tag of trade.tags) tags.add(tag);
+    if (trade.playbook !== null) playbooks.add(trade.playbook);
   }
   return Object.freeze({
     setups: Object.freeze([...setups].sort(stableCompare)),
     mistakes: Object.freeze([...mistakes].sort(stableCompare)),
     emotions: Object.freeze([...emotions].sort(stableCompare)),
     tags: Object.freeze([...tags].sort(stableCompare)),
+    playbooks: Object.freeze([...playbooks].sort(stableCompare)),
   });
 }
 
@@ -636,6 +644,7 @@ function matchesSearch(evidence: TradeBrowserEvidence, query: string): boolean {
     trade.reviewStatus,
     trade.setup,
     trade.emotion ?? "",
+    trade.playbook ?? "",
     ...trade.mistakes,
     ...trade.tags,
   ].join(" ").normalize("NFKC").toLocaleLowerCase("en-US");
@@ -654,6 +663,7 @@ function matchesFacets(
     | "mistake"
     | "emotion"
     | "tag"
+    | "playbook"
   >,
 ): boolean {
   const trade = evidence.trade;
@@ -665,7 +675,8 @@ function matchesFacets(
       || (trade.hasClassifiedSetup && trade.setup === facets.setup))
     && (facets.mistake === null || trade.mistakes.includes(facets.mistake))
     && (facets.emotion === null || trade.emotion === facets.emotion)
-    && (facets.tag === null || trade.tags.includes(facets.tag));
+    && (facets.tag === null || trade.tags.includes(facets.tag))
+    && (facets.playbook === null || trade.playbook === facets.playbook);
 }
 
 function dateLabel(from: string | null, through: string | null): string {
@@ -741,6 +752,7 @@ export function buildTradeBrowser(
   const mistake = canonicalReviewFacet(input.mistake, "Mistake filter");
   const emotion = canonicalReviewFacet(input.emotion, "Emotion filter");
   const tag = canonicalReviewFacet(input.tag, "Tag filter");
+  const playbook = canonicalReviewFacet(input.playbook, "Playbook filter");
   const requestedDay = canonicalIsoDate(input.selectedDay, "Selected activity day");
   const requestedMonth = canonicalMonth(input.calendarMonth);
 
@@ -788,6 +800,7 @@ export function buildTradeBrowser(
         mistake,
         emotion,
         tag,
+        playbook,
       })
       && matchesSearch(item, query)
     )),
@@ -835,6 +848,7 @@ export function buildTradeBrowser(
     mistake,
     emotion,
     tag,
+    playbook,
   });
 
   return Object.freeze({
@@ -849,7 +863,8 @@ export function buildTradeBrowser(
       || setup !== null
       || mistake !== null
       || emotion !== null
-      || tag !== null,
+      || tag !== null
+      || playbook !== null,
     accountLabel,
     dateLabel: scopeDateLabel,
     scopeLabel: `${accountLabel} · ${scopeDateLabel}`,

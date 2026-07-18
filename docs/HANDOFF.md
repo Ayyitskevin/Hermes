@@ -1,9 +1,129 @@
 # Hermes Journal — active mobile handoff
 
+Status: verified Exact Playbook Scope v1 locally · hosted exact-commit CI pending
+· updated 2026-07-18
+
+## Current handoff
+
+task: Deliver Exact Playbook Scope v1 as a fail-closed, derived-only path from
+one immutable Journal playbook card to its exact completed Trade Browser cohort,
+without retaining contradictory scope or adding durable playbook state.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Trade Browser now owns a ninth ephemeral facet, `playbook`, derived only from
+  exact current `TradePreview.playbook` assignments under the existing saved-
+  label normalization and limit contract. Playbook search and exact filtering
+  change visible cards only; account/date/day evidence and governed reports stay
+  unchanged.
+- A detached, deeply frozen playbook-library projection reconciles every
+  immutable Journal card one-to-one with the current playbook options, exact
+  name, fixed position, rules, finite metrics, and current completed-trade count.
+  Missing, duplicate, malformed, case-mismatched, or count-incoherent evidence
+  fails closed.
+- Each valid **Open completed reviews** action builds
+  `EMPTY_TRADE_BROWSER_STATE` plus completed review state and the exact playbook.
+  Prior account, inclusive dates, selected day, search, and every other card
+  facet are cleared before Trades renders, so hidden state cannot contradict the
+  requested cohort.
+- A retained playbook whose last completed assignment disappears remains
+  visibly selected as **not currently assigned** and yields zero cards. A local
+  draft-only playbook follows the same honest zero-result contract.
+- Activation rechecks the unique section, card, action, exact name, position,
+  count, rules, current option, and completed subject cohort before assigning
+  state. Detached, stale, duplicated, or tampered evidence shows one visible
+  failure; unexpected destination validation restores the prior tab and exact
+  Trade Browser state.
+- Playbook names remain immutable identity for this bounded read-only slice.
+  Playbook CRUD remains open pending stable durable IDs, migration ownership,
+  and archive/export decisions.
+- README, product blueprint, local-ledger contract, iOS roadmap, Mac acceptance
+  matrix, and this handoff now record 32 bounded Slice D capabilities: 27
+  derived-only and the same 5 write-capable exceptions.
+- No schema, migration, persistence command, archive/digest/export/restore shape,
+  governed-report cohort/formula/version/checksum, protected preference,
+  dependency, native source, network path, credential, destructive flow, order
+  execution, advice, or public profit ranking was added.
+
+verified:
+
+- Independent architecture review selected Exact Playbook Scope as the next
+  bounded capability and accepted the derived-only/no-schema boundary.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 68 files, 783 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 101 production-Chromium journeys
+  passed in 41.1 seconds. Coverage includes exact completed routing from
+  conflicting state, retained and draft-only zero results, tamper failure,
+  prior-state rollback, focus/announcement, storage/network neutrality, and
+  320px/200% reflow.
+- `cd mobile && npm run ios:copy && npm run ios:sync` — exit 0. Capacitor copied
+  and synchronized the production bundle; CocoaPods and xcodebuild were
+  explicitly skipped/not installed on Linux.
+- `cd mobile && npm run verify:ios-sync` — exit 0. The production bundle matched
+  the iOS public copy byte-for-byte with SHA-256
+  `e05a668a5923bbb14843d663a6f8b85c66fd8ddf55e1bccb233047c1a0854646`;
+  generated configuration passed and every native acceptance row remains NOT
+  RUN.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- Isolated Python 3.11 legacy safety gate — Ruff passed and all 228 Pytest tests
+  passed; one upstream Starlette/httpx deprecation warning was reported.
+- Native CocoaPods resolution, Xcode compile, Simulator, physical iPhone,
+  SQLCipher/Keychain runtime, VoiceOver, Dynamic Type, hardware keyboard,
+  lifecycle, and multi-scene acceptance — NOT RUN.
+
+assumptions:
+
+- Current immutable playbook names and `reviewOptions.playbooks` remain the
+  authoritative identity/card source until an explicitly versioned CRUD design
+  introduces stable durable IDs.
+- Current `TradePreview` assignments and completed review state remain the sole
+  cohort source; Journal card metrics are claims that must reconcile against
+  those live facts before routing.
+- Exact playbook scope is session-only. It is not written to SQLite, browser
+  journal state, preferences, exports, archives, report digests, or URLs.
+- Browser, SQL.js, and Linux bundle evidence do not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Hosted exact-commit GitHub Actions and publication evidence remain pending the
+  final commit; do not infer hosted CI from local gates.
+- HOLD all native acceptance. On a Mac/iPhone, prove live encrypted current
+  assignments and exact completed counts, nine-facet search/scope composition,
+  conflict clearing, honest zero state, tamper rollback, VoiceOver, hardware-
+  keyboard focus, safe-area/Dynamic Type reflow, background/foreground,
+  force-quit/relaunch, and two-scene refresh without a durable or network write.
+- Playbook CRUD, Saved Views, broker parser packs/sync, deeper reports,
+  attachments/data lifecycle, replay, backtesting, hosted AI, structured
+  education/community, and pricing remain behind their documented product,
+  rights, security, privacy, schema, device, commercial, and human gates.
+- Two separate moderated fictional-data studies remain NOT RUN: five manual
+  participants and five generic-CSV participants. Do not pool cohorts or infer
+  activation, retention, causality, or trading outcomes from browser automation.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active after this slice; this
+  handoff is a coherent milestone, not completion of the broad roadmap.
+
+## Prior milestone — Daily Reflection Rhythm Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Exact Playbook Scope v1 handoff above.
+
 Status: verified Daily Reflection Rhythm Continuation v1 locally · feature
 commit 53ec0b1 hosted exact-commit CI passed · updated 2026-07-18
 
-## Current handoff
+### Historical handoff
 
 task: Deliver Daily Reflection Rhythm Continuation v1 from an exact missing or
 draft latest-seven session row into the existing locked-date Daily Journal

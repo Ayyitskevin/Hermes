@@ -88,10 +88,13 @@
       "hermes_evidence_paths": [
         "mobile/src/ui/trade-review-sheet.ts",
         "mobile/src/ui/trades-view.ts",
+        "mobile/src/application/playbook-trade-scope.ts",
+        "mobile/src/ui/playbook-trade-scope-view.ts",
+        "mobile/e2e/playbook-trade-scope.spec.ts",
         "mobile/src/application/journal-store.ts",
         "docs/mobile/PRODUCT_BLUEPRINT.md"
       ],
-      "current_status": "Immutable executions, stable trade subjects, versioned review heads, notes, exact vocabulary facets, playbooks, rule outcomes, and user-confirmed risk evidence are implemented. Screenshot attachments are tracked separately.",
+      "current_status": "Immutable executions, stable trade subjects, versioned review heads, notes, exact vocabulary facets, playbooks, rule outcomes, and user-confirmed risk evidence are implemented. Exact Playbook Scope now reconciles the current playbook library and its completed-review counts, then opens the exact completed-review cohort in the Trade Browser without mutating review evidence. Screenshot attachments are tracked separately.",
       "disposition": "shipped",
       "rationale": "This is the central Hermes job and converts raw capture into reflection without altering execution facts.",
       "gate": "No financial metric may be inferred from free-text review fields; percent and R remain available only with versioned, inspectable denominators.",
@@ -166,11 +169,14 @@
       ],
       "hermes_evidence_paths": [
         "mobile/src/ui/trades-view.ts",
+        "mobile/src/application/playbook-trade-scope.ts",
+        "mobile/src/ui/playbook-trade-scope-view.ts",
+        "mobile/e2e/playbook-trade-scope.spec.ts",
         "mobile/src/ui/reports-view.ts",
         "mobile/src/ui/app.ts",
         "docs/HANDOFF.md"
       ],
-      "current_status": "Exact current trade facets and scoped browser filters are implemented but ephemeral. Saved presets, reusable Journal filters, persistent scope, and report rescoping remain open; private preset labels have no approved protected preference adapter.",
+      "current_status": "Nine exact current-trade facets are implemented but ephemeral, including the playbook facet. Exact Playbook Scope provides a derived-only Journal entry point that clears conflicting temporary state and opens one completed-review playbook cohort; stale or draft-only cohorts remain honest zero-result scopes. Saved presets, reusable Journal filters, persistent scope, and report rescoping remain open; private preset labels have no approved protected preference adapter.",
       "disposition": "prioritize-local",
       "rationale": "This is a low-recurring-cost way to make existing analytics faster to revisit and more useful without adding opaque calculations.",
       "gate": "Approve an encrypted preference adapter or schema/migration design plus lifecycle and archive/export-exclusion ownership; plaintext WebView localStorage is not an acceptable downgrade. Also define serialization, versioning, reset semantics, invalid-value behavior, and whether a saved scope may affect a governed report before persisting presets.",
@@ -275,10 +281,13 @@
       "hermes_evidence_paths": [
         "mobile/src/application/journal-store.ts",
         "mobile/src/ui/trade-review-sheet.ts",
+        "mobile/src/application/playbook-trade-scope.ts",
+        "mobile/src/ui/playbook-trade-scope-view.ts",
+        "mobile/e2e/playbook-trade-scope.spec.ts",
         "mobile/src/core/plan-adherence-report.ts",
         "docs/mobile/PRODUCT_BLUEPRINT.md"
       ],
-      "current_status": "Current playbooks, ordered rules, review assignments, and observational Plan Check reporting are implemented. User-facing template creation and fuller vocabulary/playbook management remain open.",
+      "current_status": "Current playbooks, ordered rules, review assignments, observational Plan Check reporting, and a derived-only Exact Playbook Scope are implemented. The scope reconciles immutable library cards to exact current assignment identities and completed-review counts, then links each card to its completed Trade Browser cohort. Standalone Playbook CRUD, user-facing template creation, and fuller vocabulary/playbook management remain open.",
       "disposition": "prioritize-local",
       "rationale": "Templates reduce review effort and reinforce Hermes's process-first positioning without creating signals or recommendations.",
       "gate": "Templates must never auto-classify a trade, overwrite review evidence, or present observational cohort differences as causal or statistically significant.",

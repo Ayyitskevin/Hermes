@@ -142,6 +142,7 @@ test("exact card facets compose with search and scope without changing totals or
   const mistake = page.getByRole("combobox", { name: "Mistake" });
   const emotion = page.getByRole("combobox", { name: "Emotion" });
   const tag = page.getByRole("combobox", { name: "Tag" });
+  const playbook = page.getByRole("combobox", { name: "Playbook" });
   const clearView = page.getByRole("button", { name: "Clear search and filters" });
   const filterDisclosure = page.locator("[data-trade-filter-disclosure]");
   const filterSummary = page.locator("#trade-view-filter-summary");
@@ -210,6 +211,8 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(activeFilterCount).toHaveText("· 7 active filters");
   await tag.selectOption("Stopped on plan");
   await expect(activeFilterCount).toHaveText("· 8 active filters");
+  await playbook.selectOption("Breakout");
+  await expect(activeFilterCount).toHaveText("· 9 active filters");
   await expect(count).toHaveText("Showing 1 of 8 trades");
   await expect(page.locator(".trade-card:visible")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "SPY", exact: true })).toBeVisible();
@@ -252,9 +255,10 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
+  await expect(playbook).toHaveValue("Breakout");
   await expect(count).toHaveText("Showing 1 of 8 trades");
   await expect(filterDisclosure).toHaveAttribute("open", "");
-  await expect(activeFilterCount).toHaveText("· 8 active filters");
+  await expect(activeFilterCount).toHaveText("· 9 active filters");
 
   await page.getByRole("combobox", { name: "Account" }).selectOption("demo-account-swing");
   await page.getByRole("textbox", { name: "Activity from" }).fill("2026-07-07");
@@ -269,7 +273,8 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
-  await expect(activeFilterCount).toHaveText("· 8 active filters");
+  await expect(playbook).toHaveValue("Breakout");
+  await expect(activeFilterCount).toHaveText("· 9 active filters");
 
   await expect(page.getByRole("heading", { name: "SPY", exact: true })).toBeVisible();
   await search.fill("QQQ");
@@ -283,6 +288,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
+  await expect(playbook).toHaveValue("Breakout");
   await expect(page.locator(".trade-card:visible")).toHaveCount(0);
   await expect(page.locator("#route-announcer")).toHaveText(
     "Trades for Tuesday, July 7, 2026. 1 contributing trade, 2 allocations, -$100.00 allocation-day P&L. Search and card filters show 0 of 1 trades.",
@@ -319,6 +325,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(mistake).toHaveValue("Chased entry");
   await expect(emotion).toHaveValue("Impatient");
   await expect(tag).toHaveValue("Stopped on plan");
+  await expect(playbook).toHaveValue("Breakout");
   await expect(count).toHaveText("Showing 0 of 1 trade");
   await expect(page.locator("#route-announcer")).toHaveText(
     "Next activity day. Trades for Thursday, July 9, 2026. 1 contributing trade, 2 allocations, -$50.00 allocation-day P&L. Scoped activity day 2 of 2 in retained scope. Search and card filters show 0 of 1 trades.",
@@ -335,7 +342,7 @@ test("exact card facets compose with search and scope without changing totals or
     name: "Tuesday, July 7, 2026",
   })).toBeFocused();
   await expect(search).toHaveValue("qqq");
-  await expect(activeFilterCount).toHaveText("· 8 active filters");
+  await expect(activeFilterCount).toHaveText("· 9 active filters");
   await expect(page.locator("#route-announcer")).toHaveText(
     "Previous activity day. Trades for Tuesday, July 7, 2026. 1 contributing trade, 2 allocations, -$100.00 allocation-day P&L. Scoped activity day 1 of 2 in retained scope. Search and card filters show 0 of 1 trades.",
   );
@@ -352,6 +359,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
   await expect(page.locator("#trade-filter-emotion")).toHaveValue("");
   await expect(page.locator("#trade-filter-tag")).toHaveValue("");
+  await expect(page.locator("#trade-filter-playbook")).toHaveValue("");
   await expect(page.getByRole("combobox", { name: "Account" }))
     .toHaveValue("demo-account-swing");
   await expect(page.getByRole("button", { name: "Clear day filter" })).toBeVisible();
@@ -404,6 +412,7 @@ test("exact card facets compose with search and scope without changing totals or
   await expect(page.locator("#trade-filter-asset-class")).toHaveValue("all");
   await expect(page.locator("#trade-filter-setup")).toHaveValue("");
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
+  await expect(page.locator("#trade-filter-playbook")).toHaveValue("");
   await expect(count).toHaveText("Showing 8 trades");
   await expect(filterDisclosure).not.toHaveAttribute("open", "");
   await expect(activeFilterCount).toHaveText("· none active");
@@ -429,6 +438,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   const mistake = page.getByRole("combobox", { name: "Mistake" });
   const emotion = page.getByRole("combobox", { name: "Emotion" });
   const tag = page.getByRole("combobox", { name: "Tag" });
+  const playbook = page.getByRole("combobox", { name: "Playbook" });
   const search = page.getByRole("searchbox", { name: "Search scoped trades" });
   const count = page.locator("#trade-count");
   const scopeSummary = page.locator("#trade-scope-summary");
@@ -443,6 +453,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(mistake).toBeDisabled();
   await expect(emotion).toBeDisabled();
   await expect(tag).toBeDisabled();
+  await expect(playbook).toBeDisabled();
   await expect(scopeSummary).toContainText("+$10.00");
   await expect(scopeSummary).toContainText(
     "1 contributing trade · 2 allocations · 1 activity day",
@@ -461,6 +472,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await dialog.locator("#review-mistakes").fill("Late scale-out");
   await dialog.locator("#review-emotion").fill("Focused");
   await dialog.locator("#review-tags").fill("A+ setup");
+  await dialog.locator("#review-playbook").fill("Draft process");
   await dialog.locator("#review-note").fill("Refresh facet retention check.");
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(dialog).toHaveCount(0);
@@ -474,10 +486,12 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(mistake).toBeEnabled();
   await expect(emotion).toBeEnabled();
   await expect(tag).toBeEnabled();
+  await expect(playbook).toBeEnabled();
   await expect(setup.locator('option[value="Opening range"]')).toHaveText("Opening range");
   await expect(mistake.locator('option[value="Late scale-out"]')).toHaveText("Late scale-out");
   await expect(emotion.locator('option[value="Focused"]')).toHaveText("Focused");
   await expect(tag.locator('option[value="A+ setup"]')).toHaveText("A+ setup");
+  await expect(playbook.locator('option[value="Draft process"]')).toHaveText("Draft process");
   await expect(filterDisclosure).toHaveAttribute("open", "");
   await expect(activeFilterCount).toHaveText("· 3 active filters");
 
@@ -486,7 +500,8 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await mistake.selectOption("Late scale-out");
   await emotion.selectOption("Focused");
   await tag.selectOption("A+ setup");
-  await expect(activeFilterCount).toHaveText("· 7 active filters");
+  await playbook.selectOption("Draft process");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
   await expect(page.getByRole("heading", { name: "AAPL", exact: true })).toBeVisible();
   await expect(count).toHaveText("Showing 1 of 1 trade");
 
@@ -496,6 +511,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await editDialog.locator("#review-mistakes").fill("Early exit");
   await editDialog.locator("#review-emotion").fill("Frustrated");
   await editDialog.locator("#review-tags").fill("Review next");
+  await editDialog.locator("#review-playbook").fill("Revised process");
   await editDialog.locator("#review-note").fill("Replaced all dynamic review labels.");
   await editDialog.getByRole("button", { name: "Save draft" }).click();
   await expect(editDialog).toHaveCount(0);
@@ -504,6 +520,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(mistake).toHaveValue("Late scale-out");
   await expect(emotion).toHaveValue("Focused");
   await expect(tag).toHaveValue("A+ setup");
+  await expect(playbook).toHaveValue("Draft process");
   await expect(setup.locator("option:checked")).toHaveText(
     "Opening range (not currently assigned)",
   );
@@ -516,15 +533,19 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(tag.locator("option:checked")).toHaveText(
     "A+ setup (not currently assigned)",
   );
+  await expect(playbook.locator("option:checked")).toHaveText(
+    "Draft process (not currently assigned)",
+  );
   await expect(setup.locator('option[value="Pullback continuation"]'))
     .toHaveText("Pullback continuation");
   await expect(mistake.locator('option[value="Early exit"]')).toHaveText("Early exit");
   await expect(emotion.locator('option[value="Frustrated"]')).toHaveText("Frustrated");
   await expect(tag.locator('option[value="Review next"]')).toHaveText("Review next");
+  await expect(playbook.locator('option[value="Revised process"]')).toHaveText("Revised process");
   await expect(count).toHaveText("Showing 0 of 1 trade");
   await expect(scopeSummary).toContainText("+$10.00");
   await expect(filterDisclosure).toHaveAttribute("open", "");
-  await expect(activeFilterCount).toHaveText("· 7 active filters");
+  await expect(activeFilterCount).toHaveText("· 8 active filters");
 
   await page.getByRole("button", { name: "Clear search and filters" }).click();
   await expect(filterSummary).toBeFocused();
@@ -534,6 +555,7 @@ test("dynamic review facets refresh locally and retain stale selections", async 
   await expect(page.locator("#trade-filter-mistake")).toHaveValue("");
   await expect(page.locator("#trade-filter-emotion")).toHaveValue("");
   await expect(page.locator("#trade-filter-tag")).toHaveValue("");
+  await expect(page.locator("#trade-filter-playbook")).toHaveValue("");
   await expect(search).toHaveValue("");
   await expect(count).toHaveText("Showing 1 trade");
   expect(externalRequests).toEqual([]);
@@ -576,8 +598,9 @@ test("compact exact facets toggle accessibly and reflow at 320px and 421px with 
   await page.getByRole("combobox", { name: "Mistake" }).selectOption("Chased entry");
   await page.getByRole("combobox", { name: "Emotion" }).selectOption("Impatient");
   await page.getByRole("combobox", { name: "Tag" }).selectOption("Stopped on plan");
-  await expect(activeFilterCount).toHaveText("· 5 active filters");
-  await expect(filters.locator("select")).toHaveCount(8);
+  await page.getByRole("combobox", { name: "Playbook" }).selectOption("Breakout");
+  await expect(activeFilterCount).toHaveText("· 6 active filters");
+  await expect(filters.locator("select")).toHaveCount(9);
   await expect(filters).toContainText(
     "They never change allocation scope, P&L totals, the calendar, Dashboard metrics, or Reports.",
   );

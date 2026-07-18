@@ -213,11 +213,11 @@ and an App Store disclosure.
   Confirm the month heading and announcement, selected-day pressed state, focus
   visibility, 44-point controls, and no invented empty calendar sessions.
 - Search scoped trades by symbol, account, setup, side, status, review state,
-  mistake, emotion, or tag. Confirm search changes visible cards only and never
-  the exact scope summary.
+  mistake, emotion, tag, or playbook. Confirm search changes visible cards only
+  and never the exact scope summary.
 - Apply asset-class, direction, position-state, review-state, Setup, Mistake,
-  Emotion, and Tag facets in combination with normalized search and account/
-  date/day scope. Confirm all eight AND against exact current trade fields,
+  Emotion, Tag, and Playbook facets in combination with normalized search and
+  account/date/day scope. Confirm all nine AND against exact current trade fields,
   change visible cards only, expose the asset-class chip, and leave exact scope
   P&L/counts, the
   calendar, Dashboard, Review Session Coverage, Direction Mix, Opening Weekday
@@ -226,28 +226,43 @@ and an App Store disclosure.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
 - Confirm the exact-filter disclosure starts collapsed with **none active**,
-  leaves all eight selects out of the keyboard/VoiceOver order, and keeps the
+  leaves all nine selects out of the keyboard/VoiceOver order, and keeps the
   search description plus **Clear search and filters** reachable. A query or
   account/date/day scope alone must not open or increment it. Toggle with
   pointer, VoiceOver, Enter, and Space; then activate each facet and confirm the
-  exact count reaches eight. Reset the final facet and use the combined clear
+  exact count reaches nine. Reset the final facet and use the combined clear
   action separately: each must collapse and return visible focus to the
   summary while preserving the documented scope boundary. Repeat a rerender
-  with a retained stale Setup, Mistake, Emotion, and Tag; each must count and
-  open.
+  with a retained stale Setup, Mistake, Emotion, Tag, and Playbook; each must
+  count and open.
 - Assign review labels inside and outside the active account/date/day scope.
-  Confirm Setup, Mistake, Emotion, and Tag choices come from current
+  Confirm Setup, Mistake, Emotion, Tag, and Playbook choices come from current
   `TradePreview` assignments across the whole workspace—not unused vocabulary—use stable
   code-unit order, and preserve saved-review normalization and limits. Confirm
   Setup includes only `hasClassifiedSetup: true` assignments, keeps an explicitly
   saved **Unclassified** value distinct from the absent placeholder, and that
   multi-valued mistake and tag assignments match any exact selected member.
 - With VoiceOver and a hardware keyboard, retain a well-formed Setup, Mistake,
-  Emotion, or Tag selection while another review removes its last current
+  Emotion, Tag, or Playbook selection while another review removes its last current
   assignment and refresh the Trades view. The selected option must remain visible as **not
   currently assigned**, focus and the exact value must remain understandable,
   and the result must contain zero cards without broadening account/date/day
-  evidence, totals, or calendar state. Repeat separately for all four selects.
+  evidence, totals, or calendar state. Repeat separately for all five selects.
+- From Journal, activate **Open completed reviews** on each current playbook card.
+  Reconcile its exact immutable name, position, rules, and completed-trade count
+  against live device state before the action. Seed a conflicting account/date/
+  day/search/nine-facet browser state first; the destination must use empty state
+  plus completed review state and only the exact playbook, announce the visible
+  and scoped counts, and focus the rebuilt Trades summary. Create a draft-only
+  local playbook assignment and confirm its action opens an honest zero-card
+  completed cohort with the playbook still selected. Remove the last completed
+  assignment after render, and separately duplicate/tamper card name, count,
+  position, rules, and action identity; every attempt must show one visible
+  failure and preserve the prior tab and exact Trade Browser state. Confirm the
+  action performs no SQLite write, preference write, report mutation, or network
+  request. Repeat with VoiceOver, a hardware keyboard, background/foreground,
+  force quit/relaunch, two scenes, and 320/421-width 200% Dynamic Type before
+  marking Exact Playbook Scope native acceptance PASS.
 - With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
   state survives tab navigation and valid ledger refreshes. Clearing a selected
   day must retain account/range and card filters; Clear search and filters must
@@ -260,7 +275,7 @@ and an App Store disclosure.
   Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole
   workspace while only Trades and the Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
-  inputs, eight facet selects, month controls, day tiles, scope summary,
+  inputs, nine facet selects, month controls, day tiles, scope summary,
   contribution evidence, and focused destinations have no horizontal overflow
   or clipping.
 - Open a closed trade's review sheet, save both a draft and a completed
@@ -371,7 +386,7 @@ and an App Store disclosure.
   SQLite work. Programmatically alter the readonly input after a valid open and
   confirm the prepared save still targets the captured selected date. After
   direct save, exact replay, and known-commit refresh retry, confirm Trades
-  redraws with account/date/day scope, query, and all eight exact facets intact,
+  redraws with account/date/day scope, query, and all nine exact facets intact,
   then focuses the same date's reflection heading. Concurrently invalidate the
   selected day and confirm focus falls to the screen without reconstructing it.
   Review Session Coverage, all governed reports, export/restore facts, and one
@@ -382,7 +397,7 @@ and an App Store disclosure.
 - With a selected Trades activity day, confirm **Previous activity day** and
   **Next activity day** follow only adjacent account/date-scoped activity
   sessions, skip empty dates, cross month boundaries, and show the exact
-  position/count. Apply a query plus all eight exact facets before stepping in
+  position/count. Apply a query plus all nine exact facets before stepping in
   both directions; confirm every filter and date bound survives, the destination
   month/day is selected on Dashboard, the matching whole-workspace reflection
   continuation redraws, and the reconciled announcement precedes focus on the
@@ -740,6 +755,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Guided Account Overview | status | retained/zero-trade account order + stable-ID all-activity scope + filter reset + stale-ID failure + focus/announcement/layout/SQLite/network evidence |
 | Manual Capture Review Continuation | status | known manual result + exact execution/allocation identity + one/two current subjects + all-activity reset + review save/return + retry-only no-resubmit + tamper/focus/layout/SQLite/network evidence |
 | Generic CSV Receipt Review Continuation | status | coherent active receipt/occurrence/ledger read + conservation/dedup/scope order + fixed paging + guide-origin return + rollback supersession + post-commit retry-only no-reread/reprepare/recommit + adapter parity + focus/layout/SQLite/network evidence |
+| Exact Playbook Scope | status | live current assignments + immutable card/options/count reconciliation + exact completed cohort + nine-facet clear/zero/tamper rollback + VoiceOver/keyboard/layout/lifecycle/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -924,8 +940,17 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   background/foreground, force-quit/relaunch, two-scene refresh, and 320/421
   Dynamic Type are NOT RUN. Keep native acceptance held until one physical
   account/date cohort proves boundary disablement, empty-date skipping,
-  cross-month selection, all-eight-facet retention, generic fail-closed error,
+  cross-month selection, all-nine-facet retention, generic fail-closed error,
   exact reflection redraw, and no durable write.
+- Exact Playbook Scope v1 has only Linux/Chromium reconciliation, exact-cohort,
+  stale/draft-only zero, prior-state rollback, focus, and reflow evidence. Live
+  native SQLite/SQLCipher current assignments and completed counts, VoiceOver
+  announcement/order, hardware-keyboard focus, background/foreground,
+  force-quit/relaunch, two-scene refresh, and 320/421-width 200% Dynamic Type are
+  NOT RUN. Keep native acceptance held until the procedure above proves all nine
+  facets, exact Journal-card identity, conflict clearing, honest zero state,
+  visible tamper failure with prior browser state intact, and zero action-driven
+  durable or network work.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.
@@ -941,9 +966,9 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   still need the persistence, response-loss, migration, accessibility, and
   lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, Dynamic Review
-  Facets v1, and Exact Setup Facet v1 intentionally remain session-only;
-  Compact Trades Filters v1 adds
-  no persisted disclosure state. They still need native
+  Facets v1, Exact Setup Facet v1, and Exact Playbook Scope v1 intentionally
+  remain session-only; Compact Trades Filters v1 adds no persisted disclosure
+  state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
   behaviors. Review Session Coverage, Direction Mix, Opening Weekday Mix,

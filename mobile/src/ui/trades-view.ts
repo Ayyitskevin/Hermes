@@ -42,6 +42,7 @@ export interface TradeViewFilterInput {
   readonly mistake: string | null;
   readonly emotion: string | null;
   readonly tag: string | null;
+  readonly playbook: string | null;
 }
 
 export interface TradesViewHandlers {
@@ -199,7 +200,8 @@ function exactViewFacetCount(browser: TradeBrowserResult): number {
     + Number(browser.state.setup !== null)
     + Number(browser.state.mistake !== null)
     + Number(browser.state.emotion !== null)
-    + Number(browser.state.tag !== null);
+    + Number(browser.state.tag !== null)
+    + Number(browser.state.playbook !== null);
 }
 
 function exactViewFacetCountLabel(count: number): string {
@@ -270,6 +272,11 @@ function viewFilters(browser: TradeBrowserResult): string {
           <label>Tag
             <select id="trade-filter-tag" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.tag, browser.reviewFacetOptions.tags)}>
               ${reviewFacetOptions(browser.state.tag, browser.reviewFacetOptions.tags, "All tags")}
+            </select>
+          </label>
+          <label>Playbook
+            <select id="trade-filter-playbook" aria-controls="${controls}" aria-describedby="${describedBy}" ${disabledWithoutOptions(browser.state.playbook, browser.reviewFacetOptions.playbooks)}>
+              ${reviewFacetOptions(browser.state.playbook, browser.reviewFacetOptions.playbooks, "All playbooks")}
             </select>
           </label>
         </div>
@@ -443,7 +450,7 @@ export function tradesView(
     ${manualCapture === null ? "" : manualCaptureReviewSection(snapshot, manualCapture)}
     ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
     ${snapshot.accountOptions.length === 0 ? "" : viewFilters(browser)}
-    <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" maxlength="${TRADE_BROWSER_SEARCH_MAX_CODE_POINTS}" aria-describedby="${searchDescribedBy}" aria-controls="trade-card-list trade-count trade-empty" placeholder="Search symbol, account, setup, or tag" autocomplete="off" value="${escapeHtml(browser.state.query)}" /></label>
+    <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" maxlength="${TRADE_BROWSER_SEARCH_MAX_CODE_POINTS}" aria-describedby="${searchDescribedBy}" aria-controls="trade-card-list trade-count trade-empty" placeholder="Search symbol, account, setup, playbook, or tag" autocomplete="off" value="${escapeHtml(browser.state.query)}" /></label>
     <p class="form-error" id="trade-search-error" role="alert" hidden></p>
     <p class="result-count" id="trade-count" role="status">${browser.hasViewFilters ? `Showing ${visibleCount} of ${countNoun(total, "trade")}` : `Showing ${countNoun(total, "trade")}`}</p>
     <div class="journal-list" id="trade-card-list">${cards}</div>
@@ -525,7 +532,7 @@ export function bindTradesView(
   );
 
   const facetControls = Array.from(root.querySelectorAll<HTMLSelectElement>(
-    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review, #trade-filter-setup, #trade-filter-mistake, #trade-filter-emotion, #trade-filter-tag",
+    "#trade-filter-asset-class, #trade-filter-direction, #trade-filter-position, #trade-filter-review, #trade-filter-setup, #trade-filter-mistake, #trade-filter-emotion, #trade-filter-tag, #trade-filter-playbook",
   ));
   const filterError = root.querySelector<HTMLElement>("#trade-view-filter-error");
   const applyViewFilters = () => {
@@ -543,6 +550,7 @@ export function bindTradesView(
         mistake: root.querySelector<HTMLSelectElement>("#trade-filter-mistake")?.value || null,
         emotion: root.querySelector<HTMLSelectElement>("#trade-filter-emotion")?.value || null,
         tag: root.querySelector<HTMLSelectElement>("#trade-filter-tag")?.value || null,
+        playbook: root.querySelector<HTMLSelectElement>("#trade-filter-playbook")?.value || null,
       });
       facetControls.forEach((control) => control.removeAttribute("aria-invalid"));
       if (filterError !== null) {

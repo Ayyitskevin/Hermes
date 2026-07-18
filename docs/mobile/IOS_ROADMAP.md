@@ -478,7 +478,7 @@ observed plugin/device behavior:
   actions continue the unique current head. Demo and future dates remain
   read-only. Direct save, exact replay, and known-commit refresh recovery focus
   the rebuilt reflection status while retaining account/date/day scope, query,
-  and all eight exact facets. The reflection remains a whole-workspace-date
+  and all nine exact facets. The reflection remains a whole-workspace-date
   record and never marks the trading session reviewed. Existing Daily Journal
   persistence/recovery is reused without schema, store-command, report,
   formula, archive, digest, preference, dependency, or native-source changes.
@@ -499,7 +499,7 @@ observed plugin/device behavior:
 - Exact Scoped Activity-Day Stepper v1 adds previous/next controls inside the
   selected Trades day card. Adjacency comes only from the validated,
   account/date-scoped activity cohort, skips no-activity dates, crosses months,
-  and is independent of query and all eight exact facets. Activation rebuilds
+  and is independent of query and all nine exact facets. Activation rebuilds
   from live session state, retains scope/filter state, updates only selected
   day and displayed month, announces position plus reconciled evidence, and
   focuses the exact rebuilt date heading. Invalid or tampered identity fails
@@ -650,10 +650,25 @@ observed plugin/device behavior:
   archive, reports, preferences, dependencies, native source, and network
   boundaries are unchanged. Because the new missing-row control can create a
   first day-review head, this is the fifth write-capable product exception.
-- Compact Trades Filters v1 puts only those eight exact controls and their
+- Exact Playbook Scope v1 adds a ninth ephemeral Trade Browser facet and a
+  derived-only Journal continuation. Playbook options come only from exact
+  current `TradePreview.playbook` assignments under the saved-label contract.
+  Journal cards must reconcile one-to-one with current options and completed
+  assignment counts before **Open completed reviews** builds the empty browser
+  state plus completed review state and that exact playbook. This clears
+  conflicting account/date/day/search and the other eight facets. A retained or
+  draft-only playbook with no completed match remains selected and honestly
+  shows zero cards. Missing, duplicated, stale, detached, case/count-mismatched,
+  or tampered evidence fails visibly without changing the prior tab or browser
+  state. Playbook names remain immutable identity for this slice; CRUD still
+  requires stable durable IDs, migration, and archive/export decisions. No
+  schema, persistence, store command, archive, digest, report, formula,
+  preference, dependency, native source, or network path changes.
+- Compact Trades Filters v1 puts only those nine exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
-  updates from zero through eight without counting query or account/date/day
+  derives from four fixed and five current-review values and updates from zero
+  through nine without counting query or account/date/day
   scope. Search-only clear stays visible outside the disclosure. Resetting the
   final facet or using the combined clear action collapses and focuses the
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
@@ -821,15 +836,16 @@ Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
-Continuation v1, Daily Reflection Rhythm Continuation v1, matching-runtime local
-restore, and all eight governed reports are implemented. Thirty-one bounded
-Slice D increments are implemented in total; twenty-six remain derived-only.
+Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
+v1, matching-runtime local restore, and all eight governed reports are
+implemented. Thirty-two bounded Slice D increments are implemented in total;
+twenty-seven remain derived-only.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Calendar-Day Reflection Continuation, and Daily Reflection Rhythm
 Continuation are the five write-capable exceptions. The trade
 continuations reuse the existing versioned trade-review path; the calendar-day
 and rhythm continuations reuse the existing Daily Journal path without changing
-either persistence contract.
+either persistence contract. Exact Playbook Scope adds no durable state.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

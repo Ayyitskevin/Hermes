@@ -203,6 +203,20 @@ describe("trade browser", () => {
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["QQQ"]);
     expect(browser.contributionPnlExact).toBe("-220");
     expect(browser.visibleEvidence[0]?.contributionPnlExact).toBe("-50");
+
+    const uniquePlaybook: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      trades: DEMO_WORKSPACE.trades.map((trade) => (
+        trade.symbol === "AAPL"
+          ? { ...trade, playbook: "Search-only playbook" }
+          : trade
+      )),
+    };
+    const byPlaybook = buildTradeBrowser(uniquePlaybook, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      query: "search-only playbook",
+    });
+    expect(byPlaybook.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["AAPL"]);
   });
 
   it("ANDs exact card facets with search without changing scope evidence or totals", () => {
@@ -282,6 +296,7 @@ describe("trade browser", () => {
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
+      playbook: "Reversal",
     });
 
     expect(browser.state).toMatchObject({
@@ -289,6 +304,7 @@ describe("trade browser", () => {
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
+      playbook: "Reversal",
     });
     expect(browser.hasViewFilters).toBe(true);
     expect(browser.evidence.map(({ trade }) => trade.symbol)).toEqual(["NVDA", "TSLA"]);
@@ -311,6 +327,7 @@ describe("trade browser", () => {
         readonly mistake?: string;
         readonly emotion?: string;
         readonly tag?: string;
+        readonly playbook?: string;
       },
     ) => buildTradeBrowser(snapshot, {
       ...EMPTY_TRADE_BROWSER_STATE,
@@ -326,6 +343,9 @@ describe("trade browser", () => {
     expect(visibleSymbols(DEMO_WORKSPACE, {
       emotion: "Impatient",
     })).toEqual(["SPY", "TSLA"]);
+    expect(visibleSymbols(DEMO_WORKSPACE, {
+      playbook: "Reversal",
+    })).toEqual(["QQQ", "TSLA"]);
     expect(visibleSymbols(DEMO_WORKSPACE, {
       tag: "Plan followed",
     })).toEqual(["AAPL", "AMD", "META", "MSFT", "NVDA"]);
@@ -368,6 +388,7 @@ describe("trade browser", () => {
     expect(visibleSymbols(nearMatches, {
       emotion: "Impatient",
       tag: "Shared tag",
+      playbook: "Reversal",
     })).toEqual(["TSLA"]);
   });
 
@@ -430,11 +451,14 @@ describe("trade browser", () => {
         "Stopped on plan",
         "Target held",
       ],
+      playbooks: ["Breakout", "Pullback", "Reversal"],
     });
     expect(browser.reviewFacetOptions.setups).toContain("Breakout");
     expect(browser.reviewFacetOptions.setups).not.toContain("Archived setup");
     expect(browser.reviewFacetOptions.mistakes).toContain("Chased entry");
     expect(browser.reviewFacetOptions.tags).not.toContain("Archived tag");
+    expect(browser.reviewFacetOptions.playbooks).toContain("Reversal");
+    expect(browser.reviewFacetOptions.playbooks).not.toContain("Archived playbook");
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["META"]);
   });
 
@@ -449,6 +473,7 @@ describe("trade browser", () => {
       mistake: "No longer assigned mistake",
       emotion: "No longer assigned emotion",
       tag: "No longer assigned tag",
+      playbook: "No longer assigned playbook",
     });
 
     expect(setupOnly.state.setup).toBe("No longer assigned setup");
@@ -461,11 +486,13 @@ describe("trade browser", () => {
       mistake: "No longer assigned mistake",
       emotion: "No longer assigned emotion",
       tag: "No longer assigned tag",
+      playbook: "No longer assigned playbook",
     });
     expect(browser.reviewFacetOptions.setups).not.toContain(browser.state.setup);
     expect(browser.reviewFacetOptions.mistakes).not.toContain(browser.state.mistake);
     expect(browser.reviewFacetOptions.emotions).not.toContain(browser.state.emotion);
     expect(browser.reviewFacetOptions.tags).not.toContain(browser.state.tag);
+    expect(browser.reviewFacetOptions.playbooks).not.toContain(browser.state.playbook);
     expect(browser.evidence).toHaveLength(8);
     expect(browser.visibleEvidence).toEqual([]);
     expect(browser.contributionPnlExact).toBe("310");
@@ -480,6 +507,7 @@ describe("trade browser", () => {
       mistake: "  Early   entry  ",
       emotion: " Impatient ",
       tag: " Invalidation   respected ",
+      playbook: "  Reversal  ",
     });
 
     expect(browser.state).toMatchObject({
@@ -487,6 +515,7 @@ describe("trade browser", () => {
       mistake: "Early entry",
       emotion: "Impatient",
       tag: "Invalidation respected",
+      playbook: "Reversal",
     });
     expect(browser.visibleEvidence.map(({ trade }) => trade.symbol)).toEqual(["TSLA"]);
   });
@@ -747,6 +776,7 @@ describe("trade browser", () => {
       mistakes: ["Detached mistake"],
       emotion: "Detached emotion",
       tags: ["Detached tag"],
+      playbook: "Detached playbook",
     };
     const snapshot: JournalWorkspaceSnapshot = {
       ...DEMO_WORKSPACE,
@@ -759,20 +789,24 @@ describe("trade browser", () => {
     mutableTrade.mistakes.push("Mutated mistake");
     mutableTrade.emotion = "Mutated emotion";
     mutableTrade.tags.push("Mutated tag");
+    mutableTrade.playbook = "Mutated playbook";
 
     expect(browser.reviewFacetOptions.setups).toContain("Detached setup");
     expect(browser.reviewFacetOptions.mistakes).toContain("Detached mistake");
     expect(browser.reviewFacetOptions.emotions).toContain("Detached emotion");
     expect(browser.reviewFacetOptions.tags).toContain("Detached tag");
+    expect(browser.reviewFacetOptions.playbooks).toContain("Detached playbook");
     expect(browser.reviewFacetOptions.setups).not.toContain("Mutated setup");
     expect(browser.reviewFacetOptions.mistakes).not.toContain("Mutated mistake");
     expect(browser.reviewFacetOptions.emotions).not.toContain("Mutated emotion");
     expect(browser.reviewFacetOptions.tags).not.toContain("Mutated tag");
+    expect(browser.reviewFacetOptions.playbooks).not.toContain("Mutated playbook");
     expect(Object.isFrozen(browser.reviewFacetOptions)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.setups)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.mistakes)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.emotions)).toBe(true);
     expect(Object.isFrozen(browser.reviewFacetOptions.tags)).toBe(true);
+    expect(Object.isFrozen(browser.reviewFacetOptions.playbooks)).toBe(true);
   });
 
   it("fails closed when a retained selected day is no longer in scope", () => {
@@ -865,6 +899,18 @@ describe("trade browser", () => {
     })).toThrow(/Tag filter.*1-120/i);
     expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
       ...EMPTY_TRADE_BROWSER_STATE,
+      playbook: 7 as never,
+    })).toThrow(/Playbook filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      playbook: "line\nbreak",
+    })).toThrow(/Playbook filter.*single-line/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
+      playbook: "x".repeat(121),
+    })).toThrow(/Playbook filter.*1-120/i);
+    expect(() => buildTradeBrowser(DEMO_WORKSPACE, {
+      ...EMPTY_TRADE_BROWSER_STATE,
       emotion: "İ".repeat(120),
     })).toThrow(/Emotion filter.*1-120/i);
 
@@ -904,6 +950,7 @@ describe("trade browser", () => {
       ["mistakes", "not-a-list", /mistakes.*at most 20/i],
       ["mistakes", [" Early entry "], /mistakes value.*not normalized/i],
       ["emotion", ["Calm"], /emotion.*single-line/i],
+      ["playbook", " Breakout ", /playbook.*not normalized/i],
       ["tags", ["line\nbreak"], /tags value.*single-line/i],
       [
         "tags",

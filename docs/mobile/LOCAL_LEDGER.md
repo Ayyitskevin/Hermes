@@ -233,7 +233,7 @@ increment and fourth write-capable exception. It does not add a command or
 storage representation. The selected Trades calendar card resolves one current
 Daily Journal head by exact canonical ISO date from the full workspace
 snapshot, independent of account/date scope, selected-day contributors, query,
-and all eight exact card facets. Zero heads yields an exact-date create action;
+and all nine exact card facets. Zero heads yields an exact-date create action;
 one draft or completed head yields its exact continuation; multiple heads,
 malformed identity/version/state, or a detached/mismatched action fails closed.
 
@@ -297,7 +297,7 @@ The click path rebuilds from current session state so inline query/facet edits
 cannot be lost. It proves one selected card and date-qualified heading, one
 stepper, exactly one control per direction, matching current identity, and the
 exact adjacent target. The candidate must retain account, date bounds, query,
-and all eight facets plus the identical scoped-date cohort; only selected day
+and all nine facets plus the identical scoped-date cohort; only selected day
 and destination calendar month may differ. State assignment is rolled back if
 the redraw, announcement, or focus handoff unexpectedly fails. A malformed,
 detached, duplicated, nonadjacent, boundary, or tampered identity yields one
@@ -485,7 +485,7 @@ known manual result { outcome, executionId }
   → render all account trades + exact linked-review actions
 ```
 
-Dates, selected day, search, and all eight exact card facets reset at the
+Dates, selected day, search, and all nine exact card facets reset at the
 destination; Dashboard and governed Reports remain whole-workspace. The guide
 is transient, preserves exact identity through a guide-origin review save, and clears
 on a new capture, scope/filter mutation, or workspace-mode change. An ordinary
@@ -744,8 +744,36 @@ deep freezing. It ANDs with the existing seven facets, search, and scope. A
 valid stale selection stays visible and returns zero cards without changing
 evidence, totals, the calendar, Dashboard, or governed reports.
 
-Compact Trades Filters v1 changes only how those eight exact controls are
-revealed. Its active count derives from the four fixed and four current-review
+Exact Playbook Scope v1 adds the ninth exact session-only facet without adding a
+ledger fact. Available playbooks derive only from current
+`TradePreview.playbook` assignments across the complete workspace and reuse the
+saved-label normalization, exact case-sensitive value, stable code-unit order,
+detachment, and deep-freeze contract. Search includes the current playbook name;
+the exact facet ANDs with the existing eight visibility controls and scope.
+
+The Journal library is a derived reconciliation boundary, not a second playbook
+store. Every immutable card must match one current `reviewOptions.playbooks`
+entry by exact name, fixed position, rules, and finite metrics. Its completed
+trade count must equal the current completed `TradePreview` assignments. One
+valid card action creates `EMPTY_TRADE_BROWSER_STATE` plus completed review state
+and that exact playbook. Account, inclusive dates, selected day, search, and all
+other facets are absent from the candidate.
+
+A well-formed retained playbook remains selected when its last completed
+assignment disappears. A draft-only playbook therefore yields an honest zero
+result rather than clearing the facet or broadening the cohort. Before assigning
+state, activation rechecks the unique section, card, action, exact name,
+position/count evidence, current option, and completed subjects. Missing,
+duplicated, detached, stale, case/count-mismatched, or tampered evidence fails
+visibly; unexpected destination validation restores the prior tab and exact
+Trade Browser state. Current playbook names are immutable identity for this
+derived slice. CRUD requires a separate stable-ID schema/migration plus archive
+and export decisions. No playbook scope, card, or failure state enters SQLite,
+browser journal state, export/restore, archives, digests, reports, formulas,
+preferences, or native storage.
+
+Compact Trades Filters v1 changes only how those nine exact controls are
+revealed. Its active count derives from the four fixed and five current-review
 facet values. The native disclosure renders closed at zero and open for
 any active value, including a valid stale dynamic selection; search and
 account/date/day scope are excluded. In-place selection changes update the
@@ -954,7 +982,7 @@ Dashboard rebuilds and the generic non-report continuation focuses
 governed reports, SQLite, browser journal shape, URLs, preferences,
 export/restore shapes, archives, formulas, and digests are unchanged.
 
-Search and all eight facet selects share the same session boundary. Clear
+Search and all nine facet selects share the same session boundary. Clear
 search and filters resets only those visibility controls and retains account/
 date/day scope; Clear all resets scope and visibility together. Neither action
 mutates ledger state.
@@ -1201,14 +1229,20 @@ composition, scope/report isolation under facets, distinct clear semantics,
 session retention/reset, and 320px/200% reflow. Dynamic Review Facets coverage
 adds current-assignment-only option derivation across the whole workspace,
 saved-review normalization/limit enforcement, stable deeply frozen choices,
-eight-facet/search/scope AND composition, classified-only Setup options,
+nine-facet/search/scope AND composition, classified-only Setup options,
 explicit saved-versus-absent **Unclassified** handling, multi-valued
 mistake/tag matching,
 and a retained stale selection that yields zero visible cards without changing
 exact evidence, totals, or calendar state. Compact Trades Filters coverage adds
-zero-to-eight counts, native pointer/keyboard disclosure behavior, query-only
+zero-to-nine counts, native pointer/keyboard disclosure behavior, query-only
 clear access, final-facet collapse/focus, retained stale-value opening,
 report/storage neutrality, 44-point controls, and 320/421px 200% reflow.
+Exact Playbook Scope coverage adds saved-label option validation, exact playbook
+search/facet composition, deeply frozen library/card reconciliation, immutable
+name/rule/count agreement, direct completed-cohort routing from conflicting
+prior state, honest retained and draft-only zero results, visible tamper failure
+with prior-state preservation, no action-triggered storage/network work, and
+320px/200% keyboard focus and reflow.
 Emotion Patterns coverage adds checksum, cohort conservation, open/closed and
 result neutrality, current-head movement, normalization/identity fail-closed
 tables, stable order, immutability, real-store updates, process-score
@@ -1291,7 +1325,7 @@ fallback to **Daily notes**, retained cancel/recovery ownership, focus visibilit
 and unchanged calendar-origin behavior without another persistence call.
 Exact Scoped Activity-Day Stepper coverage adds first/last/single-day,
 gap-skipping, cross-month, strict-order, duplicate/detached identity, live
-query plus all-eight-facet retention, exact keyboard navigation, boundary
+query plus all-nine-facet retention, exact keyboard navigation, boundary
 disablement, generic tamper/ambiguity failure, selected reflection refresh,
 date-qualified focus/announcement, 44-point controls, 320/421px 200% reflow,
 and measured 844px sticky-chrome visibility without persistence or network
@@ -1304,6 +1338,12 @@ missing/duplicate rebuilt-heading screen fallback, unchanged recent-trade/
 report/queue behavior, network neutrality, 44-point controls, visible keyboard
 focus, and fully visible generic errors plus no overflow at 320/421px with 200%
 text.
+Exact Playbook Scope native acceptance is NOT RUN. Live SQLCipher-derived
+current assignments, exact completed counts, nine-facet search/scope
+composition, conflict clearing, honest zero state, tamper rollback, VoiceOver,
+hardware-keyboard focus, lifecycle/two-scene refresh, and 320/421-width 200%
+Dynamic Type remain Mac/iPhone evidence gates; browser proof must not be treated
+as native acceptance.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

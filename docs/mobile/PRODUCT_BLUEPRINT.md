@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-one bounded Slice D increments are implemented in the current workspace.
+Thirty-two bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -805,7 +805,7 @@ render read-only explanations with no write action. Direct save, exact-command
 replay, and known-commit refresh recovery rebuild Trades and focus the same
 day's reflection status, falling back to the selected-day heading and then the
 screen if concurrent activity invalidates the day. Account/date/day scope,
-query, and all eight exact facets remain session-only and survive a coherent
+query, and all nine exact facets remain session-only and survive a coherent
 refresh. Daily reflections remain whole-workspace-date records, separate from
 trade reviews, and never mark a session covered. This reuses the existing
 checksum-pinned Daily Journal command and recovery state machine; no schema,
@@ -834,14 +834,14 @@ selected-day review moving without widening financial scope. Its previous and
 next controls resolve only the immediate older/newer entries in the validated,
 frozen Trade Browser account/date cohort. They skip no-activity dates, cross
 activity-month boundaries, and never derive from the month-limited calendar,
-raw workspace dates, query, or the eight exact card facets. Both native controls
+raw workspace dates, query, or the nine exact card facets. Both native controls
 remain present at a boundary, with the unavailable direction disabled and the
 selected position shown against the retained activity-day count.
 
 Activation rederives the browser from live session state, proves one exact
 selected card, heading, stepper, direction, current identity, and adjacent
 target, then builds the candidate before assigning it. Account/date range,
-query, and all eight facets must remain exact; only selected day and destination
+query, and all nine facets must remain exact; only selected day and destination
 calendar month may change. Hermes redraws Trades, announces the reconciled
 activity-day evidence and retained filter result, and focuses the
 date-qualified rebuilt heading. Tampered, missing, duplicate, detached, or
@@ -995,7 +995,7 @@ known reversal.
 
 The destination reuses Guided Account Overview's exact all-activity account
 scope and starts from the empty Trade Browser state, clearing dates, selected
-day, search, and all eight facets. A dedicated guide appears immediately after
+day, search, and all nine facets. A dedicated guide appears immediately after
 the scope summary, keeps every account trade visible, and offers one exact
 state-qualified action per linked subject: **Review trade**, **Continue draft**,
 or **Open completed review**. It never auto-opens a sheet. A save from a review
@@ -1092,6 +1092,33 @@ schema, migration, store command, archive/digest/export shape, governed report,
 formula, route, preference, dependency, native source, or network path; the
 other four write-capable product exceptions remain unchanged.
 
+Exact Playbook Scope v1 is the thirty-second bounded Slice D increment and the
+twenty-seventh derived-only presentation/projection increment. The ninth
+ephemeral Trade Browser facet is one exact current `TradePreview.playbook`
+assignment. Options use the existing saved-label contract, stable code-unit
+ordering, detachment, and deep freezing; playbook search and facet matching
+change visible cards only.
+
+Journal playbook cards reconcile one-to-one with current immutable playbook
+options and their completed-trade counts before becoming actionable. A valid
+**Open completed reviews** action builds the empty Trade Browser state plus
+`reviewState: completed` and that exact playbook name. Account, inclusive dates,
+selected day, search, and the other eight card facets are therefore cleared
+rather than retained as contradictory hidden scope. A retained playbook whose
+last completed assignment disappears, including a draft-only local playbook,
+stays selected as **not currently assigned** and honestly yields zero cards.
+
+Activation rechecks the unique section, card, name, position, count, action,
+current option, and completed assignment cohort before assigning browser state.
+Missing, duplicated, detached, stale, count-mismatched, case-mismatched, or
+tampered evidence fails visibly and restores the prior tab and browser state.
+Current playbook names remain immutable identity for this read-only slice;
+editable playbook CRUD requires a separately approved stable-ID migration and
+archive/export decisions. No schema, persistence, store command, archive,
+digest, export/restore shape, governed report, formula, preference, dependency,
+native source, or network path changes; the five write-capable exceptions stay
+unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1108,7 +1135,8 @@ Still open in Slice D:
 - Drawdown, time-of-day, symbol, and remaining report
   families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
-  management, and fuller vocabulary/playbook management.
+  management, and fuller vocabulary management. Playbook CRUD remains open
+  pending stable durable identity, migration, and archive/export decisions.
 - Saved presets require an approved protected preference owner. Private labels
   must not be downgraded to plaintext WebView `localStorage`; approve an
   encrypted adapter or schema/migration design plus lifecycle and
@@ -1250,7 +1278,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-  thirty Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-two Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1261,13 +1289,14 @@ Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
 Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
-and Generic CSV Receipt Review Continuation v1. The twenty-six
-presentation/projection increments remain derived-only. Durable
-Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
-Continuation and Dashboard Recent Trade Continuation reuse the existing
-versioned trade-review save path, while Calendar-Day Reflection Continuation
-reuses the existing Daily Journal save path without changing either persistence
-contract.
+Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
+v1, and Exact Playbook Scope v1. Twenty-seven presentation/projection increments
+remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
+writes; Report Trade Continuation and Dashboard Recent Trade Continuation reuse
+the existing versioned trade-review save path, while Calendar-Day Reflection
+Continuation and Daily Reflection Rhythm Continuation reuse the existing Daily
+Journal path without changing either persistence contract. Those are the five
+write-capable exceptions; Exact Playbook Scope is session-only and derived-only.
 Daily Journal preserves the outer archive version while browser payload v2
 carries its state. Final
 integration

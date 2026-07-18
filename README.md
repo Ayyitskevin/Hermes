@@ -168,7 +168,7 @@ submission-ready product:
   Demo and future dates remain informative and noninteractive. Save, exact
   replay, and committed-refresh recovery rebuild
   Trades before focusing the same day's reflection status while retaining
-  account/date/day scope, query, and all eight exact facets. A daily reflection
+  account/date/day scope, query, and all nine exact facets. A daily reflection
   belongs to the whole workspace date and never marks its trading session
   reviewed. No schema, store command, report, formula, archive, digest,
   preference, dependency, or native source changed; the sixteen earlier
@@ -195,7 +195,7 @@ submission-ready product:
   dates with no retained activity and crosses month boundaries; endpoints stay
   present and disabled with visible position/count context.
   Activation rebuilds from live session state, retains account/range, query, and
-  all eight facets, changes only the selected day and its displayed month, then
+  all nine facets, changes only the selected day and its displayed month, then
   announces and focuses the unique rebuilt date-qualified heading. Missing,
   duplicate, detached, nonadjacent, or tampered DOM/state identity produces one
   fully visible focused generic error without changing selection or touching
@@ -298,7 +298,7 @@ submission-ready product:
   current trade—or both exact subjects bearing an AUTO reversal's immutable
   allocation fragments—inside one stable account.
   It opens the existing all-activity account scope from an empty Trade Browser
-  state, clears dates, day, search, and all eight card facets, focuses a
+  state, clears dates, day, search, and all nine card facets, focuses a
   dedicated review guide, and exposes state-qualified exact-subject actions
   without auto-opening a review. The guide survives a guide-origin review save,
   clears on a new capture or scope/filter/mode reset, and persists no activation
@@ -358,6 +358,22 @@ submission-ready product:
   paths are unchanged. No schema, store command, archive/digest/export shape,
   report, formula, preference, dependency, native source, or network path
   changed; the other four write-capable product exceptions remain unchanged.
+- Exact Playbook Scope v1 is the thirty-second bounded Slice D increment and the
+  twenty-seventh derived-only presentation/projection increment. The current
+  immutable Journal playbook cards now expose exact **Open completed reviews**
+  actions. Each action reconciles the card against current playbook options and
+  current completed trade assignments, then opens Trades from the empty
+  ephemeral browser state with only completed review state plus that exact
+  playbook selected. Prior account, date, selected day, search, and every other
+  card facet are cleared so no contradictory hidden scope survives. A retained
+  playbook whose last completed assignment disappears—including a draft-only
+  local playbook—remains honestly selected with zero visible cards. Missing,
+  duplicated, stale, detached, count-mismatched, or tampered card/action
+  evidence fails visibly and restores the prior tab and Trade Browser state.
+  Playbook names remain the current immutable identity; CRUD requires a separate
+  stable-ID migration. No schema, persistence, store command, archive/digest/
+  export shape, report, formula, preference, dependency, native source, or
+  network path changed; the same five write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -528,6 +544,15 @@ submission-ready product:
   zero cards. The control composes with every existing facet, query, and scope,
   remains session-only, and changes no scope totals, calendar, Dashboard,
   report, store, archive, digest, schema, or financial definition.
+- Exact Playbook Scope v1 extends the same disclosure from eight to nine exact
+  controls with a Playbook select derived only from current `TradePreview`
+  assignments. It composes with search, scope, and all existing facets; a valid
+  retained selection with no current completed match stays visible as not
+  currently assigned and yields zero cards. Journal playbook actions enter this
+  exact completed-review scope after clearing conflicting browser state, while
+  incoherent or tampered action evidence fails visibly without changing the
+  prior view. The scope remains session-only; playbook CRUD and stable durable
+  identity remain separately gated work.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production

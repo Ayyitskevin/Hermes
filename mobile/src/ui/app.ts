@@ -6,6 +6,9 @@ import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
 import {
+  buildExactPlaybookTradeScope,
+} from "../application/playbook-trade-scope";
+import {
   buildManualCaptureReviewContinuation,
   type ManualCaptureCommitReference,
   type ManualCaptureReviewContinuation,
@@ -84,6 +87,12 @@ import {
   focusReviewQueueAfterRefresh,
   reviewQueueSection,
 } from "./review-queue-view";
+import {
+  bindPlaybookTradeScope,
+  playbookTradeScopeSection,
+  preparePlaybookTradeScope,
+  type PlaybookTradeScopeProjection,
+} from "./playbook-trade-scope-view";
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
 import { bindTradesView, tradesView } from "./trades-view";
@@ -146,7 +155,8 @@ function viewFilterAnnouncement(browser: TradeBrowserResult): string {
     || browser.state.setup !== null
     || browser.state.mistake !== null
     || browser.state.emotion !== null
-    || browser.state.tag !== null;
+    || browser.state.tag !== null
+    || browser.state.playbook !== null;
   return hasFacet && hasSearch
     ? ` Search and card filters show ${browser.visibleEvidence.length} of ${browser.evidence.length} trades.`
     : hasFacet
@@ -167,6 +177,7 @@ const RETAINED_ACTIVITY_DAY_STATE_KEYS = [
   "mistake",
   "emotion",
   "tag",
+  "playbook",
 ] as const satisfies readonly (keyof TradeBrowserState)[];
 
 function retainedActivityDayStateMatches(
@@ -341,7 +352,10 @@ function dashboardView(
   </section>`;
 }
 
-function journalView(snapshot: JournalWorkspaceSnapshot): string {
+function journalView(
+  snapshot: JournalWorkspaceSnapshot,
+  playbookTradeScope: PlaybookTradeScopeProjection,
+): string {
   const today = snapshot.provenance === "local"
     ? workspaceTodayIsoDate(snapshot.timeZone)
     : null;
@@ -400,18 +414,7 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
         ${snapshot.dailyJournal.length === 0 ? `<article class="empty-state"><h3>No daily reflections yet</h3><p>${snapshot.provenance === "local" ? "Capture process, emotion, or a lesson for any calendar day." : "Daily reflections appear here once your journal is established."}</p></article>` : ""}
       </div>
     </section>
-    <section aria-labelledby="playbooks-title">
-      <div class="section-title"><h2 id="playbooks-title">Playbooks</h2><span>Rules + results</span></div>
-      <div class="journal-list">
-        ${snapshot.playbooks.map((playbook) => `<article class="card playbook-card">
-          <div><span class="status-chip">${countNoun(playbook.tradeCount, "trade")}</span><h2>${escapeHtml(playbook.name)}</h2></div>
-          <strong class="${resultClass(playbook.netR)}">${escapeHtml(signedR(playbook.netR))}</strong>
-          <p>${playbook.winRatePct.toFixed(0)}% win rate</p>
-          <ul>${playbook.rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
-        </article>`).join("")}
-        ${snapshot.playbooks.length === 0 ? `<article class="empty-state"><h2>No playbooks yet</h2><p>Setup classification will turn imported trades into playbook analytics.</p></article>` : ""}
-      </div>
-    </section>
+    ${playbookTradeScopeSection(playbookTradeScope)}
   </section>`;
 }
 
@@ -481,11 +484,16 @@ function viewFor(
   importReceiptReview: ImportReceiptReviewContinuation | null,
   importReceiptReviewPageStart: number,
   pendingImportReceiptReview: ImportReceiptReviewFailureContext | null,
+  playbookTradeScope: PlaybookTradeScopeProjection | null,
 ): string {
   switch (tab) {
     case "dashboard": return dashboardView(snapshot, browser);
     case "trades": return tradesView(snapshot, browser, manualCapture);
-    case "journal": return journalView(snapshot);
+    case "journal":
+      if (playbookTradeScope === null) {
+        throw new Error("The Journal playbook projection is unavailable.");
+      }
+      return journalView(snapshot, playbookTradeScope);
     case "reports": return reportsView(snapshot);
     case "more": return moreView(
       snapshot,
@@ -1186,6 +1194,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       }
     }
     const manualCaptureForView = tab === "trades" ? manualCaptureContinuation : null;
+    const playbookTradeScope = tab === "journal"
+      ? preparePlaybookTradeScope(snapshot)
+      : null;
     if (screen) {
       screen.innerHTML = viewFor(
         tab,
@@ -1196,6 +1207,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         tab === "more" ? importReceiptReviewContinuation : null,
         importReceiptReviewPageStart,
         tab === "more" ? pendingImportReceiptReview : null,
+        playbookTradeScope,
       );
       clearImportReceiptReviewViewBindings(root);
       if (pendingManualCaptureReference !== null) {
@@ -1239,6 +1251,74 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       },
       announceFailure: announceStatus,
     });
+    if (tab === "journal" && playbookTradeScope !== null) {
+      bindPlaybookTradeScope(root, playbookTradeScope, {
+        openPlaybook: (playbookName) => {
+          const candidate = buildExactPlaybookTradeScope(snapshot, playbookName);
+          const previousState = tradeBrowserState;
+          const previousTab = currentTab;
+          const previousManualReference = manualCaptureReference;
+          const previousManualContinuation = manualCaptureContinuation;
+          const previousPendingManualReference = pendingManualCaptureReference;
+          try {
+            clearManualCaptureGuidance();
+            tradeBrowserState = candidate.state;
+            render("trades", false);
+            const summary = root.querySelector<HTMLElement>("#trade-view-filter-summary");
+            const disclosure = root.querySelector<HTMLDetailsElement>(
+              "[data-trade-filter-disclosure]",
+            );
+            const review = root.querySelector<HTMLSelectElement>("#trade-filter-review");
+            const playbook = root.querySelector<HTMLSelectElement>("#trade-filter-playbook");
+            const filterCount = root.querySelector<HTMLElement>(
+              "[data-trade-view-filter-count]",
+            );
+            const cards = Array.from(root.querySelectorAll<HTMLElement>(
+              "[data-trade-subject]",
+            ));
+            const visibleCards = cards.filter((card) => !card.hidden);
+            const visibleSubjects = new Set(candidate.visibleEvidence.map(({ trade }) => (
+              trade.tradeSubjectId
+            )));
+            const renderedVisibleSubjects = new Set(visibleCards.map((card) => (
+              card.dataset.tradeSubject ?? ""
+            )));
+            if (
+              summary === null
+              || disclosure === null
+              || !disclosure.open
+              || review?.value !== "completed"
+              || playbook?.value !== playbookName
+              || playbook.disabled
+              || filterCount?.textContent?.trim() !== "· 2 active filters"
+              || cards.length !== candidate.evidence.length
+              || visibleCards.length !== candidate.visibleEvidence.length
+              || visibleSubjects.size !== candidate.visibleEvidence.length
+              || renderedVisibleSubjects.size !== visibleCards.length
+              || [...visibleSubjects].some((subject) => !renderedVisibleSubjects.has(subject))
+            ) {
+              throw new Error("The exact playbook Trade Browser destination is unavailable.");
+            }
+            const topbarBottom = root.querySelector<HTMLElement>(".topbar")
+              ?.getBoundingClientRect().bottom ?? 0;
+            summary.style.scrollMarginTop = `${Math.max(16, Math.ceil(topbarBottom) + 16)}px`;
+            summary.scrollIntoView({ behavior: "auto", block: "start" });
+            summary.focus({ preventScroll: true });
+            announceStatus(
+              `Opened ${playbookName} completed reviews in Trades. ${candidate.visibleEvidence.length} of ${candidate.evidence.length} current trades. Temporary account, dates, day, search, and other card filters were cleared.`,
+            );
+          } catch (caught) {
+            tradeBrowserState = previousState;
+            manualCaptureReference = previousManualReference;
+            manualCaptureContinuation = previousManualContinuation;
+            pendingManualCaptureReference = previousPendingManualReference;
+            render(previousTab, false);
+            throw caught;
+          }
+        },
+        announceFailure: announceStatus,
+      });
+    }
     root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
       const active = button.dataset.tab === tab;
       button.classList.toggle("active", active);
@@ -1375,6 +1455,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             mistake: null,
             emotion: null,
             tag: null,
+            playbook: null,
           });
           clearManualCaptureGuidance();
           tradeBrowserState = next.state;
