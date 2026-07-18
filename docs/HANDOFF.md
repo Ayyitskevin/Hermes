@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Exact Playbook Scope v1 locally · hosted exact-commit CI pending
-· updated 2026-07-18
+Status: verified Exact Playbook Scope v1 locally · feature commit 5bb5c1d
+hosted exact-commit CI passed · updated 2026-07-18
 
 ## Current handoff
 
@@ -57,7 +57,7 @@ verified:
 - `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
 - `cd mobile && npm test` — exit 0; 68 files, 783 tests passed.
 - `cd mobile && npm run test:e2e` — exit 0; all 101 production-Chromium journeys
-  passed in 41.1 seconds. Coverage includes exact completed routing from
+  passed in 40.8 seconds. Coverage includes exact completed routing from
   conflicting state, retained and draft-only zero results, tamper failure,
   prior-state rollback, focus/announcement, storage/network neutrality, and
   320px/200% reflow.
@@ -72,6 +72,25 @@ verified:
 - `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
 - Isolated Python 3.11 legacy safety gate — Ruff passed and all 228 Pytest tests
   passed; one upstream Starlette/httpx deprecation warning was reported.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- The portable parity-report build passed validation, packaging, source-dialog
+  keyboard interaction, 1440/390 responsive checks, 20-domain lineage
+  (6 shipped, 6 prioritize-local, 6 gated-funded, 2 intentional non-goals), six
+  local-priority rows, and script-stripped semantic fallback QA. Checked-in
+  report SHA-256:
+  `4edd2439d28caa2695fe48452d70a3dfd25f7a86af60f82f74efcc8f8c474b7f`.
+- Parity artifact SHA-256:
+  `3ea310b07d83403447e7c29b299d8c7659ef8e94c02293cbecb5be954b5e76a9`;
+  capability ledger:
+  `6b3c1d0ad327e6771d98c48841f3a26938896ef24ea66339e18717bcdb52ac3e`;
+  priority SQL:
+  `a247879270b91832badc0a41caab48ca052fa93b4e07670b6de442310e570e5f`.
+- GitHub Actions run `29650236976` passed exact feature commit
+  `5bb5c1da5d051cad2b9bb0a8f7f9f555799fe3a5`. Legacy Python safety job
+  `88095232791` and Mobile Linux contract job `88095232775` both completed
+  successfully, including all 101 browser journeys, boundary checks,
+  bundle-copy verification, Linux-to-Mac iOS handoff evidence, and dependency
+  audit.
 - Native CocoaPods resolution, Xcode compile, Simulator, physical iPhone,
   SQLCipher/Keychain runtime, VoiceOver, Dynamic Type, hardware keyboard,
   lifecycle, and multi-scene acceptance — NOT RUN.
@@ -92,8 +111,6 @@ assumptions:
 
 open:
 
-- Hosted exact-commit GitHub Actions and publication evidence remain pending the
-  final commit; do not infer hosted CI from local gates.
 - HOLD all native acceptance. On a Mac/iPhone, prove live encrypted current
   assignments and exact completed counts, nine-facet search/scope composition,
   conflict clearing, honest zero state, tamper rollback, VoiceOver, hardware-
