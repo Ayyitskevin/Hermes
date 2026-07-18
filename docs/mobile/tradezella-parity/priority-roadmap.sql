@@ -1,5 +1,7 @@
 -- Source: capability-ledger.json (schema_version 1, as_of 2026-07-17).
 -- Sequence is a product recommendation, not measured impact or adoption.
+-- build-report.mjs proves that row count and sequence match the prioritize-local
+-- ledger count; recommendation text remains an explicitly reviewed decision.
 WITH priority_roadmap(sequence, capability, first_increment, decision_gate, success_metric) AS (
   VALUES
     (1, 'Guided activation and account overview',

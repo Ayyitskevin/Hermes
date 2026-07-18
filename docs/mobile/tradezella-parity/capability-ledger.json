@@ -155,7 +155,12 @@
       "tradezella_evidence": [
         {
           "url": "https://help.tradezella.com/en/articles/12417670-using-filters-in-tradezella",
-          "observation": "The official guide documents filtering the journal and reports across multiple trade attributes.",
+          "observation": "The official guide documents filtering the journal and reports across multiple trade attributes, while still describing named favorite combinations as coming soon.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://tradezella.canny.io/changelog",
+          "observation": "The July 7, 2026 changelog says active filters now persist across login and page refresh; that confirms state persistence, not reusable named presets.",
           "confidence": "high"
         }
       ],
@@ -297,17 +302,18 @@
       ],
       "hermes_evidence_paths": [
         "mobile/src/application/daily-reflection-rhythm.ts",
+        "mobile/src/application/daily-reflection-rhythm-continuation.ts",
         "mobile/src/ui/daily-reflection-rhythm-view.ts",
         "mobile/src/application/prepare-daily-journal.ts",
         "mobile/src/ui/daily-journal-sheet.ts",
         "mobile/src/ui/calendar-day-view.ts",
         "docs/mobile/IOS_ROADMAP.md"
       ],
-      "current_status": "Versioned daily reflections for trading and no-trade dates, review queues, and trade-review coverage already exist. Daily Reflection Rhythm now classifies the latest seven trading sessions as completed, draft, or missing and derives the current completed suffix from exact current daily heads.",
+      "current_status": "Versioned daily reflections for trading and no-trade dates, review queues, and trade-review coverage already exist. Daily Reflection Rhythm classifies the latest seven trading sessions as completed, draft, or missing and derives the current completed suffix from exact current daily heads. Exact private-local missing and draft rows now continue into the unchanged locked-date Daily Journal path; completed, future, empty, and fictional-demo rows remain read-only.",
       "disposition": "shipped",
       "rationale": "This translates a prominent accountability benefit into an original Hermes feature using existing local data and no new write path, performance field, or reward tied to trading outcomes.",
       "gate": "The projection may measure reflection state only; it must exclude P&L, trade count, process score from performance, predictions, advice, and reward mechanics.",
-      "success_metric": "For the latest seven trading sessions, rendered completed, draft, or missing states exactly match current daily heads; streak calculation is deterministic, accessible at 320 px and 200% text, and uses no financial outcome field."
+      "success_metric": "For the latest seven trading sessions, rendered completed, draft, or missing states exactly match current daily heads; missing/draft actions reconcile exact identity and return focus to the rebuilt row or programmatic rhythm heading; calculation and continuation remain accessible at 320/421 px and 200% text and use no financial outcome field."
     },
     {
       "id": "deeper-observational-reports",
@@ -381,7 +387,7 @@
         "docs/mobile/IOS_ROADMAP.md",
         "docs/mobile/COMPETITIVE_ANALYSIS.md"
       ],
-      "current_status": "Hermes documents a one-time local Core and optional later Connect direction, but every price is an unapproved hypothesis and some research prose still carries older TradeZella prices.",
+      "current_status": "Hermes documents a one-time local Core and optional later Connect direction, but every price is an unapproved hypothesis. Current repository TradeZella price references are aligned to the observed July 2026 pricing and remain perishable competitor facts.",
       "disposition": "gated-funded",
       "rationale": "Price clarity is a product benefit, but publishing a price or bundling ongoing costs requires current economics rather than competitor imitation.",
       "gate": "Explicit owner approval after App Store commission, taxes, refunds, support, provider costs, willingness-to-pay, conversion, and retention evidence; update externally used competitor facts immediately before publication.",
@@ -446,8 +452,13 @@
       "benefit": "Provides a structured environment to test a rule set on historical data before relying on it in live decisions.",
       "tradezella_evidence": [
         {
-          "url": "https://help.tradezella.com/en/articles/9854312-what-is-backtesting-in-tradezella",
-          "observation": "The official help center describes historical strategy testing as a product workflow.",
+          "url": "https://help.tradezella.com/en/articles/15934576-how-to-use-automated-backtesting-in-tradezella",
+          "observation": "The current automated-backtesting guide describes natural-language strategy creation, editable generated rules, and inspection of every generated trade on a chart.",
+          "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/15934478-how-to-backtest-manually-in-tradezella",
+          "observation": "The current manual guide describes Scenarios that combine market context, practice periods, rules, and preparation checklists.",
           "confidence": "high"
         },
         {
@@ -468,12 +479,12 @@
     },
     {
       "id": "opt-in-reflection-ai",
-      "capability": "AI-assisted journal retrieval and reflection",
-      "benefit": "Can reduce the effort of finding past notes and drafting questions from a large private journal.",
+      "capability": "AI-assisted journal retrieval, reflection, and confirmed automation",
+      "benefit": "Can reduce the effort of finding past notes, drafting questions, and performing user-confirmed repetitive journal organization.",
       "tradezella_evidence": [
         {
           "url": "https://help.tradezella.com/en/articles/11201153-what-is-zella-ai-tradezella-s-ai-trading-assistant",
-          "observation": "The official guide presents an AI assistant that works with journal context and metered credits.",
+          "observation": "The official guide presents a metered assistant that retrieves journal context and can also create or apply tags, edit strategies and rules, mark checklist items, write notes and session reviews, and run background agents.",
           "confidence": "high"
         },
         {
@@ -489,14 +500,14 @@
       ],
       "current_status": "Hermes uses deterministic code for calculations and has no model dependency, AI data egress, prompt store, or AI entitlement path.",
       "disposition": "gated-funded",
-      "rationale": "Assistance may improve retrieval and reflection, but recurring compute, sensitive journal text, hallucination, advice risk, deletion, and auditability require a separate product boundary.",
-      "gate": "Approve local/BYOK or funded hosted architecture, explicit field-level consent, minimization, retention/deletion, vendor terms, prompt-injection defense, output labeling, evaluation, and a hard prohibition on model-generated calculations, predictions, or trade advice.",
-      "success_metric": "If approved, a red-team and golden-query suite demonstrates source-linked retrieval, explicit uncertainty, complete opt-out and deletion, zero silent data egress, and zero model-generated financial metric or order recommendation."
+      "rationale": "Assistance may improve retrieval, reflection, and repetitive organization, but recurring compute, sensitive journal text, mutation provenance, hallucination, advice risk, deletion, and auditability require a separate product boundary.",
+      "gate": "Approve local/BYOK or funded hosted architecture, explicit field-level consent, minimization, retention/deletion, vendor terms, prompt-injection defense, output labeling, evaluation, mutation preview and confirmation, reversibility, model/version audit, and a hard prohibition on autonomous calculations, predictions, or trade advice.",
+      "success_metric": "If approved, a red-team and golden-query suite demonstrates source-linked retrieval, explicit uncertainty, complete opt-out and deletion, zero silent data egress, previewed user-confirmed reversible mutations with model/version provenance, and zero model-generated financial metric or order recommendation."
     },
     {
       "id": "mentor-community-sharing",
-      "capability": "Mentor access, community spaces, and selective sharing",
-      "benefit": "Adds accountability and feedback from other people around a trader's journal and process.",
+      "capability": "Structured education, mentor access, community spaces, and selective sharing",
+      "benefit": "Adds guided learning, accountability, and feedback from other people around a trader's journal and process.",
       "tradezella_evidence": [
         {
           "url": "https://help.tradezella.com/en/articles/8293313-understanding-mentor-mode",
@@ -507,6 +518,11 @@
           "url": "https://help.tradezella.com/en/articles/15490894-what-is-spaces-community-mentorship-leaderboards",
           "observation": "The official Spaces guide combines community, mentorship, and leaderboard surfaces.",
           "confidence": "high"
+        },
+        {
+          "url": "https://help.tradezella.com/en/articles/13863136-getting-started-with-tradezella",
+          "observation": "The official onboarding workflow includes structured education alongside the journal and review loop.",
+          "confidence": "high"
         }
       ],
       "hermes_evidence_paths": [
@@ -514,11 +530,11 @@
         "docs/mobile/IOS_ROADMAP.md",
         "mobile/src/ui/user-data-export.ts"
       ],
-      "current_status": "Hermes has user-controlled local export but no identity, hosted access control, private comments, public sharing, moderation, reporting, or community operations.",
+      "current_status": "Hermes has product guidance and user-controlled local export but no structured learning curriculum, identity, hosted access control, private comments, public sharing, moderation, reporting, or community operations.",
       "disposition": "gated-funded",
-      "rationale": "Human feedback can improve accountability, but private sharing and public community are distinct hosted products with sensitive-data, consent, abuse, moderation, and support obligations.",
-      "gate": "Approve identity and tenant isolation, granular revocable consent, least-privilege scopes, audit logs, deletion, safeguarding and moderation policy, abuse reporting, support staffing, and recurring economics. Public performance sharing remains excluded below.",
-      "success_metric": "If approved, permission tests prove that invited people can access only explicitly shared fields, revocation takes effect across every copy and cache, audit logs are complete, and moderation response targets are funded and measured."
+      "rationale": "Structured education and human feedback can improve guided learning and accountability, but curriculum quality, content rights, maintenance, education-versus-advice boundaries, private sharing, and public community are separate products with sensitive-data, consent, abuse, moderation, and support obligations.",
+      "gate": "For education, approve curriculum scope, qualified ownership and review, content rights, versioned maintenance cadence, accessibility, and explicit education-not-advice boundaries. For sharing and community, approve identity and tenant isolation, granular revocable consent, least-privilege scopes, audit logs, deletion, safeguarding and moderation policy, abuse reporting, support staffing, and recurring economics. Public performance sharing remains excluded below.",
+      "success_metric": "If approved, every published lesson has an accountable owner, rights record, current version and review date, accessibility acceptance, and bounded non-advice framing; permission tests prove that invited people can access only explicitly shared fields, revocation reaches every copy and cache, audit logs are complete, and moderation response targets are funded and measured."
     },
     {
       "id": "trade-execution-and-advice",

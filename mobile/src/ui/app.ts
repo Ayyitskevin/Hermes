@@ -369,7 +369,7 @@ function journalView(snapshot: JournalWorkspaceSnapshot): string {
       <span>${snapshot.reviewProgress.pendingTrades} waiting · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.streakSessions} consecutive reviewed sessions</span>
     </article>
     ${reviewQueueSection(snapshot)}
-    ${dailyReflectionRhythmSection(snapshot)}
+    ${dailyReflectionRhythmSection(snapshot, today)}
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title" tabindex="-1">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
       <article class="card daily-journal-intro">

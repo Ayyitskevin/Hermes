@@ -697,6 +697,18 @@ p { line-height: 1.55; }
 }
 .reflection-rhythm-session span { color: var(--muted); font-size: .68rem; }
 .reflection-rhythm-session strong { font: 700 .76rem/1.3 "B612 Mono", monospace; overflow-wrap: anywhere; }
+.reflection-rhythm-session:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: .2rem;
+}
+.reflection-rhythm-action {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: .2rem;
+  padding: .55rem .45rem;
+  white-space: normal;
+}
 .reflection-rhythm-session.reflection-completed { border-color: rgb(92 225 230 / 36%); background: rgb(92 225 230 / 6%); }
 .reflection-rhythm-session.reflection-draft { border-color: rgb(241 198 109 / 36%); background: rgb(241 198 109 / 6%); }
 .reflection-rhythm-session.reflection-missing { border-style: dashed; }

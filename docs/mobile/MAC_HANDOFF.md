@@ -736,7 +736,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
 | CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
 | Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
-| Daily Reflection Rhythm | status | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + demo/local continuation/layout/SQLite/network evidence |
+| Daily Reflection Rhythm + continuation | status/action | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + exact missing/draft row continuation + focus/demo/layout/SQLite/network evidence |
 | Guided Account Overview | status | retained/zero-trade account order + stable-ID all-activity scope + filter reset + stale-ID failure + focus/announcement/layout/SQLite/network evidence |
 | Manual Capture Review Continuation | status | known manual result + exact execution/allocation identity + one/two current subjects + all-activity reset + review save/return + retry-only no-resubmit + tamper/focus/layout/SQLite/network evidence |
 | Generic CSV Receipt Review Continuation | status | coherent active receipt/occurrence/ledger read + conservation/dedup/scope order + fixed paging + guide-origin return + rollback supersession + post-commit retry-only no-reread/reprepare/recommit + adapter parity + focus/layout/SQLite/network evidence |
@@ -853,15 +853,18 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   native acceptance held until every displayed equation matches the immutable
   receipt, demo remains noninteractive, and rollback focuses the one rebuilt
   receipt without another write.
-- Daily Reflection Rhythm v1 has only Linux/Chromium projection, local-editor
-  continuation, reflow, demo-boundary, and storage/request-neutrality evidence.
+- Daily Reflection Rhythm v1 plus exact-row continuation has only
+  Linux/Chromium projection, fail-closed missing/draft activation, exact-date
+  editor/focus continuation, reflow, demo-boundary, and
+  storage/request-neutrality evidence.
   Native VoiceOver announcement/order, hardware-keyboard navigation,
   safe-area/chrome visibility, SQLite observation, background/foreground,
   force-quit/relaunch, two-scene head refresh, and 320/421-width 200% Dynamic
   Type are NOT RUN. Keep native acceptance held until canonical session/head
   validation, completed/draft/missing totals, current completed suffix,
-  no-trade separation, and the non-performance copy are observed from live
-  device state without new persistence.
+  no-trade separation, exact missing/draft identity reconciliation and
+  post-save row focus, and the non-performance copy are observed from live
+  device state through the unchanged Daily Journal persistence path.
 - Guided Account Overview v1 has only Linux/Chromium projection,
   keyboard-routing, stale-ID, responsive-layout, storage, and request-neutrality
   evidence. Native VoiceOver announcement/order, hardware-keyboard focus,

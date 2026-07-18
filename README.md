@@ -342,6 +342,22 @@ submission-ready product:
   this is write-path correctness hardening, not another product increment or
   write-capable product exception. Both five-participant activation cohorts
   remain separately NOT RUN.
+- Daily Reflection Rhythm Continuation v1 is the thirty-first bounded Slice D
+  increment and the fifth write-capable product exception. Missing and draft
+  rows in the latest-seven local rhythm now open
+  the existing Daily Journal editor on that exact trading-session date; users
+  no longer re-enter a date or hunt through Daily notes. A pure resolver
+  reconciles local provenance, canonical non-future date, bounded row status,
+  and the exact current entry-version identity. Activation then rechecks the
+  unique section, row, status, action kind, and saved-head attributes before a
+  dialog, randomness, inert state, or persistence can begin. Completed, future,
+  empty, and fictional-demo rows stay read-only. Cancel returns to the exact
+  live action; a confirmed save rebuilds the rhythm and focuses the same row,
+  including after completion removes its action. The existing versioned Daily
+  Journal save, optimistic-conflict, exact-command retry, and refresh recovery
+  paths are unchanged. No schema, store command, archive/digest/export shape,
+  report, formula, preference, dependency, native source, or network path
+  changed; the other four write-capable product exceptions remain unchanged.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

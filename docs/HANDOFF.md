@@ -1,9 +1,152 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Generic CSV Receipt Review Continuation v1 locally · hosted
-exact-commit CI pending · updated 2026-07-17
+Status: verified Daily Reflection Rhythm Continuation v1 locally · hosted
+exact-commit CI pending · updated 2026-07-18
 
 ## Current handoff
+
+task: Deliver Daily Reflection Rhythm Continuation v1 from an exact missing or
+draft latest-seven session row into the existing locked-date Daily Journal
+editor, while preserving fail-closed identity, immutable history, and
+read-only completed/future/demo states.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- A pure resolver reuses the canonical local Daily Reflection Rhythm projection,
+  requires one non-future date in its visible latest-seven cohort, and returns a
+  frozen target. Missing must reconcile to zero current day-review heads; draft
+  and completed must reconcile to one exact current entry-version identity.
+- Only missing and draft rows are actionable. Missing opens the existing new
+  Daily Journal sheet with the trading-session date locked; draft opens the
+  exact immutable current head. Completed, future, empty, and fictional-demo
+  rows remain read-only.
+- The binder rederives the target and reconciles unique section, row, displayed
+  status, action kind, date, and saved-head identity before dialog creation,
+  secure randomness, inert state, or persistence. Detached, duplicated, stale,
+  or tampered evidence fails visibly without a write.
+- Cancel returns to the exact surviving action. Confirmed save, exact-command
+  retry, and confirmed-refresh recovery rebuild the Journal and focus the same
+  stable rhythm row; a missing or ambiguous rebuilt row falls back to the
+  programmatically focusable rhythm heading, then the screen.
+- The slice reuses the existing versioned Daily Journal prepare/commit,
+  optimistic-conflict, unknown-result, exact-command, and refresh-recovery
+  paths. Its missing-row action can create a first day-review head, so this is
+  the fifth write-capable product exception rather than a derived-only slice.
+- The TradeZella parity artifact was refreshed against current official and
+  independent evidence. It now distinguishes filter persistence from unshipped
+  named presets, represents current automated/manual backtesting and
+  user-confirmed AI mutations, broadens education/community gates, distinguishes
+  Trustpilot's 540 prior-year reviews from its 534-review AI summary, and
+  inventories every inline external source.
+- The report builder now verifies capability-ID uniqueness, 20-domain
+  disposition lineage, and the six-row local-priority sequence before producing
+  the portable report. The reviewed taxonomy remains 6 shipped,
+  6 prioritize-local, 6 gated-funded, and 2 intentional non-goals.
+- README, product blueprint, local-ledger contract, iOS roadmap, Mac handoff,
+  capability ledger, SQL snapshots, portable report, and this handoff now cover
+  31 bounded Slice D increments: 26 derived-only and 5 write-capable.
+- No schema, migration, store command, archive/digest/export/restore shape,
+  governed-report cohort/formula/version/checksum, protected preference,
+  dependency, native source, network path, credential, destructive flow, order
+  execution, advice, or public profit ranking was added.
+
+verified:
+
+- Independent architecture review: PASS after checking the resolver, binder,
+  exact-head contract, persistence reuse, and no-schema/no-new-command boundary.
+- Independent UX/accessibility review: PASS after making the rhythm heading
+  programmatically focusable and adding rebuilt-row missing/duplicate fallback
+  coverage. Missing, draft, completed, future, empty, demo, keyboard, cancel,
+  save, focus, and 320/421px at 200% behavior were accepted.
+- Independent evidence review: READY TO SHARE. It reconciled the 540/534
+  Trustpilot counts, AI and education gates, 14 inline URLs against 14 source
+  entries, slice taxonomy, and an independent report rebuild.
+- `cd mobile && npm run typecheck` — exit 0 (also rerun by both production
+  builds during final iOS copy/sync).
+- `cd mobile && npm test` — exit 0; 66 files, 773 tests passed.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 96 production-Chromium
+  journeys passed with 16 workers.
+- `cd mobile && npm run ios:copy && npm run ios:sync` — exit 0. Vite
+  transformed 91 modules; Capacitor found only
+  `@capacitor-community/sqlite@8.1.0` and explicitly skipped CocoaPods and
+  xcodebuild on Linux.
+- `cd mobile && npm run verify:ios-sync` — exit 0. Six production files
+  matched the iOS public copy byte-for-byte with SHA-256
+  `dd186fbc9f9ceb0ee22024438446fa716963c9c935d0235f304cc99b1e2ff82b`;
+  every native acceptance row remains NOT RUN.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- The portable-report build passed validation, package, source-dialog keyboard
+  interaction, 1440/390 responsive checks, 20-domain lineage (6/6/6/2), six
+  local-priority rows, and script-stripped fallback QA. Checked-in and
+  independently rebuilt HTML SHA-256:
+  `fc215a5f94abd84ca04f0171266fd4f44a339909f859a710b9e3b0a442200a9d`.
+- Artifact SHA-256:
+  `cd153ab00cf6f809e510eb309caba7ef97d66f76cd3347c0dc5ac386ada1a1ba`;
+  capability ledger:
+  `7f508e1c81f8575bdcda836a73a94536012bb2c59511ee0ee7f59c944ac2b61f`;
+  priority SQL:
+  `1a5d2c08aecbb04c7494d7a976ad6eb915c35629fffaec5c0ffcb25f2ad6a789`.
+- JSON syntax, JavaScript syntax, generated-report receipt, source inventory,
+  copied-bundle parity, tracked native/lockfile drift, and
+  `git diff --check` passed.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and the checkout has no complete project venv.
+  The hosted Legacy Python safety job remains required.
+
+assumptions:
+
+- The workspace-local maximum date remains the canonical future boundary, and
+  the rhythm's visible latest-seven projection remains the only continuation
+  cohort.
+- Daily Journal immutable entry/version identity and existing safe-commit
+  recovery remain authoritative; the rhythm continuation does not own a second
+  persistence contract.
+- Browser, SQL.js, and Linux bundle evidence do not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+- Current competitor facts are dated external observations, not causal
+  popularity, retention, profitability, or trader-outcome evidence.
+
+open:
+
+- Before downstream pass, require the published commit's Mobile Linux and
+  Legacy Python jobs to be green and record the terminal exact-SHA run in the
+  fleet handoff; GitHub Actions is authoritative for that external state.
+- Two separate moderated fictional-data studies remain NOT RUN: five manual
+  participants and five generic-CSV participants. Do not pool cohorts or infer
+  activation, retention, causality, or trading outcomes from browser automation.
+- HOLD all native acceptance. CocoaPods, Xcode compile, Simulator, physical
+  iPhone, SQLite/SQLCipher/Keychain, Files/photos, safe areas, interruption,
+  background/foreground, force-quit/relaunch, multi-scene, VoiceOver, and
+  Dynamic Type were NOT RUN.
+- Saved Views, broker parser packs/sync, playbook CRUD, deeper reports,
+  attachments/data lifecycle, replay, backtesting, hosted AI, structured
+  education/community, and pricing remain behind their documented product,
+  rights, security, privacy, schema, device, commercial, and human gates.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active after this slice; this
+  handoff is the requested stopping point, not completion of the broad roadmap.
+
+## Prior milestone — Generic CSV Receipt Review Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Daily Reflection Rhythm Continuation v1 handoff above.
+
+Status: verified Generic CSV Receipt Review Continuation v1 locally · hosted
+exact-commit status tracked in GitHub Actions · updated 2026-07-17
+
+### Historical handoff
 
 task: Deliver Generic CSV Receipt Review Continuation v1 from one exact active
 immutable receipt to its linked current review targets without rereading or

@@ -197,7 +197,12 @@ test("daily reflection creates, validates, completes, and returns focus without 
   await expect(completedHeading).toBeInViewport();
 });
 
-test("daily reflection rhythm recomputes missing to draft to completed through existing saves", async ({ page }) => {
+test("daily reflection rhythm continues the exact missing and draft session through existing saves", async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.origin !== BASE_ORIGIN) externalRequests.push(request.url());
+  });
   await establishLocalJournal(page);
   const rhythm = page.locator("[data-daily-reflection-rhythm]");
   const session = rhythm.locator('[data-reflection-session="2026-07-09"]');
@@ -207,9 +212,86 @@ test("daily reflection rhythm recomputes missing to draft to completed through e
     "Thursday, July 9, 2026: missing daily reflection",
   );
 
-  await page.getByRole("button", { name: "Write daily reflection" }).click();
+  const writeAction = session.getByRole("button", {
+    name: "Write reflection — July 9, 2026",
+  });
+  await expect(writeAction).toHaveAttribute("data-daily-entry-rhythm-date", "2026-07-09");
+  await expect(writeAction).toHaveAttribute("data-daily-entry-rhythm-status", "missing");
+  const storageBeforeTamper = await localStorageSnapshot(page);
+
+  await writeAction.evaluate((element) => {
+    element.setAttribute("data-daily-entry-rhythm-status", "draft");
+  });
+  await writeAction.click();
+  let openError = page.locator("[data-daily-entry-open-error]");
+  await expect(openError).toBeFocused();
+  await expect(openError).toContainText("could not safely open this daily reflection");
+  await expect(page.locator("[data-daily-entry-backdrop]")).toHaveCount(0);
+  expect(await localStorageSnapshot(page)).toEqual(storageBeforeTamper);
+
+  await writeAction.evaluate((element) => {
+    element.setAttribute("data-daily-entry-rhythm-status", "missing");
+    const row = element.closest("[data-reflection-session]");
+    const duplicate = row?.cloneNode(true) as Element | undefined;
+    duplicate?.querySelector("button")?.remove();
+    if (row !== null && duplicate !== undefined) {
+      row.insertAdjacentElement("afterend", duplicate);
+    }
+  });
+  await writeAction.click();
+  openError = page.locator("[data-daily-entry-open-error]");
+  await expect(openError).toBeFocused();
+  await expect(page.locator("[data-daily-entry-backdrop]")).toHaveCount(0);
+  expect(await localStorageSnapshot(page)).toEqual(storageBeforeTamper);
+  await page.locator('[data-reflection-session="2026-07-09"]').last().evaluate((row) => {
+    if (row.previousElementSibling?.getAttribute("data-reflection-session") === "2026-07-09") {
+      row.remove();
+    }
+  });
+
+  await writeAction.evaluate((element) => {
+    const section = element.closest("[data-daily-reflection-rhythm]");
+    section?.insertAdjacentElement("afterend", element);
+    (element as HTMLButtonElement).click();
+    document.querySelector('[data-reflection-session="2026-07-09"]')?.append(element);
+  });
+  openError = page.locator("[data-daily-entry-open-error]");
+  await expect(openError).toBeFocused();
+  await expect(page.locator("[data-daily-entry-backdrop]")).toHaveCount(0);
+  expect(await localStorageSnapshot(page)).toEqual(storageBeforeTamper);
+  for (const width of [320, 421]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.dataset.testTextScale = "200";
+    });
+    const geometry = await session.evaluate((element) => ({
+      left: element.getBoundingClientRect().left,
+      right: element.getBoundingClientRect().right,
+      rowOverflow: element.scrollWidth - element.clientWidth,
+      documentOverflow: document.documentElement.scrollWidth - window.innerWidth,
+    }));
+    expect(geometry.left, `${width}px rhythm row left`).toBeGreaterThanOrEqual(-1);
+    expect(geometry.right, `${width}px rhythm row right`).toBeLessThanOrEqual(width + 1);
+    expect(geometry.rowOverflow, `${width}px rhythm row overflow`).toBeLessThanOrEqual(1);
+    expect(geometry.documentOverflow, `${width}px document overflow`).toBeLessThanOrEqual(1);
+  }
+  await page.evaluate(() => {
+    delete document.documentElement.dataset.testTextScale;
+  });
+  await writeAction.focus();
+  await page.keyboard.press("Enter");
   let dialog = page.getByRole("dialog", { name: "New daily reflection" });
-  await dialog.locator("#daily-entry-date").fill("2026-07-09");
+  await expect(dialog.locator("#daily-entry-date")).toHaveValue("2026-07-09");
+  await expect(dialog.locator("#daily-entry-date")).toHaveAttribute("readonly", "");
+  await expect(dialog.locator("#daily-entry-date-hint")).toContainText(
+    "selected trading session is this entry’s durable identity",
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(writeAction).toBeFocused();
+
+  await writeAction.click();
+  dialog = page.getByRole("dialog", { name: "New daily reflection" });
   await dialog.locator("#daily-entry-note").fill("Review the recorded session without rating the result.");
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(dialog).toHaveCount(0);
@@ -217,9 +299,17 @@ test("daily reflection rhythm recomputes missing to draft to completed through e
   await expect(session).toHaveAccessibleName(
     "Thursday, July 9, 2026: draft daily reflection",
   );
+  await expect(session).toBeFocused();
+  const continueAction = session.getByRole("button", {
+    name: "Continue reflection draft — July 9, 2026",
+  });
+  await expect(continueAction).toHaveAttribute("data-daily-entry-rhythm-date", "2026-07-09");
+  await expect(continueAction).toHaveAttribute("data-daily-entry-rhythm-status", "draft");
+  await expect(continueAction).toHaveAttribute("data-daily-entry-rhythm-entry-id", /.+/u);
+  await expect(continueAction).toHaveAttribute("data-daily-entry-rhythm-version", "1");
+  await expect(continueAction).toHaveAttribute("data-daily-entry-rhythm-revision", /^[a-f0-9]{64}$/u);
 
-  const card = page.locator('[data-daily-entry-card="2026-07-09"]');
-  await card.getByRole("button", { name: /Edit daily reflection/u }).click();
+  await continueAction.click();
   dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
   await dialog.getByRole("button", { name: "Complete reflection" }).click();
   await expect(dialog).toHaveCount(0);
@@ -228,6 +318,79 @@ test("daily reflection rhythm recomputes missing to draft to completed through e
   await expect(session).toHaveAccessibleName(
     "Thursday, July 9, 2026: completed daily reflection",
   );
+  await expect(session).toBeFocused();
+  await expect(session.getByRole("button")).toHaveCount(0);
+  expect(externalRequests).toEqual([]);
+});
+
+test("daily reflection rhythm save focus falls back to its programmatic heading when the exact row is missing or ambiguous", async ({ page }) => {
+  await establishLocalJournal(page);
+  const rhythm = page.locator("[data-daily-reflection-rhythm]");
+  const session = rhythm.locator('[data-reflection-session="2026-07-09"]');
+  const heading = rhythm.getByRole("heading", { name: "Daily reflection rhythm" });
+  await expect(heading).toHaveAttribute("tabindex", "-1");
+
+  await session.getByRole("button", {
+    name: "Write reflection — July 9, 2026",
+  }).click();
+  let dialog = page.getByRole("dialog", { name: "New daily reflection" });
+  await dialog.locator("#daily-entry-note").fill(
+    "Use the rhythm heading if the exact rebuilt session row is unavailable.",
+  );
+  await page.evaluate(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        setter.call(this, value);
+        if (this.id !== "screen") return;
+        Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+        this.querySelector('[data-reflection-session="2026-07-09"]')?.remove();
+      },
+    });
+  });
+  await dialog.getByRole("button", { name: "Save draft" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(session).toHaveCount(0);
+  await expect(heading).toBeFocused();
+
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  await session.getByRole("button", {
+    name: "Continue reflection draft — July 9, 2026",
+  }).click();
+  dialog = page.getByRole("dialog", { name: "Edit daily reflection" });
+  await page.evaluate(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const getter = descriptor?.get;
+    const setter = descriptor?.set;
+    if (descriptor === undefined || getter === undefined || setter === undefined) {
+      throw new Error("Element.innerHTML is not instrumentable.");
+    }
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: descriptor.configurable,
+      enumerable: descriptor.enumerable,
+      get: getter,
+      set(this: Element, value: string) {
+        setter.call(this, value);
+        if (this.id !== "screen") return;
+        Object.defineProperty(Element.prototype, "innerHTML", descriptor);
+        const row = this.querySelector('[data-reflection-session="2026-07-09"]');
+        row?.insertAdjacentElement("afterend", row.cloneNode(true) as Element);
+      },
+    });
+  });
+  await dialog.getByRole("button", { name: "Complete reflection" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(session).toHaveCount(2);
+  await expect(heading).toBeFocused();
 });
 
 test("fictional daily reflection rhythm stays offline, read-only, and reflows at 200%", async ({ page }) => {

@@ -10,6 +10,7 @@ import {
   dailyJournalReconciliationHead,
   dailyJournalSaveFailureKind,
   dailyJournalSheetTemplate,
+  dailyReflectionRhythmAction,
   newestAvailableDailyJournalDate,
   parseDailyJournalTags,
   workspaceTodayIsoDate,
@@ -110,6 +111,31 @@ describe("daily journal sheet", () => {
     expect(generic).not.toContain("daily-entry-date-hint");
   });
 
+  it("locks an exact rhythm date with origin-specific identity copy", () => {
+    const exact = dailyJournalSheetTemplate(
+      null,
+      localWorkspace(),
+      "2026-07-13",
+      "2026-07-08",
+      null,
+      "2026-07-08",
+    );
+    expect(exact).toMatch(
+      /id="daily-entry-date"[^>]*value="2026-07-08"[^>]*readonly/u,
+    );
+    expect(exact).toContain(
+      "The selected trading session is this entry’s durable identity and cannot be changed here.",
+    );
+    expect(() => dailyJournalSheetTemplate(
+      null,
+      localWorkspace(),
+      "2026-07-13",
+      "2026-07-08",
+      "2026-07-08",
+      "2026-07-08",
+    )).toThrow("both calendar and rhythm origins");
+  });
+
   it("emits stable accessible triggers and parses comma/newline tags", () => {
     expect(dailyJournalAction(null)).toContain("data-daily-entry-new");
     const action = dailyJournalAction(DEMO_WORKSPACE.dailyJournal[0]!);
@@ -120,6 +146,44 @@ describe("daily journal sheet", () => {
       "Plan followed",
       "A+",
     ]);
+  });
+
+  it("emits exact missing and draft rhythm actions but rejects completed sessions", () => {
+    const missing = dailyReflectionRhythmAction(Object.freeze({
+      isoDate: "2026-07-07",
+      status: "missing" as const,
+      entry: null,
+    }));
+    expect(missing).toContain("data-daily-entry-new");
+    expect(missing).toContain('data-daily-entry-rhythm-date="2026-07-07"');
+    expect(missing).toContain('data-daily-entry-rhythm-status="missing"');
+    expect(missing).toContain("Write reflection — July 7, 2026");
+
+    const draftEntry = DEMO_WORKSPACE.dailyJournal[0]!;
+    const draft = dailyReflectionRhythmAction(Object.freeze({
+      isoDate: draftEntry.isoDate,
+      status: "draft" as const,
+      entry: Object.freeze({
+        entryVersionId: draftEntry.entryVersionId,
+        version: draftEntry.version,
+        revision: draftEntry.revision,
+        state: "draft" as const,
+      }),
+    }));
+    expect(draft).toContain(`data-daily-entry-edit="${draftEntry.isoDate}"`);
+    expect(draft).toContain(`data-daily-entry-rhythm-entry-id="${draftEntry.entryVersionId}"`);
+    expect(draft).toContain(`data-daily-entry-rhythm-version="${draftEntry.version}"`);
+    expect(draft).toContain(`data-daily-entry-rhythm-revision="${draftEntry.revision}"`);
+    expect(() => dailyReflectionRhythmAction(Object.freeze({
+      isoDate: draftEntry.isoDate,
+      status: "completed" as const,
+      entry: Object.freeze({
+        entryVersionId: draftEntry.entryVersionId,
+        version: draftEntry.version,
+        revision: draftEntry.revision,
+        state: "completed" as const,
+      }),
+    }))).toThrow("not continuation actions");
   });
 
   it("distinguishes uncertain persistence from retryable validation failures", () => {

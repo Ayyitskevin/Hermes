@@ -636,6 +636,20 @@ observed plugin/device behavior:
   correction adds source name and committed/unambiguous predicates to match the
   existing Session revision contract; it is correctness hardening, not another
   product increment or write-capable product exception.
+- Daily Reflection Rhythm Continuation v1 makes only exact local missing and
+  draft rows actionable through the existing Daily Journal editor. A pure
+  resolver requires one canonical non-future latest-seven session and reconciles
+  missing status to zero heads or draft/completed status to one exact frozen
+  entry-version identity. Activation rechecks the unique section, row, displayed
+  status, action kind, and saved-head attributes before opening a dialog or
+  touching randomness, inert state, or persistence. Completed, future, empty,
+  and fictional-demo rows remain read-only. The selected trading-session date is
+  locked; cancel returns to the surviving action; confirmed save/retry/refresh
+  focuses the rebuilt exact row without repeating the write. Existing Daily
+  Journal versioning, optimistic conflict, exact-command recovery, schema,
+  archive, reports, preferences, dependencies, native source, and network
+  boundaries are unchanged. Because the new missing-row control can create a
+  first day-review head, this is the fifth write-capable product exception.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -807,15 +821,15 @@ Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
-Continuation v1, matching-runtime local restore, and all eight governed reports
-are implemented. Thirty bounded Slice D increments are implemented in total;
-the twenty-six
-presentation/projection increments remain derived-only. Durable Daily Journal,
-Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
-Reflection Continuation are the write-capable exceptions. The trade
+Continuation v1, Daily Reflection Rhythm Continuation v1, matching-runtime local
+restore, and all eight governed reports are implemented. Thirty-one bounded
+Slice D increments are implemented in total; twenty-six remain derived-only.
+Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
+Continuation, Calendar-Day Reflection Continuation, and Daily Reflection Rhythm
+Continuation are the five write-capable exceptions. The trade
 continuations reuse the existing versioned trade-review path; the calendar-day
-continuation reuses the existing Daily Journal path without changing either
-persistence contract.
+and rhythm continuations reuse the existing Daily Journal path without changing
+either persistence contract.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

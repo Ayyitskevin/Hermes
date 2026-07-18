@@ -3,6 +3,10 @@ import {
   JournalApplication,
 } from "../application/journal-application";
 import {
+  resolveDailyReflectionRhythmContinuation,
+  type DailyReflectionRhythmContinuation,
+} from "../application/daily-reflection-rhythm-continuation";
+import {
   DailyJournalPreparationError,
   type PreparedDailyJournalEntry,
   validateDailyJournalIdentifier,
@@ -115,6 +119,35 @@ export function dailyJournalAction(
   return `<button class="secondary-button" type="button" data-daily-entry-edit="${escapeHtml(entry.isoDate)}"${calendarAttribute} aria-label="${escapeHtml(accessibleName)}">${escapeHtml(visibleLabel)}</button>`;
 }
 
+export function dailyReflectionRhythmAction(
+  target: Readonly<DailyReflectionRhythmContinuation>,
+): string {
+  const isoDate = validateDailyJournalIsoDate(target.isoDate);
+  if (target.status === "completed") {
+    throw new Error("Completed rhythm sessions are not continuation actions.");
+  }
+  const commonAttributes = ` data-daily-entry-rhythm-date="${escapeHtml(isoDate)}" data-daily-entry-rhythm-status="${target.status}" aria-haspopup="dialog"`;
+  if (target.status === "missing") {
+    if (target.entry !== null) {
+      throw new Error("A missing rhythm action cannot carry a current entry identity.");
+    }
+    return `<button class="secondary-button reflection-rhythm-action" type="button" data-daily-entry-new${commonAttributes} aria-label="Write reflection — ${escapeHtml(longDateLabel(isoDate))}">Write reflection</button>`;
+  }
+  const entry = target.entry;
+  if (entry === null || entry.state !== "draft") {
+    throw new Error("A draft rhythm action requires its exact current draft identity.");
+  }
+  validateDailyJournalIdentifier(entry.entryVersionId, "Daily reflection rhythm entry version ID");
+  if (!Number.isSafeInteger(entry.version) || entry.version < 1) {
+    throw new Error("Daily reflection rhythm entry version must be a positive safe integer.");
+  }
+  if (!/^[a-f0-9]{64}$/.test(entry.revision)) {
+    throw new Error("Daily reflection rhythm revision must be a 256-bit lowercase hexadecimal value.");
+  }
+  const identityAttributes = ` data-daily-entry-rhythm-entry-id="${escapeHtml(entry.entryVersionId)}" data-daily-entry-rhythm-version="${entry.version}" data-daily-entry-rhythm-revision="${entry.revision}"`;
+  return `<button class="secondary-button reflection-rhythm-action" type="button" data-daily-entry-edit="${escapeHtml(isoDate)}"${commonAttributes}${identityAttributes} aria-label="Continue reflection draft — ${escapeHtml(longDateLabel(isoDate))}">Continue draft</button>`;
+}
+
 export function dailyJournalLatestVersionTemplate(
   entry: DailyJournalPreview,
 ): string {
@@ -158,23 +191,34 @@ export function dailyJournalSheetTemplate(
   defaultDate = workspaceTodayIsoDate(snapshot.timeZone),
   createDate = defaultDate,
   calendarIsoDate: string | null = null,
+  rhythmIsoDate: string | null = null,
 ): string {
   const maximumDate = validateDailyJournalIsoDate(defaultDate);
   const isoDate = validateDailyJournalIsoDate(entry?.isoDate ?? createDate);
   const exactCalendarDate = calendarIsoDate === null
     ? null
     : validateDailyJournalIsoDate(calendarIsoDate);
+  const exactRhythmDate = rhythmIsoDate === null
+    ? null
+    : validateDailyJournalIsoDate(rhythmIsoDate);
+  if (exactCalendarDate !== null && exactRhythmDate !== null) {
+    throw new DailyJournalPreparationError(
+      "invalid_date",
+      "A daily reflection cannot have both calendar and rhythm origins.",
+    );
+  }
+  const exactOriginDate = exactCalendarDate ?? exactRhythmDate;
   if (
-    exactCalendarDate !== null
-    && (exactCalendarDate !== isoDate || exactCalendarDate > maximumDate)
+    exactOriginDate !== null
+    && (exactOriginDate !== isoDate || exactOriginDate > maximumDate)
   ) {
     throw new DailyJournalPreparationError(
       "invalid_date",
-      "The calendar origin must be the same non-future daily reflection date.",
+      "The continuation origin must be the same non-future daily reflection date.",
     );
   }
   const edit = entry !== null;
-  const dateLocked = edit || exactCalendarDate !== null;
+  const dateLocked = edit || exactOriginDate !== null;
   const title = entry?.title ?? "";
   const note = entry?.note ?? "";
   const emotion = entry?.emotion ?? "";
@@ -199,7 +243,7 @@ export function dailyJournalSheetTemplate(
             min="1970-01-01" max="${escapeHtml(maximumDate)}" value="${escapeHtml(isoDate)}"
             ${dateLocked ? 'readonly aria-describedby="daily-entry-date-hint"' : ""} required />
         </label>
-        ${dateLocked ? `<p class="field-hint" id="daily-entry-date-hint">${exactCalendarDate === null ? "The date is part of this entry’s durable identity and cannot be changed." : "The selected calendar day is this entry’s durable identity and cannot be changed here."}</p>` : ""}
+        ${dateLocked ? `<p class="field-hint" id="daily-entry-date-hint">${exactCalendarDate !== null ? "The selected calendar day is this entry’s durable identity and cannot be changed here." : exactRhythmDate !== null ? "The selected trading session is this entry’s durable identity and cannot be changed here." : "The date is part of this entry’s durable identity and cannot be changed."}</p>` : ""}
         <label>Headline <span class="field-hint">Optional</span>
           <input id="daily-entry-headline" name="daily-entry-headline" type="text"
             maxlength="240" value="${escapeHtml(title)}" placeholder="What defined the day?" aria-describedby="daily-entry-headline-count" />
@@ -309,6 +353,7 @@ export function validateDailyJournalPreview(entry: DailyJournalPreview): void {
 function focusAfterDailyJournalRefresh(
   root: HTMLElement,
   calendarOriginDate: string | null,
+  rhythmOriginDate: string | null,
   savedIsoDate: string | null = null,
 ): void {
   const focusTarget = (target: HTMLElement): void => {
@@ -326,6 +371,33 @@ function focusAfterDailyJournalRefresh(
       focusTarget(target);
       return;
     }
+  }
+  if (rhythmOriginDate !== null) {
+    const exactDate = validateDailyJournalIsoDate(rhythmOriginDate);
+    const sections = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-daily-reflection-rhythm]"),
+    );
+    if (sections.length === 1 && sections[0] !== undefined) {
+      const rows = Array.from(
+        sections[0].querySelectorAll<HTMLElement>("[data-reflection-session]"),
+      ).filter((candidate) => candidate.dataset.reflectionSession === exactDate);
+      if (rows.length === 1 && rows[0] !== undefined) {
+        focusTarget(rows[0]);
+        return;
+      }
+      const headings = Array.from(
+        sections[0].querySelectorAll<HTMLElement>("#daily-reflection-rhythm-title"),
+      );
+      if (headings.length === 1 && headings[0] !== undefined) {
+        focusTarget(headings[0]);
+        return;
+      }
+    }
+    const rhythmScreens = Array.from(root.querySelectorAll<HTMLElement>("#screen"));
+    if (rhythmScreens.length === 1 && rhythmScreens[0] !== undefined) {
+      rhythmScreens[0].focus({ preventScroll: true });
+    }
+    return;
   }
   if (savedIsoDate !== null) {
     const exactDate = validateDailyJournalIsoDate(savedIsoDate);
@@ -385,6 +457,7 @@ export function bindDailyJournalActions(
       let defaultDate: string;
       let createDate: string;
       let calendarOriginDate: string | null;
+      let rhythmOriginDate: string | null;
       let sheetHtml: string;
       try {
         const isNew = trigger.hasAttribute("data-daily-entry-new");
@@ -402,6 +475,30 @@ export function bindDailyJournalActions(
         calendarOriginDate = calendarAttribute === null
           ? null
           : validateDailyJournalIsoDate(calendarAttribute);
+        const rhythmAttribute = trigger.getAttribute("data-daily-entry-rhythm-date");
+        const rhythmStatusAttribute = trigger.getAttribute("data-daily-entry-rhythm-status");
+        const rhythmEntryIdAttribute = trigger.getAttribute("data-daily-entry-rhythm-entry-id");
+        const rhythmVersionAttribute = trigger.getAttribute("data-daily-entry-rhythm-version");
+        const rhythmRevisionAttribute = trigger.getAttribute("data-daily-entry-rhythm-revision");
+        const hasAnyRhythmAttribute = [
+          rhythmAttribute,
+          rhythmStatusAttribute,
+          rhythmEntryIdAttribute,
+          rhythmVersionAttribute,
+          rhythmRevisionAttribute,
+        ].some((value) => value !== null);
+        if (calendarOriginDate !== null && hasAnyRhythmAttribute) {
+          throw new Error("A daily reflection action cannot have two origins.");
+        }
+        if (
+          hasAnyRhythmAttribute
+          && (rhythmAttribute === null || rhythmStatusAttribute === null)
+        ) {
+          throw new Error("The daily reflection rhythm origin is incomplete.");
+        }
+        rhythmOriginDate = rhythmAttribute === null
+          ? null
+          : validateDailyJournalIsoDate(rhythmAttribute);
         const selectedDate = selectedCalendarDate === null
           ? null
           : validateDailyJournalIsoDate(selectedCalendarDate);
@@ -419,19 +516,74 @@ export function bindDailyJournalActions(
             throw new Error("The calendar action is detached from its selected day.");
           }
         }
+        if (rhythmOriginDate !== null && selectedDate !== null) {
+          throw new Error("A rhythm action cannot originate inside the selected calendar card.");
+        }
+        const exactOriginDate = calendarOriginDate ?? rhythmOriginDate;
         if (
-          calendarOriginDate !== null
+          exactOriginDate !== null
           && requestedDate !== null
-          && calendarOriginDate !== requestedDate
+          && exactOriginDate !== requestedDate
         ) {
-          throw new Error("Calendar and edit dates do not match.");
+          throw new Error("Continuation and edit dates do not match.");
         }
 
         defaultDate = validateDailyJournalIsoDate(
           workspaceTodayIsoDate(snapshot.timeZone),
         );
-        if (calendarOriginDate !== null && calendarOriginDate > defaultDate) {
-          throw new Error("Future calendar dates cannot open daily reflections.");
+        if (exactOriginDate !== null && exactOriginDate > defaultDate) {
+          throw new Error("Future dates cannot open daily reflections.");
+        }
+
+        if (rhythmOriginDate !== null) {
+          const sections = Array.from(
+            root.querySelectorAll<HTMLElement>("[data-daily-reflection-rhythm]"),
+          );
+          const section = trigger.closest<HTMLElement>("[data-daily-reflection-rhythm]");
+          const row = trigger.closest<HTMLElement>("[data-reflection-session]");
+          const rows = section === null
+            ? []
+            : Array.from(section.querySelectorAll<HTMLElement>("[data-reflection-session]"))
+              .filter((candidate) => candidate.dataset.reflectionSession === rhythmOriginDate);
+          if (
+            sections.length !== 1
+            || section === null
+            || sections[0] !== section
+            || row === null
+            || rows.length !== 1
+            || rows[0] !== row
+          ) {
+            throw new Error("The rhythm action is detached from its unique session row.");
+          }
+          const target = resolveDailyReflectionRhythmContinuation(
+            snapshot,
+            rhythmOriginDate,
+            defaultDate,
+          );
+          if (
+            target.status === "completed"
+            || row.dataset.reflectionSessionStatus !== target.status
+            || rhythmStatusAttribute !== target.status
+            || (target.status === "missing" && !isNew)
+            || (target.status === "draft" && !isEdit)
+          ) {
+            throw new Error("The rhythm action no longer matches its visible session status.");
+          }
+          if (target.entry === null) {
+            if (
+              rhythmEntryIdAttribute !== null
+              || rhythmVersionAttribute !== null
+              || rhythmRevisionAttribute !== null
+            ) {
+              throw new Error("A missing rhythm action cannot carry a saved head identity.");
+            }
+          } else if (
+            rhythmEntryIdAttribute !== target.entry.entryVersionId
+            || rhythmVersionAttribute !== String(target.entry.version)
+            || rhythmRevisionAttribute !== target.entry.revision
+          ) {
+            throw new Error("The rhythm action does not match its exact saved head identity.");
+          }
         }
 
         const matches = requestedDate === null
@@ -443,16 +595,16 @@ export function bindDailyJournalActions(
         entry = matches[0] ?? null;
         if (entry !== null) validateDailyJournalPreview(entry);
 
-        if (isNew && calendarOriginDate !== null) {
-          const existingCalendarHeads = snapshot.dailyJournal.filter(
-            (candidate) => candidate.isoDate === calendarOriginDate,
+        if (isNew && exactOriginDate !== null) {
+          const existingOriginHeads = snapshot.dailyJournal.filter(
+            (candidate) => candidate.isoDate === exactOriginDate,
           );
-          if (existingCalendarHeads.length !== 0) {
-            throw new Error("The calendar date already has a daily reflection head.");
+          if (existingOriginHeads.length !== 0) {
+            throw new Error("The continuation date already has a daily reflection head.");
           }
         }
         createDate = entry === null
-          ? calendarOriginDate
+          ? exactOriginDate
             ?? newestAvailableDailyJournalDate(snapshot.dailyJournal, defaultDate)
           : defaultDate;
         sheetHtml = dailyJournalSheetTemplate(
@@ -461,12 +613,13 @@ export function bindDailyJournalActions(
           defaultDate,
           createDate,
           calendarOriginDate,
+          rhythmOriginDate,
         );
       } catch {
         showOpenError();
         return;
       }
-      const identityIsoDate = entry?.isoDate ?? calendarOriginDate;
+      const identityIsoDate = entry?.isoDate ?? calendarOriginDate ?? rhythmOriginDate;
       root.insertAdjacentHTML(
         "beforeend",
         sheetHtml,
@@ -635,7 +788,7 @@ export function bindDailyJournalActions(
         backdrop.remove();
         setBackgroundInert(false);
         if (trigger.isConnected) trigger.focus();
-        else focusAfterDailyJournalRefresh(root, calendarOriginDate);
+        else focusAfterDailyJournalRefresh(root, calendarOriginDate, rhythmOriginDate);
       };
 
       backdrop.querySelectorAll<HTMLButtonElement>("[data-daily-entry-close]")
@@ -662,7 +815,12 @@ export function bindDailyJournalActions(
             await refresh("Journal reloaded after the saved daily reflection could not refresh.");
             backdrop.remove();
             setBackgroundInert(false);
-            focusAfterDailyJournalRefresh(root, calendarOriginDate, committedIsoDate);
+            focusAfterDailyJournalRefresh(
+              root,
+              calendarOriginDate,
+              rhythmOriginDate,
+              committedIsoDate,
+            );
           } catch {
             showCommittedRefreshFailure();
           }
@@ -704,7 +862,12 @@ export function bindDailyJournalActions(
           await refresh("Journal reloaded after confirming the exact daily reflection save.");
           backdrop.remove();
           setBackgroundInert(false);
-          focusAfterDailyJournalRefresh(root, calendarOriginDate, prepared.isoDate);
+          focusAfterDailyJournalRefresh(
+            root,
+            calendarOriginDate,
+            rhythmOriginDate,
+            prepared.isoDate,
+          );
         } catch {
           showCommittedRefreshFailure();
         }
@@ -833,7 +996,12 @@ export function bindDailyJournalActions(
           saving = false;
           backdrop.remove();
           setBackgroundInert(false);
-          focusAfterDailyJournalRefresh(root, calendarOriginDate, prepared.isoDate);
+          focusAfterDailyJournalRefresh(
+            root,
+            calendarOriginDate,
+            rhythmOriginDate,
+            prepared.isoDate,
+          );
         } catch (caught) {
           const failureKind = dailyJournalSaveFailureKind(caught);
           if (failureKind === "uncertain") {

@@ -569,6 +569,38 @@ That bounded parity correction is correctness hardening, not another product
 increment or a fifth write-capable product exception. Both separate moderated
 five-participant cohorts remain NOT RUN.
 
+### Daily-reflection rhythm continuation
+
+Daily Reflection Rhythm Continuation v1 is the thirty-first bounded Slice D
+increment and the fifth write-capable product exception. It adds no ledger fact
+or command, but its new missing-row action can create a first day-review head
+through the existing write path. The application boundary is:
+
+```text
+local snapshot + requested trading-session date + workspace-local maximum date
+  → canonical Daily Reflection Rhythm latest-seven projection
+  → exactly one visible non-future session row
+  → zero current heads when missing
+     or one valid exact entry-version identity when draft/completed
+  → deeply frozen continuation target
+```
+
+Only a missing or draft target becomes actionable. The UI rechecks one unique
+rhythm section and row, exact date and displayed status, create/edit action kind,
+and the current head's entry-version ID, version, revision, and state before it
+creates a dialog, requests secure randomness, marks the screen inert, or invokes
+persistence. Completed, future, empty, and fictional-demo rows remain read-only.
+The exact trading-session date is locked as durable day-review identity.
+
+Persistence remains the existing `prepareDailyJournal` →
+`commitDailyJournalSafely` path with its optimistic predecessor, immutable
+append, exact-command retry, stale-head reconciliation, and committed-refresh
+recovery. Cancel focuses the surviving exact action. Confirmed refresh focuses
+the unique rebuilt rhythm row, then the rhythm heading, then the screen; it does
+not repeat the write. No schema, migration, store operation, archive/digest/
+export shape, report cohort/formula, preference, dependency, native source, or
+network boundary changed.
+
 ## Daily-journal sequence
 
 ```text

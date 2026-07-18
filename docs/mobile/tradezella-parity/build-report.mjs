@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 function resolvePluginRoot() {
@@ -221,18 +221,120 @@ const build = (input, options = {}) => {
   return patchSemanticFallback(html);
 };
 
+function resolveArtifactSource(inputPath, sourcePath) {
+  let cursor = dirname(inputPath);
+  while (true) {
+    const candidate = resolve(cursor, sourcePath);
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  throw new Error(`Artifact source path does not exist: ${sourcePath}`);
+}
+
+function validateLedgerLineage(inputPath) {
+  const artifact = JSON.parse(readFileSync(inputPath, "utf8"));
+  const ledgerSource = artifact.sources?.find((source) => source.id === "capability-ledger");
+  if (typeof ledgerSource?.path !== "string") {
+    throw new Error("Portable report is missing its capability-ledger source path.");
+  }
+  const ledgerPath = resolveArtifactSource(inputPath, ledgerSource.path);
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  if (!Array.isArray(ledger.capabilities)) {
+    throw new Error("Capability ledger has no capability array.");
+  }
+  const ids = ledger.capabilities.map((capability) => capability.id);
+  if (
+    ids.some((id) => typeof id !== "string" || id.length === 0)
+    || new Set(ids).size !== ids.length
+  ) {
+    throw new Error("Capability ledger IDs must be unique nonempty strings.");
+  }
+
+  const allowed = [
+    "shipped",
+    "prioritize-local",
+    "gated-funded",
+    "intentional-non-goal",
+  ];
+  const counts = Object.fromEntries(allowed.map((disposition) => [disposition, 0]));
+  for (const capability of ledger.capabilities) {
+    if (!allowed.includes(capability.disposition)) {
+      throw new Error(`Capability ${capability.id} has an unknown disposition.`);
+    }
+    counts[capability.disposition] += 1;
+  }
+
+  const headline = artifact.snapshot?.datasets?.headline;
+  if (!Array.isArray(headline) || headline.length !== 1) {
+    throw new Error("Portable report headline dataset must contain exactly one row.");
+  }
+  const expectedHeadline = {
+    domains: ledger.capabilities.length,
+    shipped: counts.shipped,
+    local_priorities: counts["prioritize-local"],
+    gated_or_excluded: counts["gated-funded"] + counts["intentional-non-goal"],
+  };
+  for (const [field, expected] of Object.entries(expectedHeadline)) {
+    if (headline[0]?.[field] !== expected) {
+      throw new Error(
+        `Portable report headline ${field}=${headline[0]?.[field]} does not match ledger ${expected}.`,
+      );
+    }
+  }
+
+  const labelToDisposition = {
+    "Shipped": "shipped",
+    "Prioritize local": "prioritize-local",
+    "Gated and funded": "gated-funded",
+    "Intentional non-goal": "intentional-non-goal",
+  };
+  const dispositionRows = artifact.snapshot?.datasets?.disposition_summary;
+  if (
+    !Array.isArray(dispositionRows)
+    || dispositionRows.length !== Object.keys(labelToDisposition).length
+  ) {
+    throw new Error("Portable report disposition dataset has the wrong row count.");
+  }
+  for (const [label, disposition] of Object.entries(labelToDisposition)) {
+    const matches = dispositionRows.filter((row) => row.disposition === label);
+    if (matches.length !== 1 || matches[0].count !== counts[disposition]) {
+      throw new Error(`Portable report disposition ${label} does not match the ledger.`);
+    }
+  }
+
+  const priorities = artifact.snapshot?.datasets?.priority_roadmap;
+  if (
+    !Array.isArray(priorities)
+    || priorities.length !== counts["prioritize-local"]
+    || priorities.some((row, index) => row.sequence !== index + 1)
+  ) {
+    throw new Error(
+      "Portable report roadmap row count and sequence must match prioritize-local ledger count.",
+    );
+  }
+  return {
+    capabilityDomains: ledger.capabilities.length,
+    dispositionCounts: counts,
+    priorityRows: priorities.length,
+  };
+}
+
 try {
+  const inputPath = resolve(process.argv[2] ?? "artifact.json");
   const outputPath = resolve(process.argv[3] ?? "report.html");
+  const ledgerLineage = validateLedgerLineage(inputPath);
   const result = await deliverPortableArtifact(
     {
-      inputPath: resolve(process.argv[2] ?? "artifact.json"),
+      inputPath,
       outputPath,
     },
     { build },
   );
   const semanticFallbackQa = await verifySemanticFallback(outputPath);
   process.stdout.write(
-    `${JSON.stringify({ ...result, semanticFallbackQa })}\n`,
+    `${JSON.stringify({ ...result, ledgerLineage, semanticFallbackQa })}\n`,
   );
 } catch (error) {
   const result = error?.deliveryResult ?? {

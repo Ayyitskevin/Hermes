@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty bounded Slice D increments are implemented in the current workspace.
+Thirty-one bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -1064,6 +1064,33 @@ name, accepting only one committed unrolled-back match, and failing closed on
 multiple matches. That bounded write-path parity correction is correctness
 hardening in the same milestone, not a fifth write-capable product increment.
 Both five-participant activation cohorts remain separately NOT RUN.
+
+Daily Reflection Rhythm Continuation v1 is the thirty-first bounded Slice D
+increment and the fifth write-capable product exception.
+For one private local workspace, a pure resolver reuses the canonical rhythm
+projection and accepts only one non-future date in its visible latest-seven
+cohort. A missing row must have no current day-review head; a draft or completed
+row must reconcile to one valid current head plus its exact entry-version ID,
+version, revision, and state. The returned target and nested identity are
+frozen.
+
+Only missing and draft rows render controls. Missing opens the existing new
+Daily Journal sheet with the trading-session date locked; draft opens the exact
+current immutable head. Completed, future, empty, and fictional-demo rows remain
+read-only. Before opening a sheet, the binder rederives the target and reconciles
+one unique rhythm section, one unique row, its date/status, the action kind, and
+all saved-head attributes. Detached, duplicated, stale, or tampered evidence
+fails visibly before dialog creation, secure randomness, inert state, or
+persistence. Cancel returns to the exact action. A confirmed save, an
+exact-command retry, or confirmed-refresh recovery rebuilds the Journal and
+focuses the same stable rhythm row, then the rhythm heading or screen only when
+that row cannot be proven.
+
+The slice reuses the unchanged versioned Daily Journal prepare/commit,
+optimistic-conflict, unknown-result, and reconciliation paths. It adds no
+schema, migration, store command, archive/digest/export shape, governed report,
+formula, route, preference, dependency, native source, or network path; the
+other four write-capable product exceptions remain unchanged.
 
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
