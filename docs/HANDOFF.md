@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Exact Playbook Draft Scope v1 locally · feature commit pending
-· hosted exact-commit CI pending · updated 2026-07-18
+Status: verified Exact Playbook Draft Scope v1 locally · feature commit ed74993
+· hosted exact-commit CI passed · updated 2026-07-18
 
 ## Current handoff
 
@@ -83,8 +83,13 @@ verified:
   passed. Every native acceptance row remains NOT RUN.
 - `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
 - `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
-- Feature commit and hosted exact-commit GitHub Actions — PENDING. No current
-  commit SHA or hosted CI run is claimed for Exact Playbook Draft Scope v1.
+- GitHub Actions run `29659948587` passed exact feature commit
+  `ed749937dd2d0b16085528872f48cdd7f06fa28a`. Mobile Linux contract gate job
+  `88120782755` and Legacy Python safety gate job `88120782761` both
+  completed successfully. Hosted coverage included locked dependencies,
+  typecheck, boundary/no-order checks, unit tests, the iOS verifier, all browser
+  journeys, bundle copy and Linux-to-Mac handoff evidence, dependency audit,
+  and Python lint/tests.
 - Native CocoaPods resolution, Xcode compile, Simulator, physical iPhone,
   SQLCipher/Keychain runtime, VoiceOver, Dynamic Type, hardware keyboard,
   lifecycle, and multi-scene acceptance — NOT RUN.
@@ -105,8 +110,6 @@ assumptions:
 
 open:
 
-- Before publication, complete the pending feature commit and hosted
-  exact-commit CI gates recorded above.
 - HOLD all native acceptance. On a Mac/iPhone, prove live encrypted current
   assignments, separate exact completed/draft counts, nine-facet search/scope
   composition, conflict clearing, disappearing-draft and tamper rollback,
