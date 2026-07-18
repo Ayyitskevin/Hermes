@@ -3,12 +3,12 @@
 WITH priority_roadmap(sequence, capability, first_increment, decision_gate, success_metric) AS (
   VALUES
     (1, 'Guided activation and account overview',
-      'Moderate branch-specific manual and CSV paths from capture (plus CSV receipt reconciliation) through the shipped exact account scope to the correct review.',
-      'No account mutation, financial aggregation, or advisory onboarding copy.',
-      'At least four of five moderated first-use participants reach one trusted review without correction.'),
+      'Ship exact immutable-receipt-to-review continuation for generic CSV, then moderate the shipped manual and CSV paths as separate first-use cohorts through the exact stable-ID account scope.',
+      'No identity inference, account mutation, financial aggregation, or advisory onboarding copy.',
+      'In separate five-participant cohorts, at least four manual and four CSV participants reach the linked current review without correction; CSV participants first reconcile the exact immutable receipt.'),
     (2, 'Reusable filters and saved views',
-      'Specify and ship device-local view presets after ownership, reset, stale-value, and export-exclusion rules are pinned.',
-      'A saved scope cannot silently change governed report membership.',
+      'Specify and ship device-local view presets only after protected preference ownership, reset, stale-value, lifecycle, and archive/export-exclusion rules are pinned.',
+      'No plaintext WebView localStorage downgrade; a saved scope cannot silently change governed report membership.',
       'A preset restores exact account, date, search, and facet state after relaunch and fails closed on stale values.'),
     (3, 'Named broker CSV parser packs',
       'Implement the first parser only after an anonymized real-format fixture and timezone, fee, identity, and asset semantics exist.',

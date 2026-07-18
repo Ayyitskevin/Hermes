@@ -165,10 +165,10 @@
         "mobile/src/ui/app.ts",
         "docs/HANDOFF.md"
       ],
-      "current_status": "Exact current trade facets and scoped browser filters are implemented but ephemeral. Saved presets, reusable Journal filters, persistent scope, and report rescoping remain open.",
+      "current_status": "Exact current trade facets and scoped browser filters are implemented but ephemeral. Saved presets, reusable Journal filters, persistent scope, and report rescoping remain open; private preset labels have no approved protected preference adapter.",
       "disposition": "prioritize-local",
       "rationale": "This is a low-recurring-cost way to make existing analytics faster to revisit and more useful without adding opaque calculations.",
-      "gate": "Define ownership, serialization, versioning, reset semantics, invalid-value behavior, and whether a saved scope may affect a governed report before persisting presets.",
+      "gate": "Approve an encrypted preference adapter or schema/migration design plus lifecycle and archive/export-exclusion ownership; plaintext WebView localStorage is not an acceptable downgrade. Also define serialization, versioning, reset semantics, invalid-value behavior, and whether a saved scope may affect a governed report before persisting presets.",
       "success_metric": "A saved view restores the exact account, date, search, and facet state after relaunch, fails closed on unsupported values, and never changes report membership without explicit scope disclosure."
     },
     {
@@ -220,14 +220,22 @@
         "mobile/src/ui/app.ts",
         "mobile/src/application/account-overview.ts",
         "mobile/src/ui/account-overview-view.ts",
+        "mobile/src/application/manual-capture-review-continuation.ts",
+        "mobile/src/application/manual-capture-review-continuation.test.ts",
+        "mobile/src/ui/manual-capture-review-view.ts",
+        "mobile/src/ui/manual-capture-review-view.test.ts",
+        "mobile/src/ui/manual-execution-sheet.ts",
+        "mobile/src/ui/trade-review-sheet.ts",
+        "mobile/src/ui/trades-view.ts",
+        "mobile/e2e/manual-execution.spec.ts",
         "mobile/src/ui/import-tool.ts",
         "docs/mobile/IOS_ROADMAP.md"
       ],
-      "current_status": "Hermes has private/demo onboarding, task entry points, inspectable post-import receipt reconciliation, and a read-only stable-ID account overview that resets hidden filters before opening exact all-activity Trades evidence. Branch-specific manual/CSV continuation through the correct review and the moderated four-of-five result remain open; current authored prompts already cover the basic reflection questions.",
+      "current_status": "Hermes has private/demo onboarding, task entry points, inspectable post-import receipt reconciliation, a read-only stable-ID account overview, and exact manual execution-to-review continuation for one current trade or both immutable allocation sides of an AUTO reversal, even if a later distinct execution has since closed the entry-side subject. The manual path resets hidden filters, preserves exact identity through a guide-origin review save while ordinary-card review returns normal screen focus, and retries known-commit continuation without resubmitting. CSV receipt-to-review continuation and both moderated branch results remain open; current authored prompts already cover the basic reflection questions.",
       "disposition": "prioritize-local",
       "rationale": "A clearer activation path is a bounded way to expose already-shipped capture and review capabilities without expanding financial scope; impact remains unmeasured.",
       "gate": "Usability copy must remain educational rather than advisory; account and receipt surfaces must derive from the current snapshot and preserve demo/real-workspace separation.",
-      "success_metric": "NOT RUN. In five moderated first-use sessions, at least four participants must create or import one fictional execution, reconcile its receipt on the CSV branch, enter the exact account scope, and open the correct review without facilitator correction; record path, time, and failure points rather than claiming retention."
+      "success_metric": "NOT RUN. In separate five-participant first-use cohorts, at least four manual participants and at least four generic-CSV participants must pass from fictional capture through the exact stable-ID account scope to the linked current review without facilitator correction; CSV participants must first reconcile the exact immutable receipt. Record path, elapsed time, self-corrections, and failure points; do not pool branches or claim retention/causality."
     },
     {
       "id": "playbooks-rules-templates",

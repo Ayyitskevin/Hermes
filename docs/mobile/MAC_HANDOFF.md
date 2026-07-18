@@ -717,6 +717,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
 | Daily Reflection Rhythm | status | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + demo/local continuation/layout/SQLite/network evidence |
 | Guided Account Overview | status | retained/zero-trade account order + stable-ID all-activity scope + filter reset + stale-ID failure + focus/announcement/layout/SQLite/network evidence |
+| Manual Capture Review Continuation | status | known manual result + exact execution/allocation identity + one/two current subjects + all-activity reset + review save/return + retry-only no-resubmit + tamper/focus/layout/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -848,6 +849,21 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   accounts reconcile from live device state, exact stable-ID routing clears
   transient filters without changing whole-workspace reports, and tampered
   identity fails visibly without a write or broadened scope.
+- Manual Capture Review Continuation v1 has only Linux/Chromium exact-identity,
+  guide-origin review-save continuation, ordinary-card focus return, focus,
+  320px/200% layout, local-storage, and request
+  evidence. Native VoiceOver announcement/order and state-qualified action
+  labels, hardware-keyboard focus/return, safe-area/chrome visibility,
+  SQLite/SQLCipher observation, background/foreground, force-quit/relaunch,
+  two-scene projection refresh, and 320/421-width 200% Dynamic Type are NOT RUN.
+  Exercise a normal save, duplicate reconciliation, and AUTO reversal from live
+  encrypted state; prove one execution resolves to exactly one or two current
+  subjects in one account, conflicting transient filters reset, a guide-origin
+  review save returns to the rebuilt guide while an ordinary trade-card review
+  returns normal screen focus, and known-commit reload/reconciliation/
+  render failure retries continuation without a second manual command. Keep
+  native acceptance held until stale/tampered identity fails visibly and the
+  execution, review heads, account scope, reports, and network log reconcile.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

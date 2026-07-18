@@ -286,8 +286,37 @@ submission-ready product:
   visibly without changing route or scope. The module adds no account mutation,
   balance, account-level financial metric, activation preference, write
   command, schema, archive, formula, dependency, native source, or network
-  path. The five-session moderated first-use target remains NOT RUN and is not
-  replaced by automated acceptance.
+  path. Separate five-participant manual and generic-CSV first-use cohorts
+  remain NOT RUN and are not replaced by automated acceptance.
+- Manual Capture Review Continuation v1 is the twenty-ninth bounded Slice D
+  increment and the twenty-fifth derived-only presentation/projection
+  increment. After the existing manual command is confirmed or reconciled,
+  Hermes narrows the visible commit reference to its outcome and immutable
+  execution ID; pending recovery temporarily retains the existing submission
+  acknowledgement token only until the exact destination is visible. It
+  reloads the current local projection and resolves that exact execution to one
+  current trade—or both exact subjects bearing an AUTO reversal's immutable
+  allocation fragments—inside one stable account.
+  It opens the existing all-activity account scope from an empty Trade Browser
+  state, clears dates, day, search, and all eight card facets, focuses a
+  dedicated review guide, and exposes state-qualified exact-subject actions
+  without auto-opening a review. The guide survives a guide-origin review save,
+  clears on a new capture or scope/filter/mode reset, and persists no activation
+  progress. An unacknowledged known save remains recoverable across restart; an
+  ordinary acknowledged guide does not.
+  Missing, ambiguous, excessive, cross-account, stale, detached, or tampered
+  identity fails closed. A known save followed by reload, reconciliation, or
+  destination failure offers only **Retry review continuation** and never
+  resubmits the execution. Production Chromium proves the single-target and
+  two-target reversal paths, draft continuation, filter reset, focus,
+  dismissal, tamper rejection, an injected destination-render failure after a
+  known commit with continuation-only retry and no second commit,
+  no local-preference/network write, and 320px/200% reflow. The generic-CSV
+  receipt-to-review branch and separate
+  moderated manual/CSV cohorts remain NOT RUN. No schema, store command,
+  archive, digest, export/restore shape, governed report, financial formula,
+  preference, dependency, native source, or network path changed; the same
+  four write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -488,6 +517,11 @@ management, human-gated generic-CSV asset-class semantics, and the remaining
 report families remain Phase 1 work. Native v3→v4 migration, Daily Journal
 relaunch/Files export/restore/continued writes, VoiceOver, and small-screen
 behavior still require Mac/iPhone evidence.
+Saved Views also remain held because private filter labels currently have no
+approved protected preference adapter; plaintext WebView `localStorage` is not
+an acceptable persistence downgrade. Shipping them requires an explicitly
+approved encrypted preference design, migration/lifecycle ownership, and
+archive/export-exclusion rules.
 See [the iOS roadmap](docs/mobile/IOS_ROADMAP.md) for the release sequence and
 [the Mac handoff](docs/mobile/MAC_HANDOFF.md) for Xcode/device gates.
 

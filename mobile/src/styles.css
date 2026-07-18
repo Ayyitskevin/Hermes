@@ -493,6 +493,19 @@ p { line-height: 1.55; }
 .trade-row-action { grid-column: 1 / -1; }
 .numeric { text-align: right; font-family: "B612 Mono", monospace; }
 
+.manual-capture-review,
+.manual-capture-review-failure { display: grid; gap: .85rem; min-width: 0; }
+.manual-capture-review h2,
+.manual-capture-review p,
+.manual-capture-review-failure strong,
+.manual-capture-review-failure span { min-width: 0; overflow-wrap: anywhere; }
+#manual-capture-review-title:focus-visible,
+#manual-capture-review-failure-title:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.manual-capture-review-failure[aria-busy="true"] button { cursor: progress; }
+
 .search-field { display: block; }
 .search-field input {
   padding-left: 2.7rem;

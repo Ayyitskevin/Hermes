@@ -56,7 +56,8 @@ under the provisional identifier until that gate is cleared.
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
   Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
-  Rhythm v1, Guided Account Overview v1, Compact Trades Filters v1, export, and
+  Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
+  Compact Trades Filters v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -580,11 +581,39 @@ observed plugin/device behavior:
   visibly without changing route or scope. Fictional-demo guidance is
   explicitly read-only. Production Chromium proves keyboard continuation,
   prior-filter reset, exact evidence count, focus/announcement, stale-ID
-  failure, storage/network neutrality, and 320px/200% reflow. The moderated
-  four-of-five first-use target remains NOT RUN. No account mutation,
+  failure, storage/network neutrality, and 320px/200% reflow. Separate
+  five-participant manual and generic-CSV first-use cohorts remain NOT RUN. No account mutation,
   account-level financial field, activation preference, schema, store command,
   archive, digest, governed report, formula, dependency, native source, or
   network path changed.
+- Manual Capture Review Continuation v1 uses a known manual result's immutable
+  execution ID and outcome for visible guidance while retaining the existing
+  submission acknowledgement token only until the exact destination is
+  visible. It reloads the current private projection,
+  and resolves exact allocation identity to one current trade or both exact
+  subjects bearing an AUTO reversal's immutable fragments in one account. A
+  later execution may have closed the entry-side subject without invalidating
+  recovery. It resets the full Trade Browser to
+  that all-activity account, focuses a dedicated guide after the scope summary,
+  and exposes state-qualified exact-subject review actions without auto-opening
+  a sheet. Guide-origin review saves retain and rebuild the guide while an
+  ordinary trade-card review returns normal screen focus; a new capture,
+  scope/filter change, or workspace-mode change clears it. An ordinary
+  acknowledged guide clears on document reload; an unacknowledged known save
+  remains recoverable and reopens only after exact reconciliation.
+  Missing, ambiguous, cross-account, stale, detached, or tampered identity
+  fails closed. Once save is known, reload/reconciliation/render failure offers
+  only continuation retry and never resubmits the execution. Production
+  Chromium proves single- and two-target paths, draft continuation, conflicting
+  filter reset, ordinary-card focus return, focus/dismissal, tamper rejection,
+  an injected destination-render failure after a known commit with
+  continuation-only retry and zero second commit reads, storage/network
+  neutrality,
+  and 320px/200% reflow. CSV receipt-to-review continuation and separate
+  moderated manual/CSV cohorts remain NOT RUN. No schema, store command,
+  archive/digest/export shape, governed report, financial formula, preference,
+  dependency, native source, or network path changed; the same four
+  write-capable exceptions remain.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -686,7 +715,8 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add prioritized broker-specific CSV adapters behind the generic mapping core.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
-- Add templates, reminders, saved view presets, fuller vocabulary/playbook
+- Add templates, reminders, saved view presets only after an approved encrypted
+  preference owner/migration and archive-export exclusion contract, fuller vocabulary/playbook
   management, drawdown/time-of-day/symbol reports, deeper setup
   comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
@@ -754,9 +784,9 @@ Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
-Overview v1, matching-runtime local restore, and all eight governed reports are
-implemented. Twenty-eight bounded Slice D increments are implemented in total;
-the twenty-four
+Overview v1, Manual Capture Review Continuation v1, matching-runtime local
+restore, and all eight governed reports are implemented. Twenty-nine bounded
+Slice D increments are implemented in total; the twenty-five
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade

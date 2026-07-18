@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-eight bounded Slice D increments are implemented in the current workspace.
+Twenty-nine bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -971,10 +971,57 @@ whole-workspace; no account-level financial field or new formula is added.
 Fictional-demo guidance remains explicit and read-only. Production Chromium
 proves keyboard continuation, reset from conflicting prior filters, exact
 account evidence, focus/announcement, stale-ID failure, storage/network
-neutrality, and 320px/200% reflow. The separate moderated first-use result of at
-least four of five remains NOT RUN. No schema, store command, account mutation,
+  neutrality, and 320px/200% reflow. Separate five-participant manual and
+generic-CSV first-use cohorts remain NOT RUN. No schema, store command, account mutation,
 archive, digest, governed-report definition, preference, dependency, native
 source, or network path changed.
+
+Manual Capture Review Continuation v1 is the twenty-ninth bounded Slice D
+increment and the twenty-fifth derived-only presentation/projection increment.
+Only a confirmed or reconciled manual result's immutable `executionId` and
+outcome drive the visible continuation. Until that destination is visible, the
+existing submission acknowledgement token remains available to the recovery
+protocol; successful presentation acknowledges it. A fresh local snapshot must
+resolve that exact execution to one current trade, or to the two current trade
+subjects created by one AUTO reversal, with exactly one allocation fragment per
+subject and one stable account. Symbol, label, time, recency, row order, and DOM
+text are never fallback identity.
+
+The two-subject case is accepted only when immutable allocation evidence proves
+one exit plus one opposite entry for the same represented instrument and
+execution facts. Recovery does not require the entry-side trade to remain open:
+a later distinct execution may already have closed it without invalidating the
+known reversal.
+
+The destination reuses Guided Account Overview's exact all-activity account
+scope and starts from the empty Trade Browser state, clearing dates, selected
+day, search, and all eight facets. A dedicated guide appears immediately after
+the scope summary, keeps every account trade visible, and offers one exact
+state-qualified action per linked subject: **Review trade**, **Continue draft**,
+or **Open completed review**. It never auto-opens a sheet. A save from a review
+opened by the manual guide rebuilds the exact target and returns focus to the
+guide; an ordinary trade-card review leaves the guide present but returns
+normal screen focus;
+starting another capture, changing scope or filters, or switching workspace
+mode clears the transient continuation. An ordinary acknowledged guide does
+not survive document reload; an unacknowledged known save is intentionally
+recoverable and reopens only after exact reconciliation.
+
+Invalid, missing, duplicate, excessive, cross-account, stale, detached, or
+tampered identity fails closed. Once the execution save is known, a workspace
+reload, reconciliation, or destination failure retains the prior route and
+Trade Browser state and exposes only **Retry review continuation**; retry
+reloads and rederives from the same immutable execution identity and never
+calls the manual save again. Production Chromium proves single-target,
+two-target reversal, draft-state continuation, conflicting-filter reset,
+ordinary-card focus return, focus/dismissal, tamper rejection, an injected
+destination-render failure after a known commit with continuation-only retry
+and zero second commit reads, local-storage/request neutrality, and
+320px/200% reflow. Generic-CSV receipt-to-review continuation remains open, and
+the manual and CSV first-use cohorts remain separately NOT RUN. No schema,
+store command, archive, digest, export/restore shape, governed-report
+definition, financial formula, preference, dependency, native source, or
+network path changed; the same four write-capable exceptions remain.
 
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
@@ -993,6 +1040,10 @@ Still open in Slice D:
   families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
   management, and fuller vocabulary/playbook management.
+- Saved presets require an approved protected preference owner. Private labels
+  must not be downgraded to plaintext WebView `localStorage`; approve an
+  encrypted adapter or schema/migration design plus lifecycle and
+  archive/export-exclusion rules before implementation.
 - Bounded screenshots, camera/photo flow, orphan cleanup, and export coverage.
 - Share Sheet/Files import, local reminders, biometric lock, and a review widget
   where platform behavior supports it.
@@ -1130,7 +1181,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-  twenty-eight Slice D increments add Plan Check, governed Setup Breakdown,
+  twenty-nine Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1140,7 +1191,8 @@ Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
 Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
 Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
-Rhythm v1, and Guided Account Overview v1. The twenty-four
+Rhythm v1, Guided Account Overview v1, and Manual Capture Review Continuation
+v1. The twenty-five
 presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing

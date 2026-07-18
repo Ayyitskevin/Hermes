@@ -447,8 +447,61 @@ closed and leaves route and browser scope unchanged.
 
 The guidance state is rebuilt from the current snapshot and never persisted as
 activation progress. Fictional-demo copy remains explicit and exposes no
-mutation control. The moderated four-of-five first-use target is separate human
-evidence and remains NOT RUN.
+mutation control. Separate five-participant manual and generic-CSV first-use
+cohorts remain NOT RUN.
+
+### Manual-capture review continuation
+
+Manual Capture Review Continuation v1 is the twenty-ninth bounded Slice D
+increment and the twenty-fifth derived-only presentation/projection increment.
+It adds no ledger fact. After `commitManualSafely` has returned a known
+`committed` or reconciled `duplicate` result, the visible commit reference is
+narrowed to that outcome and immutable execution ID. Until the exact
+destination is visibly established, pending recovery temporarily retains the
+existing submission acknowledgement token in the pre-existing recovery
+protocol. The application reloads the local workspace and derives the
+destination from current `TradePreview.executions` allocation identity;
+successful presentation then acknowledges that submission.
+
+The resolver requires a trimmed, bounded, control-free execution ID; local
+provenance; one or two affected current subjects; exactly one matching
+allocation fragment per subject; unique stable subject IDs; and one stable
+account. Two subjects are allowed only when one AUTO reversal execution has one
+exit allocation and one opposite entry allocation with matching represented
+instrument and execution facts. The entry-side subject may now be closed by a
+later distinct execution; recovery validates the immutable reversal allocation,
+not that mutable open/closed status. It builds the existing exact all-activity
+account scope and rechecks each target inside that scope. Symbol, account label,
+timestamp, recency, display order, and DOM text are never identity fallbacks.
+
+```text
+known manual result { outcome, executionId }
+  → reload current private workspace
+  → exact execution-allocation lookup
+  → require 1–2 unique current subjects in one account
+  → build empty-state + exact-account Trade Browser scope
+  → render all account trades + exact linked-review actions
+```
+
+Dates, selected day, search, and all eight exact card facets reset at the
+destination; Dashboard and governed Reports remain whole-workspace. The guide
+is transient, preserves exact identity through a guide-origin review save, and clears
+on a new capture, scope/filter mutation, or workspace-mode change. An ordinary
+acknowledged guide clears on document reload; an unacknowledged known save uses
+the existing durable recovery record to reopen only after exact reconciliation.
+Guide state itself is absent from SQLite, browser journal state, archives, exports,
+restores, report digests, and preferences.
+
+Once the manual result is known, workspace-reload, exact-reconciliation, or
+destination-render failure exposes a focused retry-only surface while retaining
+the prior route and Trade Browser state. Retry repeats only reload and the pure
+identity derivation with the same execution ID; it never invokes the manual
+commit again. Missing, malformed, duplicate, excessive, cross-account, stale,
+detached, or tampered evidence fails closed. The generic-CSV continuation and
+separate moderated manual/CSV first-use cohorts remain open and NOT RUN. No
+schema, store command, receipt, archive/digest/export shape, governed report,
+financial formula, dependency, native source, or network path changed; the same
+four write-capable exceptions remain.
 
 ## Daily-journal sequence
 

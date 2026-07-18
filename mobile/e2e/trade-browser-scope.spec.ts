@@ -209,6 +209,8 @@ test("activity month controls navigate only months with local allocation evidenc
     await page.locator("#manual-executed-at").fill(input.executedAt);
     await page.getByRole("button", { name: "Review execution" }).click();
     await page.getByRole("button", { name: "Save execution" }).click();
+    await expect(page.locator("#manual-capture-review-title")).toBeFocused();
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
   };
 
@@ -229,6 +231,8 @@ test("activity month controls navigate only months with local allocation evidenc
   });
 
   const monthGroup = page.getByRole("group", { name: "Activity month" });
+  await expect(monthGroup.getByRole("heading", { name: "July 2026" })).toBeVisible();
+  await monthGroup.getByRole("button", { name: "Previous activity month" }).click();
   await expect(monthGroup.getByRole("heading", { name: "June 2026" })).toBeVisible();
   await expect(page.locator("button[data-calendar-day]")).toHaveCount(1);
   await expect(monthGroup.getByRole("button", { name: "Previous activity month" })).toBeDisabled();

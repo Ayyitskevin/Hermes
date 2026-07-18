@@ -1,9 +1,200 @@
 # Hermes Journal — active mobile handoff
 
+Status: verified Manual Capture Review Continuation v1 locally · hosted
+exact-commit CI pending · updated 2026-07-17
+
+## Current handoff
+
+task: Deliver Manual Capture Review Continuation v1 from a known manual commit
+to the exact current review target without resubmitting the execution, inferring
+identity, changing governed data, or broadening Hermes's local/offline boundary.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- A pure continuation resolver accepts only a known `committed` or reconciled
+  `duplicate` outcome plus a bounded immutable execution ID, reloads the current
+  private projection, and finds one exact current subject or the two exact
+  allocation subjects of one structurally valid AUTO reversal in one stable
+  account. It rejects missing, ambiguous, duplicated, excessive,
+  cross-account, detached, stale, and tampered evidence without symbol, label,
+  timestamp, recency, row-order, or DOM inference.
+- The two-target branch requires one exact exit and one exact opposite entry
+  with matching represented instrument and execution facts. Recovery correctly
+  tolerates a later distinct execution having closed the entry-side subject;
+  mutable current open status is not mistaken for immutable reversal evidence.
+- A successful continuation resets the Trade Browser to the existing exact
+  all-activity account scope, clearing dates, selected day, search, and all
+  eight facets. Every account trade remains visible. A dedicated guide exposes
+  one state-qualified stable-subject action per linked trade and does not
+  auto-open a review.
+- A guide-origin review save rebuilds the exact target and returns focus to the
+  guide. An ordinary trade-card review preserves the visible guide but returns
+  normal screen focus. New capture, filter/scope mutation, and workspace-mode
+  changes clear the transient guide.
+- The visible commit reference is narrowed to outcome plus execution ID.
+  Pending recovery temporarily retains the existing submission ID only until
+  visible destination acknowledgment. A known destination-render failure
+  offers continuation-only retry with no second commit read. Startup and
+  post-onboarding recovery re-query current recoverable executions, rederive
+  from the fresh projection, and acknowledge only after the exact destination
+  is visible.
+- Modal generation ownership prevents a delayed retry from rendering or
+  stealing focus behind Settings or another inert modal. A superseded retry
+  resets its busy state, Settings close restores the visible failure heading,
+  and continuation alerts never interpolate private adapter detail.
+- README, product blueprint, local-ledger contract, iOS roadmap, Mac handoff,
+  capability ledger, priority SQL, portable report, and this handoff now cover
+  29 bounded Slice D increments, 25 derived-only presentation/projection
+  increments, and the same four write-capable exceptions.
+- The source-backed benchmark remains 20 unique domains with 6 shipped,
+  6 prioritize-local, 6 gated-funded, and 2 intentional non-goals. Manual
+  capture continuation is shipped inside the broader prioritize-local guided
+  activation domain; generic-CSV continuation and both human cohorts remain
+  open.
+- No schema, migration, store command, archive/digest/export/restore shape,
+  governed-report cohort/formula/version/checksum, financial aggregation,
+  preference, dependency, native source, network path, credential, destructive
+  flow, order execution, advice, or public profit ranking was added.
+
+verified:
+
+- Regression-first and adversarial proof covers exact single-target and AUTO
+  reversal destinations, a later-closed reversal entry subject, unrelated
+  same-account execution-ID collision, tampered targets, hidden-filter reset,
+  guide versus ordinary review origins, destination-render failure, retry-only
+  recovery, modal supersession, post-onboarding recovery, privacy-safe errors,
+  storage/request neutrality, and 320px/200% reflow.
+- Independent technical review found and drove fixes for hidden-modal retry
+  acknowledgment, unrelated two-target collisions, stale onboarding recovery,
+  raw adapter alerts, and mutable reversal status. Final re-review: PASS, no
+  must-fix findings.
+- Independent UX/accessibility review found and drove fixes for sticky-chrome
+  focus, retry busy-state recovery, modal supersession, and Settings-close
+  focus. Final re-review: PASS, no must-fix findings.
+- Independent evidence review reconciled the implementation and held stale or
+  overbroad claims. The active docs now distinguish visible outcome/execution
+  identity from temporary pending submission acknowledgment, name only the
+  injected destination-render failure, keep the manual and generic-CSV studies
+  separate, and include every new evidence path.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 63 files, 740 tests passed.
+- Focused continuation projection/view/review-origin Vitest inventory — 25
+  tests passed, including the later-closed reversal recovery fixture.
+- `cd mobile && npm run test:e2e -- e2e/manual-execution.spec.ts` — exit 0;
+  all 9 manual-execution journeys passed.
+- `cd mobile && npm run test:e2e` — exit 0; all 93 production-Chromium journeys
+  passed after the pre-existing activity-month fixture was updated to consume
+  the new intentional review-guide destination.
+- `cd mobile && npm run ios:copy`, then `npm run ios:sync` — exit 0. Vite
+  transformed 86 modules; the existing >500 kB warning remains. Capacitor found
+  only `@capacitor-community/sqlite@8.1.0` and explicitly skipped
+  CocoaPods/xcodebuild on Linux.
+- `cd mobile && npm run verify:ios-sync` — exit 0. Six production files matched
+  the iOS public copy byte-for-byte with SHA-256
+  `dd5b2b4119385115d385f9cd1c6f2cd94f5feb63d5aa54b3a519ce61edd503a8`;
+  all native acceptance rows remain NOT RUN.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- `node docs/mobile/tradezella-parity/build-report.mjs
+  docs/mobile/tradezella-parity/artifact.json
+  docs/mobile/tradezella-parity/report.html` — exit 0; validation, packaging,
+  verification, source keyboard interaction, 1440/390 responsive checks, and
+  script-stripped fallback checks passed for 11 blocks, 1 chart, 1 metric
+  strip, and 1 table. Fallback client/scroll widths reconciled at 1425/1425
+  desktop and 375/375 mobile.
+- SQL.js execution of `headline.sql`, `disposition.sql`, and
+  `priority-roadmap.sql` reproduced 20/6/6/8 headline counts, exact 6/6/6/2
+  dispositions, and six ordered local-first rows. System `sqlite3` was absent;
+  the repository's pinned `sql.js@1.14.1` executed the same SQL instead.
+- SHA-256: report HTML
+  `ade8181dcb32874f168e8cba994fdcd37c36ffc3cd9666dd3008d64411057ec9`;
+  artifact JSON
+  `3b97b94c952dc11f5f327dcbd93ca953f6d2244f8b6c3fb7f18d7decd00212e0`;
+  capability ledger
+  `d6d0e101508ecfd9d31847cba4a2948c4c8600e0559eed6f32c3183148baef6e`;
+  priority SQL
+  `a1fdad49029d4be5196731b4521b4b8bac2b1effe989a75bfe5412e6291436a1`.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- JSON syntax, builder syntax, report build receipt, SQL output,
+  generated-bundle parity, and `git diff --check` — passed.
+- Handoff topology checks — 1 current section, 35 prior-milestone markers, and
+  36 complete `task/stage/lane/produced/verified/assumptions/open` schema
+  blocks.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job remains required.
+
+assumptions:
+
+- The existing manual store owns commit idempotency and its durable recovery
+  record. This slice begins only after the store has returned a known outcome;
+  continuation retry must never call the commit again.
+- Exact execution and allocation identities in the fresh current projection are
+  the only routing evidence. Symbol, label, time, recency, and position in a
+  rendered list are presentation only.
+- One manual execution may affect two subjects only as an AUTO reversal. The
+  entry-side subject can later close under a distinct execution while the
+  original reversal fragments remain valid.
+- Reset-all is intentional: retaining hidden dates, day, search, or facets
+  would make the destination disagree with the exact guide.
+- This increment is intended to reduce capture-to-review friction; no causal
+  activation, retention, or trading-outcome benefit has been measured.
+- Browser and Linux bundle evidence does not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
+  publication before this milestone can be passed downstream.
+- Generic-CSV receipt-to-review continuation remains the next autonomous
+  branch. It must start from the exact immutable receipt, reconcile explicit
+  row outcomes, resolve stable current subjects, and reuse the exact account
+  scope without guessed broker semantics or resubmission.
+- Two distinct moderated fictional-data studies are NOT RUN: five manual
+  participants and five generic-CSV participants. At least four participants
+  in each cohort must reach the linked current review without facilitator
+  correction; CSV participants must first reconcile the exact receipt. Do not
+  pool cohorts or infer retention/causality from browser automation.
+- Saved Views remains held until protected preference ownership, encryption or
+  an approved schema/migration, reset/stale-value lifecycle, and archive/export
+  exclusion are designed. Plaintext WebView localStorage is not acceptable.
+- Symbol Breakdown and every later observational report remain held on explicit
+  eligibility, version, checksum, conservation, exclusion, restore-equality,
+  and stable-ID drill-down decisions.
+- HOLD all native acceptance. CocoaPods, Xcode compile, Simulator, physical
+  iPhone, SQLite/SQLCipher/Keychain, Files/photos, safe areas, interruption,
+  background/foreground, force-quit/relaunch, multi-scene, VoiceOver, and
+  Dynamic Type were NOT RUN.
+- Existing human gates remain: generic-CSV asset semantics; atomic batch
+  durable recovery; approved Delete All Data; and removal, wrapping, or explicit
+  acceptance of the pinned SQLite plugin's HTTP-download bridge and
+  database-path console print.
+- Credentialed broker/prop sync, licensed replay, reproducible backtesting,
+  private AI, mentor/community services, and pricing/packaging remain
+  gated-funded domains requiring explicit product, rights, security, privacy,
+  commercial, moderation, recurring-cost, and human decisions.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active after this slice.
+
+## Prior milestone — Guided Account Overview v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Manual Capture Review Continuation v1 handoff above.
+
 Status: verified Guided Account Overview v1 locally · hosted exact-commit CI
 pending · updated 2026-07-17
 
-## Current handoff
+### Historical handoff
 
 task: Deliver Guided Account Overview v1 as a derived-only activation path from
 the Dashboard into one exact existing Trade Browser account scope, while

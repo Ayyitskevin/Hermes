@@ -7,6 +7,9 @@ import type {
   TradeBrowserResult,
 } from "../application/trade-browser";
 import { TRADE_BROWSER_SEARCH_MAX_CODE_POINTS } from "../application/trade-browser";
+import type {
+  ManualCaptureReviewContinuation,
+} from "../application/manual-capture-review-continuation";
 import { validateDailyJournalIsoDate } from "../application/prepare-daily-journal";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
@@ -21,6 +24,7 @@ import {
   workspaceTodayIsoDate,
 } from "./daily-journal-sheet";
 import { manualExecutionAction } from "./manual-execution-sheet";
+import { manualCaptureReviewSection } from "./manual-capture-review-view";
 import { reviewTradeAction } from "./trade-review-sheet";
 
 export interface TradeScopeInput {
@@ -397,6 +401,7 @@ export function calendarDayReflectionContinuation(
 export function tradesView(
   snapshot: JournalWorkspaceSnapshot,
   browser: TradeBrowserResult,
+  manualCapture: ManualCaptureReviewContinuation | null = null,
 ): string {
   const total = browser.evidence.length;
   const visibleSubjects = new Set(
@@ -435,6 +440,7 @@ export function tradesView(
       calendarDayStepper(browser),
     )}
     ${snapshot.accountOptions.length === 0 ? "" : scopeSummary(browser, snapshot.currencyCode)}
+    ${manualCapture === null ? "" : manualCaptureReviewSection(snapshot, manualCapture)}
     ${snapshot.provenance === "demo" ? "" : manualExecutionAction()}
     ${snapshot.accountOptions.length === 0 ? "" : viewFilters(browser)}
     <label class="search-field"><span class="sr-only">${escapeHtml(searchLabel)}</span><input id="trade-search" type="search" maxlength="${TRADE_BROWSER_SEARCH_MAX_CODE_POINTS}" aria-describedby="${searchDescribedBy}" aria-controls="trade-card-list trade-count trade-empty" placeholder="Search symbol, account, setup, or tag" autocomplete="off" value="${escapeHtml(browser.state.query)}" /></label>

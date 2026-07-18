@@ -27,7 +27,9 @@ function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
   return trade.assetClass === "etf" ? "ETF" : "Stock";
 }
 
-export type TradeReviewDisplayOrigin = "dashboard-review-progress";
+export type TradeReviewDisplayOrigin =
+  | "dashboard-review-progress"
+  | "manual-capture-review";
 
 export function reviewTradeAction(
   trade: TradePreview,
@@ -503,6 +505,8 @@ function tradeReviewReportSource(
 }
 const DASHBOARD_REVIEW_PROGRESS_ORIGIN: TradeReviewDisplayOrigin =
   "dashboard-review-progress";
+const MANUAL_CAPTURE_REVIEW_ORIGIN: TradeReviewDisplayOrigin =
+  "manual-capture-review";
 
 interface DashboardReviewProgressContext {
   readonly heading: HTMLElement;
@@ -575,8 +579,34 @@ function dashboardReviewProgressOrigin(
     return trigger.closest(".review-progress-card, [data-dashboard-review-progress]") === null
       ? false : null;
   }
-  if (origin !== DASHBOARD_REVIEW_PROGRESS_ORIGIN) return null;
+  if (origin !== DASHBOARD_REVIEW_PROGRESS_ORIGIN) {
+    return origin === MANUAL_CAPTURE_REVIEW_ORIGIN ? false : null;
+  }
   return dashboardReviewProgressContext(root)?.action === trigger ? true : null;
+}
+
+function manualCaptureReviewOrigin(
+  root: HTMLElement,
+  trigger: HTMLButtonElement,
+): boolean | null {
+  const origin = trigger.dataset.tradeReviewOrigin;
+  const section = trigger.closest<HTMLElement>(
+    "[data-manual-capture-review-continuation]",
+  );
+  if (origin === undefined) return section === null ? false : null;
+  if (origin !== MANUAL_CAPTURE_REVIEW_ORIGIN) {
+    return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN ? false : null;
+  }
+  const sections = Array.from(root.querySelectorAll<HTMLElement>(
+    "[data-manual-capture-review-continuation]",
+  ));
+  return section !== null
+    && sections.length === 1
+    && sections[0] === section
+    && root.contains(section)
+    && section.contains(trigger)
+    ? true
+    : null;
 }
 
 function showTradeReviewOpenError(
@@ -638,6 +668,7 @@ function focusAfterTradeReviewRefresh(
   reportSource: TradeReviewReportSource | undefined,
   reviewQueueOrigin: boolean,
   dashboardReviewOrigin: boolean,
+  manualCaptureOrigin: boolean,
 ): void {
   let target: HTMLElement | null = null;
   if (reportSource !== undefined) {
@@ -648,6 +679,13 @@ function focusAfterTradeReviewRefresh(
       ?? root.querySelector<HTMLElement>("#review-queue-title");
   } else if (dashboardReviewOrigin) {
     target = dashboardReviewProgressContext(root)?.heading ?? null;
+  } else if (manualCaptureOrigin) {
+    const manualCaptureHeadings = Array.from(root.querySelectorAll<HTMLElement>(
+      "[data-manual-capture-review-title]",
+    ));
+    target = manualCaptureHeadings.length === 1
+      ? manualCaptureHeadings[0] ?? null
+      : null;
   }
   if (target !== null) {
     const topbarBottom = root.querySelector<HTMLElement>(".topbar")
@@ -695,14 +733,19 @@ export function bindTradeReviewActions(
         root,
         trigger,
       );
-      const originConflict = dashboardReviewOrigin === true && (
-        reportSource !== undefined || reviewQueueOrigin
-      );
+      const manualCaptureOrigin = manualCaptureReviewOrigin(root, trigger);
+      const originCount = [
+        reportSource !== undefined,
+        reviewQueueOrigin,
+        dashboardReviewOrigin === true,
+        manualCaptureOrigin === true,
+      ].filter(Boolean).length;
       if (
         reportSource === null
         || trade === null
         || dashboardReviewOrigin === null
-        || originConflict
+        || manualCaptureOrigin === null
+        || originCount > 1
       ) {
         showTradeReviewOpenError(root, trigger);
         return;
@@ -893,7 +936,13 @@ export function bindTradeReviewActions(
         uncertain = false;
         backdrop.remove();
         setBackgroundInert(false);
-        focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
+        focusAfterTradeReviewRefresh(
+          root,
+          reportSource,
+          reviewQueueOrigin,
+          dashboardReviewOrigin,
+          manualCaptureOrigin,
+        );
       };
 
       const close = (force = false) => {
@@ -906,7 +955,13 @@ export function bindTradeReviewActions(
         backdrop.remove();
         setBackgroundInert(false);
         if (returnFocus.isConnected) returnFocus.focus({ preventScroll: true });
-        else focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
+        else focusAfterTradeReviewRefresh(
+          root,
+          reportSource,
+          reviewQueueOrigin,
+          dashboardReviewOrigin,
+          manualCaptureOrigin,
+        );
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
         button.addEventListener("click", () => close());
@@ -947,7 +1002,13 @@ export function bindTradeReviewActions(
             uncertain = false;
             backdrop.remove();
             setBackgroundInert(false);
-            focusAfterTradeReviewRefresh(root, reportSource, reviewQueueOrigin, dashboardReviewOrigin);
+            focusAfterTradeReviewRefresh(
+              root,
+              reportSource,
+              reviewQueueOrigin,
+              dashboardReviewOrigin,
+              manualCaptureOrigin,
+            );
           } catch {
             showCommittedRefreshFailure();
           }

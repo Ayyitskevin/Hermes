@@ -7,6 +7,11 @@ import type { PreparedManualExecution } from "../application/prepare-manual-exec
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot } from "../core/types";
 
+export interface ManualExecutionRefreshResult {
+  readonly status: "complete" | "pending";
+  readonly focus: () => void;
+}
+
 export function manualExecutionAction(label = "Add execution"): string {
   return `<button class="primary-button" type="button" data-manual-execution>${escapeHtml(label)}</button>`;
 }
@@ -127,7 +132,13 @@ export function bindManualExecutionActions(
   application: JournalApplication,
   snapshot: JournalWorkspaceSnapshot,
   setBackgroundInert: (inert: boolean) => void,
-  refresh: (announcement: string) => Promise<void>,
+  startCapture: () => void,
+  cancelCapture: () => HTMLElement | null,
+  refresh: (
+    result: ManualExecutionCommitResult,
+    submissionId: string,
+    announcement: string,
+  ) => Promise<ManualExecutionRefreshResult>,
 ): void {
   if (snapshot.provenance === "demo") return;
   root.querySelectorAll<HTMLButtonElement>("[data-manual-execution]").forEach((trigger) => {
@@ -161,6 +172,7 @@ export function bindManualExecutionActions(
         trigger.disabled = false;
         return;
       }
+      startCapture();
       setBackgroundInert(true);
       let prepared: PreparedManualExecution | null = null;
       let saving = false;
@@ -172,7 +184,7 @@ export function bindManualExecutionActions(
         backdrop.remove();
         setBackgroundInert(false);
         returnFocus.disabled = false;
-        returnFocus.focus();
+        (cancelCapture() ?? returnFocus).focus();
       };
       const setSaving = (value: boolean) => {
         saving = value;
@@ -264,28 +276,29 @@ export function bindManualExecutionActions(
         const announcement = result.outcome === "duplicate"
           ? "This execution was already saved; no duplicate was created."
           : `${prepared.side === "BUY" ? "Buy" : "Sell"} execution for ${prepared.symbol} saved on device.`;
-        backdrop.remove();
-        setBackgroundInert(false);
-        returnFocus.disabled = false;
+        let refreshResult: ManualExecutionRefreshResult;
         try {
-          await refresh(announcement);
-          root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
-        } catch (error) {
+          refreshResult = await refresh(result, prepared.submissionId, announcement);
+        } catch {
+          backdrop.remove();
+          setBackgroundInert(false);
+          returnFocus.disabled = false;
           returnFocus.focus();
           window.alert(
-            error instanceof Error
-              ? `The execution was saved, but the journal could not refresh: ${error.message}`
-              : "The execution was saved, but the journal could not refresh.",
+            "The execution was saved, but the journal could not refresh. Reopen Hermes before entering it again.",
           );
           return;
         }
+        backdrop.remove();
+        setBackgroundInert(false);
+        returnFocus.disabled = false;
+        refreshResult.focus();
+        if (refreshResult.status === "pending") return;
         try {
           await application.acknowledgeManualExecution(prepared.submissionId);
-        } catch (error) {
+        } catch {
           window.alert(
-            error instanceof Error
-              ? `The execution is visible, but its save confirmation remains pending: ${error.message}`
-              : "The execution is visible, but its save confirmation remains pending.",
+            "The execution is visible, but its save confirmation remains pending. Hermes will retry recovery after restart.",
           );
         }
       });

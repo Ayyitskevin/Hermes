@@ -5,6 +5,11 @@ import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
 import {
+  buildManualCaptureReviewContinuation,
+  type ManualCaptureCommitReference,
+  type ManualCaptureReviewContinuation,
+} from "../application/manual-capture-review-continuation";
+import {
   buildTradeBrowser,
   EMPTY_TRADE_BROWSER_STATE,
   scopedActivityDayNeighbors,
@@ -33,7 +38,14 @@ import {
   bindManualExecutionActions,
   manualCaptureCard,
   manualExecutionAction,
+  type ManualExecutionRefreshResult,
 } from "./manual-execution-sheet";
+import {
+  bindManualCaptureReviewFailure,
+  bindManualCaptureReviewView,
+  focusManualCaptureElement,
+  manualCaptureReviewFailure,
+} from "./manual-capture-review-view";
 import {
   bindDailyJournalActions,
   dailyJournalAction,
@@ -63,6 +75,10 @@ interface AppDependencies {
   readonly root: HTMLElement;
   readonly application: JournalApplication;
   readonly onboarding: OnboardingPreferences;
+}
+
+interface PendingManualCaptureReference extends ManualCaptureCommitReference {
+  readonly submissionId: string | null;
 }
 
 const TABS: ReadonlyArray<{ id: TabId; label: string; glyph: string }> = [
@@ -429,10 +445,11 @@ function viewFor(
   snapshot: JournalWorkspaceSnapshot,
   persistence: JournalApplication["persistence"],
   browser: TradeBrowserResult,
+  manualCapture: ManualCaptureReviewContinuation | null,
 ): string {
   switch (tab) {
     case "dashboard": return dashboardView(snapshot, browser);
-    case "trades": return tradesView(snapshot, browser);
+    case "trades": return tradesView(snapshot, browser, manualCapture);
     case "journal": return journalView(snapshot);
     case "reports": return reportsView(snapshot);
     case "more": return moreView(snapshot, persistence);
@@ -730,6 +747,7 @@ function bindOnboarding(
   preferences: OnboardingPreferences,
   setBackgroundInert: (inert: boolean) => void,
   chooseWorkspace: (mode: "local" | "demo") => Promise<void>,
+  afterComplete: (mode: "local" | "demo") => Promise<void>,
 ): void {
   if (preferences.isComplete()) return;
   setBackgroundInert(true);
@@ -759,6 +777,7 @@ function bindOnboarding(
     root.querySelector(".onboarding")?.remove();
     setBackgroundInert(false);
     root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+    await afterComplete(mode);
   };
   next?.addEventListener("click", () => {
     if (page < 2) {
@@ -773,7 +792,6 @@ function bindOnboarding(
 }
 
 export async function startApp({ root, application, onboarding }: AppDependencies): Promise<void> {
-  const recoveredManualExecutions = await application.loadRecoverableManualExecutions();
   let snapshot = await application.loadWorkspace();
   root.innerHTML = shellTemplate();
   const screen = root.querySelector<HTMLElement>("#screen");
@@ -783,6 +801,22 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   let tradeBrowserState: TradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
   let returnFocus: HTMLElement | null = null;
   let pendingScopeNotice: string | null = null;
+  let manualCaptureReference: ManualCaptureCommitReference | null = null;
+  let manualCaptureContinuation: ManualCaptureReviewContinuation | null = null;
+  let pendingManualCaptureReference: PendingManualCaptureReference | null = null;
+  let manualCaptureAttemptGeneration = 0;
+
+  const clearManualCaptureGuidance = () => {
+    manualCaptureAttemptGeneration += 1;
+    manualCaptureReference = null;
+    manualCaptureContinuation = null;
+    pendingManualCaptureReference = null;
+  };
+  const clearManualCaptureGuidanceInPlace = () => {
+    clearManualCaptureGuidance();
+    root.querySelector("[data-manual-capture-review-continuation]")?.remove();
+    root.querySelector("[data-manual-capture-review-failure]")?.remove();
+  };
 
   const queueScopeNotice = (notice: string) => {
     pendingScopeNotice = pendingScopeNotice === null
@@ -877,6 +911,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   };
 
   const setBackgroundInert = (inert: boolean) => {
+    if (inert) manualCaptureAttemptGeneration += 1;
     document.body.classList.toggle("modal-open", inert);
     root.querySelectorAll<HTMLElement>(".skip-link, .topbar, #screen, .tabbar").forEach((element) => {
       if (inert) {
@@ -901,7 +936,11 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   const closeSettings = () => {
     if (settings) settings.hidden = true;
     setBackgroundInert(false);
-    returnFocus?.focus();
+    const pendingHeading = root.querySelector<HTMLElement>(
+      "[data-manual-capture-review-failure-title]",
+    );
+    if (pendingHeading !== null) focusManualCaptureElement(root, pendingHeading);
+    else returnFocus?.focus();
   };
   const updateChrome = () => {
     const badge = root.querySelector<HTMLElement>("#mode-badge");
@@ -955,13 +994,60 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       );
     }
     tradeBrowserState = browser.state;
-    if (screen) screen.innerHTML = viewFor(tab, snapshot, application.persistence, browser);
+    if (snapshot.provenance !== "local") {
+      clearManualCaptureGuidance();
+    } else if (manualCaptureReference !== null) {
+      if (
+        manualCaptureContinuation !== null
+        && (
+          browser.state.accountId !== manualCaptureContinuation.accountId
+          || browser.state.activityFrom !== null
+          || browser.state.activityThrough !== null
+          || browser.state.selectedDay !== null
+        )
+      ) {
+        clearManualCaptureGuidance();
+      } else {
+        try {
+          manualCaptureContinuation = buildManualCaptureReviewContinuation(
+            snapshot,
+            manualCaptureReference,
+          );
+        } catch {
+          pendingManualCaptureReference = Object.freeze({
+            ...manualCaptureReference,
+            submissionId: null,
+          });
+          manualCaptureReference = null;
+          manualCaptureContinuation = null;
+        }
+      }
+    }
+    const manualCaptureForView = tab === "trades" ? manualCaptureContinuation : null;
+    if (screen) {
+      screen.innerHTML = viewFor(
+        tab,
+        snapshot,
+        application.persistence,
+        browser,
+        manualCaptureForView,
+      );
+      if (pendingManualCaptureReference !== null) {
+        const heading = screen.querySelector<HTMLElement>(".screen-heading");
+        if (heading === null) screen.insertAdjacentHTML("afterbegin", manualCaptureReviewFailure());
+        else heading.insertAdjacentHTML("afterend", manualCaptureReviewFailure());
+      }
+    }
     bindAccountOverview(root, snapshot, {
       openAccount: (accountId) => {
         const candidate = buildExactAccountTradeScope(snapshot, accountId);
         const previousState = tradeBrowserState;
         const previousTab = currentTab;
+        const previousManualReference = manualCaptureReference;
+        const previousManualContinuation = manualCaptureContinuation;
+        const previousPendingManualReference = pendingManualCaptureReference;
         try {
+          clearManualCaptureGuidance();
           tradeBrowserState = candidate.state;
           render("trades", false);
           const summary = root.querySelector<HTMLElement>("#trade-scope-summary");
@@ -978,6 +1064,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           );
         } catch (caught) {
           tradeBrowserState = previousState;
+          manualCaptureReference = previousManualReference;
+          manualCaptureContinuation = previousManualContinuation;
+          pendingManualCaptureReference = previousPendingManualReference;
           render(previousTab, false);
           throw caught;
         }
@@ -1015,6 +1104,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             ...input,
             selectedDay: null,
           });
+          clearManualCaptureGuidance();
           tradeBrowserState = next.state;
           render("trades", false);
           const searchAnnouncement = viewFilterAnnouncement(next);
@@ -1023,6 +1113,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         },
         clearAll: () => {
           const next = buildTradeBrowser(snapshot, EMPTY_TRADE_BROWSER_STATE);
+          clearManualCaptureGuidance();
           tradeBrowserState = next.state;
           render("trades", false);
           announceStatus(`Trade browser scope cleared. Showing ${countNoun(next.evidence.length, "trade")}.`);
@@ -1033,6 +1124,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             ...tradeBrowserState,
             selectedDay: null,
           });
+          clearManualCaptureGuidance();
           tradeBrowserState = next.state;
           render("trades", false);
           const searchAnnouncement = viewFilterAnnouncement(next);
@@ -1052,6 +1144,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             emotion: null,
             tag: null,
           });
+          clearManualCaptureGuidance();
           tradeBrowserState = next.state;
           render("trades", false);
           announceStatus(`Search and trade card filters cleared. Showing ${countNoun(next.evidence.length, "scoped trade")}.`);
@@ -1062,6 +1155,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             ...tradeBrowserState,
             ...input,
           });
+          clearManualCaptureGuidanceInPlace();
           tradeBrowserState = next.state;
           return next;
         },
@@ -1070,8 +1164,36 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             ...tradeBrowserState,
             query,
           });
+          clearManualCaptureGuidanceInPlace();
           tradeBrowserState = next.state;
           return next;
+        },
+      });
+      if (manualCaptureForView !== null) {
+        bindManualCaptureReviewView(root, snapshot, manualCaptureForView, {
+          dismiss: () => {
+            clearManualCaptureGuidance();
+            render("trades", false);
+            announceStatus("Saved execution guidance dismissed. The exact account scope remains unchanged.");
+            const summary = root.querySelector<HTMLElement>("#trade-scope-summary");
+            if (summary !== null) focusManualCaptureElement(root, summary);
+          },
+        });
+      }
+    }
+    if (pendingManualCaptureReference !== null) {
+      const reference = pendingManualCaptureReference;
+      bindManualCaptureReviewFailure(root, {
+        retry: async () => {
+          const result = await continueManualCaptureReview(
+            reference,
+            "The execution save is already confirmed.",
+            false,
+          );
+          result.focus();
+          if (result.status === "complete") {
+            await acknowledgeManualCapture(reference);
+          }
         },
       });
     }
@@ -1085,11 +1207,18 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       application,
       snapshot,
       setBackgroundInert,
-      async (announcement) => {
-        snapshot = await application.loadWorkspace();
+      clearManualCaptureGuidance,
+      () => {
         render(currentTab, false);
-        announceStatus(announcement);
+        return root.querySelector<HTMLButtonElement>("[data-manual-execution]");
       },
+      async (result, submissionId, announcement) => (
+        continueManualCaptureReview(Object.freeze({
+          outcome: result.outcome,
+          executionId: result.executionId,
+          submissionId,
+        }), announcement, true)
+      ),
     );
     bindTradeReviewActions(
       root,
@@ -1286,6 +1415,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     });
     root.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
+        manualCaptureAttemptGeneration += 1;
         const destination = (button.dataset.route as TabId | undefined) ?? currentTab;
         const reportTarget = button.dataset.reportTarget;
         render(destination);
@@ -1297,22 +1427,176 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     root.querySelectorAll<HTMLButtonElement>("[data-explore-demo]").forEach((button) => {
       button.addEventListener("click", async () => {
         snapshot = await application.exploreDemo();
+        clearManualCaptureGuidance();
         tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
         render("dashboard");
       });
     });
   };
 
+  async function continueManualCaptureReview(
+    reference: PendingManualCaptureReference,
+    saveAnnouncement: string,
+    allowOwnedManualModal: boolean,
+  ): Promise<ManualExecutionRefreshResult> {
+    const previousTab = currentTab;
+    const previousState = tradeBrowserState;
+    manualCaptureAttemptGeneration += 1;
+    const attemptGeneration = manualCaptureAttemptGeneration;
+    const superseded = (): ManualExecutionRefreshResult => Object.freeze({
+      status: "pending" as const,
+      focus: () => undefined,
+    });
+    const showKnownCommitFailure = (): ManualExecutionRefreshResult => {
+      manualCaptureReference = null;
+      manualCaptureContinuation = null;
+      pendingManualCaptureReference = reference;
+      tradeBrowserState = previousState;
+      render(previousTab, false);
+      const headings = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-manual-capture-review-failure-title]",
+      ));
+      const heading = headings.length === 1 ? headings[0] ?? null : null;
+      return Object.freeze({
+        status: "pending" as const,
+        focus: () => {
+          if (heading !== null && heading.isConnected) {
+            focusManualCaptureElement(root, heading);
+          }
+        },
+      });
+    };
+    let freshSnapshot: JournalWorkspaceSnapshot;
+    try {
+      freshSnapshot = await application.loadWorkspace();
+    } catch {
+      if (attemptGeneration !== manualCaptureAttemptGeneration) return superseded();
+      return showKnownCommitFailure();
+    }
+    if (attemptGeneration !== manualCaptureAttemptGeneration) return superseded();
+    snapshot = freshSnapshot;
+    let continuation: ManualCaptureReviewContinuation;
+    try {
+      continuation = buildManualCaptureReviewContinuation(snapshot, reference);
+    } catch {
+      return showKnownCommitFailure();
+    }
+    if (attemptGeneration !== manualCaptureAttemptGeneration) return superseded();
+
+    const visibleReference: ManualCaptureCommitReference = Object.freeze({
+      outcome: reference.outcome,
+      executionId: reference.executionId,
+    });
+    manualCaptureReference = visibleReference;
+    manualCaptureContinuation = continuation;
+    pendingManualCaptureReference = null;
+    tradeBrowserState = continuation.scope.state;
+    let heading: HTMLElement;
+    try {
+      render("trades", false);
+      const sections = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-manual-capture-review-continuation]",
+      ));
+      const headings = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-manual-capture-review-title]",
+      ));
+      const section = sections[0];
+      const candidateHeading = headings[0];
+      if (
+        sections.length !== 1
+        || headings.length !== 1
+        || section === undefined
+        || candidateHeading === undefined
+        || !section.contains(candidateHeading)
+        || candidateHeading.id !== "manual-capture-review-title"
+        || (
+          !allowOwnedManualModal
+          && (
+            screen === null
+            || screen.hasAttribute("inert")
+            || screen.getAttribute("aria-hidden") === "true"
+          )
+        )
+      ) {
+        throw new Error("The manual capture review destination is unavailable.");
+      }
+      heading = candidateHeading;
+    } catch {
+      return showKnownCommitFailure();
+    }
+
+    return Object.freeze({
+      status: "complete" as const,
+      focus: () => {
+        announceStatus(
+          `${saveAnnouncement} Opened ${continuation.accountLabel} in Trades with ${countNoun(continuation.scope.evidence.length, "current trade")}; ${countNoun(continuation.tradeSubjectIds.length, "trade")} linked to this execution. Temporary dates, day, search, and card filters were cleared.`,
+        );
+        if (heading.isConnected) focusManualCaptureElement(root, heading);
+      },
+    });
+  }
+
+  async function acknowledgeManualCapture(
+    reference: PendingManualCaptureReference,
+  ): Promise<boolean> {
+    if (reference.submissionId === null) return true;
+    try {
+      await application.acknowledgeManualExecution(reference.submissionId);
+      return true;
+    } catch {
+      window.alert(
+        "The execution is visible, but its save confirmation remains pending. Hermes will retry recovery after restart.",
+      );
+      return false;
+    }
+  }
+
+  let recoveringManualExecution = false;
+  async function recoverNewestManualExecution(): Promise<void> {
+    if (recoveringManualExecution || !onboarding.isComplete() || snapshot.provenance !== "local") {
+      return;
+    }
+    recoveringManualExecution = true;
+    try {
+      const recoveredManualExecutions = await application.loadRecoverableManualExecutions();
+      const recoveredCount = recoveredManualExecutions.length;
+      const recovered = recoveredManualExecutions.at(-1);
+      if (recovered === undefined) return;
+      const reference = Object.freeze({
+        outcome: "duplicate" as const,
+        executionId: recovered.executionId,
+        submissionId: recovered.submissionId,
+      });
+      const result = await continueManualCaptureReview(
+        reference,
+        recoveredCount === 1
+          ? "This execution was already saved and awaiting confirmation; no duplicate was created."
+          : `${recoveredCount} executions were already saved and awaiting confirmation; no duplicates were created. Continuing with the newest confirmation.`,
+        false,
+      );
+      result.focus();
+      if (result.status === "complete") await acknowledgeManualCapture(reference);
+    } catch {
+      window.alert(
+        "Hermes could not check pending manual save confirmations. The journal remains unchanged; try again after restart.",
+      );
+    } finally {
+      recoveringManualExecution = false;
+    }
+  }
+
   const chooseWorkspace = async (mode: "local" | "demo") => {
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
+    clearManualCaptureGuidance();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     render("dashboard", false);
   };
 
   root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
     button.addEventListener("click", () => {
+      manualCaptureAttemptGeneration += 1;
       render((button.dataset.tab as TabId | undefined) ?? currentTab);
     });
   });
@@ -1322,6 +1606,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = snapshot.provenance === "demo"
       ? await application.startJournal()
       : await application.exploreDemo();
+    clearManualCaptureGuidance();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     closeSettings();
     render("dashboard");
@@ -1332,10 +1617,14 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   root.querySelector("#onboarding-reset")?.addEventListener("click", () => {
     onboarding.reset();
     closeSettings();
-    bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
+    bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace, async (mode) => {
+      if (mode === "local") await recoverNewestManualExecution();
+    });
   });
   render("dashboard", false);
-  bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace);
+  bindOnboarding(root, onboarding, setBackgroundInert, chooseWorkspace, async (mode) => {
+    if (mode === "local") await recoverNewestManualExecution();
+  });
   document.addEventListener("keydown", (event) => {
     const welcome = root.querySelector<HTMLElement>(".onboarding");
     const settingsSheet = root.querySelector<HTMLElement>(".settings-sheet");
@@ -1343,20 +1632,5 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     else if (settings && !settings.hidden && settingsSheet) trapModalFocus(settingsSheet, event);
     if (event.key === "Escape" && settings && !settings.hidden) closeSettings();
   });
-  if (recoveredManualExecutions.length > 0) {
-    const recoveredCount = recoveredManualExecutions.length;
-    if (announcer) {
-      announcer.textContent = `${recoveredCount} ${recoveredCount === 1 ? "execution was" : "executions were"} already saved before Hermes restarted; no duplicate was created.`;
-    }
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    try {
-      for (const item of recoveredManualExecutions) {
-        await application.acknowledgeManualExecution(item.submissionId);
-      }
-    } catch {
-      if (announcer) {
-        announcer.textContent = "The recovered execution is visible, but its confirmation remains pending and will be retried next launch.";
-      }
-    }
-  }
+  if (onboarding.isComplete()) await recoverNewestManualExecution();
 }
