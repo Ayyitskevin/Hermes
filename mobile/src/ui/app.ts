@@ -6,6 +6,7 @@ import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
 import {
+  buildExactPlaybookDraftTradeScope,
   buildExactPlaybookTradeScope,
 } from "../application/playbook-trade-scope";
 import {
@@ -1253,8 +1254,18 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     });
     if (tab === "journal" && playbookTradeScope !== null) {
       bindPlaybookTradeScope(root, playbookTradeScope, {
-        openPlaybook: (playbookName) => {
-          const candidate = buildExactPlaybookTradeScope(snapshot, playbookName);
+        openPlaybook: (playbookName, reviewState, expectedTradeCount) => {
+          const candidate = reviewState === "completed"
+            ? buildExactPlaybookTradeScope(
+              snapshot,
+              playbookName,
+              expectedTradeCount,
+            )
+            : buildExactPlaybookDraftTradeScope(
+              snapshot,
+              playbookName,
+              expectedTradeCount,
+            );
           const previousState = tradeBrowserState;
           const previousTab = currentTab;
           const previousManualReference = manualCaptureReference;
@@ -1273,10 +1284,20 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             const filterCount = root.querySelector<HTMLElement>(
               "[data-trade-view-filter-count]",
             );
+            const resultCount = root.querySelector<HTMLElement>("#trade-count");
+            const expectedResultCount = candidate.hasViewFilters
+              ? `Showing ${candidate.visibleEvidence.length} of ${countNoun(candidate.evidence.length, "trade")}`
+              : `Showing ${countNoun(candidate.evidence.length, "trade")}`;
             const cards = Array.from(root.querySelectorAll<HTMLElement>(
               "[data-trade-subject]",
             ));
             const visibleCards = cards.filter((card) => !card.hidden);
+            const allSubjects = new Set(candidate.evidence.map(({ trade }) => (
+              trade.tradeSubjectId
+            )));
+            const renderedSubjects = new Set(cards.map((card) => (
+              card.dataset.tradeSubject ?? ""
+            )));
             const visibleSubjects = new Set(candidate.visibleEvidence.map(({ trade }) => (
               trade.tradeSubjectId
             )));
@@ -1287,11 +1308,15 @@ export async function startApp({ root, application, onboarding }: AppDependencie
               summary === null
               || disclosure === null
               || !disclosure.open
-              || review?.value !== "completed"
+              || review?.value !== reviewState
               || playbook?.value !== playbookName
               || playbook.disabled
               || filterCount?.textContent?.trim() !== "· 2 active filters"
+              || resultCount?.textContent?.trim() !== expectedResultCount
               || cards.length !== candidate.evidence.length
+              || allSubjects.size !== candidate.evidence.length
+              || renderedSubjects.size !== cards.length
+              || [...allSubjects].some((subject) => !renderedSubjects.has(subject))
               || visibleCards.length !== candidate.visibleEvidence.length
               || visibleSubjects.size !== candidate.visibleEvidence.length
               || renderedVisibleSubjects.size !== visibleCards.length
@@ -1305,7 +1330,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
             summary.scrollIntoView({ behavior: "auto", block: "start" });
             summary.focus({ preventScroll: true });
             announceStatus(
-              `Opened ${playbookName} completed reviews in Trades. ${candidate.visibleEvidence.length} of ${candidate.evidence.length} current trades. Temporary account, dates, day, search, and other card filters were cleared.`,
+              `Opened ${playbookName} ${reviewState} reviews in Trades. ${candidate.visibleEvidence.length} of ${candidate.evidence.length} current trades. Temporary account, dates, day, search, and other card filters were cleared.`,
             );
           } catch (caught) {
             tradeBrowserState = previousState;

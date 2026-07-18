@@ -17,7 +17,7 @@ WITH priority_roadmap(sequence, capability, first_increment, decision_gate, succ
       'No guessed format, credential storage, silent fallback, or broader asset claim.',
       'Golden files reconcile every row; repeat imports are idempotent and changed payloads fail visibly.'),
     (4, 'Playbook and template management',
-      'Use the shipped derived-only Exact Playbook Scope as the read-only entry point, then add standalone local CRUD for reusable playbooks, ordered rules, and user-authored reflection templates.',
+      'Use the shipped derived-only Exact Playbook Scope and Draft Scope as the read-only entry points, then add standalone local CRUD for reusable playbooks, ordered rules, and user-authored reflection templates.',
       'Templates never auto-classify, overwrite evidence, or imply causality.',
       'Create, edit, apply, export, and restore reproduce exact ordered content and explicit application evidence.'),
     (5, 'Deeper observational reports',

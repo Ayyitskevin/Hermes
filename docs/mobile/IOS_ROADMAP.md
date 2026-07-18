@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-17
+Status: active delivery roadmap · updated 2026-07-18
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -664,6 +664,19 @@ observed plugin/device behavior:
   requires stable durable IDs, migration, and archive/export decisions. No
   schema, persistence, store command, archive, digest, report, formula,
   preference, dependency, native source, or network path changes.
+- Exact Playbook Draft Scope v1 adds one separately reconciled current-draft
+  action without changing the ninth facet or completed playbook metrics. Each
+  library card derives a draft count only from exact current draft assignments;
+  **Open draft reviews** renders only above zero. Activation rechecks the unique
+  section/card/action kind, name, position, completed/draft counts, current
+  option, and exact draft subjects, then builds empty browser state plus draft
+  review state and that exact playbook. Account/date/day/search and the other
+  eight facets are cleared, and no editor opens automatically. A disappearing
+  last draft, duplicate, detached, stale, count-mismatched, tampered, or invalid
+  destination fails visibly and restores the prior tab and exact browser state.
+  No schema, persistence, store command, preference, archive/digest/export
+  shape, governed report/formula, dependency, native source, or network path
+  changes.
 - Compact Trades Filters v1 puts only those nine exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -837,15 +850,16 @@ Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
-v1, matching-runtime local restore, and all eight governed reports are
-implemented. Thirty-two bounded Slice D increments are implemented in total;
-twenty-seven remain derived-only.
+v1, Exact Playbook Draft Scope v1, matching-runtime local restore, and all eight
+governed reports are implemented. Thirty-three bounded Slice D increments are
+implemented in total; twenty-eight remain derived-only.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Calendar-Day Reflection Continuation, and Daily Reflection Rhythm
 Continuation are the five write-capable exceptions. The trade
 continuations reuse the existing versioned trade-review path; the calendar-day
 and rhythm continuations reuse the existing Daily Journal path without changing
-either persistence contract. Exact Playbook Scope adds no durable state.
+either persistence contract. Exact Playbook Scope and Draft Scope add no durable
+state.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

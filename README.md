@@ -374,6 +374,20 @@ submission-ready product:
   stable-ID migration. No schema, persistence, store command, archive/digest/
   export shape, report, formula, preference, dependency, native source, or
   network path changed; the same five write-capable exceptions remain.
+- Exact Playbook Draft Scope v1 is the thirty-third bounded Slice D increment
+  and the twenty-eighth derived-only presentation/projection increment. Each
+  immutable Journal playbook card now derives a separate current draft-review
+  count without changing completed `tradeCount`, net R, win rate, or governed
+  report semantics. Cards with at least one current draft expose **Open draft
+  reviews**; activation rechecks the exact action/count and current subjects,
+  then opens Trades from the empty ephemeral browser state with only draft review
+  state plus that playbook. It clears account, dates, selected day, search, and
+  every other facet, never auto-opens an editor, and performs no write. A
+  disappearing last draft, duplicate or detached action, count mismatch, DOM
+  tamper, or invalid destination fails visibly and restores the prior tab and
+  exact Trade Browser state. No schema, persistence, store command, archive/
+  digest/export shape, report, formula, preference, dependency, native source,
+  or network path changed; the same five write-capable exceptions remain.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -548,10 +562,12 @@ submission-ready product:
   controls with a Playbook select derived only from current `TradePreview`
   assignments. It composes with search, scope, and all existing facets; a valid
   retained selection with no current completed match stays visible as not
-  currently assigned and yields zero cards. Journal playbook actions enter this
-  exact completed-review scope after clearing conflicting browser state, while
-  incoherent or tampered action evidence fails visibly without changing the
-  prior view. The scope remains session-only; playbook CRUD and stable durable
+  currently assigned and yields zero cards. Journal playbook actions enter the
+  corresponding exact completed or current-draft scope after clearing
+  conflicting browser state; draft actions render only for a positive separately
+  reconciled draft count and never open the editor automatically. Incoherent or
+  tampered action evidence fails visibly without changing the prior view. The
+  scope remains session-only; playbook CRUD and stable durable
   identity remain separately gated work.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.

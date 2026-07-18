@@ -263,6 +263,20 @@ and an App Store disclosure.
   request. Repeat with VoiceOver, a hardware keyboard, background/foreground,
   force quit/relaunch, two scenes, and 320/421-width 200% Dynamic Type before
   marking Exact Playbook Scope native acceptance PASS.
+- From the same live Journal library, reconcile each playbook's completed
+  metrics separately from its exact current draft-assignment count. Cards with no
+  drafts must expose no **Open draft reviews** action; a positive draft count must
+  expose exactly one. Seed conflicting account/date/day/search/nine-facet state,
+  activate the draft action, and confirm empty browser state plus only draft
+  review state and the exact playbook, the exact frozen draft subjects, summary
+  focus, and no automatic review editor. Remove the last draft after render and
+  separately duplicate, detach, change action kind/count/name/position, or tamper
+  destination review/playbook/count/subject evidence. Every attempt must show one
+  visible failure and preserve the prior tab and exact browser state. Confirm
+  zero SQLite, preference, archive/report, editor-write, or network work. Repeat
+  with VoiceOver, hardware keyboard, background/foreground, force quit/relaunch,
+  two scenes, and 320/421-width 200% Dynamic Type before marking Exact Playbook
+  Draft Scope native acceptance PASS.
 - With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
   state survives tab navigation and valid ledger refreshes. Clearing a selected
   day must retain account/range and card filters; Clear search and filters must
@@ -756,6 +770,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Manual Capture Review Continuation | status | known manual result + exact execution/allocation identity + one/two current subjects + all-activity reset + review save/return + retry-only no-resubmit + tamper/focus/layout/SQLite/network evidence |
 | Generic CSV Receipt Review Continuation | status | coherent active receipt/occurrence/ledger read + conservation/dedup/scope order + fixed paging + guide-origin return + rollback supersession + post-commit retry-only no-reread/reprepare/recommit + adapter parity + focus/layout/SQLite/network evidence |
 | Exact Playbook Scope | status | live current assignments + immutable card/options/count reconciliation + exact completed cohort + nine-facet clear/zero/tamper rollback + VoiceOver/keyboard/layout/lifecycle/SQLite/network evidence |
+| Exact Playbook Draft Scope | status | live separate completed/draft count reconciliation + conditional draft action + exact draft cohort + all-state clear + disappearing-last-draft/tamper rollback + no editor auto-open + VoiceOver/keyboard/layout/lifecycle/SQLite/preference/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -951,6 +966,14 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   facets, exact Journal-card identity, conflict clearing, honest zero state,
   visible tamper failure with prior browser state intact, and zero action-driven
   durable or network work.
+- Exact Playbook Draft Scope v1 has only Linux/Chromium separate-count,
+  exact-draft-cohort, stale-last-draft, live-duplicate/detached-action,
+  prior-state rollback, storage/archive/network-neutrality, keyboard-focus, and
+  narrow-layout evidence. Native SQLCipher current assignments, conditional
+  action visibility, no-editor behavior, preference/SQLite observation,
+  VoiceOver announcement/order, hardware-keyboard focus, lifecycle, two-scene
+  refresh, force-quit/relaunch, and 320/421-width 200% Dynamic Type are NOT RUN.
+  Keep native acceptance held until every device procedure above is recorded.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.
@@ -966,8 +989,8 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   still need the persistence, response-loss, migration, accessibility, and
   lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, Dynamic Review
-  Facets v1, Exact Setup Facet v1, and Exact Playbook Scope v1 intentionally
-  remain session-only; Compact Trades Filters v1 adds no persisted disclosure
+  Facets v1, Exact Setup Facet v1, Exact Playbook Scope v1, and Exact Playbook
+  Draft Scope v1 intentionally remain session-only; Compact Trades Filters v1 adds no persisted disclosure
   state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native

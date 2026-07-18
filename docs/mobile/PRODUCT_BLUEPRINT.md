@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-two bounded Slice D increments are implemented in the current workspace.
+Thirty-three bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -1119,6 +1119,30 @@ digest, export/restore shape, governed report, formula, preference, dependency,
 native source, or network path changes; the five write-capable exceptions stay
 unchanged.
 
+Exact Playbook Draft Scope v1 is the thirty-third bounded Slice D increment and
+the twenty-eighth derived-only presentation/projection increment. It extends the
+existing reconciled Journal library with a separate current draft-assignment
+count derived from exact `TradePreview.reviewStatus: draft` plus playbook
+identity. Completed `tradeCount`, net R, win rate, and every governed report
+definition remain completed-only and unchanged.
+
+A card exposes **Open draft reviews** only while that separately reconciled count
+is positive. Activation rechecks the one section, card, action kind, name,
+position, completed and draft counts, current option, and exact current draft
+subjects. It then builds `EMPTY_TRADE_BROWSER_STATE` plus
+`reviewState: draft` and the exact playbook. Account, inclusive dates, selected
+day, search, and the other eight facets are cleared; the existing review editor
+does not open automatically.
+
+If the last draft disappears after render, or the section/card/action becomes
+missing, duplicated, detached, count-mismatched, or tampered, activation fails
+visibly before browser assignment. Unexpected destination evidence restores the
+prior tab and exact Trade Browser state. The action adds no persistence or
+editor command: schema, migration, store, browser journal state, protected
+preferences, archive/digest/export/restore shape, reports, formulas,
+dependencies, native sources, and network paths remain unchanged; the same five
+write-capable exceptions stay fixed.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1278,7 +1302,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-two Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-three Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1290,13 +1314,14 @@ Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
-v1, and Exact Playbook Scope v1. Twenty-seven presentation/projection increments
-remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
+v1, Exact Playbook Scope v1, and Exact Playbook Draft Scope v1. Twenty-eight
+presentation/projection increments remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
 writes; Report Trade Continuation and Dashboard Recent Trade Continuation reuse
 the existing versioned trade-review save path, while Calendar-Day Reflection
 Continuation and Daily Reflection Rhythm Continuation reuse the existing Daily
 Journal path without changing either persistence contract. Those are the five
-write-capable exceptions; Exact Playbook Scope is session-only and derived-only.
+write-capable exceptions; Exact Playbook Scope and Draft Scope are session-only
+and derived-only.
 Daily Journal preserves the outer archive version while browser payload v2
 carries its state. Final
 integration

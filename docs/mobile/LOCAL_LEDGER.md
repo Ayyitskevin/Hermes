@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-17
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-18
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -753,7 +753,8 @@ the exact facet ANDs with the existing eight visibility controls and scope.
 
 The Journal library is a derived reconciliation boundary, not a second playbook
 store. Every immutable card must match one current `reviewOptions.playbooks`
-entry by exact name, fixed position, rules, and finite metrics. Its completed
+entry by exact name and rules while retaining its projected card order and
+finite metrics; retained-option order is not card identity. Its completed
 trade count must equal the current completed `TradePreview` assignments. One
 valid card action creates `EMPTY_TRADE_BROWSER_STATE` plus completed review state
 and that exact playbook. Account, inclusive dates, selected day, search, and all
@@ -771,6 +772,24 @@ derived slice. CRUD requires a separate stable-ID schema/migration plus archive
 and export decisions. No playbook scope, card, or failure state enters SQLite,
 browser journal state, export/restore, archives, digests, reports, formulas,
 preferences, or native storage.
+
+Exact Playbook Draft Scope v1 extends only that derived library and route. Each
+frozen card separately counts exact current assignments whose review state is
+`draft`; completed `tradeCount`, net R, win rate, and report semantics remain
+unchanged. A card exposes **Open draft reviews** only while its draft count is
+positive. Activation rechecks the unique live section/card/action, action kind,
+name, position, both completed and draft counts, current option, and exact draft
+subjects before building `EMPTY_TRADE_BROWSER_STATE` plus draft review state and
+that playbook.
+
+The draft route clears account, inclusive dates, selected day, search, and the
+other eight facets, and it never opens a review editor automatically. If the
+last draft disappears after render, or section/card/action evidence is missing,
+duplicated, detached, stale, count-mismatched, or tampered, activation fails
+visibly. Destination mismatch restores the prior tab and exact Trade Browser
+state. No store, browser journal, preference, archive/digest/export/restore,
+report, formula, schema, native, or network state is read or written beyond the
+same current snapshot used by the existing derived route.
 
 Compact Trades Filters v1 changes only how those nine exact controls are
 revealed. Its active count derives from the four fixed and five current-review
@@ -1243,6 +1262,12 @@ name/rule/count agreement, direct completed-cohort routing from conflicting
 prior state, honest retained and draft-only zero results, visible tamper failure
 with prior-state preservation, no action-triggered storage/network work, and
 320px/200% keyboard focus and reflow.
+Exact Playbook Draft Scope coverage adds separate frozen completed/draft
+counts, true draft-only and completed-zero separation, exact draft-subject
+routing from conflicting scope/filter state, positive-count-only action
+rendering, last-draft disappearance and live duplicate/detached rejection,
+post-assignment rollback, no editor auto-open, archive/local/session-storage and
+network neutrality, keyboard focus, 44-point action size, and 320px/200% reflow.
 Emotion Patterns coverage adds checksum, cohort conservation, open/closed and
 result neutrality, current-head movement, normalization/identity fail-closed
 tables, stable order, immutability, real-store updates, process-score
@@ -1344,6 +1369,13 @@ composition, conflict clearing, honest zero state, tamper rollback, VoiceOver,
 hardware-keyboard focus, lifecycle/two-scene refresh, and 320/421-width 200%
 Dynamic Type remain Mac/iPhone evidence gates; browser proof must not be treated
 as native acceptance.
+Exact Playbook Draft Scope native acceptance is NOT RUN. Live SQLCipher-derived
+separate completed/draft counts, conditional draft-action visibility, exact
+draft subjects, all-state clearing, no editor auto-open, disappearing-last-draft
+and tamper rollback, VoiceOver, hardware-keyboard focus, lifecycle/two-scene
+refresh, preference/SQLite/network neutrality, and 320/421-width 200% Dynamic
+Type remain Mac/iPhone evidence gates; browser proof must not be treated as
+native acceptance.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

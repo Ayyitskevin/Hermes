@@ -8,8 +8,15 @@ import {
 
 export interface PlaybookLibrary {
   readonly provenance: JournalWorkspaceSnapshot["provenance"];
-  readonly playbooks: readonly PlaybookPreview[];
+  readonly playbooks: readonly PlaybookLibraryItem[];
 }
+
+export interface PlaybookLibraryItem extends PlaybookPreview {
+  /** Current draft assignments; completed performance remains in PlaybookPreview. */
+  readonly draftTradeCount: number;
+}
+
+export type ExactPlaybookReviewState = "completed" | "draft";
 
 function playbookIdentity(name: string): string {
   return name.toLocaleLowerCase("en-US");
@@ -64,7 +71,7 @@ export function buildPlaybookLibrary(
   }
 
   const previewByIdentity = new Map<string, PlaybookPreview>();
-  const playbooks = snapshot.playbooks.map((playbook) => {
+  const previews = snapshot.playbooks.map((playbook) => {
     const name = canonicalPlaybookName(playbook.name, "Playbook name");
     const identity = playbookIdentity(name);
     if (previewByIdentity.has(identity)) {
@@ -108,6 +115,7 @@ export function buildPlaybookLibrary(
   }
 
   const completedCounts = new Map<string, number>();
+  const draftCounts = new Map<string, number>();
   for (const trade of snapshot.trades) {
     if (trade.playbook === null) continue;
     const identity = playbookIdentity(trade.playbook);
@@ -117,13 +125,19 @@ export function buildPlaybookLibrary(
     }
     if (trade.reviewStatus === "completed") {
       completedCounts.set(identity, (completedCounts.get(identity) ?? 0) + 1);
+    } else if (trade.reviewStatus === "draft") {
+      draftCounts.set(identity, (draftCounts.get(identity) ?? 0) + 1);
     }
   }
-  for (const playbook of playbooks) {
+  const playbooks = previews.map((playbook) => {
     if ((completedCounts.get(playbookIdentity(playbook.name)) ?? 0) !== playbook.tradeCount) {
       throw new Error(`Playbook ${playbook.name} completed trade count does not reconcile.`);
     }
-  }
+    return Object.freeze({
+      ...playbook,
+      draftTradeCount: draftCounts.get(playbookIdentity(playbook.name)) ?? 0,
+    });
+  });
 
   return Object.freeze({
     provenance: snapshot.provenance,
@@ -132,24 +146,44 @@ export function buildPlaybookLibrary(
 }
 
 /**
- * Opens the exact completed-review cohort represented by one playbook card.
+ * Opens one exact playbook review cohort from an empty browser state.
  * Every prior Trade Browser scope and view filter is intentionally discarded.
  */
-export function buildExactPlaybookTradeScope(
+function buildExactPlaybookReviewScope(
   snapshot: JournalWorkspaceSnapshot,
   playbookName: string,
+  reviewState: ExactPlaybookReviewState,
+  expectedTradeCount: number | undefined,
 ): TradeBrowserResult {
   const library = buildPlaybookLibrary(snapshot);
   const playbook = library.playbooks.find(({ name }) => name === playbookName);
   if (playbook === undefined) {
     throw new Error("The selected playbook is not available in this journal.");
   }
+  const currentTradeCount = reviewState === "completed"
+    ? playbook.tradeCount
+    : playbook.draftTradeCount;
+  const expected = reviewState === "completed"
+    ? expectedTradeCount ?? currentTradeCount
+    : expectedTradeCount;
+  if (
+    expected === undefined
+    || !Number.isSafeInteger(expected)
+    || expected < 0
+    || expected !== currentTradeCount
+    || (reviewState === "draft" && currentTradeCount === 0)
+  ) {
+    throw new Error("The selected playbook review count is no longer available.");
+  }
   const target = buildTradeBrowser(snapshot, {
     ...EMPTY_TRADE_BROWSER_STATE,
-    reviewState: "completed",
+    reviewState,
     playbook: playbook.name,
   });
   const state = target.state;
+  const visibleSubjects = new Set(target.visibleEvidence.map(({ trade }) => (
+    trade.tradeSubjectId
+  )));
   if (
     state.accountId !== null
     || state.activityFrom !== null
@@ -159,19 +193,48 @@ export function buildExactPlaybookTradeScope(
     || state.assetClass !== "all"
     || state.direction !== "all"
     || state.positionState !== "all"
-    || state.reviewState !== "completed"
+    || state.reviewState !== reviewState
     || state.setup !== null
     || state.mistake !== null
     || state.emotion !== null
     || state.tag !== null
     || state.playbook !== playbook.name
     || target.invalidatedSelectedDay !== null
-    || target.visibleEvidence.length !== playbook.tradeCount
+    || target.visibleEvidence.length !== currentTradeCount
+    || visibleSubjects.size !== currentTradeCount
     || target.visibleEvidence.some(({ trade }) => (
-      trade.reviewStatus !== "completed" || trade.playbook !== playbook.name
+      trade.reviewStatus !== reviewState || trade.playbook !== playbook.name
     ))
   ) {
     throw new Error("The selected playbook trade count or scope does not reconcile.");
   }
   return target;
+}
+
+/** Opens the exact completed-review cohort represented by one playbook card. */
+export function buildExactPlaybookTradeScope(
+  snapshot: JournalWorkspaceSnapshot,
+  playbookName: string,
+  expectedTradeCount?: number,
+): TradeBrowserResult {
+  return buildExactPlaybookReviewScope(
+    snapshot,
+    playbookName,
+    "completed",
+    expectedTradeCount,
+  );
+}
+
+/** Opens a current, nonempty exact draft-review cohort represented by one card. */
+export function buildExactPlaybookDraftTradeScope(
+  snapshot: JournalWorkspaceSnapshot,
+  playbookName: string,
+  expectedDraftTradeCount: number,
+): TradeBrowserResult {
+  return buildExactPlaybookReviewScope(
+    snapshot,
+    playbookName,
+    "draft",
+    expectedDraftTradeCount,
+  );
 }

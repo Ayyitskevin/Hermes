@@ -14,6 +14,44 @@ function renderPlaybookScope(snapshot: JournalWorkspaceSnapshot): string {
   return playbookTradeScopeSection(preparePlaybookTradeScope(snapshot));
 }
 
+function snapshotWithDraftOnlyPlaybook(): JournalWorkspaceSnapshot {
+  return {
+    ...DEMO_WORKSPACE,
+    trades: DEMO_WORKSPACE.trades.map((trade) => (
+      trade.tradeSubjectId === "demo-subject-aapl"
+        ? { ...trade, reviewStatus: "draft", playbook: "Draft process" }
+        : trade
+    )),
+    playbooks: [
+      ...DEMO_WORKSPACE.playbooks.map((playbook) => (
+        playbook.name === "Breakout"
+          ? { ...playbook, tradeCount: playbook.tradeCount - 1 }
+          : playbook
+      )),
+      {
+        name: "Draft process",
+        tradeCount: 0,
+        netR: null,
+        winRatePct: 0,
+        rules: ["Wait for confirmation"],
+      },
+    ],
+    reviewOptions: {
+      ...DEMO_WORKSPACE.reviewOptions,
+      playbooks: [
+        ...DEMO_WORKSPACE.reviewOptions.playbooks,
+        { name: "Draft process", rules: ["Wait for confirmation"] },
+      ],
+    },
+    reviewProgress: {
+      ...DEMO_WORKSPACE.reviewProgress,
+      pendingTrades: 0,
+      draftTrades: 1,
+      completedTrades: DEMO_WORKSPACE.reviewProgress.completedTrades - 1,
+    },
+  };
+}
+
 describe("playbook trade scope view", () => {
   it("renders one reconciled, semantic action for every playbook card", () => {
     const html = renderPlaybookScope(DEMO_WORKSPACE);
@@ -25,12 +63,34 @@ describe("playbook trade scope view", () => {
     expect(html.match(/data-playbook-trade-scope-route=/g)).toHaveLength(3);
     expect(html).toContain('data-playbook-trade-scope-card="Breakout"');
     expect(html).toContain('data-playbook-trade-scope-position="2"');
+    expect(html).toContain('data-playbook-trade-scope-completed-count="3"');
+    expect(html).toContain('data-playbook-trade-scope-draft-count="0"');
+    expect(html).toContain('data-playbook-trade-scope-review-state="completed"');
     expect(html).toContain('data-playbook-trade-scope-count="3"');
     expect(html).toContain(
       'aria-label="Open Breakout completed reviews in Trades, playbook 2 of 3"',
     );
+    expect(html).toContain("3 completed trades");
     expect(html).toContain("Open completed reviews");
-    expect(html).toContain("card count and visible Trades agree");
+    expect(html).not.toContain("Open draft reviews");
+    expect(html).toContain("selected count and visible Trades agree");
+  });
+
+  it("renders one separately counted draft action only for a positive current cohort", () => {
+    const html = renderPlaybookScope(snapshotWithDraftOnlyPlaybook());
+
+    expect(html.match(/data-playbook-trade-scope-route=/g)).toHaveLength(5);
+    expect(html).toContain('data-playbook-trade-scope-card="Draft process"');
+    expect(html).toContain('data-playbook-trade-scope-completed-count="0"');
+    expect(html).toContain('data-playbook-trade-scope-draft-count="1"');
+    expect(html).toContain('data-playbook-trade-scope-review-state="draft"');
+    expect(html).toContain('data-playbook-trade-scope-count="1"');
+    expect(html).toContain("0 completed trades");
+    expect(html).toContain("1 draft review");
+    expect(html).toContain(
+      'aria-label="Open Draft process draft reviews in Trades, playbook 4 of 4"',
+    );
+    expect(html.match(/>Open draft reviews<\/button>/g)).toHaveLength(1);
   });
 
   it("escapes hostile playbook identity and rule text in cards and actions", () => {
@@ -86,10 +146,13 @@ describe("playbook trade scope view", () => {
     };
 
     const retainedHtml = renderPlaybookScope(retained);
-    expect(retainedHtml).toContain("0 trades");
+    expect(retainedHtml).toContain("0 completed trades");
     expect(retainedHtml).toContain('data-playbook-trade-scope-route="Draft process"');
     expect(retainedHtml).toContain(
       "Open Draft process completed reviews in Trades, playbook 4 of 4",
+    );
+    expect(retainedHtml).not.toContain(
+      "Open Draft process draft reviews in Trades, playbook 4 of 4",
     );
 
     const emptyHtml = renderPlaybookScope(EMPTY_WORKSPACE);

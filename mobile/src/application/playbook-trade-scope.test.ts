@@ -3,25 +3,85 @@ import { describe, expect, it } from "vitest";
 import type { JournalWorkspaceSnapshot } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
+  buildExactPlaybookDraftTradeScope,
   buildExactPlaybookTradeScope,
   buildPlaybookLibrary,
 } from "./playbook-trade-scope";
+
+function snapshotWithBreakoutDraft(): JournalWorkspaceSnapshot {
+  return {
+    ...DEMO_WORKSPACE,
+    trades: DEMO_WORKSPACE.trades.map((trade) => (
+      trade.tradeSubjectId === "demo-subject-aapl"
+        ? { ...trade, reviewStatus: "draft" }
+        : trade
+    )),
+    playbooks: DEMO_WORKSPACE.playbooks.map((playbook) => (
+      playbook.name === "Breakout"
+        ? {
+          ...playbook,
+          tradeCount: playbook.tradeCount - 1,
+          netR: -0.1,
+          winRatePct: 50,
+        }
+        : playbook
+    )),
+    reviewProgress: {
+      ...DEMO_WORKSPACE.reviewProgress,
+      pendingTrades: 0,
+      draftTrades: 1,
+      completedTrades: DEMO_WORKSPACE.reviewProgress.completedTrades - 1,
+    },
+  };
+}
+
+function snapshotWithDraftOnlyPlaybook(): JournalWorkspaceSnapshot {
+  const snapshot = snapshotWithBreakoutDraft();
+  return {
+    ...snapshot,
+    trades: snapshot.trades.map((trade) => (
+      trade.tradeSubjectId === "demo-subject-aapl"
+        ? { ...trade, playbook: "Draft process" }
+        : trade
+    )),
+    playbooks: [
+      ...snapshot.playbooks,
+      {
+        name: "Draft process",
+        tradeCount: 0,
+        netR: null,
+        winRatePct: 0,
+        rules: ["Wait for confirmation"],
+      },
+    ],
+    reviewOptions: {
+      ...snapshot.reviewOptions,
+      playbooks: [
+        ...snapshot.reviewOptions.playbooks,
+        { name: "Draft process", rules: ["Wait for confirmation"] },
+      ],
+    },
+  };
+}
 
 describe("playbook trade scope", () => {
   it("projects stable playbook evidence without adding durable state", () => {
     const library = buildPlaybookLibrary(DEMO_WORKSPACE);
 
     expect(library.provenance).toBe("demo");
-    expect(library.playbooks.map(({ name, tradeCount }) => [name, tradeCount]))
-      .toEqual([
-        ["Pullback", 3],
-        ["Breakout", 3],
-        ["Reversal", 2],
-      ]);
+    expect(library.playbooks.map(({ name, tradeCount, draftTradeCount }) => (
+      [name, tradeCount, draftTradeCount]
+    ))).toEqual([
+      ["Pullback", 3, 0],
+      ["Breakout", 3, 0],
+      ["Reversal", 2, 0],
+    ]);
     expect(Object.isFrozen(library)).toBe(true);
     expect(Object.isFrozen(library.playbooks)).toBe(true);
     expect(library.playbooks.every(Object.isFrozen)).toBe(true);
     expect(library.playbooks.every((playbook) => Object.isFrozen(playbook.rules)))
+      .toBe(true);
+    expect(library.playbooks.every(({ draftTradeCount }) => draftTradeCount === 0))
       .toBe(true);
   });
 
@@ -87,35 +147,88 @@ describe("playbook trade scope", () => {
     expect(target.hasViewFilters).toBe(true);
   });
 
-  it("supports an honest empty completed cohort for a retained draft-only playbook", () => {
-    const retained: JournalWorkspaceSnapshot = {
-      ...DEMO_WORKSPACE,
-      playbooks: [
-        ...DEMO_WORKSPACE.playbooks,
-        {
-          name: "Draft process",
-          tradeCount: 0,
-          netR: null,
-          winRatePct: 0,
-          rules: ["Wait for confirmation"],
-        },
-      ],
-      reviewOptions: {
-        ...DEMO_WORKSPACE.reviewOptions,
-        playbooks: [
-          ...DEMO_WORKSPACE.reviewOptions.playbooks,
-          { name: "Draft process", rules: ["Wait for confirmation"] },
-        ],
-      },
-    };
+  it("separates draft assignments from completed metrics and exact subjects", () => {
+    const snapshot = snapshotWithBreakoutDraft();
+    const breakout = buildPlaybookLibrary(snapshot).playbooks.find(({ name }) => (
+      name === "Breakout"
+    ));
 
-    const target = buildExactPlaybookTradeScope(retained, "Draft process");
-    expect(target.state.playbook).toBe("Draft process");
-    expect(target.visibleEvidence).toEqual([]);
+    expect(breakout).toMatchObject({
+      name: "Breakout",
+      tradeCount: 2,
+      draftTradeCount: 1,
+      netR: -0.1,
+      winRatePct: 50,
+      rules: DEMO_WORKSPACE.playbooks.find(({ name }) => name === "Breakout")?.rules,
+    });
+    expect(Object.isFrozen(breakout)).toBe(true);
+
+    const completed = buildExactPlaybookTradeScope(snapshot, "Breakout", 2);
+    expect(completed.visibleEvidence.map(({ trade }) => trade.tradeSubjectId).sort())
+      .toEqual(["demo-subject-amd", "demo-subject-spy"]);
+    expect(completed.state.reviewState).toBe("completed");
+
+    const draft = buildExactPlaybookDraftTradeScope(snapshot, "Breakout", 1);
+    expect(draft.state).toEqual({
+      accountId: null,
+      activityFrom: null,
+      activityThrough: null,
+      selectedDay: null,
+      calendarMonth: "2026-07",
+      query: "",
+      assetClass: "all",
+      direction: "all",
+      positionState: "all",
+      reviewState: "draft",
+      setup: null,
+      mistake: null,
+      emotion: null,
+      tag: null,
+      playbook: "Breakout",
+    });
+    expect(draft.evidence).toHaveLength(8);
+    expect(draft.visibleEvidence.map(({ trade }) => trade.tradeSubjectId))
+      .toEqual(["demo-subject-aapl"]);
+    expect(draft.invalidatedSelectedDay).toBeNull();
+  });
+
+  it("keeps completed zero honest while opening a true draft-only playbook exactly", () => {
+    const retained = snapshotWithDraftOnlyPlaybook();
+
+    const completed = buildExactPlaybookTradeScope(retained, "Draft process", 0);
+    expect(completed.state.playbook).toBe("Draft process");
+    expect(completed.visibleEvidence).toEqual([]);
+
+    const draft = buildExactPlaybookDraftTradeScope(retained, "Draft process", 1);
+    expect(draft.state.reviewState).toBe("draft");
+    expect(draft.visibleEvidence.map(({ trade }) => trade.tradeSubjectId))
+      .toEqual(["demo-subject-aapl"]);
     expect(buildPlaybookLibrary(retained).playbooks.at(-1)).toMatchObject({
       name: "Draft process",
       tradeCount: 0,
+      draftTradeCount: 1,
     });
+  });
+
+  it("rejects a stale last-draft action instead of broadening to an empty cohort", () => {
+    const rendered = snapshotWithBreakoutDraft();
+    expect(buildPlaybookLibrary(rendered).playbooks[1]?.draftTradeCount).toBe(1);
+
+    expect(() => buildExactPlaybookDraftTradeScope(
+      DEMO_WORKSPACE,
+      "Breakout",
+      1,
+    )).toThrow(/count|available/iu);
+    expect(() => buildExactPlaybookDraftTradeScope(
+      DEMO_WORKSPACE,
+      "Breakout",
+      0,
+    )).toThrow(/count|available/iu);
+    expect(() => Reflect.apply(
+      buildExactPlaybookDraftTradeScope,
+      undefined,
+      [rendered, "Breakout"],
+    )).toThrow(/count|available/iu);
   });
 
   it("fails closed on stale, duplicate, malformed, or count-disagreeing evidence", () => {
