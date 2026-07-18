@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ImportHistoryPreview, JournalWorkspaceSnapshot } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
@@ -63,11 +63,33 @@ describe("import receipt view", () => {
     expect(html).toContain("6 source rows = 4 accepted + 1 rejected + 1 skipped.");
     expect(html).toContain("4 accepted rows = 3 new or restored execution versions + 1 already present.");
     expect(html).toContain("2 warnings = 1 already-present warning + 1 other preview warning.");
+    expect(html).toContain('data-review-import-receipt="receipt-1"');
+    expect(html).toContain("Review linked trades");
     expect(html).toContain('data-rollback-receipt="receipt-1"');
+    expect(html).toContain(
+      'aria-label="Roll back broker.csv from Primary brokerage, Imported Jul 17, 2026 · 9:30 AM, receipt 1 of 1"',
+    );
 
     const demo = importReceiptHistorySection(snapshot("demo"));
     expect(demo).toContain("Reconcile receipt");
+    expect(demo).not.toContain("data-review-import-receipt");
     expect(demo).not.toContain("data-rollback-receipt");
+  });
+
+  it("qualifies same-minute receipt actions by immutable history position", () => {
+    const html = importReceiptHistorySection(snapshot("local", [
+      receipt({ receiptId: "receipt-newer" }),
+      receipt({ receiptId: "receipt-older" }),
+    ]));
+
+    expect(html).toContain("receipt 1 of 2");
+    expect(html).toContain("receipt 2 of 2");
+    expect(html).toContain(
+      "Review trades linked to broker.csv, Primary brokerage, Imported Jul 17, 2026 · 9:30 AM, receipt 1 of 2",
+    );
+    expect(html).toContain(
+      "Review trades linked to broker.csv, Primary brokerage, Imported Jul 17, 2026 · 9:30 AM, receipt 2 of 2",
+    );
   });
 
   it("keeps rolled-back receipts inspectable with exact history and no repeat action", () => {
@@ -79,6 +101,7 @@ describe("import receipt view", () => {
     expect(html).toContain("ROLLED BACK");
     expect(html).toContain("Rolled back Jul 17, 2026 · 10:15 AM");
     expect(html).toContain("The immutable receipt remains in history.");
+    expect(html).not.toContain("data-review-import-receipt");
     expect(html).not.toContain("data-rollback-receipt");
   });
 
@@ -102,7 +125,9 @@ describe("import receipt view", () => {
     const actions: string[] = [];
     const heading = {
       dataset: { importReceiptHeading: "receipt-1" },
-      style: { scrollMarginTop: "" },
+      style: { scrollMarginTop: "", scrollMarginBottom: "" },
+      closest: () => null,
+      getBoundingClientRect: () => ({ top: 84, bottom: 104, height: 20 }),
       scrollIntoView(options: ScrollIntoViewOptions): void {
         expect(options).toEqual({ behavior: "auto", block: "start" });
         actions.push("scroll");
@@ -117,17 +142,28 @@ describe("import receipt view", () => {
       querySelectorAll: () => [heading],
       querySelector(selector: string): unknown {
         if (selector === ".topbar") return { getBoundingClientRect: () => ({ bottom: 71.2 }) };
+        if (selector === ".tabbar") return null;
         if (selector === "#screen") return screen;
         return null;
       },
     };
 
-    focusImportReceiptAfterRefresh(root as unknown as HTMLElement, "receipt-1");
-    expect(heading.style.scrollMarginTop).toBe("88px");
-    expect(actions).toEqual(["scroll", "heading"]);
+    vi.stubGlobal("window", {
+      innerHeight: 844,
+      getComputedStyle: () => ({ position: "sticky" }),
+      scrollBy: () => actions.push("adjust"),
+    });
+    try {
+      focusImportReceiptAfterRefresh(root as unknown as HTMLElement, "receipt-1");
+      expect(heading.style.scrollMarginTop).toBe("84px");
+      expect(heading.style.scrollMarginBottom).toBe("12px");
+      expect(actions).toEqual(["scroll", "heading"]);
 
-    heading.dataset.importReceiptHeading = "other";
-    focusImportReceiptAfterRefresh(root as unknown as HTMLElement, "receipt-1");
-    expect(actions).toEqual(["scroll", "heading", "screen"]);
+      heading.dataset.importReceiptHeading = "other";
+      focusImportReceiptAfterRefresh(root as unknown as HTMLElement, "receipt-1");
+      expect(actions).toEqual(["scroll", "heading", "screen"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -29,6 +29,8 @@ async function importTwoClosedTrades(page: Page): Promise<void> {
   await page.locator("#import-account").fill("Primary brokerage");
   await page.getByRole("button", { name: "Preview CSV" }).click();
   await page.getByRole("button", { name: "Import 4 executions" }).click();
+  await expect(page.getByRole("heading", { name: "More", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 }
 
@@ -51,6 +53,8 @@ async function importDuplicateSymbolSessions(page: Page): Promise<void> {
   await page.locator("#import-account").fill("Primary brokerage");
   await page.getByRole("button", { name: "Preview CSV" }).click();
   await page.getByRole("button", { name: "Import 4 executions" }).click();
+  await expect(page.getByRole("heading", { name: "More", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 }
 

@@ -249,6 +249,8 @@ async function importTwoClosedTrades(page: Page): Promise<void> {
   await page.locator("#import-account").fill("Primary brokerage");
   await page.getByRole("button", { name: "Preview CSV" }).click();
   await page.getByRole("button", { name: "Import 4 executions" }).click();
+  await expect(page.getByRole("heading", { name: "More", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 }
 
@@ -2520,6 +2522,8 @@ test("open trades with realized exits stay explicitly interim partial", async ({
   await page.locator("#import-account").fill("Primary brokerage");
   await page.getByRole("button", { name: "Preview CSV" }).click();
   await page.getByRole("button", { name: "Import 2 executions" }).click();
+  await expect(page.getByRole("heading", { name: "More", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 
   await expect(page.locator(".result-card").first())

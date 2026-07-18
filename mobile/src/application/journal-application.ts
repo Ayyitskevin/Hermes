@@ -4,6 +4,7 @@ import { DEMO_WORKSPACE } from "../data/demo";
 import type {
   CsvImportCommitResult,
   DailyJournalCommitResult,
+  JournalImportReceipt,
   JournalRestoreCommitResult,
   JournalStore,
   JournalTradeReviewRecord,
@@ -57,6 +58,12 @@ export interface CsvImportSelection {
   readonly mapping?: CsvHeaderMapping;
 }
 
+export interface ImportReceiptReviewContext {
+  readonly receipt: JournalImportReceipt;
+  readonly occurrenceExecutionIds: readonly string[];
+  readonly snapshot: JournalWorkspaceSnapshot;
+}
+
 export class ManualExecutionCommitStatusUncertainError extends Error {
   constructor(cause: unknown) {
     super(
@@ -108,6 +115,20 @@ export class JournalApplication {
   async loadWorkspace(): Promise<JournalWorkspaceSnapshot> {
     if (this.viewMode === "demo") return DEMO_WORKSPACE;
     return workspaceSnapshotFromLedger(await this.store.load());
+  }
+
+  async loadImportReceiptReviewContext(
+    receiptId: string,
+  ): Promise<ImportReceiptReviewContext> {
+    if (this.viewMode !== "local") {
+      throw new Error("Return to your local journal before reviewing an import receipt.");
+    }
+    const evidence = await this.store.loadImportReviewEvidence(receiptId);
+    return Object.freeze({
+      receipt: evidence.receipt,
+      occurrenceExecutionIds: evidence.occurrenceExecutionIds,
+      snapshot: workspaceSnapshotFromLedger(evidence.ledger),
+    });
   }
 
   async exportUserData(): Promise<JournalExportArtifact> {

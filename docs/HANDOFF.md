@@ -1,9 +1,223 @@
 # Hermes Journal — active mobile handoff
 
+Status: verified Generic CSV Receipt Review Continuation v1 locally · hosted
+exact-commit CI pending · updated 2026-07-17
+
+## Current handoff
+
+task: Deliver Generic CSV Receipt Review Continuation v1 from one exact active
+immutable receipt to its linked current review targets without rereading or
+recommitting the file, inferring identity, changing Trade Browser scope, or
+broadening Hermes's generic stock-only import boundary.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- A new read-only store seam returns one exact active receipt, one execution ID
+  for every accepted source-row occurrence, and the ledger from one coherent
+  store operation. Accepted duplicate rows retain their multiplicity; returned
+  order is explicitly nonsemantic. Session derives the evidence from immutable
+  receipt execution IDs, while SQLite reads occurrence facts and the ledger in
+  one serialized transaction.
+- Both adapters fail closed unless the receipt is unique, committed,
+  unrolled-back, account-coherent, and conserved against accepted-row and
+  written-version counts. SQLite additionally rejects contradictory
+  created/restored execution cardinality, missing or cross-account active
+  executions, rejected receipts, invalid outcomes, and reads queued behind a
+  completed rollback.
+- The manual and CSV branches now share one stable execution/allocation
+  resolver. CSV receipt continuation conserves occurrence multiplicity first,
+  deduplicates exact execution and trade identities second, and orders only the
+  linked current subjects against the existing canonical all-activity account
+  scope. It never guesses from symbol, label, time, row order, recency, or DOM.
+- A dedicated More-screen guide exposes state-qualified stable-subject review
+  actions, ten targets per page, exact Previous/Next bounds, and qualified
+  receipt position labels. It does not mutate Trade Browser filters, imply that
+  every account trade is shown, or auto-open a review. Guide-origin cancel/save
+  returns to the exact action and page; ordinary review origins retain their
+  existing focus behavior.
+- Only active local receipts expose Review and Rollback. Fictional and
+  rolled-back receipts remain inspectable but non-actionable. Review-first and
+  rollback-first both lock their sibling control; confirmed rollback
+  invalidates an in-flight continuation before its serialized store operation
+  and removes transient guidance after refresh.
+- A known-positive post-commit failure surface is owned by Hermes rather than
+  the File input. It names the committed source/account/time, hides capture,
+  cannot be dismissed, and retries only the receipt read/continuation. Tests
+  prove zero second file reads, preparations, or commits for both workspace-read
+  and destination-render failures. Ordinary history-review failure remains a
+  distinct dismissible surface.
+- New file selection clears transient receipt guidance without losing the
+  selected File. Programmatically focused receipt and target headings use
+  visible chrome-safe focus treatment. Existing CSV-dependent journeys now
+  explicitly acknowledge the intentional More destination before navigating to
+  their actual Dashboard subject.
+- SQLite exact-replay matching was separately corrected to include source name
+  and require one committed, unrolled-back, unambiguous match, aligning with
+  Session revision identity. Identical bytes under a renamed file intentionally
+  create a distinct zero-version receipt. This is write-path correctness
+  hardening, not another product increment; no schema or migration changed.
+- README, product blueprint, local-ledger contract, iOS roadmap, Mac handoff,
+  capability ledger, priority SQL, portable report, and this handoff now cover
+  30 bounded Slice D increments, 26 derived-only presentation/projection
+  increments, and the same four write-capable product exceptions.
+- The benchmark remains 20 unique domains with 6 shipped, 6 prioritize-local,
+  6 gated-funded, and 2 intentional non-goals. Manual and generic-CSV
+  continuation are shipped inside the broader prioritize-local activation
+  domain; their separate moderated human cohorts remain NOT RUN.
+- No schema, migration, receipt fact, archive/digest/export/restore shape,
+  governed-report cohort/formula/version/checksum, financial aggregation,
+  protected preference, dependency, native source, network path, credential,
+  destructive flow, order execution, advice, or public profit ranking was
+  added.
+
+verified:
+
+- Independent technical review found no release-blocking defect after fixes for
+  rollback/review mutual locking, source-name contract wording, and fail-closed
+  written-occurrence cardinality. Its final focused rerun passed typecheck,
+  756 then-current unit tests, receipt Playwright 4/4, boundary 2/2, iOS-sync
+  verifier 8/8, and diff checking; the parent then added three adapter
+  regressions and reran the broader gates below.
+- Independent UX/accessibility review found no release blocker after
+  fixed-size paging, qualified action identity, chrome-safe focus, state-aware
+  action eligibility, listener teardown, and recovery separation. It retained
+  unbounded receipt-history rendering as P2 debt and native assistive-technology
+  checks as explicit device work.
+- Independent evidence review reconciled implementation, tests, and claims. It
+  classified this as Slice D 30 / derived-only product increment 26, kept the
+  same four write-capable product increments, and required the SQLite replay
+  correction to be disclosed separately.
+- `cd mobile && npm ci` — exit 0; 164 packages audited, 0 vulnerabilities.
+- `cd mobile && npm run typecheck` — exit 0.
+- `cd mobile && npm run test:boundary` — exit 0; 1 file, 2 tests passed.
+- `cd mobile && npm test` — exit 0; 65 files, 759 tests passed.
+- Focused adapter verification — exit 0; Session/SQLite 45/45 passed before the
+  final Session renamed-file regression was added to the 759-test full run.
+- `cd mobile && npm run test:e2e -- e2e/import-receipt-detail.spec.ts
+  --workers=1` — exit 0; all 4 receipt journeys passed.
+- The first full post-feature Chromium run exposed 22 legacy fixtures that
+  still expected CSV commit to land on Dashboard: 73/95 passed. Four test files
+  were updated to assert the intentional More destination, navigate explicitly
+  where Dashboard was their real subject, and use qualified rollback names.
+  The affected focused inventory then passed 32/32 without weakening product
+  assertions.
+- `cd mobile && npm run test:e2e` — final exit 0; all 95
+  production-Chromium journeys passed with 16 workers.
+- `cd mobile && npm run ios:copy`, then `npm run ios:sync` — exit 0.
+  Vite transformed 90 modules; the existing >500 kB chunk warning remains.
+  Capacitor found only `@capacitor-community/sqlite@8.1.0` and explicitly
+  skipped CocoaPods/xcodebuild on Linux.
+- `cd mobile && npm run verify:ios-sync` — exit 0. Six production files
+  matched the iOS public copy byte-for-byte with SHA-256
+  `28ed665a8b2fb366c1b9f060a72d8ce5b2a6481287635ddd65f9bab41c06ee18`;
+  all native acceptance rows remain NOT RUN.
+- `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
+- The parity report builder passed validation, packaging, verification, source
+  keyboard interaction, 1440/390 responsive checks, and script-stripped
+  fallback checks for 11 blocks, 1 chart, 1 metric strip, and 1 table. Fallback
+  widths reconciled at 1425/1425 desktop and 375/375 mobile.
+- Repository-pinned `sql.js@1.14.1` execution of `headline.sql`,
+  `disposition.sql`, and `priority-roadmap.sql` reproduced 20/6/6/8
+  headline counts, exact 6/6/6/2 dispositions, and six ordered local-first
+  rows.
+- SHA-256: report HTML
+  `935b57505beebe6a3c1ac8d1bedce60a17d1a22bede64bc1d8f50114f058a086`;
+  artifact JSON
+  `aefb58536379c190213284ebaad62418df12fa6061aaf813ec112ea030ba5542`;
+  capability ledger
+  `a20c9c20f1a6d463a2822f701e928610b403e2bb0706b98fd7cdc3b4d712a2aa`;
+  priority SQL
+  `47aeefff71f4ef8a52743a2d2fc0716ed9669b3c7fe5a6ce5e956dcde22bdb06`.
+- `cd mobile && npm audit --omit=dev` — exit 0; 0 vulnerabilities.
+- JSON syntax, report receipt, SQL output, generated-bundle parity, tracked
+  native/lockfile drift, and `git diff --check` — passed.
+- Handoff topology checks — 1 current section, 36 prior-milestone markers, and
+  37 complete `task/stage/lane/produced/verified/assumptions/open` schema
+  blocks.
+- Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
+  does not touch legacy Python and this checkout has no complete project venv.
+  The hosted Legacy Python safety job remains required.
+
+assumptions:
+
+- Each accepted CSV source-row occurrence owns exactly one immutable execution
+  reference. Repeated occurrences are meaningful evidence; adapter return order
+  is not.
+- The receipt and ledger must come from one coherent serialized read. A stale,
+  rejected, rolled-back, ambiguous, cross-account, or corrupted receipt is not
+  a review destination.
+- Canonical all-activity account scope is used only to validate and order
+  linked current subjects. CSV continuation deliberately leaves the user's
+  Trade Browser session unchanged.
+- The guide is transient in-process UI state. No relaunch persistence,
+  activation-progress persistence, or native lifecycle continuity is claimed.
+- Generic CSV remains stock-only. No broker-specific mapping, asset-class
+  inference, correction inference, or broader import semantics were added.
+- Source name is intentionally part of exact active import revision identity.
+  The SQLite parity correction changes existing replay behavior but does not
+  alter immutable receipt shape or product-increment counts.
+- This increment is intended to reduce import-to-review friction; no causal
+  activation, retention, or trading-outcome benefit has been measured.
+- Browser, SQL.js, and Linux bundle evidence do not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Before downstream pass, require the published commit's Mobile Linux and
+  Legacy Python jobs to be green and record the terminal exact-SHA run in the
+  fleet handoff; GitHub Actions is authoritative for that external state.
+- Two separate moderated fictional-data studies remain NOT RUN: five manual
+  participants and five generic-CSV participants. At least four in each cohort
+  must reach linked current review without facilitator correction; CSV
+  participants must first reconcile the exact immutable receipt. Do not pool
+  cohorts or infer retention/causality from browser automation.
+- Receipt history still renders every historical receipt in More. Its
+  unbounded DOM/list behavior is P2 debt; the linked-target guide itself is
+  bounded at ten per page.
+- Completed-review guide opening, AUTO/many-to-one normalization boundaries,
+  listener-lifetime instrumentation, and several return-focus paths have
+  application/unit or indirect browser evidence but not dedicated browser
+  journeys. These are residual coverage gaps, not release blockers.
+- Saved Views remains held until protected preference ownership, encryption or
+  an approved schema/migration, reset/stale-value lifecycle, and archive/export
+  exclusion are designed. Plaintext WebView localStorage is not acceptable.
+- Symbol Breakdown and every later observational report remain held on explicit
+  eligibility, version, checksum, conservation, exclusion, restore-equality,
+  and stable-ID drill-down decisions.
+- HOLD all native acceptance. CocoaPods, Xcode compile, Simulator, physical
+  iPhone, SQLite/SQLCipher/Keychain, Files/photos, safe areas, interruption,
+  background/foreground, force-quit/relaunch, multi-scene, VoiceOver, and
+  Dynamic Type were NOT RUN.
+- Existing human gates remain: generic-CSV asset semantics; atomic batch
+  durable recovery; approved Delete All Data; and removal, wrapping, or explicit
+  acceptance of the pinned SQLite plugin's HTTP-download bridge and
+  database-path console print.
+- Credentialed broker/prop sync, licensed replay, reproducible backtesting,
+  private AI, mentor/community services, and pricing/packaging remain
+  gated-funded domains requiring explicit product, rights, security, privacy,
+  commercial, moderation, recurring-cost, and human decisions.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active after this slice.
+
+## Prior milestone — Manual Capture Review Continuation v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Generic CSV Receipt Review Continuation v1 handoff above.
+
 Status: verified Manual Capture Review Continuation v1 locally · exact-commit
 hosted status tracked in GitHub Actions · updated 2026-07-17
 
-## Current handoff
+### Historical handoff
 
 task: Deliver Manual Capture Review Continuation v1 from a known manual commit
 to the exact current review target without resubmitting the execution, inferring

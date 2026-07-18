@@ -57,7 +57,8 @@ under the provisional identifier until that gate is cleared.
   Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
   Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
-  Compact Trades Filters v1, export, and
+  Generic CSV Receipt Review Continuation v1, Compact Trades Filters v1,
+  export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -609,11 +610,32 @@ observed plugin/device behavior:
   an injected destination-render failure after a known commit with
   continuation-only retry and zero second commit reads, storage/network
   neutrality,
-  and 320px/200% reflow. CSV receipt-to-review continuation and separate
-  moderated manual/CSV cohorts remain NOT RUN. No schema, store command,
+  and 320px/200% reflow. Separate moderated manual/CSV cohorts remain NOT RUN.
+  No schema, store command,
   archive/digest/export shape, governed report, financial formula, preference,
   dependency, native source, or network path changed; the same four
   write-capable exceptions remain.
+- Generic CSV Receipt Review Continuation v1 adds a derived-only active-receipt
+  path in More. One coherent read-only store operation returns the exact
+  committed receipt, accepted-row occurrence execution IDs, and current ledger;
+  the application conserves receipt and occurrence counts before deduplicating
+  executions and reusing the shared exact allocation resolver. Linked current
+  subjects are ordered against the canonical all-activity account scope and
+  displayed ten at a time without changing Trade Browser filters or opening a
+  review automatically. State-qualified actions retain the exact page/action
+  through guide-origin saves. New CSV selection clears the transient guide;
+  rollback supersedes in-flight review and preserves immutable history; active
+  history can reopen it. Demo and rolled-back receipts are non-actionable.
+  Confirmed post-commit failure names file/account/time from the committed
+  ledger, hides capture, cannot be dismissed, and retries without rereading,
+  preparing, or recommitting the file. History-review failure remains distinct
+  and dismissible. Generic CSV remains stock-only; relaunch persistence and
+  both moderated cohorts remain NOT RUN. No schema, receipt fact,
+  archive/digest/export shape, governed report/formula, preference, dependency,
+  native source, or network path changed. A separate SQLite exact-replay parity
+  correction adds source name and committed/unambiguous predicates to match the
+  existing Session revision contract; it is correctness hardening, not another
+  product increment or write-capable product exception.
 - Compact Trades Filters v1 puts only those eight exact controls and their
   error region in a native disclosure. Zero exact facets render collapsed; any
   fixed, dynamic, or retained stale facet renders open; the summary count
@@ -784,9 +806,10 @@ Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
-Overview v1, Manual Capture Review Continuation v1, matching-runtime local
-restore, and all eight governed reports are implemented. Twenty-nine bounded
-Slice D increments are implemented in total; the twenty-five
+Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
+Continuation v1, matching-runtime local restore, and all eight governed reports
+are implemented. Thirty bounded Slice D increments are implemented in total;
+the twenty-six
 presentation/projection increments remain derived-only. Durable Daily Journal,
 Report Trade Continuation, Dashboard Recent Trade Continuation, and Calendar-Day
 Reflection Continuation are the write-capable exceptions. The trade

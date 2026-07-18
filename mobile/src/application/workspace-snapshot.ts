@@ -163,6 +163,15 @@ function zonedDay(timestampUs: string, timeZone: string, label: string): ZonedDa
   };
 }
 
+export function importReceiptImportedAtLabel(
+  receipt: Readonly<Pick<JournalImportReceipt, "id" | "importedAtUs">>,
+  timeZone: string,
+): string {
+  validateTimeZone(timeZone);
+  const imported = zonedDay(receipt.importedAtUs, timeZone, `import ${receipt.id} time`);
+  return `Imported ${imported.dateLabel}, ${imported.year} · ${imported.timeLabel}`;
+}
+
 function dailyEntryDate(isoDate: string): Date {
   invariant(
     /^(?:19[7-9][0-9]|[2-9][0-9]{3})-[0-9]{2}-[0-9]{2}$/.test(isoDate),
@@ -705,7 +714,6 @@ function mapImport(
   invariant(receipt.accountId.length > 0 && receipt.accountId.trim() === receipt.accountId, `import ${receipt.id} has no account ID`);
   invariant(receipt.accountName.length > 0 && receipt.accountName.trim() === receipt.accountName, `import ${receipt.id} has no account name`);
   invariant(receipt.sourceName.length > 0 && receipt.sourceName.trim() === receipt.sourceName, `import ${receipt.id} has no source name`);
-  const imported = zonedDay(receipt.importedAtUs, timeZone, `import ${receipt.id} time`);
   validateReceiptCount(receipt.sourceRows, `import ${receipt.id} source rows`);
   validateReceiptCount(receipt.acceptedRows, `import ${receipt.id} accepted rows`);
   validateReceiptCount(receipt.rejectedRows, `import ${receipt.id} rejected rows`);
@@ -742,7 +750,7 @@ function mapImport(
     receiptId: receipt.id,
     accountLabel: receipt.accountName,
     sourceLabel: receipt.sourceName,
-    importedAtLabel: `Imported ${imported.dateLabel}, ${imported.year} · ${imported.timeLabel}`,
+    importedAtLabel: importReceiptImportedAtLabel(receipt, timeZone),
     executions: receipt.acceptedRows,
     accounts: accountCount,
     sourceRows: receipt.sourceRows,

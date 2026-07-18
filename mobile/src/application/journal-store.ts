@@ -165,6 +165,17 @@ export interface CsvImportCommitResult {
   readonly ledger: JournalLedgerSnapshot;
 }
 
+export interface JournalImportReviewEvidence {
+  readonly receipt: JournalImportReceipt;
+  /**
+   * One stable execution ID per accepted source-row occurrence. Duplicates are
+   * meaningful; adapter order is non-semantic and must not drive review order.
+   */
+  readonly occurrenceExecutionIds: readonly string[];
+  /** Coherent current ledger read from the same adapter operation as the receipt evidence. */
+  readonly ledger: JournalLedgerSnapshot;
+}
+
 export interface ManualExecutionCommitResult {
   readonly outcome: "committed" | "duplicate";
   readonly executionId: string;
@@ -273,6 +284,8 @@ export class JournalRestoreError extends Error {
 
 export interface JournalStore {
   load(): Promise<JournalLedgerSnapshot>;
+  /** Read-only receipt occurrence evidence; never reconstruct this link from display fields. */
+  loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence>;
   /** Complete archive boundary; unlike load(), this includes immutable history. */
   exportUserData(): Promise<JournalExportArtifact>;
   prepareUserDataRestore(contents: string): Promise<PreparedJournalRestore>;

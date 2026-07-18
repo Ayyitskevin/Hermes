@@ -3,9 +3,9 @@
 WITH priority_roadmap(sequence, capability, first_increment, decision_gate, success_metric) AS (
   VALUES
     (1, 'Guided activation and account overview',
-      'Ship exact immutable-receipt-to-review continuation for generic CSV, then moderate the shipped manual and CSV paths as separate first-use cohorts through the exact stable-ID account scope.',
+      'Moderate the shipped manual and generic-CSV paths as separate first-use cohorts through exact stable-ID continuation; CSV participants must reconcile the immutable receipt before linked review.',
       'No identity inference, account mutation, financial aggregation, or advisory onboarding copy.',
-      'In separate five-participant cohorts, at least four manual and four CSV participants reach the linked current review without correction; CSV participants first reconcile the exact immutable receipt.'),
+      'In separate five-participant cohorts, at least four manual participants reach linked review through exact account scope and four CSV participants reach it from the reconciled canonical-scope-ordered receipt guide, without correction.'),
     (2, 'Reusable filters and saved views',
       'Specify and ship device-local view presets only after protected preference ownership, reset, stale-value, lifecycle, and archive/export-exclusion rules are pinned.',
       'No plaintext WebView localStorage downgrade; a saved scope cannot silently change governed report membership.',

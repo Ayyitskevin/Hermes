@@ -323,10 +323,10 @@ async function createHarness(runtime: JournalStoreRuntime = deterministicRuntime
   };
 }
 
-function preparedCsv(rawInput = ROUND_TRIP_CSV) {
+function preparedCsv(rawInput = ROUND_TRIP_CSV, sourceName = "fills.csv") {
   return prepareCsvImport({
     rawInput,
-    sourceName: "fills.csv",
+    sourceName,
     accountName: "Main brokerage",
     timeZone: "America/New_York",
     defaultCurrency: "USD",
@@ -1701,6 +1701,12 @@ describe("SqliteJournalStore", () => {
         rolledBackAtUs: null,
       });
       expect(result.ledger.executions).toHaveLength(2);
+      const reviewEvidence = await store.loadImportReviewEvidence(result.receipt.id);
+      expect(reviewEvidence.receipt).toEqual(result.receipt);
+      expect(reviewEvidence.occurrenceExecutionIds).toEqual(
+        result.ledger.executions.map((execution) => execution.id),
+      );
+      expect(Object.isFrozen(reviewEvidence.occurrenceExecutionIds)).toBe(true);
       expect(result.ledger.projection.trades).toHaveLength(1);
       expect(result.ledger.projection.trades[0]).toMatchObject({
         direction: "LONG",
@@ -1739,6 +1745,172 @@ describe("SqliteJournalStore", () => {
     }
   });
 
+  it("rejects noncommitted and occurrence-kind-corrupted review evidence", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const committed = await store.commitCsvImport(preparedCsv());
+      await database.execute("DROP TRIGGER import_receipts_reject_update");
+      await database.execute("DROP TRIGGER import_execution_occurrences_reject_update");
+      await database.run(
+        `UPDATE import_receipts
+            SET outcome = 'rejected',
+                source_row_count = 0,
+                accepted_row_count = 0,
+                rejected_row_count = 0,
+                skipped_row_count = 0,
+                warning_count = 0,
+                execution_version_count = 0
+          WHERE id = ?`,
+        [committed.receipt.id],
+      );
+
+      await expect(store.loadImportReviewEvidence(committed.receipt.id))
+        .rejects.toThrow(/committed receipt/i);
+
+      await database.run(
+        `UPDATE import_receipts
+            SET outcome = 'committed',
+                source_row_count = 2,
+                accepted_row_count = 2,
+                rejected_row_count = 0,
+                skipped_row_count = 0,
+                warning_count = 0,
+                execution_version_count = 2
+          WHERE id = ?`,
+        [committed.receipt.id],
+      );
+      await database.run(
+        `UPDATE import_execution_occurrences
+            SET occurrence_kind = 'duplicate'
+          WHERE id = (
+            SELECT MIN(occurrence.id)
+              FROM import_execution_occurrences AS occurrence
+              JOIN import_receipts AS receipt
+                ON receipt.batch_id = occurrence.import_batch_id
+             WHERE receipt.id = ?
+          )`,
+        [committed.receipt.id],
+      );
+
+      await expect(store.loadImportReviewEvidence(committed.receipt.id))
+        .rejects.toThrow(/does not reconcile/i);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("rejects contradictory written-execution occurrence evidence", async () => {
+    const { database, store } = await createHarness();
+    const threeExecutionCsv =
+      "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+      + "written-1,AAPL,BTO,1,100,0,USD,2026-07-01T13:30:00Z\r\n"
+      + "written-2,AAPL,STC,1,110,0,USD,2026-07-01T14:30:00Z\r\n"
+      + "written-3,MSFT,BTO,1,400,0,USD,2026-07-01T15:30:00Z";
+    try {
+      const committed = await store.commitCsvImport(
+        preparedCsv(threeExecutionCsv, "three-executions.csv"),
+      );
+      const occurrences = await database.query<{
+        id: string;
+        execution_id: string;
+        execution_version_id: string;
+      }>(
+        `SELECT occurrence.id, occurrence.execution_id, occurrence.execution_version_id
+           FROM import_execution_occurrences AS occurrence
+           JOIN import_source_rows AS source_row
+             ON source_row.id = occurrence.import_source_row_id
+          WHERE occurrence.import_batch_id = (
+            SELECT receipt.batch_id FROM import_receipts AS receipt WHERE receipt.id = ?
+          )
+          ORDER BY source_row.row_ordinal`,
+        [committed.receipt.id],
+      );
+      const [first, second, third] = occurrences;
+      if (first === undefined || second === undefined || third === undefined) {
+        throw new Error("Expected three immutable import occurrences.");
+      }
+      await database.execute("DROP TRIGGER import_receipts_reject_update");
+      await database.execute("DROP TRIGGER import_execution_occurrences_reject_update");
+      await database.run(
+        `UPDATE import_receipts
+            SET execution_version_count = 2
+          WHERE id = ?`,
+        [committed.receipt.id],
+      );
+      await database.run(
+        `UPDATE import_execution_occurrences
+            SET execution_id = ?,
+                execution_version_id = ?,
+                occurrence_kind = 'restored'
+          WHERE id = ?`,
+        [first.execution_id, first.execution_version_id, second.id],
+      );
+      await database.run(
+        `UPDATE import_execution_occurrences
+            SET execution_id = ?,
+                execution_version_id = ?,
+                occurrence_kind = 'duplicate'
+          WHERE id = ?`,
+        [second.execution_id, second.execution_version_id, third.id],
+      );
+
+      await expect(store.loadImportReviewEvidence(committed.receipt.id))
+        .rejects.toThrow(/does not reconcile/i);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("preserves repeated accepted-row occurrence multiplicity for one execution", async () => {
+    const { store } = await createHarness();
+    const repeated =
+      "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+      + "same-fill,AAPL,BUY,1,100,0,USD,2026-07-01T13:30:00Z\r\n"
+      + "same-fill,AAPL,BUY,1,100,0,USD,2026-07-01T13:30:00Z";
+    try {
+      const committed = await store.commitCsvImport(
+        preparedCsv(repeated, "repeated.csv"),
+      );
+      const evidence = await store.loadImportReviewEvidence(committed.receipt.id);
+
+      expect(committed.receipt).toMatchObject({ acceptedRows: 2, executionCount: 1 });
+      expect(evidence.occurrenceExecutionIds).toHaveLength(2);
+      expect(new Set(evidence.occurrenceExecutionIds).size).toBe(1);
+      expect(evidence.occurrenceExecutionIds[0]).toBe(evidence.occurrenceExecutionIds[1]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("queues receipt evidence behind rollback and then rejects the inactive receipt", async () => {
+    const destination = await createHarness();
+    const database = new BlockingStoreOperationDatabase(destination.database);
+    const store = new SqliteJournalStore(database, deterministicRuntime());
+    const committed = await store.commitCsvImport(preparedCsv());
+    const gate = database.blockNextTransaction();
+    const rollback = store.rollbackImport(committed.receipt.id, "Queue evidence behind rollback");
+    let evidenceSettled = false;
+    let evidence: Promise<unknown> | null = null;
+    try {
+      await gate.started;
+      evidence = store.loadImportReviewEvidence(committed.receipt.id).finally(() => {
+        evidenceSettled = true;
+      });
+      await Promise.resolve();
+      expect(evidenceSettled).toBe(false);
+
+      gate.release();
+      await rollback;
+      await expect(evidence).rejects.toThrow(/active receipt/i);
+      evidence = null;
+    } finally {
+      gate.release();
+      await rollback.catch(() => undefined);
+      if (evidence !== null) await evidence.catch(() => undefined);
+      await store.close();
+    }
+  });
+
   it("returns the original receipt for an identical import without rebuilding", async () => {
     const { database, store } = await createHarness();
     try {
@@ -1747,6 +1919,8 @@ describe("SqliteJournalStore", () => {
 
       expect(duplicate.outcome).toBe("duplicate");
       expect(duplicate.receipt.id).toBe(first.receipt.id);
+      expect((await store.loadImportReviewEvidence(duplicate.receipt.id)).occurrenceExecutionIds)
+        .toEqual((await store.loadImportReviewEvidence(first.receipt.id)).occurrenceExecutionIds);
       expect(duplicate.ledger.executions).toHaveLength(2);
       expect(duplicate.ledger.imports).toHaveLength(1);
       expect(await count(database, "import_batches")).toBe(1);
@@ -1754,6 +1928,31 @@ describe("SqliteJournalStore", () => {
       expect(await count(database, "executions")).toBe(2);
       expect(await count(database, "projection_rebuild_runs")).toBe(1);
       expect(await scalar(database, "SELECT generation FROM projection_active_state")).toBe(1);
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("matches Session semantics when identical CSV content has a different source name", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const first = await store.commitCsvImport(preparedCsv());
+      const renamed = await store.commitCsvImport(
+        preparedCsv(ROUND_TRIP_CSV, "renamed-fills.csv"),
+      );
+
+      expect(renamed.outcome).toBe("committed");
+      expect(renamed.receipt.id).not.toBe(first.receipt.id);
+      expect(renamed.receipt).toMatchObject({
+        sourceName: "renamed-fills.csv",
+        acceptedRows: 2,
+        executionCount: 0,
+      });
+      expect(renamed.ledger.executions).toHaveLength(2);
+      expect(renamed.ledger.imports).toHaveLength(2);
+      expect(await count(database, "import_batches")).toBe(2);
+      expect(await count(database, "import_receipts")).toBe(2);
       await expectHealthyDatabase(database);
     } finally {
       await store.close();
@@ -1797,6 +1996,9 @@ describe("SqliteJournalStore", () => {
       expect(result.outcome).toBe("committed");
       expect(result.receipt.executionCount).toBe(0);
       expect(result.receipt.warningCount).toBe(3);
+      const evidence = await store.loadImportReviewEvidence(result.receipt.id);
+      expect(evidence.occurrenceExecutionIds).toHaveLength(3);
+      expect(new Set(evidence.occurrenceExecutionIds).size).toBe(3);
       expect(result.ledger.executions).toHaveLength(3);
       expect(result.ledger.imports).toHaveLength(2);
       expect(await count(database, "executions")).toBe(3);
@@ -1840,6 +2042,9 @@ describe("SqliteJournalStore", () => {
       expect(second.ledger.executions).toHaveLength(2);
       expect(second.receipt).toMatchObject({ acceptedRows: 2, executionCount: 1 });
       expect(await count(database, "import_execution_occurrences")).toBe(3);
+      const secondEvidence = await store.loadImportReviewEvidence(second.receipt.id);
+      expect(secondEvidence.occurrenceExecutionIds).toHaveLength(2);
+      expect(new Set(secondEvidence.occurrenceExecutionIds).size).toBe(2);
 
       const afterFirstRollback = await store.rollbackImport(
         first.receipt.id,
@@ -1847,6 +2052,10 @@ describe("SqliteJournalStore", () => {
       );
       expect(afterFirstRollback.executions).toHaveLength(2);
       expect(afterFirstRollback.projection.moneyTotals[0]?.netPnl).toBe("10");
+      await expect(store.loadImportReviewEvidence(first.receipt.id))
+        .rejects.toThrow(/active receipt/i);
+      await expect(store.loadImportReviewEvidence(second.receipt.id))
+        .resolves.toMatchObject({ occurrenceExecutionIds: secondEvidence.occurrenceExecutionIds });
       expect(await scalar(
         database,
         `SELECT reverted_execution_count
@@ -1856,17 +2065,26 @@ describe("SqliteJournalStore", () => {
       const duplicate = await store.commitCsvImport(preparedCsv(overlappingCsv));
       expect(duplicate.outcome).toBe("duplicate");
       expect(duplicate.ledger.executions).toHaveLength(2);
+      expect((await store.loadImportReviewEvidence(duplicate.receipt.id)).occurrenceExecutionIds)
+        .toEqual(secondEvidence.occurrenceExecutionIds);
 
       const afterSecondRollback = await store.rollbackImport(
         second.receipt.id,
         "Remove the remaining overlapping import",
       );
       expect(afterSecondRollback.executions).toEqual([]);
+      await expect(store.loadImportReviewEvidence(second.receipt.id))
+        .rejects.toThrow(/active receipt/i);
       expect(await scalar(
         database,
         `SELECT reverted_execution_count
            FROM import_rollbacks WHERE import_receipt_id = '${second.receipt.id}'`,
       )).toBe(2);
+
+      const restored = await store.commitCsvImport(preparedCsv(overlappingCsv));
+      expect(restored.receipt.id).not.toBe(second.receipt.id);
+      expect((await store.loadImportReviewEvidence(restored.receipt.id)).occurrenceExecutionIds)
+        .toEqual(secondEvidence.occurrenceExecutionIds);
       await expectHealthyDatabase(database);
     } finally {
       await store.close();

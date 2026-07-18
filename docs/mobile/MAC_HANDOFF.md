@@ -117,6 +117,27 @@ and an App Store disclosure.
 - Import a two-fill CSV, confirm the preview/mapping/receipt, force quit, relaunch,
   and reconcile the closed-trade P&L including both fees.
 - Re-import the same file and confirm no duplicate execution or performance.
+- From one active local receipt, open **Review linked trades** and record that
+  the visible source/accepted/rejected/skipped/new-or-restored/already-present/
+  warning equations match SQLite. Confirm one accepted-row occurrence identity
+  is retained per source row before execution/trade deduplication, the linked
+  targets follow canonical all-activity account order, at most ten render per
+  page, and the existing Trade Browser filters do not change. Open pending,
+  draft, and completed targets without automatic sheet opening; save from page
+  two and confirm the exact page/action regains unobscured focus. Select a new
+  CSV and confirm the guide clears without losing the chosen file. Reopen from
+  active history, then begin Review and attempt rollback: mutually exclusive
+  controls and pre-transaction supersession must prevent a late guide from
+  reopening after rollback. Demo and rolled-back receipts must expose no review
+  action. Inject both a post-commit workspace-read failure and a destination-
+  render failure: the confirmed recovery must name the committed file/account/
+  time, hide capture, expose no dismiss action, and retry without a second file
+  read, preparation, or commit. A history-read failure must remain distinctly
+  labeled and dismissible. Repeat an identical source name/file and a renamed
+  identical file; Session/SQLite revision behavior must agree, with the renamed
+  file producing a new zero-version receipt rather than returning the old
+  source identity. Generic CSV remains stock-only; do not infer relaunch
+  persistence or broader broker/asset semantics.
 - In a fresh journal, manually enter an opening and closing fill with fees.
   Confirm the review step shows the canonical values, the result reconciles,
   no import receipt is manufactured, and force quit/relaunch preserves both
@@ -718,6 +739,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Daily Reflection Rhythm | status | canonical date/head validation + completed/draft/missing/current-run/no-trade counts + demo/local continuation/layout/SQLite/network evidence |
 | Guided Account Overview | status | retained/zero-trade account order + stable-ID all-activity scope + filter reset + stale-ID failure + focus/announcement/layout/SQLite/network evidence |
 | Manual Capture Review Continuation | status | known manual result + exact execution/allocation identity + one/two current subjects + all-activity reset + review save/return + retry-only no-resubmit + tamper/focus/layout/SQLite/network evidence |
+| Generic CSV Receipt Review Continuation | status | coherent active receipt/occurrence/ledger read + conservation/dedup/scope order + fixed paging + guide-origin return + rollback supersession + post-commit retry-only no-reread/reprepare/recommit + adapter parity + focus/layout/SQLite/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
 
@@ -864,6 +886,20 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   render failure retries continuation without a second manual command. Keep
   native acceptance held until stale/tampered identity fails visibly and the
   execution, review heads, account scope, reports, and network log reconcile.
+- Generic CSV Receipt Review Continuation v1 has only Linux/SQL.js/Chromium
+  coherent-evidence, conservation, pagination, recovery, focus, reflow,
+  storage, and request evidence. Native SQLite/SQLCipher transaction ordering,
+  background/foreground, force-quit/relaunch, two-scene refresh/rollback,
+  VoiceOver qualified action order, hardware-keyboard focus/return, safe-area
+  visibility, and 320/421-width 200% Dynamic Type remain NOT RUN. Prove active
+  receipt occurrence multiplicity and created/restored counts directly from the
+  encrypted store; confirm canonical target order does not mutate Trade Browser
+  session filters; exercise page-two review return, capture clearing, rollback
+  supersession, identical/renamed replay parity, and both post-commit read and
+  render failures without file reread, preparation, or recommit. Keep native
+  acceptance held until demo/rolled-back noninteraction, stock-only copy,
+  no-dismiss confirmed recovery, history-only dismissal, exact focus, and
+  unchanged report/network boundaries are observed on device.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

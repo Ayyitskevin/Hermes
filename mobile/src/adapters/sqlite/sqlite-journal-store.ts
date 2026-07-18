@@ -2,6 +2,7 @@ import type {
   JournalAccountRecord,
   JournalDailyEntryRecord,
   JournalImportReceipt,
+  JournalImportReviewEvidence,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
   JournalPlaybookRecord,
@@ -357,6 +358,101 @@ export class SqliteJournalStore implements JournalStore {
     });
   }
 
+  async loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence> {
+    return this.withRegularStoreOperation(async () => {
+      this.assertOpen();
+      await this.verifySchema();
+      return this.database.transaction(async () => {
+        const ledger = await this.loadWithinConnection();
+        const receiptMatches = ledger.imports.filter((receipt) => receipt.id === receiptId);
+        const receipt = receiptMatches[0];
+        if (
+          receiptMatches.length !== 1
+          || receipt === undefined
+          || receipt.rolledBackAtUs !== null
+        ) {
+          throw new Error("Import review evidence requires one exact active receipt.");
+        }
+        const receiptStateRows = await this.database.query<SqlRow>(
+          `SELECT receipt.outcome
+             FROM import_receipts AS receipt
+             JOIN import_batches AS batch ON batch.id = receipt.batch_id
+            WHERE receipt.id = ? AND batch.workspace_id = ?`,
+          [receiptId, WORKSPACE_ID],
+        );
+        if (
+          receiptStateRows.length !== 1
+          || requireText(receiptStateRows[0]!, "outcome") !== "committed"
+        ) {
+          throw new Error("Import review evidence requires a committed receipt.");
+        }
+        const occurrenceRows = await this.database.query<SqlRow>(
+          `SELECT occurrence.execution_id, occurrence.account_id,
+                  occurrence.occurrence_kind, receipt.outcome AS receipt_outcome
+             FROM import_receipts AS receipt
+             JOIN import_batches AS batch ON batch.id = receipt.batch_id
+             JOIN import_execution_occurrences AS occurrence
+               ON occurrence.import_batch_id = batch.id
+              AND occurrence.workspace_id = batch.workspace_id
+             JOIN import_source_rows AS source_row
+               ON source_row.id = occurrence.import_source_row_id
+              AND source_row.batch_id = batch.id
+            WHERE receipt.id = ? AND batch.workspace_id = ?
+            ORDER BY source_row.row_ordinal, occurrence.id`,
+          [receiptId, WORKSPACE_ID],
+        );
+        let writtenOccurrenceCount = 0;
+        const writtenExecutionIds = new Set<string>();
+        const occurrenceExecutionIds = occurrenceRows.map((row) => {
+          if (requireText(row, "receipt_outcome") !== "committed") {
+            throw new Error("Import review evidence requires a committed receipt.");
+          }
+          if (requireText(row, "account_id") !== receipt.accountId) {
+            throw new Error("Import review evidence crosses receipt accounts.");
+          }
+          const occurrenceKind = requireText(row, "occurrence_kind");
+          if (
+            occurrenceKind !== "created"
+            && occurrenceKind !== "restored"
+            && occurrenceKind !== "duplicate"
+          ) {
+            throw new Error("Import review evidence has an invalid occurrence outcome.");
+          }
+          const executionId = requireText(row, "execution_id");
+          if (occurrenceKind !== "duplicate") {
+            writtenOccurrenceCount += 1;
+            writtenExecutionIds.add(executionId);
+          }
+          return executionId;
+        });
+        const uniqueExecutionIds = new Set(occurrenceExecutionIds);
+        if (
+          occurrenceExecutionIds.length !== receipt.acceptedRows
+          || writtenOccurrenceCount !== receipt.executionCount
+          || writtenExecutionIds.size !== writtenOccurrenceCount
+          || uniqueExecutionIds.size < receipt.executionCount
+          || uniqueExecutionIds.size > receipt.acceptedRows
+        ) {
+          throw new Error("Import review occurrence evidence does not reconcile with its receipt.");
+        }
+        const activeExecutions = new Map(ledger.executions.map((execution) => (
+          [execution.id, execution] as const
+        )));
+        for (const executionId of uniqueExecutionIds) {
+          const execution = activeExecutions.get(executionId);
+          if (execution === undefined || execution.accountId !== receipt.accountId) {
+            throw new Error("Import review evidence references a missing or cross-account execution.");
+          }
+        }
+        return Object.freeze({
+          receipt,
+          occurrenceExecutionIds: Object.freeze(occurrenceExecutionIds),
+          ledger,
+        });
+      });
+    });
+  }
+
   async exportUserData(): Promise<JournalExportArtifact> {
     return this.withRegularStoreOperation(
       () => this.exportUserDataWithinStoreOperation(),
@@ -571,14 +667,27 @@ export class SqliteJournalStore implements JournalStore {
            LEFT JOIN import_rollbacks AS rollback ON rollback.import_receipt_id = receipt.id
           WHERE batch.workspace_id = ?
             AND batch.account_id = ?
+            AND batch.source_name = ?
             AND batch.input_sha256 = ?
             AND batch.parser_id = ?
             AND batch.parser_version = ?
             AND batch.mapping_sha256 = ?
+            AND receipt.outcome = 'committed'
             AND rollback.id IS NULL
-          LIMIT 1`,
-        [WORKSPACE_ID, accountId, inputHash, PARSER_ID, PARSER_VERSION, mappingHash],
+          ORDER BY receipt.recorded_at_ms DESC, receipt.id DESC`,
+        [
+          WORKSPACE_ID,
+          accountId,
+          command.sourceName,
+          inputHash,
+          PARSER_ID,
+          PARSER_VERSION,
+          mappingHash,
+        ],
       );
+      if (duplicate.length > 1) {
+        throw new Error("Multiple active receipts match one exact CSV import revision.");
+      }
       const duplicateReceiptId = duplicate[0] === undefined
         ? null
         : requireText(duplicate[0], "receipt_id");
@@ -1682,7 +1791,7 @@ export class SqliteJournalStore implements JournalStore {
         `SELECT receipt.batch_id, receipt.recorded_at_ms
            FROM import_receipts AS receipt
            LEFT JOIN import_rollbacks AS rollback ON rollback.import_receipt_id = receipt.id
-          WHERE receipt.id = ? AND rollback.id IS NULL
+          WHERE receipt.id = ? AND receipt.outcome = 'committed' AND rollback.id IS NULL
           LIMIT 1`,
         [receiptId],
       );
@@ -1716,6 +1825,7 @@ export class SqliteJournalStore implements JournalStore {
                ON rollback.import_receipt_id = receipt.id
             WHERE occurrence.execution_id = ?
               AND receipt.id <> ?
+              AND receipt.outcome = 'committed'
               AND rollback.id IS NULL
             LIMIT 1`,
           [executionId, receiptId],

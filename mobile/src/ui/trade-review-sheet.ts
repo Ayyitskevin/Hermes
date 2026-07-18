@@ -14,6 +14,7 @@ import {
 import { escapeHtml } from "../core/html";
 import type { TradeMetricEvidence } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
+import { focusChromeSafeElement } from "./focus-chrome-safe";
 
 const METRIC_REASON: Readonly<Record<NonNullable<TradeMetricEvidence["nullReason"]>, string>> = {
   no_realized_exit: "No realized exit exists yet.",
@@ -29,7 +30,8 @@ function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
 
 export type TradeReviewDisplayOrigin =
   | "dashboard-review-progress"
-  | "manual-capture-review";
+  | "manual-capture-review"
+  | "import-receipt-review";
 
 export function reviewTradeAction(
   trade: TradePreview,
@@ -507,6 +509,8 @@ const DASHBOARD_REVIEW_PROGRESS_ORIGIN: TradeReviewDisplayOrigin =
   "dashboard-review-progress";
 const MANUAL_CAPTURE_REVIEW_ORIGIN: TradeReviewDisplayOrigin =
   "manual-capture-review";
+const IMPORT_RECEIPT_REVIEW_ORIGIN: TradeReviewDisplayOrigin =
+  "import-receipt-review";
 
 interface DashboardReviewProgressContext {
   readonly heading: HTMLElement;
@@ -580,7 +584,8 @@ function dashboardReviewProgressOrigin(
       ? false : null;
   }
   if (origin !== DASHBOARD_REVIEW_PROGRESS_ORIGIN) {
-    return origin === MANUAL_CAPTURE_REVIEW_ORIGIN ? false : null;
+    return origin === MANUAL_CAPTURE_REVIEW_ORIGIN
+      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN ? false : null;
   }
   return dashboardReviewProgressContext(root)?.action === trigger ? true : null;
 }
@@ -595,10 +600,36 @@ function manualCaptureReviewOrigin(
   );
   if (origin === undefined) return section === null ? false : null;
   if (origin !== MANUAL_CAPTURE_REVIEW_ORIGIN) {
-    return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN ? false : null;
+    return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN
+      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN ? false : null;
   }
   const sections = Array.from(root.querySelectorAll<HTMLElement>(
     "[data-manual-capture-review-continuation]",
+  ));
+  return section !== null
+    && sections.length === 1
+    && sections[0] === section
+    && root.contains(section)
+    && section.contains(trigger)
+    ? true
+    : null;
+}
+
+function importReceiptReviewOrigin(
+  root: HTMLElement,
+  trigger: HTMLButtonElement,
+): boolean | null {
+  const origin = trigger.dataset.tradeReviewOrigin;
+  const section = trigger.closest<HTMLElement>(
+    "[data-import-receipt-review-continuation]",
+  );
+  if (origin === undefined) return section === null ? false : null;
+  if (origin !== IMPORT_RECEIPT_REVIEW_ORIGIN) {
+    return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN
+      || origin === MANUAL_CAPTURE_REVIEW_ORIGIN ? false : null;
+  }
+  const sections = Array.from(root.querySelectorAll<HTMLElement>(
+    "[data-import-receipt-review-continuation]",
   ));
   return section !== null
     && sections.length === 1
@@ -669,6 +700,8 @@ function focusAfterTradeReviewRefresh(
   reviewQueueOrigin: boolean,
   dashboardReviewOrigin: boolean,
   manualCaptureOrigin: boolean,
+  importReceiptOrigin: boolean,
+  tradeSubjectId: string,
 ): void {
   let target: HTMLElement | null = null;
   if (reportSource !== undefined) {
@@ -686,13 +719,23 @@ function focusAfterTradeReviewRefresh(
     target = manualCaptureHeadings.length === 1
       ? manualCaptureHeadings[0] ?? null
       : null;
+  } else if (importReceiptOrigin) {
+    const sections = Array.from(root.querySelectorAll<HTMLElement>(
+      "[data-import-receipt-review-continuation]",
+    ));
+    const matchingActions = sections.length === 1
+      ? Array.from(sections[0]!.querySelectorAll<HTMLButtonElement>(
+        "button[data-review-trade]",
+      )).filter((button) => button.dataset.reviewTrade === tradeSubjectId)
+      : [];
+    target = matchingActions.length === 1
+      ? matchingActions[0] ?? null
+      : sections.length === 1
+        ? sections[0]!.querySelector<HTMLElement>("[data-import-receipt-review-title]")
+        : null;
   }
   if (target !== null) {
-    const topbarBottom = root.querySelector<HTMLElement>(".topbar")
-      ?.getBoundingClientRect().bottom ?? 0;
-    target.style.scrollMarginTop = `${Math.ceil(Math.max(0, topbarBottom) + 16)}px`;
-    target.scrollIntoView({ behavior: "auto", block: "start" });
-    target.focus({ preventScroll: true });
+    focusChromeSafeElement(root, target);
     return;
   }
   root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
@@ -734,17 +777,20 @@ export function bindTradeReviewActions(
         trigger,
       );
       const manualCaptureOrigin = manualCaptureReviewOrigin(root, trigger);
+      const importReceiptOrigin = importReceiptReviewOrigin(root, trigger);
       const originCount = [
         reportSource !== undefined,
         reviewQueueOrigin,
         dashboardReviewOrigin === true,
         manualCaptureOrigin === true,
+        importReceiptOrigin === true,
       ].filter(Boolean).length;
       if (
         reportSource === null
         || trade === null
         || dashboardReviewOrigin === null
         || manualCaptureOrigin === null
+        || importReceiptOrigin === null
         || originCount > 1
       ) {
         showTradeReviewOpenError(root, trigger);
@@ -942,6 +988,8 @@ export function bindTradeReviewActions(
           reviewQueueOrigin,
           dashboardReviewOrigin,
           manualCaptureOrigin,
+          importReceiptOrigin,
+          trade.tradeSubjectId,
         );
       };
 
@@ -961,6 +1009,8 @@ export function bindTradeReviewActions(
           reviewQueueOrigin,
           dashboardReviewOrigin,
           manualCaptureOrigin,
+          importReceiptOrigin,
+          trade.tradeSubjectId,
         );
       };
       backdrop.querySelectorAll<HTMLButtonElement>("[data-trade-review-close]").forEach((button) => {
@@ -1008,6 +1058,8 @@ export function bindTradeReviewActions(
               reviewQueueOrigin,
               dashboardReviewOrigin,
               manualCaptureOrigin,
+              importReceiptOrigin,
+              trade.tradeSubjectId,
             );
           } catch {
             showCommittedRefreshFailure();

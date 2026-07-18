@@ -240,20 +240,24 @@ test("CSV preview commits exact executions and receipt rollback removes their pr
   await expect(page.getByText("2 valid · 0 rejected · 0 skipped")).toBeVisible();
   await page.getByRole("button", { name: "Import 2 executions" }).click();
 
-  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
-  await expect(page.getByText("+$18.00", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("1 trade with realized P&L", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "More", exact: true })).toBeVisible();
   await expect(page.locator("#route-announcer")).toHaveText(
     "2 accepted rows = 2 new or restored execution versions + 0 already-present rows; reversible receipt created.",
   );
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+  await expect(page.getByText("+$18.00", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("1 trade with realized P&L", { exact: false })).toBeVisible();
 
   await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Import history" })).toBeVisible();
   await expect(page.getByText("broker-export.csv", { exact: true }).first()).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Roll back this import" }).click();
+  await page.getByRole("button", {
+    name: /^Roll back broker-export\.csv from Primary brokerage,/,
+  }).click();
   await expect(page.getByText("ROLLED BACK", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Roll back this import" })).toHaveCount(0);
+  await expect(page.locator("button[data-rollback-receipt]")).toHaveCount(0);
   await expect(page.locator("#route-announcer")).toHaveText(
     "Import rolled back. Its immutable receipt remains in history.",
   );
@@ -578,7 +582,9 @@ test("rolled-back receipts keep their own account and the next import requires a
 
   const betaReceipt = page.locator(".import-history-row").filter({ hasText: "beta.csv" });
   page.once("dialog", (dialog) => dialog.accept());
-  await betaReceipt.getByRole("button", { name: "Roll back this import" }).click();
+  await betaReceipt.getByRole("button", {
+    name: /^Roll back beta\.csv from Account Beta,/,
+  }).click();
 
   await expect(page.locator(".import-receipt")).toContainText("Account Beta");
   await expect(page.locator(".import-history-row").filter({ hasText: "beta.csv" }))

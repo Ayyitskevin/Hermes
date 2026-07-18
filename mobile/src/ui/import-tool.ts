@@ -1,5 +1,8 @@
 import type { JournalApplication } from "../application/journal-application";
-import type { PreparedCsvImport } from "../application/journal-store";
+import type {
+  CsvImportCommitResult,
+  PreparedCsvImport,
+} from "../application/journal-store";
 import {
   DEFAULT_CSV_LIMITS,
   type CsvHeaderMapping,
@@ -7,6 +10,7 @@ import {
 } from "../core/csv";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot } from "../core/types";
+import { focusChromeSafeElement } from "./focus-chrome-safe";
 
 const CSV_FIELDS: ReadonlyArray<{ readonly id: CsvImportField; readonly label: string }> = [
   { id: "executionId", label: "Execution ID (optional)" },
@@ -92,7 +96,11 @@ function preparedPreviewTemplate(prepared: PreparedCsvImport): string {
 export function bindImportForm(
   root: HTMLElement,
   application: JournalApplication,
-  refresh: (announcement: string) => Promise<void>,
+  refresh: (
+    result: CsvImportCommitResult,
+    announcement: string,
+  ) => Promise<void>,
+  beginCapture: () => void,
 ): void {
   const form = root.querySelector<HTMLFormElement>("#csv-import-form");
   const fileInput = root.querySelector<HTMLInputElement>("#import-file");
@@ -107,8 +115,7 @@ export function bindImportForm(
   let previewing = false;
 
   const focusFeedback = (target: HTMLElement): void => {
-    target.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
-    target.focus({ preventScroll: true });
+    focusChromeSafeElement(root, target, "nearest");
   };
 
   const clearPreparedFile = (): void => {
@@ -150,22 +157,75 @@ export function bindImportForm(
       if (!(button instanceof HTMLButtonElement) || prepared === null) return;
       button.disabled = true;
       status.textContent = "Writing one atomic journal transaction…";
+      let result: CsvImportCommitResult;
       try {
-        const result = await application.commitCsv(prepared);
-        const alreadyPresent = result.receipt.acceptedRows - result.receipt.executionCount;
-        const reconciliation =
-          `${countNoun(result.receipt.acceptedRows, "accepted row")} = ` +
-          `${countNoun(result.receipt.executionCount, "new or restored execution version")} + ` +
-          countNoun(alreadyPresent, "already-present row");
-        const announcement = result.outcome === "duplicate"
-          ? `This exact CSV was already imported; its existing receipt records ${reconciliation}. No records were duplicated.`
-          : `${reconciliation}; reversible receipt created.`;
-        status.textContent = announcement;
-        await refresh(announcement);
-        root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+        result = await application.commitCsv(prepared);
       } catch (error) {
         button.disabled = false;
         status.textContent = error instanceof Error ? error.message : "The import was rolled back after an unexpected error.";
+        return;
+      }
+      const alreadyPresent = result.receipt.acceptedRows - result.receipt.executionCount;
+      const reconciliation =
+        `${countNoun(result.receipt.acceptedRows, "accepted row")} = ` +
+        `${countNoun(result.receipt.executionCount, "new or restored execution version")} + ` +
+        countNoun(alreadyPresent, "already-present row");
+      const announcement = result.outcome === "duplicate"
+        ? `This exact CSV was already imported; its existing receipt records ${reconciliation}. No records were duplicated.`
+        : `${reconciliation}; reversible receipt created.`;
+      status.textContent = announcement;
+
+      const lockKnownCommit = (): void => {
+        form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
+          "input, select, button",
+        ).forEach((control) => { control.disabled = true; });
+        button.textContent = "Import saved";
+      };
+      const showRefreshOnlyRecovery = (): void => {
+        lockKnownCommit();
+        root.querySelector("[data-import-refresh-retry]")?.remove();
+        const recoveryHost = form.isConnected && previewContainer.isConnected
+          ? previewContainer
+          : root.querySelector<HTMLElement>("#screen");
+        if (recoveryHost === null) {
+          throw new Error("The confirmed import refresh recovery has no visible host.");
+        }
+        const recovery = document.createElement("section");
+        recovery.className = "card form-error import-refresh-recovery";
+        recovery.dataset.importRefreshRetry = "";
+        recovery.setAttribute("aria-labelledby", "import-refresh-retry-title");
+        recovery.innerHTML = `<h4 id="import-refresh-retry-title" tabindex="-1">Import saved; review continuation needs attention</h4><p><strong>Do not import the CSV again.</strong> Retry only the receipt refresh; Hermes will not read, prepare, or commit the file again.</p><button class="secondary-button" type="button" data-import-refresh-retry-button>Retry receipt refresh</button><p class="helper-text" data-import-refresh-retry-status role="status" aria-live="polite" tabindex="-1"></p>`;
+        recoveryHost.append(recovery);
+        const retry = recovery.querySelector<HTMLButtonElement>(
+          "button[data-import-refresh-retry-button]",
+        );
+        const retryStatus = recovery.querySelector<HTMLElement>(
+          "[data-import-refresh-retry-status]",
+        );
+        if (retry === null || retryStatus === null) {
+          throw new Error("The confirmed import refresh recovery could not be created.");
+        }
+        retry.addEventListener("click", async () => {
+          retry.disabled = true;
+          recovery.setAttribute("aria-busy", "true");
+          retryStatus.textContent = "Reloading only the confirmed immutable receipt.";
+          try {
+            await refresh(result, announcement);
+          } catch {
+            if (!recovery.isConnected) return;
+            retry.disabled = false;
+            recovery.removeAttribute("aria-busy");
+            retryStatus.textContent = "Receipt refresh could not finish. Try again; do not import the CSV again.";
+            focusFeedback(retryStatus);
+          }
+        });
+        const heading = recovery.querySelector<HTMLElement>("#import-refresh-retry-title");
+        if (heading !== null) focusFeedback(heading);
+      };
+      try {
+        await refresh(result, announcement);
+      } catch {
+        showRefreshOnlyRecovery();
       }
     });
     if (focusField !== undefined) {
@@ -194,6 +254,7 @@ export function bindImportForm(
     previewing = false;
     clearPreparedFile();
     const file = fileInput.files?.[0];
+    if (file !== undefined) beginCapture();
     status.textContent = file === undefined ? "Choose a CSV file." : `${file.name} selected. Preview it before import.`;
   });
 

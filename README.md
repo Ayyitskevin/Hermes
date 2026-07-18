@@ -311,12 +311,37 @@ submission-ready product:
   two-target reversal paths, draft continuation, filter reset, focus,
   dismissal, tamper rejection, an injected destination-render failure after a
   known commit with continuation-only retry and no second commit,
-  no local-preference/network write, and 320px/200% reflow. The generic-CSV
-  receipt-to-review branch and separate
+  no local-preference/network write, and 320px/200% reflow. The separate
   moderated manual/CSV cohorts remain NOT RUN. No schema, store command,
   archive, digest, export/restore shape, governed report, financial formula,
   preference, dependency, native source, or network path changed; the same
   four write-capable exceptions remain.
+- Generic CSV Receipt Review Continuation v1 is the thirtieth bounded Slice D
+  increment and the twenty-sixth derived-only presentation/projection
+  increment. One new read-only store query returns an exact active receipt,
+  one stable execution ID per accepted source-row occurrence, and the coherent
+  current ledger from the same adapter operation. The application conserves
+  the receipt equations and occurrence multiplicity before deduplicating stable
+  executions, then reuses the manual path's exact execution/allocation resolver
+  to order current linked subjects against the canonical all-activity account
+  scope. The guide stays in More, displays only linked targets ten at a time,
+  preserves the existing Trade Browser session state, and never auto-opens a
+  review. Guide-origin draft/completed saves rebuild the same page and return
+  to the exact action; a new CSV selection, rollback, dismissal, or workspace
+  change clears transient guidance, while active history can reopen it.
+  Confirmed post-commit recovery names the exact file/account/time from the
+  committed ledger, hides capture, cannot be dismissed, and retries only the
+  receipt continuation with no file reread, preparation, or commit. A distinct
+  history-review failure remains dismissible. Demo and rolled-back receipts are
+  non-actionable, generic CSV remains stock-only, and no relaunch persistence
+  is claimed. Schema, receipt facts, archive/digest/export shape, formulas,
+  reports, preferences, dependencies, native sources, and network paths are
+  unchanged. Separately, SQLite exact-replay matching was hardened to the
+  existing Session revision contract by including source name, requiring a
+  committed unrolled-back receipt, and rejecting ambiguous active matches;
+  this is write-path correctness hardening, not another product increment or
+  write-capable product exception. Both five-participant activation cohorts
+  remain separately NOT RUN.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

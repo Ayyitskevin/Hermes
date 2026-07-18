@@ -158,6 +158,18 @@ describe("trade review sheet", () => {
     expect(tagHtml).toContain("Opened from Tag patterns.");
   });
 
+  it("marks receipt-guide review actions with their exact display origin", () => {
+    const html = reviewTradeAction(
+      trade(),
+      "Continue draft · 2 of 4",
+      "import-receipt-review",
+    );
+
+    expect(html).toContain('data-review-trade="subject-1"');
+    expect(html).toContain('data-trade-review-origin="import-receipt-review"');
+    expect(html).toContain("Continue draft · 2 of 4");
+  });
+
   it("renders complete escaped evidence for one coherent saved review", () => {
     const latest = {
       ...trade(),

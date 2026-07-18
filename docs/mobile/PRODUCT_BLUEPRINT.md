@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Twenty-nine bounded Slice D increments are implemented in the current workspace.
+Thirty bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -1017,11 +1017,53 @@ two-target reversal, draft-state continuation, conflicting-filter reset,
 ordinary-card focus return, focus/dismissal, tamper rejection, an injected
 destination-render failure after a known commit with continuation-only retry
 and zero second commit reads, local-storage/request neutrality, and
-320px/200% reflow. Generic-CSV receipt-to-review continuation remains open, and
-the manual and CSV first-use cohorts remain separately NOT RUN. No schema,
+320px/200% reflow. The manual and CSV first-use cohorts remain separately NOT
+RUN. No schema,
 store command, archive, digest, export/restore shape, governed-report
 definition, financial formula, preference, dependency, native source, or
 network path changed; the same four write-capable exceptions remain.
+
+Generic CSV Receipt Review Continuation v1 is the thirtieth bounded Slice D
+increment and the twenty-sixth derived-only presentation/projection increment.
+One new read-only `JournalStore.loadImportReviewEvidence(receiptId)` operation
+must return one exact active committed receipt, one stable execution ID per
+accepted source-row occurrence, and a coherent current ledger from the same
+adapter operation. Duplicate occurrence IDs are meaningful; adapter order is
+not. Session derives multiplicity from immutable execution `receiptIds`, while
+SQLite reads `import_execution_occurrences` inside the serialized store
+transaction and validates committed outcome, account ownership, accepted-row
+count, created/restored count, active execution ownership, and unique-ID bounds.
+
+The continuation reconciles that evidence with the one exact visible history
+receipt before deduplicating stable executions. It then reuses the shared
+execution/allocation resolver and orders linked current subjects against the
+canonical empty-state all-activity account scope. It does not assign that scope
+to the Trade Browser: the destination remains in More, shows only linked
+targets in fixed pages of ten, and preserves existing session filters. Each
+target exposes **Review trade**, **Continue draft**, or **Open completed
+review** without auto-opening. Guide-origin saves rebuild the exact page and
+return to the exact surviving action; paging and programmatic headings retain
+visible chrome-safe focus. Selecting a new CSV clears the transient guide
+without losing the selected file. Rollback invalidates in-flight continuation,
+clears matching guidance, and leaves immutable history; active history can
+reopen it. Demo and rolled-back receipts expose no review action.
+
+Known-positive post-commit recovery is distinct from an ordinary history-read
+failure. The confirmed state derives file, account, and import-time identity
+from the committed ledger; it hides capture, cannot be dismissed, and retries
+only receipt evidence/projection/rendering. It never rereads, prepares, or
+commits the CSV again. History-read failure keeps capture available for a
+different file and remains dismissible. No guide or failure is claimed to
+survive relaunch, and generic CSV remains stock-only.
+
+This product increment adds no schema, receipt fact, archive/digest/export
+shape, formula, report cohort/version/checksum, preference, dependency, native
+source, or network path. Separately, the existing SQLite CSV exact-replay query
+now matches the established Session revision contract by including source
+name, accepting only one committed unrolled-back match, and failing closed on
+multiple matches. That bounded write-path parity correction is correctness
+hardening in the same milestone, not a fifth write-capable product increment.
+Both five-participant activation cohorts remain separately NOT RUN.
 
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
@@ -1181,7 +1223,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-  twenty-nine Slice D increments add Plan Check, governed Setup Breakdown,
+  thirty Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1191,8 +1233,8 @@ Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation v1,
 Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
 Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
-Rhythm v1, Guided Account Overview v1, and Manual Capture Review Continuation
-v1. The twenty-five
+Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
+and Generic CSV Receipt Review Continuation v1. The twenty-six
 presentation/projection increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily writes; Report Trade
 Continuation and Dashboard Recent Trade Continuation reuse the existing

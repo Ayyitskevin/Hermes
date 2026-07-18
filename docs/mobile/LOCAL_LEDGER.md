@@ -75,8 +75,10 @@ identity to the account and treats symbol, price, quantity, and the other fill
 values as payload. Reusing the ID with changed payload rejects the whole batch.
 Without an ID, Hermes fingerprints the intrinsic fill values and adds an
 occurrence ordinal so two legitimate identical fills are retained. The full
-input, account, parser, and mapping digest makes an active exact import
-idempotent. A no-ID export cannot prove that a changed row is a correction;
+input, source name, account, parser, and mapping digest makes an active exact
+import idempotent. Renaming an otherwise identical file intentionally creates a
+distinct receipt with zero newly written execution versions. A no-ID export
+cannot prove that a changed row is a correction;
 broker-specific adapters should supply documented stable execution identities.
 
 Blank source records are preserved and counted as skipped. Invalid rows block
@@ -497,11 +499,75 @@ destination-render failure exposes a focused retry-only surface while retaining
 the prior route and Trade Browser state. Retry repeats only reload and the pure
 identity derivation with the same execution ID; it never invokes the manual
 commit again. Missing, malformed, duplicate, excessive, cross-account, stale,
-detached, or tampered evidence fails closed. The generic-CSV continuation and
-separate moderated manual/CSV first-use cohorts remain open and NOT RUN. No
+detached, or tampered evidence fails closed. Separate moderated manual/CSV
+first-use cohorts remain NOT RUN. No
 schema, store command, receipt, archive/digest/export shape, governed report,
 financial formula, dependency, native source, or network path changed; the same
 four write-capable exceptions remain.
+
+### Generic-CSV receipt review continuation
+
+Generic CSV Receipt Review Continuation v1 is the thirtieth bounded Slice D
+increment and the twenty-sixth derived-only presentation/projection increment.
+It adds no ledger fact and never reconstructs receipt ownership from display
+labels. The new read-only store boundary is:
+
+```text
+loadImportReviewEvidence(receiptId)
+  → one exact active committed immutable receipt
+  → one stable execution ID per accepted source-row occurrence
+  → one coherent current ledger from the same serialized adapter operation
+```
+
+Occurrence duplicates are meaningful and adapter order is non-semantic.
+Session counts immutable execution `receiptIds`; SQLite reads
+`import_execution_occurrences` in source-row ordinal order inside one store
+transaction. SQLite additionally requires committed outcome, one account,
+`accepted occurrence count = receipt.acceptedRows`,
+`created + restored occurrence count = receipt.executionCount`, valid
+occurrence kinds, active execution ownership, and unique execution bounds.
+The application must reconcile the returned receipt against exactly one visible
+history projection, including source/accepted/rejected/skipped/warning/new-or-
+restored counts and rollback state, before deduplicating execution IDs.
+
+```text
+active receipt ID
+  → coherent receipt + accepted occurrence IDs + ledger
+  → conserve immutable receipt/history equations and occurrence multiplicity
+  → deduplicate stable execution identities
+  → shared execution/allocation resolver
+  → canonical all-activity account-scope order
+  → fixed page of at most 10 linked current review subjects in More
+```
+
+The canonical account scope validates ownership and ordering; it does not
+replace the user's ephemeral Trade Browser state and the guide does not claim
+to show every account trade. Symbol, account label, import time, CSV row order,
+recency, and DOM text are never routing evidence. Several accepted rows may
+resolve to one execution, and several executions may resolve to one trade. An
+AUTO reversal may resolve to two subjects only through the shared immutable
+allocation proof. Each linked subject has one state-qualified stable-ID review
+action and no review opens automatically. A guide-origin save rebuilds the same
+receipt/page and returns focus to the exact action when it survives.
+
+Guidance is transient. A new selected CSV clears it in place without clearing
+file ownership; confirmed rollback invalidates an in-flight read before the
+transaction, clears the guide, and retains immutable history; active history
+can reopen it. Demo and rolled-back receipts expose no review action. A known
+post-commit failure retains human-readable identity from the committed ledger,
+hides manual/CSV capture, has no dismiss action, and retries only evidence,
+projection, and rendering—never file read, preparation, or commit. A history-
+initiated failure is separately labeled and dismissible. Neither state is
+persisted or claimed to survive relaunch. Generic CSV remains stock-only.
+
+This increment adds one read-only store command but changes no schema, receipt
+fact, archive/digest/export shape, projection formula, governed report,
+preference, dependency, native source, or network path. Separately, SQLite CSV
+exact replay now includes source name, requires one committed unrolled-back
+match, and rejects ambiguity so its existing write revision matches Session.
+That bounded parity correction is correctness hardening, not another product
+increment or a fifth write-capable product exception. Both separate moderated
+five-participant cohorts remain NOT RUN.
 
 ## Daily-journal sequence
 

@@ -4,6 +4,7 @@ import type {
   JournalAccountRecord,
   JournalDailyEntryRecord,
   JournalImportReceipt,
+  JournalImportReviewEvidence,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
   JournalPlaybookRecord,
@@ -353,6 +354,40 @@ export class SessionJournalStore implements JournalStore {
 
   async load(): Promise<JournalLedgerSnapshot> {
     return this.loadSnapshot();
+  }
+
+  async loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence> {
+    this.assertOpen();
+    const matches = this.receipts.filter((receipt) => receipt.id === receiptId);
+    const receipt = matches[0];
+    if (matches.length !== 1 || receipt === undefined || receipt.rolledBackAtUs !== null) {
+      throw new Error("Import review evidence requires one exact active receipt.");
+    }
+    const occurrenceExecutionIds = this.executions.flatMap((execution) => {
+      const occurrenceCount = execution.receiptIds.filter((id) => id === receiptId).length;
+      if (occurrenceCount > 0 && execution.accountId !== receipt.accountId) {
+        throw new Error("Import review evidence crosses receipt accounts.");
+      }
+      return Array.from({ length: occurrenceCount }, () => execution.id);
+    });
+    const uniqueExecutionCount = new Set(occurrenceExecutionIds).size;
+    if (
+      occurrenceExecutionIds.length !== receipt.acceptedRows
+      || uniqueExecutionCount < receipt.executionCount
+      || uniqueExecutionCount > receipt.acceptedRows
+    ) {
+      throw new Error("Import review occurrence evidence does not reconcile with its receipt.");
+    }
+    const ledger = this.loadSnapshot();
+    const ledgerMatches = ledger.imports.filter((candidate) => candidate.id === receiptId);
+    if (ledgerMatches.length !== 1 || ledgerMatches[0] !== receipt) {
+      throw new Error("Import review receipt evidence changed during the coherent read.");
+    }
+    return Object.freeze({
+      receipt,
+      occurrenceExecutionIds: Object.freeze(occurrenceExecutionIds),
+      ledger,
+    });
   }
 
   private loadSnapshot(): JournalLedgerSnapshot {

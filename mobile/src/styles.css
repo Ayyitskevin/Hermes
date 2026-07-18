@@ -878,6 +878,14 @@ p { line-height: 1.55; }
 #import-status:focus,
 #preview-title:focus,
 #commit-import:focus { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.import-refresh-recovery { min-width: 0; display: grid; gap: .75rem; }
+.import-refresh-recovery h4,
+.import-refresh-recovery p { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.import-refresh-recovery h4:focus-visible,
+.import-refresh-recovery [data-import-refresh-retry-status]:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
 .helper-text { margin: 0; color: var(--muted); font-size: .76rem; }
 .import-preview-card { margin-top: .25rem; padding-top: 1rem; border-top: 1px solid var(--line); display: grid; gap: 1rem; }
 .mapping-details { border: 1px solid var(--line); border-radius: .75rem; padding: .75rem; }
@@ -929,6 +937,20 @@ p { line-height: 1.55; }
 .import-receipt-grid dt { color: var(--muted); font-size: .68rem; overflow-wrap: anywhere; }
 .import-receipt-grid dd { margin: 0; font: 700 .95rem/1.25 "B612 Mono", monospace; }
 .import-receipt-disclosure[open] { display: grid; gap: .45rem; }
+.import-receipt-review,
+.import-receipt-review-failure { min-width: 0; display: grid; gap: .85rem; }
+.import-receipt-review h2,
+.import-receipt-review h3,
+.import-receipt-review p,
+.import-receipt-review-failure h2,
+.import-receipt-review-failure p { min-width: 0; overflow-wrap: anywhere; }
+#import-receipt-review-title:focus-visible,
+#import-receipt-review-failure-title:focus-visible,
+.import-receipt-review-row h3:focus {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.import-receipt-review-failure[aria-busy="true"] button { cursor: progress; }
 .manual-capture-card { display: grid; gap: .75rem; border-color: rgb(155 124 255 / 25%); }
 .manual-capture-card > p { margin: 0; color: var(--muted); }
 .manual-entry-sheet { display: grid; gap: 1rem; }

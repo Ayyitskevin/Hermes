@@ -1,4 +1,5 @@
 import { JournalApplication } from "../application/journal-application";
+import type { JournalImportReceipt } from "../application/journal-store";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
 import { buildReviewQueue } from "../application/review-queue";
 import {
@@ -9,6 +10,12 @@ import {
   type ManualCaptureCommitReference,
   type ManualCaptureReviewContinuation,
 } from "../application/manual-capture-review-continuation";
+import {
+  buildImportReceiptReviewContinuation,
+  type ImportReceiptReviewContinuation,
+  type ImportReceiptReviewEvidence,
+} from "../application/import-receipt-review-continuation";
+import { importReceiptImportedAtLabel } from "../application/workspace-snapshot";
 import {
   buildTradeBrowser,
   EMPTY_TRADE_BROWSER_STATE,
@@ -30,10 +37,20 @@ import {
 } from "./calendar-day-view";
 import { bindImportForm, importTool } from "./import-tool";
 import {
+  bindImportReceiptReviewActions,
   focusImportReceiptAfterRefresh,
   importReceiptHistorySection,
   latestImportReceiptCard,
 } from "./import-receipt-view";
+import {
+  bindImportReceiptReviewFailure,
+  bindImportReceiptReviewView,
+  clearImportReceiptReviewViewBindings,
+  IMPORT_RECEIPT_REVIEW_PAGE_SIZE,
+  importReceiptReviewFailure,
+  importReceiptReviewSection,
+  type ImportReceiptReviewFailureContext,
+} from "./import-receipt-review-view";
 import {
   bindManualExecutionActions,
   manualCaptureCard,
@@ -425,14 +442,29 @@ function sizingTool(): string {
   </article>`;
 }
 
-function moreView(snapshot: JournalWorkspaceSnapshot, persistence: JournalApplication["persistence"]): string {
+function moreView(
+  snapshot: JournalWorkspaceSnapshot,
+  persistence: JournalApplication["persistence"],
+  importReceiptReview: ImportReceiptReviewContinuation | null,
+  importReceiptReviewPageStart: number,
+  pendingImportReceiptReview: ImportReceiptReviewFailureContext | null,
+): string {
   const activeHistory = snapshot.importHistory.filter((receipt) => !receipt.rolledBack);
+  const confirmedImportRecovery = pendingImportReceiptReview?.origin === "confirmed-post-commit";
   return `<section class="screen-stack" aria-labelledby="more-title">
     <div class="screen-heading"><div><p class="eyebrow">DATA + TOOLS</p><h1 id="more-title">More</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
-    ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Manual entry and CSV import stay in your private journal; demo records are never written to the ledger.</p></article>` : manualCaptureCard()}
-    ${snapshot.provenance === "demo" ? "" : importTool(snapshot)}
+    ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Manual entry and CSV import stay in your private journal; demo records are never written to the ledger.</p></article>` : confirmedImportRecovery ? "" : manualCaptureCard()}
+    ${snapshot.provenance === "demo" || confirmedImportRecovery ? "" : importTool(snapshot)}
     ${latestImportReceiptCard(snapshot)}
     ${importReceiptHistorySection(snapshot)}
+    ${importReceiptReview === null ? "" : importReceiptReviewSection(
+      snapshot,
+      importReceiptReview,
+      importReceiptReviewPageStart,
+    )}
+    ${pendingImportReceiptReview === null ? "" : importReceiptReviewFailure(
+      pendingImportReceiptReview,
+    )}
     ${snapshot.provenance === "demo" ? "" : userDataExportCard(persistence)}
     ${snapshot.provenance === "demo" ? "" : userDataRestoreCard(snapshot.provenance === "empty", persistence)}
     ${sizingTool()}
@@ -446,13 +478,22 @@ function viewFor(
   persistence: JournalApplication["persistence"],
   browser: TradeBrowserResult,
   manualCapture: ManualCaptureReviewContinuation | null,
+  importReceiptReview: ImportReceiptReviewContinuation | null,
+  importReceiptReviewPageStart: number,
+  pendingImportReceiptReview: ImportReceiptReviewFailureContext | null,
 ): string {
   switch (tab) {
     case "dashboard": return dashboardView(snapshot, browser);
     case "trades": return tradesView(snapshot, browser, manualCapture);
     case "journal": return journalView(snapshot);
     case "reports": return reportsView(snapshot);
-    case "more": return moreView(snapshot, persistence);
+    case "more": return moreView(
+      snapshot,
+      persistence,
+      importReceiptReview,
+      importReceiptReviewPageStart,
+      pendingImportReceiptReview,
+    );
   }
 }
 
@@ -556,21 +597,50 @@ function bindSizingForm(root: HTMLElement): void {
 function bindRollbacks(
   root: HTMLElement,
   application: JournalApplication,
-  refresh: (announcement: string) => Promise<void>,
+  snapshot: JournalWorkspaceSnapshot,
+  beforeRollback: (receiptId: string) => void,
+  refresh: (announcement: string, receiptId: string) => Promise<void>,
 ): void {
   root.querySelectorAll<HTMLButtonElement>("[data-rollback-receipt]").forEach((button) => {
+    const receiptId = button.dataset.rollbackReceipt;
+    const row = button.closest<HTMLElement>("[data-import-receipt]");
+    const reviewButtons = row === null ? [] : Array.from(
+      row.querySelectorAll<HTMLButtonElement>("button[data-review-import-receipt]"),
+    );
+    const review = reviewButtons[0];
+    const matches = snapshot.provenance === "local"
+      ? snapshot.importHistory.filter((receipt) => (
+        receipt.receiptId === receiptId && !receipt.rolledBack
+      ))
+      : [];
+    const receipt = matches[0];
+    if (
+      receiptId === undefined
+      || matches.length !== 1
+      || receipt === undefined
+      || row === null
+      || row.dataset.importReceipt !== receiptId
+      || reviewButtons.length !== 1
+      || review === undefined
+      || review.dataset.reviewImportReceipt !== receiptId
+    ) {
+      throw new Error("An import rollback action is inconsistent with active receipt history.");
+    }
     button.addEventListener("click", async () => {
-      const receiptId = button.dataset.rollbackReceipt;
-      if (receiptId === undefined) return;
-      const confirmed = window.confirm("Roll back this receipt? Hermes will deactivate each execution for which this is the last active import reference. Executions covered by another active receipt stay active, and immutable source records remain for audit.");
+      const confirmed = window.confirm(
+        `Roll back the import from ${receipt.sourceLabel} in ${receipt.accountLabel} (${receipt.importedAtLabel})? Hermes will deactivate each execution for which this is the last active import reference. Executions covered by another active receipt stay active, and immutable source records remain for audit.`,
+      );
       if (!confirmed) return;
+      beforeRollback(receiptId);
       button.disabled = true;
+      review.disabled = true;
       try {
         await application.rollbackImport(receiptId, "User confirmed rollback from the import history.");
-        await refresh("Import rolled back. Its immutable receipt remains in history.");
+        await refresh("Import rolled back. Its immutable receipt remains in history.", receiptId);
         focusImportReceiptAfterRefresh(root, receiptId);
       } catch (error) {
         button.disabled = false;
+        review.disabled = false;
         window.alert(error instanceof Error ? error.message : "The rollback could not be completed.");
       }
     });
@@ -805,6 +875,32 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   let manualCaptureContinuation: ManualCaptureReviewContinuation | null = null;
   let pendingManualCaptureReference: PendingManualCaptureReference | null = null;
   let manualCaptureAttemptGeneration = 0;
+  let importReceiptReviewEvidence: ImportReceiptReviewEvidence | null = null;
+  let importReceiptReviewContinuation: ImportReceiptReviewContinuation | null = null;
+  let importReceiptReviewPageStart = 0;
+  let pendingImportReceiptReview: ImportReceiptReviewFailureContext | null = null;
+  let importReceiptReviewAttemptGeneration = 0;
+
+  const clearImportReceiptReviewGuidance = () => {
+    importReceiptReviewAttemptGeneration += 1;
+    importReceiptReviewEvidence = null;
+    importReceiptReviewContinuation = null;
+    pendingImportReceiptReview = null;
+    importReceiptReviewPageStart = 0;
+  };
+  const clearTransientImportReceiptReviewGuidance = () => {
+    const retainedConfirmedRecovery = pendingImportReceiptReview?.origin === "confirmed-post-commit"
+      ? pendingImportReceiptReview
+      : null;
+    clearImportReceiptReviewGuidance();
+    pendingImportReceiptReview = retainedConfirmedRecovery;
+  };
+  const clearImportReceiptReviewGuidanceInPlace = () => {
+    clearImportReceiptReviewGuidance();
+    clearImportReceiptReviewViewBindings(root);
+    root.querySelector("[data-import-receipt-review-continuation]")?.remove();
+    root.querySelector("[data-import-receipt-review-failure]")?.remove();
+  };
 
   const clearManualCaptureGuidance = () => {
     manualCaptureAttemptGeneration += 1;
@@ -816,6 +912,44 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     clearManualCaptureGuidance();
     root.querySelector("[data-manual-capture-review-continuation]")?.remove();
     root.querySelector("[data-manual-capture-review-failure]")?.remove();
+  };
+  const clearAllCaptureGuidance = () => {
+    clearManualCaptureGuidance();
+    clearTransientImportReceiptReviewGuidance();
+  };
+  const clearAllCaptureGuidanceForWorkspace = () => {
+    clearManualCaptureGuidance();
+    clearImportReceiptReviewGuidance();
+  };
+
+  const pendingImportReceiptReviewFromReceipt = (
+    receipt: JournalImportReceipt,
+    origin: ImportReceiptReviewFailureContext["origin"],
+    timeZone = snapshot.timeZone,
+  ): ImportReceiptReviewFailureContext => Object.freeze({
+    receiptId: receipt.id,
+    sourceLabel: receipt.sourceName,
+    accountLabel: receipt.accountName,
+    importedAtLabel: importReceiptImportedAtLabel(receipt, timeZone),
+    origin,
+  });
+
+  const pendingImportReceiptReviewFromHistory = (
+    receiptId: string,
+    origin: ImportReceiptReviewFailureContext["origin"] = "history-review",
+  ): ImportReceiptReviewFailureContext => {
+    const matches = snapshot.importHistory.filter((receipt) => receipt.receiptId === receiptId);
+    const receipt = matches[0];
+    if (matches.length !== 1 || receipt === undefined) {
+      throw new Error("Receipt review recovery requires one exact visible receipt.");
+    }
+    return Object.freeze({
+      receiptId,
+      sourceLabel: receipt.sourceLabel,
+      accountLabel: receipt.accountLabel,
+      importedAtLabel: receipt.importedAtLabel,
+      origin,
+    });
   };
 
   const queueScopeNotice = (notice: string) => {
@@ -911,7 +1045,10 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   };
 
   const setBackgroundInert = (inert: boolean) => {
-    if (inert) manualCaptureAttemptGeneration += 1;
+    if (inert) {
+      manualCaptureAttemptGeneration += 1;
+      importReceiptReviewAttemptGeneration += 1;
+    }
     document.body.classList.toggle("modal-open", inert);
     root.querySelectorAll<HTMLElement>(".skip-link, .topbar, #screen, .tabbar").forEach((element) => {
       if (inert) {
@@ -938,6 +1075,8 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     setBackgroundInert(false);
     const pendingHeading = root.querySelector<HTMLElement>(
       "[data-manual-capture-review-failure-title]",
+    ) ?? root.querySelector<HTMLElement>(
+      "[data-import-receipt-review-failure-title]",
     );
     if (pendingHeading !== null) focusManualCaptureElement(root, pendingHeading);
     else returnFocus?.focus();
@@ -1023,6 +1162,29 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         }
       }
     }
+    if (
+      snapshot.provenance !== "local"
+      && pendingImportReceiptReview?.origin !== "confirmed-post-commit"
+    ) {
+      clearImportReceiptReviewGuidance();
+    } else if (importReceiptReviewEvidence !== null) {
+      try {
+        importReceiptReviewContinuation = buildImportReceiptReviewContinuation(
+          snapshot,
+          importReceiptReviewEvidence,
+        );
+      } catch {
+        pendingImportReceiptReview = pendingImportReceiptReview?.receiptId
+          === importReceiptReviewEvidence.receipt.id
+          ? pendingImportReceiptReview
+          : pendingImportReceiptReviewFromReceipt(
+            importReceiptReviewEvidence.receipt,
+            "history-review",
+          );
+        importReceiptReviewEvidence = null;
+        importReceiptReviewContinuation = null;
+      }
+    }
     const manualCaptureForView = tab === "trades" ? manualCaptureContinuation : null;
     if (screen) {
       screen.innerHTML = viewFor(
@@ -1031,7 +1193,11 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         application.persistence,
         browser,
         manualCaptureForView,
+        tab === "more" ? importReceiptReviewContinuation : null,
+        importReceiptReviewPageStart,
+        tab === "more" ? pendingImportReceiptReview : null,
       );
+      clearImportReceiptReviewViewBindings(root);
       if (pendingManualCaptureReference !== null) {
         const heading = screen.querySelector<HTMLElement>(".screen-heading");
         if (heading === null) screen.insertAdjacentHTML("afterbegin", manualCaptureReviewFailure());
@@ -1095,6 +1261,72 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         render(currentTab, false);
         announceStatus(announcement);
       });
+      bindImportReceiptReviewActions(root, snapshot, {
+        openReceipt: async (receiptId) => {
+          const result = await continueImportReceiptReview(receiptId);
+          result.focus();
+        },
+      });
+      if (importReceiptReviewContinuation !== null) {
+        bindImportReceiptReviewView(
+          root,
+          snapshot,
+          importReceiptReviewContinuation,
+          importReceiptReviewPageStart,
+          {
+            dismiss: () => {
+              const receiptId = importReceiptReviewContinuation?.receiptId ?? null;
+              clearImportReceiptReviewGuidance();
+              render("more", false);
+              announceStatus("Receipt review guide dismissed. The immutable receipt remains in history.");
+              if (receiptId !== null) focusImportReceiptAfterRefresh(root, receiptId);
+            },
+            previousPage: () => {
+              importReceiptReviewPageStart = Math.max(
+                0,
+                importReceiptReviewPageStart - IMPORT_RECEIPT_REVIEW_PAGE_SIZE,
+              );
+              render("more", false);
+              announceStatus("The previous exact receipt-linked trade page is visible.");
+              const target = root.querySelector<HTMLElement>(
+                "[data-import-receipt-review-trade] h3",
+              ) ?? root.querySelector<HTMLElement>("[data-import-receipt-review-title]");
+              if (target !== null) {
+                target.tabIndex = -1;
+                focusManualCaptureElement(root, target, "nearest");
+              }
+            },
+            nextPage: () => {
+              importReceiptReviewPageStart += IMPORT_RECEIPT_REVIEW_PAGE_SIZE;
+              render("more", false);
+              announceStatus("The next exact receipt-linked trade page is visible.");
+              const target = root.querySelector<HTMLElement>(
+                "[data-import-receipt-review-trade] h3",
+              ) ?? root.querySelector<HTMLElement>("[data-import-receipt-review-title]");
+              if (target !== null) {
+                target.tabIndex = -1;
+                focusManualCaptureElement(root, target, "nearest");
+              }
+            },
+          },
+        );
+      }
+      if (pendingImportReceiptReview !== null) {
+        const failureContext = pendingImportReceiptReview;
+        const receiptId = failureContext.receiptId;
+        bindImportReceiptReviewFailure(root, failureContext, {
+          retry: async () => {
+            const result = await continueImportReceiptReview(receiptId);
+            result.focus();
+          },
+          dismiss: () => {
+            clearImportReceiptReviewGuidance();
+            render("more", false);
+            announceStatus("Receipt review continuation dismissed. The immutable receipt remains in history.");
+            focusImportReceiptAfterRefresh(root, receiptId);
+          },
+        });
+      }
     }
     if (tab === "trades") {
       bindTradesView(root, browser, {
@@ -1197,17 +1429,39 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         },
       });
     }
-    bindImportForm(root, application, async (announcement) => {
-      snapshot = await application.loadWorkspace();
-      render(currentTab, false);
-      announceStatus(announcement);
-    });
+    bindImportForm(root, application, async (result, announcement) => {
+      clearImportReceiptReviewGuidance();
+      try {
+        snapshot = await application.loadWorkspace();
+        render("more", false);
+        announceStatus(announcement);
+        focusImportReceiptAfterRefresh(root, result.receipt.id);
+      } catch {
+        const committedWorkspace = result.ledger.workspace;
+        if (committedWorkspace === null) {
+          throw new Error("A confirmed CSV receipt has no committed workspace identity.");
+        }
+        pendingImportReceiptReview = pendingImportReceiptReviewFromReceipt(
+          result.receipt,
+          "confirmed-post-commit",
+          committedWorkspace.timeZone,
+        );
+        render("more", false);
+        announceStatus(
+          `${announcement} Import saved; retry only its exact receipt continuation.`,
+        );
+        const heading = root.querySelector<HTMLElement>(
+          "[data-import-receipt-review-failure-title]",
+        );
+        if (heading !== null) focusManualCaptureElement(root, heading);
+      }
+    }, clearImportReceiptReviewGuidanceInPlace);
     bindManualExecutionActions(
       root,
       application,
       snapshot,
       setBackgroundInert,
-      clearManualCaptureGuidance,
+      clearAllCaptureGuidance,
       () => {
         render(currentTab, false);
         return root.querySelector<HTMLButtonElement>("[data-manual-execution]");
@@ -1252,7 +1506,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       render(currentTab, false);
       announceStatus(announcement);
     });
-    bindRollbacks(root, application, async (announcement) => {
+    bindRollbacks(root, application, snapshot, () => {
+      clearImportReceiptReviewGuidance();
+    }, async (announcement) => {
       snapshot = await application.loadWorkspace();
       render(currentTab, false);
       announceStatus(announcement);
@@ -1416,6 +1672,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     root.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => {
       button.addEventListener("click", () => {
         manualCaptureAttemptGeneration += 1;
+        importReceiptReviewAttemptGeneration += 1;
         const destination = (button.dataset.route as TabId | undefined) ?? currentTab;
         const reportTarget = button.dataset.reportTarget;
         render(destination);
@@ -1427,12 +1684,130 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     root.querySelectorAll<HTMLButtonElement>("[data-explore-demo]").forEach((button) => {
       button.addEventListener("click", async () => {
         snapshot = await application.exploreDemo();
-        clearManualCaptureGuidance();
+        clearAllCaptureGuidanceForWorkspace();
         tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
         render("dashboard");
       });
     });
   };
+
+  async function continueImportReceiptReview(
+    receiptId: string,
+  ): Promise<ManualExecutionRefreshResult> {
+    const retainedFailure = pendingImportReceiptReview?.receiptId === receiptId
+      ? pendingImportReceiptReview
+      : pendingImportReceiptReviewFromHistory(receiptId);
+    importReceiptReviewAttemptGeneration += 1;
+    const attemptGeneration = importReceiptReviewAttemptGeneration;
+    const superseded = (): ManualExecutionRefreshResult => Object.freeze({
+      status: "pending" as const,
+      focus: () => undefined,
+    });
+    const showFailure = (): ManualExecutionRefreshResult => {
+      importReceiptReviewEvidence = null;
+      importReceiptReviewContinuation = null;
+      pendingImportReceiptReview = retainedFailure;
+      importReceiptReviewPageStart = 0;
+      render("more", false);
+      const headings = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-import-receipt-review-failure-title]",
+      ));
+      const heading = headings.length === 1 ? headings[0] ?? null : null;
+      return Object.freeze({
+        status: "pending" as const,
+        focus: () => {
+          if (heading !== null && heading.isConnected) {
+            focusManualCaptureElement(root, heading);
+          }
+        },
+      });
+    };
+
+    let context: Awaited<ReturnType<JournalApplication["loadImportReceiptReviewContext"]>>;
+    try {
+      context = await application.loadImportReceiptReviewContext(receiptId);
+    } catch {
+      if (attemptGeneration !== importReceiptReviewAttemptGeneration) return superseded();
+      try {
+        const fresh = await application.loadWorkspace();
+        const visibleReceipt = fresh.importHistory.find((receipt) => (
+          receipt.receiptId === receiptId
+        ));
+        if (visibleReceipt?.rolledBack === true) {
+          snapshot = fresh;
+          clearImportReceiptReviewGuidance();
+          render("more", false);
+          return Object.freeze({
+            status: "complete" as const,
+            focus: () => {
+              announceStatus("This receipt was rolled back. Its review continuation ended, and immutable history remains visible.");
+              focusImportReceiptAfterRefresh(root, receiptId);
+            },
+          });
+        }
+      } catch {
+        // The retry-only surface remains the truthful fallback for unreadable evidence.
+      }
+      return showFailure();
+    }
+    if (attemptGeneration !== importReceiptReviewAttemptGeneration) return superseded();
+
+    const evidence: ImportReceiptReviewEvidence = Object.freeze({
+      receipt: context.receipt,
+      occurrenceExecutionIds: context.occurrenceExecutionIds,
+    });
+    let continuation: ImportReceiptReviewContinuation;
+    try {
+      continuation = buildImportReceiptReviewContinuation(context.snapshot, evidence);
+    } catch {
+      snapshot = context.snapshot;
+      return showFailure();
+    }
+    if (attemptGeneration !== importReceiptReviewAttemptGeneration) return superseded();
+
+    snapshot = context.snapshot;
+    clearAllCaptureGuidance();
+    importReceiptReviewEvidence = evidence;
+    importReceiptReviewContinuation = continuation;
+    pendingImportReceiptReview = null;
+    importReceiptReviewPageStart = 0;
+    let heading: HTMLElement;
+    try {
+      render("more", false);
+      const sections = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-import-receipt-review-continuation]",
+      ));
+      const headings = Array.from(root.querySelectorAll<HTMLElement>(
+        "[data-import-receipt-review-title]",
+      ));
+      const section = sections[0];
+      const candidateHeading = headings[0];
+      if (
+        sections.length !== 1
+        || headings.length !== 1
+        || section === undefined
+        || candidateHeading === undefined
+        || section.dataset.importReceiptReviewContinuation !== receiptId
+        || !section.contains(candidateHeading)
+        || candidateHeading.id !== "import-receipt-review-title"
+      ) {
+        throw new Error("The receipt review destination is unavailable.");
+      }
+      heading = candidateHeading;
+    } catch {
+      return showFailure();
+    }
+
+    return Object.freeze({
+      status: "complete" as const,
+      focus: () => {
+        announceStatus(
+          `Receipt reconciled. ${countNoun(continuation.acceptedRows, "accepted row")} resolve to ${countNoun(continuation.tradeSubjectIds.length, "current trade")} in the exact all-activity ${continuation.accountLabel} scope. Review actions are paged and no trade opened automatically.`,
+        );
+        if (heading.isConnected) focusManualCaptureElement(root, heading);
+      },
+    });
+  }
 
   async function continueManualCaptureReview(
     reference: PendingManualCaptureReference,
@@ -1589,7 +1964,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
-    clearManualCaptureGuidance();
+    clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     render("dashboard", false);
   };
@@ -1597,6 +1972,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   root.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       manualCaptureAttemptGeneration += 1;
+      importReceiptReviewAttemptGeneration += 1;
       render((button.dataset.tab as TabId | undefined) ?? currentTab);
     });
   });
@@ -1606,7 +1982,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = snapshot.provenance === "demo"
       ? await application.startJournal()
       : await application.exploreDemo();
-    clearManualCaptureGuidance();
+    clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     closeSettings();
     render("dashboard");

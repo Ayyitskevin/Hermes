@@ -133,6 +133,13 @@ describe("browser session journal ownership", () => {
       const second = await store.commitCsvImport(prepared(IMPORT_B, "second.csv"));
       expect(second.ledger.executions).toHaveLength(2);
       expect(second.receipt).toMatchObject({ acceptedRows: 2, executionCount: 1 });
+      const firstEvidence = await store.loadImportReviewEvidence(first.receipt.id);
+      const secondEvidence = await store.loadImportReviewEvidence(second.receipt.id);
+      expect(firstEvidence.occurrenceExecutionIds).toHaveLength(1);
+      expect(secondEvidence.occurrenceExecutionIds).toHaveLength(2);
+      expect(new Set(secondEvidence.occurrenceExecutionIds).size).toBe(2);
+      expect(secondEvidence.receipt).toEqual(second.receipt);
+      expect(Object.isFrozen(secondEvidence.occurrenceExecutionIds)).toBe(true);
 
       const afterFirstRollback = await store.rollbackImport(
         first.receipt.id,
@@ -140,16 +147,69 @@ describe("browser session journal ownership", () => {
       );
       expect(afterFirstRollback.executions).toHaveLength(2);
       expect(afterFirstRollback.projection.trades[0]?.moneyTotals[0]?.netPnl).toBe("10");
+      await expect(store.loadImportReviewEvidence(first.receipt.id))
+        .rejects.toThrow(/active receipt/i);
+      await expect(store.loadImportReviewEvidence(second.receipt.id))
+        .resolves.toMatchObject({ occurrenceExecutionIds: secondEvidence.occurrenceExecutionIds });
 
       const duplicate = await store.commitCsvImport(prepared(IMPORT_B, "second.csv"));
       expect(duplicate.outcome).toBe("duplicate");
       expect(duplicate.ledger.executions).toHaveLength(2);
+      expect((await store.loadImportReviewEvidence(duplicate.receipt.id)).occurrenceExecutionIds)
+        .toEqual(secondEvidence.occurrenceExecutionIds);
 
       const afterSecondRollback = await store.rollbackImport(
         second.receipt.id,
         "Remove the remaining overlapping import",
       );
       expect(afterSecondRollback.executions).toEqual([]);
+      await expect(store.loadImportReviewEvidence(second.receipt.id))
+        .rejects.toThrow(/active receipt/i);
+
+      const restored = await store.commitCsvImport(prepared(IMPORT_B, "restored.csv"));
+      expect(restored.receipt.id).not.toBe(second.receipt.id);
+      expect((await store.loadImportReviewEvidence(restored.receipt.id)).occurrenceExecutionIds)
+        .toEqual(secondEvidence.occurrenceExecutionIds);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("creates a distinct zero-version receipt when identical content is renamed", async () => {
+    const store = new SessionJournalStore();
+    try {
+      const first = await store.commitCsvImport(prepared(IMPORT_B, "fills.csv"));
+      const renamed = await store.commitCsvImport(prepared(IMPORT_B, "renamed-fills.csv"));
+
+      expect(renamed.outcome).toBe("committed");
+      expect(renamed.receipt.id).not.toBe(first.receipt.id);
+      expect(renamed.receipt).toMatchObject({
+        sourceName: "renamed-fills.csv",
+        acceptedRows: 2,
+        executionCount: 0,
+      });
+      expect(renamed.ledger.executions).toHaveLength(2);
+      expect(renamed.ledger.imports).toHaveLength(2);
+      expect((await store.loadImportReviewEvidence(renamed.receipt.id)).occurrenceExecutionIds)
+        .toEqual((await store.loadImportReviewEvidence(first.receipt.id)).occurrenceExecutionIds);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("preserves repeated accepted-row occurrence multiplicity for one execution", async () => {
+    const store = new SessionJournalStore();
+    const repeated = "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+      + "same-fill,AAPL,BUY,1,100,0,USD,2026-07-01T13:30:00Z\r\n"
+      + "same-fill,AAPL,BUY,1,100,0,USD,2026-07-01T13:30:00Z";
+    try {
+      const committed = await store.commitCsvImport(prepared(repeated, "repeated.csv"));
+      const evidence = await store.loadImportReviewEvidence(committed.receipt.id);
+
+      expect(committed.receipt).toMatchObject({ acceptedRows: 2, executionCount: 1 });
+      expect(evidence.occurrenceExecutionIds).toHaveLength(2);
+      expect(new Set(evidence.occurrenceExecutionIds).size).toBe(1);
+      expect(evidence.occurrenceExecutionIds[0]).toBe(evidence.occurrenceExecutionIds[1]);
     } finally {
       await store.close();
     }
