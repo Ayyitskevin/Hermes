@@ -38,6 +38,12 @@ export function focusManualCaptureElement(
   target: HTMLElement,
   block: "start" | "nearest" = "start",
 ): void {
+  const screenStack = target.closest<HTMLElement>(".screen-stack");
+  if (screenStack !== null) {
+    // A focused destination must not keep moving after its chrome-safe geometry
+    // is measured; the entry transform otherwise shifts it upward mid-focus.
+    screenStack.style.animation = "none";
+  }
   const topbar = root.querySelector<HTMLElement>(".topbar");
   const topbarRect = topbar?.getBoundingClientRect();
   const topbarPosition = topbar === null

@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Manual Capture Review Continuation v1 locally · hosted
-exact-commit CI pending · updated 2026-07-17
+Status: verified Manual Capture Review Continuation v1 locally · exact-commit
+hosted status tracked in GitHub Actions · updated 2026-07-17
 
 ## Current handoff
 
@@ -90,13 +90,22 @@ verified:
 - `cd mobile && npm run test:e2e` — exit 0; all 93 production-Chromium journeys
   passed after the pre-existing activity-month fixture was updated to consume
   the new intentional review-guide destination.
+- Initial exact-commit GitHub Actions run `29623294923` passed the Legacy Python
+  gate but exposed two Mobile Linux focus-geometry failures at 2 workers: the
+  `.screen-stack` entrance transform kept moving after chrome-safe focus
+  geometry was measured. The shared manual-continuation focus helper now freezes
+  that transform before measurement, and the E2E helper asserts the animation
+  is inactive rather than weakening its 8px clearance requirement.
+- CI-profile focus verification after that fix — 20/20 repeated AUTO-reversal
+  tamper and known-save failure journeys passed at 2 workers; a subsequent full
+  local inventory again passed 93/93.
 - `cd mobile && npm run ios:copy`, then `npm run ios:sync` — exit 0. Vite
   transformed 86 modules; the existing >500 kB warning remains. Capacitor found
   only `@capacitor-community/sqlite@8.1.0` and explicitly skipped
   CocoaPods/xcodebuild on Linux.
 - `cd mobile && npm run verify:ios-sync` — exit 0. Six production files matched
   the iOS public copy byte-for-byte with SHA-256
-  `dd5b2b4119385115d385f9cd1c6f2cd94f5feb63d5aa54b3a519ce61edd503a8`;
+  `14e9e510e2d51dc73fd004febe6dfa36a714517489615f8a71785d07e23e9dbb`;
   all native acceptance rows remain NOT RUN.
 - `cd mobile && npm run test:ios-sync` — exit 0; all 8 verifier tests passed.
 - `node docs/mobile/tradezella-parity/build-report.mjs
@@ -149,8 +158,9 @@ assumptions:
 
 open:
 
-- Exact-commit hosted Mobile Linux and Legacy Python jobs remain required after
-  publication before this milestone can be passed downstream.
+- Before downstream pass, require the published commit's Mobile Linux and
+  Legacy Python jobs to be green and record the terminal run in the fleet
+  handoff; GitHub Actions is authoritative for that external state.
 - Generic-CSV receipt-to-review continuation remains the next autonomous
   branch. It must start from the exact immutable receipt, reconcile explicit
   row outcomes, resolve stable current subjects, and reuse the exact account

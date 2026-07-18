@@ -85,13 +85,18 @@ async function expectWithinUnobscuredChrome(
           : null;
     };
     const bounds = element.getBoundingClientRect();
+    const screenStack = element.closest<HTMLElement>(".screen-stack");
     return {
       target: { top: bounds.top, bottom: bounds.bottom },
       topBoundary: fixedBoundary(document.querySelector(".topbar"), "top") ?? 0,
       bottomBoundary: fixedBoundary(document.querySelector(".tabbar"), "bottom")
         ?? window.innerHeight,
+      screenAnimationName: screenStack === null
+        ? null
+        : window.getComputedStyle(screenStack).animationName,
     };
   });
+  expect(geometry.screenAnimationName).toBe("none");
   expect(geometry.target.top).toBeGreaterThanOrEqual(geometry.topBoundary + 8);
   if (options.wholeTarget !== false) {
     expect(geometry.target.bottom).toBeLessThanOrEqual(geometry.bottomBoundary - 8);
