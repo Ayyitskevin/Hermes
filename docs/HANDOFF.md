@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: verified Daily Reflection Rhythm Continuation v1 locally · hosted
-exact-commit CI pending · updated 2026-07-18
+Status: verified Daily Reflection Rhythm Continuation v1 locally · feature
+commit 53ec0b1 hosted exact-commit CI passed · updated 2026-07-18
 
 ## Current handoff
 
@@ -95,9 +95,14 @@ verified:
 - JSON syntax, JavaScript syntax, generated-report receipt, source inventory,
   copied-bundle parity, tracked native/lockfile drift, and
   `git diff --check` passed.
+- GitHub Actions run `29630379516` passed exact feature commit
+  `53ec0b131113c8fc7d3e2248840d5086b9f74e9f`. Legacy Python safety job
+  `88042683367` and Mobile Linux contract job `88042683415` both completed
+  successfully, including the 96-journey browser smoke, boundary, bundle-copy,
+  iOS-handoff, and dependency-audit stages.
 - Legacy Python Ruff/Pytest — NOT RUN locally because this mobile/report slice
   does not touch legacy Python and the checkout has no complete project venv.
-  The hosted Legacy Python safety job remains required.
+  The exact-feature-commit hosted Legacy Python safety job passed above.
 
 assumptions:
 
@@ -115,9 +120,6 @@ assumptions:
 
 open:
 
-- Before downstream pass, require the published commit's Mobile Linux and
-  Legacy Python jobs to be green and record the terminal exact-SHA run in the
-  fleet handoff; GitHub Actions is authoritative for that external state.
 - Two separate moderated fictional-data studies remain NOT RUN: five manual
   participants and five generic-CSV participants. Do not pool cohorts or infer
   activation, retention, causality, or trading outcomes from browser automation.
