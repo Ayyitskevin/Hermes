@@ -83,6 +83,10 @@ function withCoherentReviewSessions(
   const closed = trades.filter((trade) => trade.status === "closed");
   return {
     ...snapshot,
+    accountOptions: snapshot.accountOptions.map((account) => ({
+      ...account,
+      tradeCount: trades.filter((trade) => trade.accountId === account.id).length,
+    })),
     trades,
     calendar,
     reviewProgress: {
@@ -155,6 +159,7 @@ function workspaceWithManyContributors(count = 31): JournalWorkspaceSnapshot {
 
 function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
   const aapl = demoTrade("AAPL");
+  const hostileAccountLabel = "<Broker & One>";
   const noRealizedMetrics = deriveTradeMetricsV1({
     assetClass: "stock",
     netRealizedPnl: null,
@@ -166,7 +171,7 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
     ...aapl,
     setup: "<Breakout>",
     sessionLabel: "<Jul 1 & morning>",
-    accountLabel: "<Broker & One>",
+    accountLabel: hostileAccountLabel,
     rules: aapl.rules.map((rule, index) => ({
       ...rule,
       text: index === 0 ? "<Wait & confirm>" : rule.text,
@@ -186,6 +191,18 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
     followedPlan: null,
     rules: aapl.rules.map((rule) => ({ ...rule, outcome: "not_applicable" as const })),
   });
+  const trades = [
+    escaped,
+    ...DEMO_WORKSPACE.trades.slice(1),
+    open,
+    missing,
+    draft,
+    unclassified,
+  ].map((trade) => (
+    trade.accountId === aapl.accountId
+      ? { ...trade, accountLabel: hostileAccountLabel }
+      : trade
+  ));
   return withCoherentReviewSessions({
     ...DEMO_WORKSPACE,
     provenance: "local",
@@ -193,14 +210,12 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
     periodLabel: "<all history>",
     timeZone: "<UTC & local>",
     accountLabel: "<all accounts & scope>",
-  }, [
-    escaped,
-    ...DEMO_WORKSPACE.trades.slice(1),
-    open,
-    missing,
-    draft,
-    unclassified,
-  ]);
+    accountOptions: DEMO_WORKSPACE.accountOptions.map((account) => (
+      account.id === aapl.accountId
+        ? { ...account, label: hostileAccountLabel }
+        : account
+    )),
+  }, trades);
 }
 
 describe("reports presentation", () => {
@@ -211,6 +226,7 @@ describe("reports presentation", () => {
       "performance-summary-title",
       "cumulative-result-title",
       "review-session-coverage-title",
+      "account-review-coverage-title",
       "direction-mix-title",
       "symbol-breakdown-title",
       "opening-weekday-mix-title",
@@ -228,8 +244,8 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(11);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(11);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(12);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(12);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
@@ -237,6 +253,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#review-session-coverage-title"'),
     );
     expect(html.indexOf('href="#review-session-coverage-title"')).toBeLessThan(
+      html.indexOf('href="#account-review-coverage-title"'),
+    );
+    expect(html.indexOf('href="#account-review-coverage-title"')).toBeLessThan(
       html.indexOf('href="#direction-mix-title"'),
     );
     expect(html.indexOf('href="#direction-mix-title"')).toBeLessThan(
@@ -264,6 +283,9 @@ describe("reports presentation", () => {
       html.indexOf("data-review-session-coverage"),
     );
     expect(html.indexOf("data-review-session-coverage")).toBeLessThan(
+      html.indexOf("data-account-review-coverage"),
+    );
+    expect(html.indexOf("data-account-review-coverage")).toBeLessThan(
       html.indexOf("data-direction-mix"),
     );
     expect(html.indexOf("data-direction-mix")).toBeLessThan(
@@ -343,7 +365,7 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all nine versioned evidence reports with the existing headline context", () => {
+  it("renders all ten versioned reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain("data-review-session-coverage");
@@ -360,6 +382,17 @@ describe("reports presentation", () => {
     expect(html).toContain(
       "<dt>Session–trade assignments</dt><dd>8 assignments</dd>",
     );
+    expect(html).toContain("data-account-review-coverage");
+    expect(html).toContain(
+      '<h2 id="account-review-coverage-title" class="report-target" tabindex="-1">Account review coverage</h2>',
+    );
+    expect(html).toContain("account-review-coverage-report-v1");
+    expect(html).toContain(
+      "a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a",
+    );
+    expect(html).toContain("2 accounts");
+    expect(html).toContain("8 completed");
+    expect(html.match(/data-account-review-coverage-route=/g)).toHaveLength(2);
     expect(html).toContain("data-direction-mix");
     expect(html).toContain(
       '<h2 id="direction-mix-title" class="report-target" tabindex="-1">Direction mix</h2>',

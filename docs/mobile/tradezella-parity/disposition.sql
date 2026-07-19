@@ -1,4 +1,4 @@
--- Source: capability-ledger.json (schema_version 1, as_of 2026-07-18).
+-- Source: capability-ledger.json (schema_version 1, as_of 2026-07-19).
 -- These are exact roadmap-disposition counts, not feature-coverage percentages.
 -- This portable constant snapshot is rederived and fail-closed against the
 -- declared ledger by build-report.mjs before report delivery.

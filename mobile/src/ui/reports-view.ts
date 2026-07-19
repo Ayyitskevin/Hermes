@@ -6,6 +6,7 @@ import {
 } from "../core/plan-adherence-report";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
+import { accountReviewCoverageSection } from "./account-review-coverage-view";
 import {
   bindDirectionMixView,
   directionMixSection,
@@ -49,6 +50,7 @@ const REPORT_TARGET_IDS = Object.freeze([
   "reports-navigation-title",
   "performance-summary-title",
   "review-session-coverage-title",
+  "account-review-coverage-title",
   "direction-mix-title",
   "symbol-breakdown-title",
   "opening-weekday-mix-title",
@@ -68,6 +70,7 @@ function reportNavigation(): string {
       <li><a class="report-navigation-link" href="#performance-summary-title" data-report-target="performance-summary-title">Performance summary</a></li>
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
       <li><a class="report-navigation-link" href="#review-session-coverage-title" data-report-target="review-session-coverage-title">Review session coverage</a></li>
+      <li><a class="report-navigation-link" href="#account-review-coverage-title" data-report-target="account-review-coverage-title">Account review coverage</a></li>
       <li><a class="report-navigation-link" href="#direction-mix-title" data-report-target="direction-mix-title">Direction mix</a></li>
       <li><a class="report-navigation-link" href="#symbol-breakdown-title" data-report-target="symbol-breakdown-title">Symbol breakdown</a></li>
       <li><a class="report-navigation-link" href="#opening-weekday-mix-title" data-report-target="opening-weekday-mix-title">Opening weekday mix</a></li>
@@ -154,6 +157,7 @@ export function bindReportNavigation(root: HTMLElement): void {
           ".report-navigation-link",
           ".report-menu-link",
           ".plan-check-group > summary",
+          ".account-review-coverage-actions > button",
           ".report-trade-action",
         ].join(", "))
       ) {
@@ -393,6 +397,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
       <article class="card chart-card" aria-labelledby="cumulative-result-title"><div class="section-title"><div><p class="card-label">JOURNAL CURVE</p><h2 id="cumulative-result-title" class="report-target" tabindex="-1">Cumulative result</h2></div><div class="report-section-actions"><strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>${reportMenuLink()}</div></div>${equityChart(snapshot)}</article>
     </section>
     ${reviewSessionCoverageSection(snapshot)}
+    ${accountReviewCoverageSection(snapshot)}
     ${directionMixSection(snapshot)}
     ${symbolBreakdownSection(snapshot)}
     ${openingWeekdayMixSection(snapshot)}

@@ -1,10 +1,10 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
 
-The current workspace contains 37 bounded Slice D increments: 31 derived-only
+The current workspace contains 38 bounded Slice D increments: 32 derived-only
 presentation/projection increments and six write-capable exceptions.
-Reports exposes 11 semantic targets and nine governed reports.
+Reports exposes 12 semantic targets and ten governed reports.
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -1143,17 +1143,56 @@ is transient presentation only. No report state or result enters SQLite,
 browser journal state, export/restore, archive shape, or report-input digests;
 restore recomputes the report from existing calendar and current-review inputs.
 
+Account Review Coverage v1 is the thirty-eighth bounded Slice D increment and
+the thirty-second derived-only presentation/projection increment. It stays
+inside the same derived-report boundary and adds no ledger fact. Definition
+`account-review-coverage-report-v1` is pinned by SHA-256
+`a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`.
+The complete immutable builder includes every retained stable account,
+including a zero-trade account, in label-code-unit then stable-ID order.
+Duplicate labels remain distinct and are disambiguated by retained account
+position rather than treated as identity.
+
+Every unique current trade resolves to exactly one retained account and is
+conserved exactly once in the fixed draft, pending, completed, or open groups.
+Open position state takes precedence over review state and is explicit in the
+count, but open trades are excluded from every closed-cohort action. Global
+waiting must equal `reviewProgress.pendingTrades` and draft plus pending;
+global draft and completed totals must separately reconcile
+`reviewProgress.draftTrades` and `reviewProgress.completedTrades`. Invalid,
+duplicate, missing, noncanonical, or nonconserving identity/count/review-head
+evidence fails closed without repair, dropping, or defaults.
+
+This is a count-only account-coverage report. It computes no P&L, financial
+comparison, percentage, rate, rank, reward, prediction, or advice. Each nonzero
+draft, pending, or completed closed cohort may explicitly route to Trades using
+an exact stable account ID, `closed` position state, and review-state facet
+built from empty Trade Browser state. Activation rederives the report, validates
+the captured stable account/state/count and exact destination cards, focuses
+the filter summary, and restores the prior tab and exact browser state if any
+check fails. Account Review Coverage uses this separate cohort binder; it does
+not join or change the eight non-Symbol per-trade continuation sources.
+
+No report, route, scope, focus, or failure state enters SQLite, browser journal
+state, preferences, export/restore, archive shape, or report-input digests.
+Matching-runtime restore recomputes identical version, checksum, ordered
+accounts, fixed groups, counts, and stable subjects from existing inputs.
+Account CRUD, broker identity, and financial account comparisons remain open.
+Native SQLCipher, VoiceOver, hardware-keyboard, lifecycle/multi-scene, and
+Dynamic Type acceptance are NOT RUN on Linux and remain a Mac/iPhone gate.
+
 Reports Navigator v1 remains inside that same derived boundary. It adds no
-scope or result state: its eleven semantic in-page links target Performance
-Summary, Journal Curve, Review Session Coverage, Direction Mix, Symbol
-Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
-Tag Patterns, and Setup Breakdown markup. Dashboard shortcuts may enter Review Session Coverage and
+scope or result state: its twelve semantic in-page links target Performance
+Summary, Journal Curve, Review Session Coverage, Account Review Coverage,
+Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake
+Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown markup. Dashboard
+shortcuts may enter Review Session Coverage and
 Plan Check directly. Activating a link scrolls and focuses
 current DOM only; open disclosure state survives because no report is rebuilt.
 The responsive top-bar position and clipped-control focus correction are
 presentation behavior only. No navigation value enters SQLite, browser journal
 state, local preferences, export/restore, archive digests, report-input digests,
-or governed definitions. All nine governed report builders receive the full
+or governed definitions. All ten governed report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -1344,7 +1383,7 @@ or plugin-runtime evidence.
   destination; the replacement file must earn its own preview. Successful
   commit focuses the stable rendered screen after the old commit control is
   removed.
-- All nine governed reports remain derived-only across native and browser
+- All ten governed reports remain derived-only across native and browser
   export/restore. A matching-runtime restored snapshot must recompute identical
   versions, checksums, cohorts, exclusions, fixed or exact group order, evidence
   order, values, and stable contributor identities; no report output is restored
@@ -1520,6 +1559,16 @@ no-trade-gap streak continuity, Daily Journal/result/Trades-scope isolation,
 immutability, exact browser restore recomputation, 25-assignment pagination,
 stable-ID continuation, ordinary-close trigger focus, save-driven heading focus
 return, offline operation, and 320/421px 200% reflow.
+Account Review Coverage tests add the pinned checksum, retained stable-account
+ordering including zero-trade accounts, duplicate-label position
+disambiguation, exact draft/pending/completed/open conservation, and global
+waiting/draft/completed reconciliation. They also cover open-position
+precedence and action exclusion, count-only financial/rank/advice neutrality,
+exact nonzero account + closed + review cohort routing from empty browser state,
+activation-time identity/count/destination validation, filter-summary focus,
+prior-state rollback, storage/network neutrality, matching-runtime export/
+restore equality, and 320/421px 200% reflow. This coverage uses no pagination
+claim and leaves the eight non-Symbol per-trade action sources unchanged.
 Reports Navigator coverage adds an
 ordered navigation landmark, direct Dashboard entry, return paths, live-header
 offset focus, preserved disclosure/DOM state, governed metric/curve/report
@@ -1626,6 +1675,13 @@ restore equality, VoiceOver, hardware-keyboard focus, lifecycle/two-scene
 refresh, preference/SQLite/network neutrality, and 320/421-width 200% Dynamic
 Type on the Mac/iPhone candidate; browser proof must not be treated as native
 acceptance.
+Account Review Coverage native acceptance is NOT RUN. Prove retained account
+identity/order, duplicate-label position semantics, zero-trade accounts,
+draft/pending/completed/open conservation, closed-cohort routing, mismatch
+rollback, restore equality, VoiceOver, hardware-keyboard focus, lifecycle/two-
+scene refresh, preference/SQLite/network neutrality, and 320/421-width 200%
+Dynamic Type on the Mac/iPhone candidate; browser proof must not be treated as
+native acceptance.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

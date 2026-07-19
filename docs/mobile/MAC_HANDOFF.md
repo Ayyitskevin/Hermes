@@ -5,9 +5,9 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
-The current source contains 37 bounded Slice D increments: 31 derived-only and
-six write-capable exceptions. Reports exposes 11 semantic targets and
-nine governed reports. These source counts do not strengthen any native claim.
+The current source contains 38 bounded Slice D increments: 32 derived-only and
+six write-capable exceptions. Reports exposes 12 semantic targets and
+ten governed reports. These source counts do not strengthen any native claim.
 
 ## Branch reconciliation record
 
@@ -263,9 +263,9 @@ and an App Store disclosure.
   account/date/day scope. Confirm all nine AND against exact current trade fields,
   change visible cards only, expose the asset-class chip, and leave exact scope
   P&L/counts, the
-  calendar, Dashboard, Review Session Coverage, Direction Mix, Opening Weekday
-  Mix, Symbol Breakdown, Plan Check, Mistake Patterns, Emotion Patterns, Tag
-  Patterns, and Setup Breakdown unchanged.
+  calendar, Dashboard, Review Session Coverage, Account Review Coverage,
+  Direction Mix, Opening Weekday Mix, Symbol Breakdown, Plan Check, Mistake
+  Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
 - Confirm the exact-filter disclosure starts collapsed with **none active**,
@@ -328,9 +328,10 @@ and an App Store disclosure.
   state. If an account or day disappears after refresh, confirm Hermes announces
   the recovery instead of silently broadening or trapping the app.
 - Confirm Dashboard headline P&L, equity, and review progress plus Direction
-  Mix, Symbol Breakdown, Opening Weekday Mix, Review Session Coverage, Plan Check, Mistake
-  Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole
-  workspace while only Trades and the Dashboard calendar are scoped.
+  Mix, Symbol Breakdown, Opening Weekday Mix, Review Session Coverage, Account
+  Review Coverage, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns,
+  and Setup Breakdown remain whole workspace while only Trades and the
+  Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
   inputs, nine facet selects, month controls, day tiles, scope summary,
   contribution evidence, and focused destinations have no horizontal overflow
@@ -382,7 +383,7 @@ and an App Store disclosure.
   the existing sheet/recovery surface; a refresh retry must not repeat a review
   or batch write. Inspect export and storage evidence to confirm no queue,
   grouping, or focus state exists beyond the established review successors.
-  Schema v4, five primary tabs, eleven report targets, nine governed reports, and
+  Schema v4, five primary tabs, twelve report targets, ten governed reports, and
   their digests/formulas must remain unchanged. Repeat with VoiceOver, hardware
   keyboard, background/foreground, force quit/relaunch, and 200% Dynamic Type at
   320 and 421 CSS pixels before marking Review Queue Focus native acceptance
@@ -653,6 +654,28 @@ and an App Store disclosure.
   keyboard, 44-point controls, 320 and 421 CSS pixels, 200% Dynamic Type, Reduce
   Motion, background/foreground, and force quit/relaunch. These native rows
   remain NOT RUN until observed on the Mac/iPhone candidate.
+- In Reports, verify Account Review Coverage shows
+  `account-review-coverage-report-v1`, checksum
+  `a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`,
+  every retained account exactly once, and every current trade exactly once in
+  its stable account plus one fixed draft, not-started, completed, or open
+  group. Retain zero-trade accounts. Order accounts by display label then
+  stable ID, and distinguish duplicate labels by account position. Reconcile
+  each account's four counts to its current trade count and reconcile global
+  draft, waiting, completed, open, and total counts to review progress, where
+  waiting equals draft plus not-started.
+- Confirm open positions stay explicit but expose no closed-review action.
+  Activate each positive draft, not-started, and completed cohort and prove the
+  current snapshot rebuilds an exact empty-state Trade Browser scope containing
+  only the stable account, closed positions, and requested review state. Dates,
+  selected day, query, and every other facet must be clear; focus must land on
+  the filter summary. Tamper count, state, account identity, account position,
+  DOM ownership, or rendered destination evidence and confirm a generic focused
+  error plus exact prior-tab/filter rollback without persistence or a network
+  request. Confirm the report exposes no P&L, rate, rank, target, comparison,
+  prediction, or advice. After export and matching-runtime restore, require
+  exact version/checksum/account/group/count/subject equality. These native rows
+  remain NOT RUN until observed on the Mac/iPhone candidate.
 - In Reports, verify Direction Mix shows `direction-mix-report-v1`, checksum
   `0a55af9905699cc62746c99b5b4e7dd664588d8b526eefb207e9fb2bb77b3ab2`,
   eight current trades, and the fixed Long/Short counts 6/2. Reconcile every
@@ -718,12 +741,13 @@ and an App Store disclosure.
   check** from Dashboard and confirm focus lands on Plan Check rather than the
   generic Reports container. In the Report sections landmark, verify
   VoiceOver and hardware-keyboard order is Performance Summary, Journal Curve,
-  Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
-  Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup
-  Breakdown. Open a Review Session Coverage, Direction, Symbol Breakdown,
-  Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup disclosure, visit all
-  eleven targets, and use every **Back to report menu** link; focus must remain
-  visible and all nine governed disclosures must
+  Review Session Coverage, Account Review Coverage, Direction Mix, Symbol
+  Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion
+  Patterns, Tag Patterns, then Setup Breakdown. Open a Review Session Coverage,
+  Account Review Coverage, Direction, Symbol Breakdown, Opening Weekday, Plan,
+  Mistake, Emotion, Tag, and Setup disclosure, visit all twelve targets, and use
+  every **Back to report menu** link; focus must remain visible and all ten
+  governed disclosures must
   stay open. At
   320 CSS pixels and again in the 421–440 CSS-pixel device class with
   200% Dynamic Type, confirm the top bar scrolls
@@ -831,7 +855,7 @@ and an App Store disclosure.
   five groups, each evidence action adds at most 25 contributors, live status
   stays exact, focus moves to the first newly revealed group, controls remain
   44 points, and 200% text reflows at 320 CSS pixels without clipping.
-- After native export → empty-container restore, verify all nine governed
+- After native export → empty-container restore, verify all ten governed
   reports, their checksums, cohorts, exclusions, group/evidence order, exact
   values, and contributor identities equal the source. For Review Session
   Coverage, also prove exact equality of all session dates, classifications,
@@ -874,6 +898,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | VoiceOver/Dynamic Type/keyboard/layout | status | settings + observed result |
 | Files export/restore/continued writes | status | archive digests + result |
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
+| Account Review Coverage/navigation/continuation/restore | status | checksum + retained/zero-trade/duplicate-label fixtures + four-state conservation + exact cohort/focus/rollback/equality |
 | Symbol Breakdown/navigation/continuation/restore | status | checksum + full cohort + exact symbol/asset collision fixtures + paging/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
@@ -1138,6 +1163,16 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   refresh, and 320/421-width 200% Dynamic Type are NOT RUN. Keep native
   acceptance held until the procedure above records them without a durable or
   network write.
+- Account Review Coverage v1 has Linux unit evidence for its checksum-pinned
+  retained-account and four-state conservation contract plus matching-runtime
+  restore equality. Chromium evidence covers exact positive-cohort navigation,
+  conflicting-filter clearing, tamper rejection, destination-failure rollback,
+  keyboard focus, offline storage/network neutrality, and 320/421-width 200%
+  reflow. Native SQLCipher-derived equality, zero-trade and duplicate-label
+  fixtures, VoiceOver announcement/order, hardware-keyboard focus,
+  background/foreground, force-quit/relaunch, two-scene refresh, and Dynamic
+  Type are NOT RUN. Keep native acceptance held until the procedure above
+  records them without durable or network mutation.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.
@@ -1147,9 +1182,10 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   custom subdirectory. Actual device and iCloud backup inclusion—and whether the
   matching Keychain item restores—remain unresolved until measured and
   reflected in privacy/help copy.
-- Manual entry, versioned reviews, governed Review Session Coverage, Direction
-  Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
-  Patterns, and Setup Breakdown, export generation, and Slice C-B local restore
+- Manual entry, versioned reviews, governed Review Session Coverage, Account
+  Review Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown,
+  export generation, and Slice C-B local restore
   still need the persistence, response-loss, migration, accessibility, and
   lifecycle checks
   above. Trade Browser Scope v1, Structured Trades Facets v1, Dynamic Review
@@ -1158,9 +1194,10 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
-  behaviors. Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
-  Mistake Patterns, Emotion Patterns, Tag Patterns, and Report Trade
-  Continuation are browser-verified only. Dashboard Recent Trade Continuation
+  behaviors. Review Session Coverage, Account Review Coverage, Direction Mix,
+  Symbol Breakdown, Opening Weekday Mix, Mistake Patterns, Emotion Patterns,
+  Tag Patterns, and Report Trade Continuation are browser-verified only.
+  Dashboard Recent Trade Continuation
   likewise has only browser-session evidence; native
   stable-ID duplicate-symbol targeting, VoiceOver labels, progressive-row
   activation, exact-trigger return, post-save heading/screen fallback, offline

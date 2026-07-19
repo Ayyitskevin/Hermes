@@ -875,6 +875,11 @@ p { line-height: 1.55; }
 .plan-check-metric { min-width: 0; display: grid; gap: .2rem; }
 .plan-check-metric span { color: var(--muted); font-size: .68rem; }
 .plan-check-metric strong { font: 700 .82rem/1.35 "B612 Mono", monospace; overflow-wrap: anywhere; }
+.account-review-coverage-actions { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.account-review-coverage-actions .secondary-button {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .plan-check-evidence-list { min-width: 0; display: grid; gap: .55rem; }
 .plan-check-evidence {
   min-width: 0;

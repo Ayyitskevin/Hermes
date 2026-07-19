@@ -19,6 +19,7 @@ import {
 } from "../application/prepare-trade-review";
 import type { PreparedJournalRestore } from "../application/journal-restore";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
+import { buildAccountReviewCoverageReport } from "../core/account-review-coverage-report";
 import { buildDirectionMixReport } from "../core/direction-mix-report";
 import { buildEmotionPatternsReport } from "../core/emotion-patterns-report";
 import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
@@ -149,6 +150,103 @@ async function reviewedSourceArchive(): Promise<{
   return { store, archive: artifact.archive, contents: artifact.contents };
 }
 
+async function mixedAccountReviewCoverageArchive(): Promise<{
+  readonly store: SessionJournalStore;
+  readonly contents: string;
+}> {
+  let nowMs = Date.parse("2026-07-01T16:00:00.000Z");
+  const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+  await store.commitManualExecution(manual("d", "NVDA"));
+  await store.commitManualExecution(manual("e", "NVDA", "0", {
+    side: "SELL",
+    positionEffect: "CLOSE",
+    price: "115",
+    executedAt: "2026-07-01T10:30:00",
+  }));
+  await store.commitManualExecution(manual("1", "AAPL", "0", {
+    accountName: "Secondary brokerage",
+    executedAt: "2026-07-01T11:00:00",
+  }));
+  await store.commitManualExecution(manual("2", "MSFT", "0", {
+    accountName: "Secondary brokerage",
+    executedAt: "2026-07-01T12:00:00",
+  }));
+  await store.commitManualExecution(manual("3", "MSFT", "0", {
+    accountName: "Secondary brokerage",
+    side: "SELL",
+    positionEffect: "CLOSE",
+    price: "205",
+    executedAt: "2026-07-01T12:30:00",
+  }));
+  await store.commitManualExecution(manual("4", "TSLA", "0", {
+    executedAt: "2026-07-01T13:00:00",
+  }));
+  await store.commitManualExecution(manual("5", "TSLA", "0", {
+    side: "SELL",
+    positionEffect: "CLOSE",
+    price: "105",
+    executedAt: "2026-07-01T13:30:00",
+  }));
+  const retained = await store.commitCsvImport(prepareCsvImport({
+    rawInput: "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+      + "retained-empty,QQQ,BUY,1,500,0,USD,2026-07-01T18:00:00Z",
+    sourceName: "retained-empty.csv",
+    accountName: "Retained archive",
+    timeZone: "America/New_York",
+    defaultCurrency: "USD",
+  }));
+  await store.rollbackImport(retained.receipt.id, "Retain an empty account");
+
+  const ledger = await store.load();
+  const subjectFor = (symbol: string): string => {
+    const instrument = ledger.instruments.find((candidate) => candidate.symbol === symbol);
+    const trade = ledger.projection.trades.find((candidate) => (
+      candidate.instrumentId === instrument?.id
+    ));
+    const subject = ledger.tradeSubjects.find((candidate) => (
+      candidate.projectionTradeId === trade?.id
+    ));
+    if (subject === undefined) throw new Error(`Missing ${symbol} trade subject.`);
+    return subject.tradeSubjectId;
+  };
+  const completed = prepareTradeReview({
+    submissionId: "6".repeat(64),
+    tradeSubjectId: subjectFor("NVDA"),
+    expectedPreviousReviewId: null,
+    state: "completed",
+    note: "Completed review retained across restore.",
+    setup: "Breakout",
+    mistakes: [],
+    tags: [],
+    emotion: "Focused",
+    playbook: null,
+    initialRisk: { amount: "10", currency: "USD" },
+    plannedStop: "90",
+  });
+  const draft = prepareTradeReview({
+    submissionId: "7".repeat(64),
+    tradeSubjectId: subjectFor("TSLA"),
+    expectedPreviousReviewId: null,
+    state: "draft",
+    note: "Draft review retained across restore.",
+    setup: null,
+    mistakes: [],
+    tags: [],
+    emotion: null,
+    playbook: null,
+    initialRisk: null,
+    plannedStop: null,
+  });
+  const batchId = "mixed-account-review-coverage-restore";
+  await store.commitTradeReviews({
+    batchId,
+    reviews: [completed, draft],
+    revision: tradeReviewBatchRevision(batchId, [completed, draft]),
+  });
+  const artifact = await store.exportUserData();
+  return { store, contents: artifact.contents };
+}
+
 function rebuild(
   archive: JournalArchive,
   changes: Partial<JournalArchiveUnsigned>,
@@ -176,6 +274,7 @@ describe("browser session user-data restore", () => {
     const destination = new SessionJournalStore();
     try {
       const beforeSnapshot = workspaceSnapshotFromLedger(await source.store.load());
+      const beforeAccountReviewCoverage = buildAccountReviewCoverageReport(beforeSnapshot);
       const beforeDirection = buildDirectionMixReport(beforeSnapshot);
       const beforeEmotions = buildEmotionPatternsReport(beforeSnapshot);
       const beforeMistakes = buildMistakePatternsReport(beforeSnapshot);
@@ -188,6 +287,7 @@ describe("browser session user-data restore", () => {
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
       const afterSnapshot = workspaceSnapshotFromLedger(await destination.load());
+      const afterAccountReviewCoverage = buildAccountReviewCoverageReport(afterSnapshot);
       const afterDirection = buildDirectionMixReport(afterSnapshot);
       const afterEmotions = buildEmotionPatternsReport(afterSnapshot);
       const afterMistakes = buildMistakePatternsReport(afterSnapshot);
@@ -200,6 +300,7 @@ describe("browser session user-data restore", () => {
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
       expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
 
+      expect(afterAccountReviewCoverage).toEqual(beforeAccountReviewCoverage);
       expect(afterDirection).toEqual(beforeDirection);
       expect(afterEmotions).toEqual(beforeEmotions);
       expect(afterPlan).toEqual(beforePlan);
@@ -209,6 +310,31 @@ describe("browser session user-data restore", () => {
       expect(afterMistakes).toEqual(beforeMistakes);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
       expect(afterTags).toEqual(beforeTags);
+      expect(afterAccountReviewCoverage.metadata).toMatchObject({
+        accountCount: 1,
+        totalTradeCount: 1,
+        closedTradeCount: 1,
+        openTradeCount: 0,
+        waitingReviewCount: 0,
+        completedReviewCount: 1,
+      });
+      expect(afterAccountReviewCoverage.accounts).toEqual([
+        expect.objectContaining({
+          accountLabel: "Primary brokerage",
+          position: 1,
+          tradeCount: 1,
+          groups: [
+            expect.objectContaining({ classification: "draft", tradeCount: 0 }),
+            expect.objectContaining({ classification: "pending", tradeCount: 0 }),
+            expect.objectContaining({
+              classification: "completed",
+              tradeCount: 1,
+              tradeSubjectIds: [expect.any(String)],
+            }),
+            expect.objectContaining({ classification: "open", tradeCount: 0 }),
+          ],
+        }),
+      ]);
       expect(afterReviewSessions.metadata).toMatchObject({
         totalSessionCount: 1,
         reviewedSessionCount: 1,
@@ -314,6 +440,60 @@ describe("browser session user-data restore", () => {
         resultPnlExact: "15",
         resultRExact: "1.5",
       });
+    } finally {
+      await source.store.close();
+      await destination.close();
+    }
+  });
+
+  it("restores mixed account review coverage with zero-trade and four-state evidence", async () => {
+    const source = await mixedAccountReviewCoverageArchive();
+    const destination = new SessionJournalStore();
+    try {
+      const before = buildAccountReviewCoverageReport(
+        workspaceSnapshotFromLedger(await source.store.load()),
+      );
+      const prepared = await destination.prepareUserDataRestore(source.contents);
+      await destination.commitUserDataRestore(prepared);
+      const after = buildAccountReviewCoverageReport(
+        workspaceSnapshotFromLedger(await destination.load()),
+      );
+
+      expect(after).toEqual(before);
+      expect(after.metadata).toMatchObject({
+        accountCount: 3,
+        totalTradeCount: 4,
+        closedTradeCount: 3,
+        openTradeCount: 1,
+        waitingReviewCount: 2,
+        pendingReviewCount: 1,
+        draftReviewCount: 1,
+        completedReviewCount: 1,
+      });
+      expect(after.accounts.map((account) => ({
+        label: account.accountLabel,
+        tradeCount: account.tradeCount,
+        groups: account.groups.map((group) => [
+          group.classification,
+          group.tradeCount,
+        ]),
+      }))).toEqual([
+        {
+          label: "Primary brokerage",
+          tradeCount: 2,
+          groups: [["draft", 1], ["pending", 0], ["completed", 1], ["open", 0]],
+        },
+        {
+          label: "Retained archive",
+          tradeCount: 0,
+          groups: [["draft", 0], ["pending", 0], ["completed", 0], ["open", 0]],
+        },
+        {
+          label: "Secondary brokerage",
+          tradeCount: 2,
+          groups: [["draft", 0], ["pending", 1], ["completed", 0], ["open", 1]],
+        },
+      ]);
     } finally {
       await source.store.close();
       await destination.close();

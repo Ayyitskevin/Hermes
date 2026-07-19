@@ -1,9 +1,118 @@
 # Hermes Journal — active mobile handoff
 
-Status: Review-Clear Plan Check Continuation v1 shipped on main · implementation
-commit 3de0dcf · exact-head hosted CI passed · updated 2026-07-19
+Status: Account Review Coverage v1 locally verified · direct-main publication
+and exact-head hosted CI pending · updated 2026-07-19
 
 ## Current handoff
+
+task: Add one checksum-pinned, count-only Account Review Coverage report that
+conserves every current trade across each retained account and routes only exact
+nonzero closed-review cohorts into the existing ephemeral Trade Browser.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Implemented Account Review Coverage v1 as the thirty-eighth bounded Slice D
+  increment and thirty-second derived-only presentation/reporting/navigation
+  increment. Reports now exposes 12 semantic targets and ten governed reports;
+  the six write-capable product exceptions remain fixed.
+- Pinned `account-review-coverage-report-v1` to SHA-256
+  `a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`.
+  Every retained stable account appears once, including zero-trade accounts, in
+  label-code-unit then stable-ID order. Duplicate labels stay distinct by
+  retained position.
+- Conserved each unique current trade exactly once as draft, pending/not
+  started, completed, or open. Open position state overrides review state;
+  waiting reconciles as draft plus pending while draft and completed reconcile
+  independently with canonical review progress. Invalid identity, ordering,
+  count, review-head, or conservation evidence fails closed.
+- Added a separate account/state/count cohort binder. Each positive draft,
+  pending, or completed closed cohort starts from `EMPTY_TRADE_BROWSER_STATE`,
+  applies exact account ID plus closed-position and review-state facets,
+  rederives current report membership, validates the rendered destination and
+  focused filter summary, and restores the prior exact tab/browser state when
+  any check fails. No action opens an individual review automatically.
+- Added unit, restore-equality, report-navigation, and production-Chromium
+  coverage for checksum/immutability, retained and duplicate-label accounts,
+  zero-trade accounts, four-state conservation, open-state precedence, exact
+  routing, conflicting-filter clearing, storage/network neutrality, source and
+  destination tampering, rollback, focus, keyboard activation, and 320/421px at
+  200% text.
+- Updated README, Product Blueprint, iOS Roadmap, Local Ledger, Mac handoff, and
+  the generated TradeZella parity artifact through its JSON/SQL build inputs.
+  Account Review Coverage is count-only and has no per-trade **Open trade**
+  action, so the shared non-Symbol per-trade continuation contract remains
+  eight sources. Account CRUD, broker identity, and financial/performance
+  account comparisons remain open.
+- No schema, migration, store command, archive/digest/export/restore shape,
+  preference, dependency, native source, file/network/security path, financial
+  formula, order, advice, or brokerage-execution path changed.
+
+verified:
+
+- `cd mobile && npm ci` — 164 packages installed; zero vulnerabilities.
+  `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2. `npm test` —
+  866/866 across 76 files. `npm run test:bundle` — 6/6. `npm run
+  test:ios-sync` — 8/8. `npm audit --omit=dev` — zero production
+  vulnerabilities.
+- `cd mobile && npm run test:e2e` — 141/141 production-Chromium journeys,
+  including all eight Account Review Coverage journeys and every prior Hermes
+  browser flow.
+- `cd mobile && npm run ios:sync` — 103 modules transformed, five JavaScript
+  chunks, and only the pinned SQLite plugin registered; CocoaPods and
+  xcodebuild were explicitly skipped on Linux. `npm run verify:bundle` —
+  largest `assets/app-BRg7gWO4.js` at 431,287/500,000 bytes. `npm run
+  verify:ios-sync` — nine production files copied byte-for-byte at SHA-256
+  `482b2143a794cd9e8b924686655a88ef46dc82074d2d622a17380cbefbb13260`;
+  generated identity, SQLite registration, native drift, and lock drift passed.
+- `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
+  report.html` — 20 domains validated; 6/6/6/2 dispositions, six priority rows,
+  three SQL sources, and semantic fallback 1425/1425 desktop and 375/375 mobile.
+- `git diff --check`, checksum/source/scope scans, generated-file review, and
+  native/lock drift checks passed. Initial independent audits identified
+  delegated-source and post-focus destination-validation gaps; both were
+  hardened, and the eight adversarial Account journeys plus the full browser
+  suite passed. Both follow-up independent re-audits returned no P0–P2
+  findings. Exact-head hosted CI is the remaining publication gate.
+- The legacy Python/Ruff suite was not rerun because this slice changes no
+  legacy Python source or dependency. CocoaPods, Xcode, Simulator, device,
+  SQLCipher, Keychain, native VoiceOver, and native Dynamic Type are NOT RUN on
+  Linux.
+
+assumptions:
+
+- The current full-workspace projection, retained account options, and
+  canonical review-progress totals remain authoritative. This derived report
+  neither stores a snapshot nor consumes the user's current Trade Browser
+  scope.
+- Account display labels are presentation only; stable account IDs are route
+  identity. Exact cohort navigation is local and ephemeral, not a brokerage
+  account connection or performance comparison.
+- Chromium validates the production web artifact and browser accessibility
+  boundary. Linux bundle/config/copy evidence does not prove WKWebView, native
+  focus order, SQLCipher, Keychain, lifecycle, or device behavior.
+
+open:
+
+- Publish the verified slice directly to `main`, require exact-head hosted CI,
+  then replace this pending status with the implementation SHA and CI run
+  evidence.
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  SQLCipher/Keychain, lifecycle, VoiceOver, Dynamic Type, safe-area, hardware-
+  keyboard, Files/WKWebView, and multi-scene evidence are recorded on the
+  reviewed Mac/device.
+- Fleet input/output guard evidence and Sonnet Stage 2 sign-off remain open.
+- The broader paired trading-and-journal product remains active. Account CRUD,
+  broker identity, financial account comparison, brokerage connection, funded
+  execution, and human-cohort validation remain separate, human-gated scopes.
+
+## Prior milestone — Review-Clear Plan Check Continuation v1
+
+Status: Review-Clear Plan Check Continuation v1 shipped on main · implementation
+commit 3de0dcf · exact-head hosted CI passed · updated 2026-07-19
 
 task: Add one fail-closed, explicit continuation from a completed local review
 queue to the existing full-journal Plan Check without auto-routing after save or

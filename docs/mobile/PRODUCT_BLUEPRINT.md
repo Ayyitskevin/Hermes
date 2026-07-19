@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-seven bounded Slice D increments are implemented in the current workspace.
+Thirty-eight bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -437,7 +437,33 @@ assignments across all 3 fixed groups. P&L, currency, Daily Journal, outcome
 fields, and Trade Browser scope are not consumed. It is derived-only and adds
 no schema, store, archive, or digest-shape change.
 
-A dedicated browser archive test proves all nine governed reports recompute
+The count-only Account Review Coverage report uses definition
+`account-review-coverage-report-v1`, pinned by checksum
+`a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`.
+It includes every retained stable-ID account, including zero-trade accounts,
+in deterministic account-label then account-ID order; duplicate labels remain
+distinct by account position. Every current trade is conserved once in fixed
+draft, pending/not-started, completed, or open order. An open position remains
+in its account total and is excluded from closed-review actions regardless of
+its saved review state. The review-progress `pendingTrades` field is the global
+waiting total—draft plus pending/not-started closed trades—and account totals,
+group totals, stable subjects, drafts, waiting reviews, completed reviews, and
+open positions must all reconcile without repair or omission.
+
+Each nonzero closed cohort may explicitly open Trades from empty ephemeral
+browser state with only its exact stable account ID, closed-position facet, and
+review-state facet. Activation rederives the current report, action, count, and
+stable subjects, validates the exact focused destination, and restores the
+prior tab and exact browser state on any mismatch; it never opens a review
+automatically. The report persists no scope and matching-runtime restore must
+recompute equal version, checksum, accounts, groups, counts, and subjects. It
+calculates no P&L, financial rate, performance comparison, account ranking,
+reward, target, prediction, or advice. Account CRUD, broker identity, and
+financial/performance comparisons remain separate work. This derived-only
+report adds no schema, migration, store command, archive shape, digest input,
+preference, native source, dependency, or network path.
+
+A dedicated browser archive test proves all ten governed reports recompute
 identically after export and restore.
 
 The count-only Direction Mix report uses definition
@@ -520,9 +546,9 @@ trading or no-trade date, then edit it only by appending an optimistic immutable
 successor. The workspace-local date is durable identity. Headline, note,
 emotion, tags, and a self-reported process score are optional, but every version
 requires at least one authored signal; the score is excluded from performance,
-Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
-Plan Check, Setup Breakdown, Mistake Patterns, Emotion Patterns, and Tag
-Patterns analytics.
+Review Session Coverage, Account Review Coverage, Direction Mix, Symbol
+Breakdown, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake Patterns,
+Emotion Patterns, and Tag Patterns analytics.
 Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
 v2 and the native archive codecs covered by Linux tests preserve the complete
@@ -608,19 +634,19 @@ whole-trade realized-to-date P&L. Search changes visible cards but never scope
 totals. State is session-only, survives internal navigation/refresh while
 valid, and resets on local/demo switches or reload. It scopes Trades and the
 Dashboard calendar only: headline metrics, equity, review progress, Review
-Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
-Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain
-whole-workspace. No schema, migration, journal store, archive, or report-
-definition version changed.
+Session Coverage, Account Review Coverage, Direction Mix, Symbol Breakdown,
+Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+Patterns, and Setup Breakdown remain whole-workspace. No schema, migration,
+journal store, archive, or report-definition version changed.
 
 The sixth increment is Structured Trades Facets v1. Four fixed exact facets—
 asset class (Stock/ETF), direction, position state, and review state—AND with
 the existing normalized text query over cards already admitted by the account,
 date, and selected-day scope. Facets and search change visible cards only. They
 never change exact contribution P&L, trade/allocation/day counts, calendar
-evidence, Dashboard metrics, Review Session Coverage, Direction Mix, Symbol
-Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
-Tag Patterns, or Setup Breakdown. Clear
+evidence, Dashboard metrics, Review Session Coverage, Account Review Coverage,
+Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake
+Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown. Clear
 search and filters resets the query
 and facets while retaining scope; Clear all resets both layers.
 The state is session-only, survives internal navigation and valid refresh, and
@@ -650,11 +676,12 @@ store, archive, or governed report-definition change. Saved presets, persistent
 or report scope, and vocabulary/playbook management remain separate work.
 
 An eighth increment, Reports Navigator v1, reorganizes only the existing
-Reports presentation. Its current eleven-target semantic menu follows DOM
-order—Performance Summary, Journal Curve, Review Session Coverage, Direction
-Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns,
-Emotion Patterns, Tag Patterns, then Setup Breakdown—and every destination has
-a stable focusable heading plus a return path. Dashboard's Review Session
+Reports presentation. Its current twelve-target semantic menu follows DOM
+order—Performance Summary, Journal Curve, Review Session Coverage, Account
+Review Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+Check, Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup Breakdown—
+ten governed reports plus the two summary targets—and every destination has a
+stable focusable heading plus a return path. Dashboard's Review Session
 Coverage and Plan Check shortcuts land on
 their headings. In-page jumps measure the live top chrome,
 scroll without animation, then focus without a second scroll; opened report
@@ -1292,6 +1319,36 @@ archive/digest/export/restore shape, financial definition, dependency, native
 source, file access, network path, advice, signal, order, or brokerage
 execution. The six write-capable exceptions remain fixed.
 
+Account Review Coverage v1 is the thirty-eighth bounded Slice D increment and
+the thirty-second derived-only presentation/reporting/navigation increment. It
+adds the governed definition and exact cohort route described above immediately
+after Review Session Coverage in the Reports surface. Every retained stable
+account appears once, including zero-trade accounts; deterministic label then ID
+order and account position keep duplicate labels distinct. Every current trade
+is conserved once across draft, pending/not-started, completed, and open groups,
+with `pendingTrades` reconciled as the waiting total of draft plus pending closed
+trades. Open positions stay explicit and outside closed-review actions.
+
+Only a positive closed cohort exposes a route. Its own account/state/count
+binder starts from empty Trade Browser state, applies the exact account ID plus
+closed-position and review-state facets, rederives the current report and stable
+subjects at activation, and validates the focused destination. Any stale,
+detached, duplicated, tampered, or non-reconciling source or destination restores
+the prior tab and exact browser state with visible failure. The action never
+opens a review automatically, and no report scope is persisted. Account Review
+Coverage intentionally has no **Open trade** action; the shared non-Symbol
+per-trade continuation contract therefore remains eight sources. Reports now
+expose twelve semantic targets and ten governed reports.
+
+Matching-runtime export/restore recomputes equal version, checksum, accounts,
+groups, counts, and subject identities. The report remains count-only and
+calculates no financial rate, account rank, performance comparison, reward,
+prediction, or advice. Account CRUD, broker identity, and financial/performance
+comparison remain open. This increment adds no schema, migration, store command,
+archive/digest/export shape, preference, dependency, native source, network
+path, financial formula, order, or brokerage-execution path. The six
+write-capable exceptions remain fixed.
+
 A post-publication Symbol Breakdown hardening milestone does not add another
 Slice D increment. It captures every reference in one dense indexed source
 cohort before reading any trade field; consumed snapshot fields, indexed slots,
@@ -1320,10 +1377,10 @@ remain separate gates.
 
 Still open in Slice D:
 
-- Drawdown, time-of-day, comparison, and remaining report
+- Drawdown, time-of-day, financial/performance comparison, and remaining report
   families with reconciled drill-down, plus saved scope
-  presets, saved view presets, persistent/report scope, fuller account
-  management, and fuller vocabulary management. Playbook CRUD remains open
+  presets, saved view presets, persistent/report scope, account CRUD and broker
+  identity, and fuller vocabulary management. Playbook CRUD remains open
   pending stable durable identity, migration, and archive/export decisions.
 - Saved presets require an approved protected preference owner. Private labels
   must not be downgraded to plaintext WebView `localStorage`; approve an
@@ -1466,7 +1523,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-seven Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-eight Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1479,9 +1536,10 @@ Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
 v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, Symbol Breakdown v1,
-Quick Review Continuation v1, Dashboard Import Continuation v1, and Review-Clear
-Plan Check Continuation v1. Thirty-one presentation/projection/navigation
-increments remain derived-only. Durable
+Quick Review Continuation v1, Dashboard Import Continuation v1, Review-Clear
+Plan Check Continuation v1, and Account Review Coverage v1. Thirty-two
+presentation/projection/navigation/reporting increments remain derived-only.
+Durable
 Daily Journal owns checksum-pinned schema-v4 daily
 writes; Report Trade Continuation, Dashboard Recent Trade Continuation, and
 Quick Review Continuation reuse the existing versioned trade-review save path,

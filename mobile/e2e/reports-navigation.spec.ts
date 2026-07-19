@@ -21,6 +21,12 @@ const REPORT_DESTINATIONS = [
       "[data-review-session-coverage] > .section-title .report-menu-link",
   },
   {
+    link: "Account review coverage",
+    target: "#account-review-coverage-title",
+    returnLink:
+      "[data-account-review-coverage] > .section-title .report-menu-link",
+  },
+  {
     link: "Direction mix",
     target: "#direction-mix-title",
     returnLink: "[data-direction-mix] > .section-title .report-menu-link",
@@ -175,6 +181,28 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         )).map((action) => [
           action.getAttribute("data-review-trade"),
           action.getAttribute("data-trade-review-report-source"),
+          action.getAttribute("aria-label"),
+        ]),
+      },
+      accountReviewCoverage: {
+        metadata: text(
+          "[data-account-review-coverage] .account-review-coverage-meta",
+        ),
+        accounts: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-account-review-coverage-account] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        identities: attributes(
+          "[data-account-review-coverage-account]",
+          "data-account-review-coverage-account",
+        ),
+        actions: Array.from(document.querySelectorAll<HTMLElement>(
+          "[data-account-review-coverage-route]",
+        )).map((action) => [
+          action.getAttribute("data-account-review-coverage-route"),
+          action.getAttribute("data-account-review-coverage-review-state"),
+          action.getAttribute("data-account-review-coverage-count"),
           action.getAttribute("aria-label"),
         ]),
       },
@@ -385,6 +413,9 @@ test(
     const directionGroup = page.locator(
       '[data-direction-mix-group="long"]',
     );
+    const accountReviewGroup = page.locator(
+      '[data-account-review-coverage-account="demo-account-primary"]',
+    );
     const symbolGroup = page.locator(
       '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
     );
@@ -412,6 +443,7 @@ test(
     for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
       await reviewSessionGroups.nth(index).locator(":scope > summary").click();
     }
+    await accountReviewGroup.locator(":scope > summary").click();
     await directionGroup.locator("summary").click();
     await symbolGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
@@ -423,6 +455,7 @@ test(
     for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
       await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
     }
+    await expect(accountReviewGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
@@ -455,6 +488,7 @@ test(
     for (let index = 0; index < await reviewSessionGroups.count(); index += 1) {
       await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
     }
+    await expect(accountReviewGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
@@ -1222,8 +1256,23 @@ test(
       await expectUnobscured(menuHeading);
     }
 
+    const narrowAccountGroup = page.locator(
+      '[data-account-review-coverage-account="demo-account-primary"]',
+    );
+    await narrowAccountGroup.locator(":scope > summary").click();
+    await expect(narrowAccountGroup).toHaveAttribute("open", "");
+    const narrowAccountAction = narrowAccountGroup.getByRole("button", {
+      name: "Open Demo Brokerage completed reviews in Trades, account 1 of 2",
+    });
+    await expect(narrowAccountAction).toBeVisible();
+    await narrowAccountAction.focus();
+    await expect(narrowAccountAction).toBeFocused();
+    await expectUnobscured(narrowAccountAction);
+    await expectTouchTarget(narrowAccountAction);
+
     const summaries = page.locator([
       "[data-review-session-coverage-group] > summary",
+      "[data-account-review-coverage-account] > summary",
       "[data-direction-mix-group] > summary",
       "[data-symbol-breakdown-group-index] > summary",
       "[data-opening-weekday-mix-group] > summary",
@@ -1258,6 +1307,8 @@ test(
         "[data-report-overview] *",
         "[data-review-session-coverage]",
         "[data-review-session-coverage] *",
+        "[data-account-review-coverage]",
+        "[data-account-review-coverage] *",
         "[data-direction-mix]",
         "[data-direction-mix] *",
         "[data-symbol-breakdown]",
@@ -1296,6 +1347,17 @@ test(
       `Overflow evidence: ${JSON.stringify(overflow.offenders)}`,
     ).toBeLessThanOrEqual(1);
     expect(overflow.offenders).toEqual([]);
+
+    await narrowAccountAction.focus();
+    await page.keyboard.press("Enter");
+    const filterSummary = page.locator("#trade-view-filter-summary");
+    await expect(filterSummary).toBeFocused();
+    await expectUnobscured(filterSummary);
+    await expect(page.getByRole("combobox", { name: "Account" }))
+      .toHaveValue("demo-account-primary");
+    await expect(page.locator("#trade-filter-position")).toHaveValue("closed");
+    await expect(page.locator("#trade-filter-review")).toHaveValue("completed");
+    await expect(page.locator(".trade-card:visible")).toHaveCount(5);
     expect(await localStorageSnapshot(page)).toEqual(storageBefore);
     expect(externalRequests).toEqual([]);
   },
@@ -1322,6 +1384,9 @@ test(
       '[data-review-session-coverage-group="current_streak"]',
     );
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
+    const accountReviewGroup = page.locator(
+      '[data-account-review-coverage-account="demo-account-primary"]',
+    );
     const symbolGroup = page.locator('[data-symbol-breakdown-group-index="0"]');
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
@@ -1335,6 +1400,7 @@ test(
       '[data-tag-patterns-group-index="0"]',
     );
     await reviewSessionGroup.locator(":scope > summary").click();
+    await accountReviewGroup.locator(":scope > summary").click();
     await directionGroup.locator(":scope > summary").click();
     await symbolGroup.locator(":scope > summary").click();
     await openingWeekdayGroup.locator(":scope > summary").click();
@@ -1343,6 +1409,7 @@ test(
     await emotionGroup.locator(":scope > summary").click();
     await tagGroup.locator(":scope > summary").click();
     await expect(reviewSessionGroup).toHaveAttribute("open", "");
+    await expect(accountReviewGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
     await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
@@ -1354,6 +1421,7 @@ test(
     const controls = page.locator([
       "a[data-report-target]",
       "[data-review-session-coverage-group] > summary",
+      "[data-account-review-coverage-account] > summary",
       "[data-direction-mix-group] > summary",
       "[data-symbol-breakdown-group-index] > summary",
       "[data-opening-weekday-mix-group] > summary",
@@ -1363,6 +1431,7 @@ test(
       "[data-tag-patterns-group-index] > summary",
       "[data-setup-performance-group-index] > summary",
       '[data-review-session-coverage-group="current_streak"][open] .report-trade-action',
+      '[data-account-review-coverage-account="demo-account-primary"][open] [data-account-review-coverage-route]',
       '[data-direction-mix-group="long"][open] .report-trade-action',
       '[data-symbol-breakdown-group-index="0"][open] .report-trade-action',
       '[data-opening-weekday-mix-group="wednesday"][open] .report-trade-action',
@@ -1428,6 +1497,7 @@ test(
         "[data-report-navigation]",
         "[data-report-overview]",
         "[data-review-session-coverage]",
+        "[data-account-review-coverage]",
         "[data-direction-mix]",
         "[data-symbol-breakdown]",
         "[data-opening-weekday-mix]",

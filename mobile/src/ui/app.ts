@@ -13,6 +13,10 @@ import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
 import {
+  buildExactAccountReviewCoverageScope,
+  type ExactAccountReviewCoverageScope,
+} from "../application/account-review-coverage-scope";
+import {
   buildExactPlaybookDraftTradeScope,
   buildExactPlaybookTradeScope,
 } from "../application/playbook-trade-scope";
@@ -43,9 +47,13 @@ import {
   bindAccountOverview,
 } from "./account-overview-view";
 import {
+  bindAccountReviewCoverageView,
+} from "./account-review-coverage-view";
+import {
   calendarDayAnnouncement,
   calendarDaySection,
 } from "./calendar-day-view";
+import { focusChromeSafeElement } from "./focus-chrome-safe";
 import {
   bindDashboardImportContinuation,
   buildDashboardImportContinuation,
@@ -170,6 +178,180 @@ function hasInterimPartialMetrics(trade: TradePreview): boolean {
 
 function countNoun(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function exactOwnedElement<ElementType extends Element>(
+  root: HTMLElement,
+  selector: string,
+): ElementType {
+  const matches = Array.from(root.querySelectorAll<ElementType>(selector));
+  const match = matches[0];
+  if (matches.length !== 1 || match === undefined) {
+    throw new Error("The exact account review Trade Browser destination is unavailable.");
+  }
+  return match;
+}
+
+function isRenderedDestination(
+  element: HTMLElement,
+  checkOpacity = true,
+): boolean {
+  if (
+    !element.isConnected
+    || element.closest('[hidden], [inert], [aria-hidden="true"]') !== null
+  ) return false;
+  let current: HTMLElement | null = element;
+  while (current !== null) {
+    const style = window.getComputedStyle(current);
+    if (
+      style.display === "none"
+      || style.visibility === "hidden"
+      || style.visibility === "collapse"
+      || (checkOpacity && Number.parseFloat(style.opacity) === 0)
+      || style.contentVisibility === "hidden"
+    ) return false;
+    current = current.parentElement;
+  }
+  return element.getClientRects().length > 0;
+}
+
+function isVisibleWithinAppChrome(root: HTMLElement, element: HTMLElement): boolean {
+  if (!isRenderedDestination(element)) return false;
+  const bounds = element.getBoundingClientRect();
+  const topbar = root.querySelector<HTMLElement>(".topbar");
+  const tabbar = root.querySelector<HTMLElement>(".tabbar");
+  const topbarBounds = topbar?.getBoundingClientRect();
+  const tabbarBounds = tabbar?.getBoundingClientRect();
+  const topbarPosition = topbar === null
+    ? "static"
+    : window.getComputedStyle(topbar).position;
+  const tabbarPosition = tabbar === null
+    ? "static"
+    : window.getComputedStyle(tabbar).position;
+  const topBoundary = (
+    (topbarPosition === "fixed" || topbarPosition === "sticky")
+    && topbarBounds !== undefined
+    && topbarBounds.bottom > 0
+  ) ? topbarBounds.bottom : 0;
+  const bottomBoundary = (
+    (tabbarPosition === "fixed" || tabbarPosition === "sticky")
+    && tabbarBounds !== undefined
+    && tabbarBounds.top < window.innerHeight
+  ) ? tabbarBounds.top : window.innerHeight;
+  return bounds.width > 0
+    && bounds.height > 0
+    && bounds.left >= -1
+    && bounds.right <= window.innerWidth + 1
+    && bounds.top >= topBoundary - 1
+    && bounds.bottom <= bottomBoundary + 1;
+}
+
+function exactAccountReviewCoverageDestination(
+  root: HTMLElement,
+  candidate: ExactAccountReviewCoverageScope,
+  checkOpacity = false,
+): HTMLElement {
+  const screen = exactOwnedElement<HTMLElement>(root, "#screen");
+  const stack = exactOwnedElement<HTMLElement>(root, "#screen > .screen-stack");
+  const title = exactOwnedElement<HTMLElement>(root, "#trades-title");
+  const scopeForm = exactOwnedElement<HTMLFormElement>(root, "#trade-scope-form");
+  const account = exactOwnedElement<HTMLSelectElement>(root, "#trade-scope-account");
+  const activityFrom = exactOwnedElement<HTMLInputElement>(root, "#trade-scope-from");
+  const activityThrough = exactOwnedElement<HTMLInputElement>(root, "#trade-scope-through");
+  const filters = exactOwnedElement<HTMLElement>(root, ".trade-view-filters");
+  const disclosure = exactOwnedElement<HTMLDetailsElement>(
+    root,
+    "[data-trade-filter-disclosure]",
+  );
+  const summary = exactOwnedElement<HTMLElement>(root, "#trade-view-filter-summary");
+  const filterCount = exactOwnedElement<HTMLElement>(
+    root,
+    "[data-trade-view-filter-count]",
+  );
+  const assetClass = exactOwnedElement<HTMLSelectElement>(
+    root,
+    "#trade-filter-asset-class",
+  );
+  const direction = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-direction");
+  const position = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-position");
+  const review = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-review");
+  const setup = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-setup");
+  const mistake = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-mistake");
+  const emotion = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-emotion");
+  const tag = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-tag");
+  const playbook = exactOwnedElement<HTMLSelectElement>(root, "#trade-filter-playbook");
+  const search = exactOwnedElement<HTMLInputElement>(root, "#trade-search");
+  const resultCount = exactOwnedElement<HTMLElement>(root, "#trade-count");
+  const cardList = exactOwnedElement<HTMLElement>(root, "#trade-card-list");
+  const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-trade-subject]"));
+  const visibleCards = cards.filter((card) => !card.hidden);
+  const allSubjects = new Set(candidate.scope.evidence.map(({ trade }) => (
+    trade.tradeSubjectId
+  )));
+  const renderedSubjects = new Set(cards.map((card) => (
+    card.dataset.tradeSubject ?? ""
+  )));
+  const visibleSubjects = new Set(candidate.tradeSubjectIds);
+  const renderedVisibleSubjects = new Set(visibleCards.map((card) => (
+    card.dataset.tradeSubject ?? ""
+  )));
+  const expectedResultCount = `Showing ${candidate.tradeCount} of ${countNoun(candidate.scope.evidence.length, "trade")}`;
+  if (
+    stack.parentElement !== screen
+    || stack.getAttribute("aria-labelledby") !== "trades-title"
+    || !stack.contains(title)
+    || scopeForm.parentElement !== stack
+    || account.closest("#trade-scope-form") !== scopeForm
+    || activityFrom.closest("#trade-scope-form") !== scopeForm
+    || activityThrough.closest("#trade-scope-form") !== scopeForm
+    || filters.parentElement !== stack
+    || disclosure.parentElement !== filters
+    || summary.parentElement !== disclosure
+    || filterCount.parentElement !== summary
+    || !disclosure.contains(assetClass)
+    || !disclosure.contains(direction)
+    || !disclosure.contains(position)
+    || !disclosure.contains(review)
+    || !disclosure.contains(setup)
+    || !disclosure.contains(mistake)
+    || !disclosure.contains(emotion)
+    || !disclosure.contains(tag)
+    || !disclosure.contains(playbook)
+    || resultCount.parentElement !== stack
+    || cardList.parentElement !== stack
+    || cards.some((card) => card.parentElement !== cardList)
+    || !disclosure.open
+    || summary.tabIndex < 0
+    || !isRenderedDestination(summary, checkOpacity)
+    || account.value !== candidate.accountId
+    || activityFrom.value !== ""
+    || activityThrough.value !== ""
+    || search.value !== ""
+    || assetClass.value !== "all"
+    || direction.value !== "all"
+    || position.value !== "closed"
+    || review.value !== candidate.reviewState
+    || setup.value !== ""
+    || mistake.value !== ""
+    || emotion.value !== ""
+    || tag.value !== ""
+    || playbook.value !== ""
+    || filterCount.textContent?.trim() !== "· 2 active filters"
+    || resultCount.textContent?.trim() !== expectedResultCount
+    || root.querySelectorAll("[data-calendar-day-filter]").length !== 0
+    || cards.length !== candidate.scope.evidence.length
+    || allSubjects.size !== candidate.scope.evidence.length
+    || renderedSubjects.size !== cards.length
+    || [...allSubjects].some((subject) => !renderedSubjects.has(subject))
+    || visibleCards.length !== candidate.tradeCount
+    || visibleSubjects.size !== candidate.tradeCount
+    || renderedVisibleSubjects.size !== visibleCards.length
+    || [...visibleSubjects].some((subject) => !renderedVisibleSubjects.has(subject))
+    || visibleCards.some((card) => !isRenderedDestination(card, checkOpacity))
+  ) {
+    throw new Error("The exact account review Trade Browser destination is unavailable.");
+  }
+  return summary;
 }
 
 function viewFilterAnnouncement(browser: TradeBrowserResult): string {
@@ -1351,6 +1533,60 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       },
       announceFailure: announceStatus,
     });
+    if (tab === "reports") {
+      bindAccountReviewCoverageView(root, snapshot, {
+        openCohort: (accountId, reviewState, expectedTradeCount) => {
+          const candidate = buildExactAccountReviewCoverageScope(
+            snapshot,
+            accountId,
+            reviewState,
+            expectedTradeCount,
+          );
+          const previousState = tradeBrowserState;
+          const previousTab = currentTab;
+          const previousManualReference = manualCaptureReference;
+          const previousManualContinuation = manualCaptureContinuation;
+          const previousPendingManualReference = pendingManualCaptureReference;
+          try {
+            clearManualCaptureGuidance();
+            tradeBrowserState = candidate.scope.state;
+            render("trades", false);
+            const summary = exactAccountReviewCoverageDestination(root, candidate);
+            focusChromeSafeElement(root, summary);
+            const confirmedSummary = exactAccountReviewCoverageDestination(
+              root,
+              candidate,
+              true,
+            );
+            if (
+              confirmedSummary !== summary
+              || root.ownerDocument.activeElement !== summary
+              || !isVisibleWithinAppChrome(root, summary)
+            ) {
+              throw new Error(
+                "The exact account review Trade Browser destination changed during focus.",
+              );
+            }
+            const reviewLabel = reviewState === "draft"
+              ? "draft reviews"
+              : reviewState === "pending"
+                ? "not-started reviews"
+                : "completed reviews";
+            announceStatus(
+              `Opened ${candidate.scope.accountLabel} ${reviewLabel} in Trades. ${candidate.tradeCount} of ${candidate.scope.evidence.length} current trades. Temporary dates, day, search, and other card filters were cleared.`,
+            );
+          } catch (caught) {
+            tradeBrowserState = previousState;
+            manualCaptureReference = previousManualReference;
+            manualCaptureContinuation = previousManualContinuation;
+            pendingManualCaptureReference = previousPendingManualReference;
+            render(previousTab, false);
+            throw caught;
+          }
+        },
+        announceFailure: announceStatus,
+      });
+    }
     if (tab === "dashboard" && dashboardImportContinuation !== null) {
       bindDashboardImportContinuation(root, dashboardImportContinuation, {
         open: (continuation) => {

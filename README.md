@@ -97,9 +97,9 @@ submission-ready product:
   can explicitly save a draft or completed reflection on trading and no-trade
   days, edit only through an optimistic successor version, and optionally add a
   headline, note, emotion, tags, and a clearly self-reported process score that
-  never enters performance, Review Session Coverage, Direction Mix, Opening
-  Weekday Mix, Plan Check, Setup Breakdown, Mistake Patterns, Emotion Patterns,
-  or Tag Patterns analytics.
+  never enters performance, Review Session Coverage, Account Review Coverage,
+  Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
+  Patterns, Emotion Patterns, or Tag Patterns analytics.
 - Daily Journal Stale-Head Recovery v1 keeps the unsaved form intact after a
   deterministic optimistic conflict, blocks the obsolete save, loads and shows
   the newer local head, and requires separate consent to use it as the base
@@ -475,6 +475,23 @@ submission-ready product:
   cursor, archive/export shape, dependency, native source, file, network,
   security, advice, order, or brokerage-execution path is added; the six
   write-capable exceptions remain fixed.
+- Account Review Coverage v1 is the thirty-eighth bounded Slice D increment and
+  the thirty-second derived-only presentation/reporting/navigation increment.
+  Definition `account-review-coverage-report-v1`, pinned by checksum
+  `a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`,
+  includes every retained stable account and every current trade in the
+  reconciled contract described below. Each positive closed-review cohort owns
+  a separate account/state/count binder that rebuilds the exact Trades facet
+  from empty browser state, validates current evidence and focused destination,
+  and rolls back to the prior exact state on failure. It does not add an **Open
+  trade** action or change the shared eight-source non-Symbol continuation
+  validator. Matching-runtime restore recomputes equal definition, checksum,
+  accounts, groups, counts, and stable subject identities. Account CRUD, broker
+  identity, and financial or performance comparisons remain open work. No
+  schema, migration, store command, archive/export shape, preference,
+  dependency, native source, network path, financial formula, order, advice, or
+  brokerage-execution path is added; the six write-capable exceptions remain
+  fixed.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -515,6 +532,20 @@ submission-ready product:
   assignments reconcile separately, rows open exact stable-ID trades 25 at a
   time, and the report contains no P&L, rate, ranking, trading target,
   prediction, or advice.
+- Account Review Coverage v1 is a checksum-pinned, count-only account workflow
+  report over every retained stable account, including accounts with no current
+  trades. Accounts use deterministic label-then-ID order, so duplicate labels
+  remain distinct by account position. Every current trade is conserved once as
+  draft, not started, completed, or open; the global `pendingTrades` count is the
+  waiting total of draft plus not-started closed trades. Open positions remain
+  explicit and are excluded from closed-review actions. Nonzero closed cohorts
+  rebuild Trades from empty ephemeral browser state with only the exact account,
+  closed-position, and review-state facets, then validate the current subjects,
+  destination, and focus before keeping the route; any mismatch restores the
+  prior tab and exact browser state. The report calculates no financial rate,
+  account rank, performance comparison, reward, or advice, never opens a review
+  automatically, persists no scope, and recomputes identically after a
+  matching-runtime restore.
 - An offline plan-adherence report derived from current completed review heads.
   It reconciles followed/broken cohorts with explicit exclusions, exact cash
   and R coverage, account/currency/time-zone context, and deterministic evidence
@@ -567,9 +598,10 @@ submission-ready product:
   report exposes no P&L, currency, win rate, R, expectancy, percentage, rate,
   ranking, comparison, outcome claim, target, reward, prediction, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
-  Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday
-  Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
-  Breakdown in one semantic, DOM-ordered eleven-target report menu.
+  Review Session Coverage, Account Review Coverage, Direction Mix, Symbol
+  Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion
+  Patterns, Tag Patterns, and Setup Breakdown in one semantic, DOM-ordered
+  twelve-target report menu over ten governed reports.
   Dashboard opens Review Session Coverage or Plan Check directly; every section
   returns to the menu; jumps preserve open evidence disclosures and move visible
   focus below live chrome.
@@ -596,7 +628,9 @@ submission-ready product:
   that rebuilds evidence returns to the originating report heading. The report
   source is transient DOM context. No report-origin or selected-trade state is
   persisted; Trades state and the report, review-persistence, checksum, and
-  archive contracts remain unchanged.
+  archive contracts remain unchanged. Account Review Coverage has no **Open
+  trade** action: its account-cohort route uses a separate exact Trade Browser
+  binder, so the shared non-Symbol per-trade validator remains eight sources.
 - Dashboard Recent Trade Continuation v1 turns the unchanged four newest
   projected Recent trades rows into semantic **Open trade** actions. Each row
   exposes asset class, account, and full session context, while activation
@@ -616,9 +650,9 @@ submission-ready product:
   and keeps whole-trade realized-to-date P&L separate from scoped allocation
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
-  progress, Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan
-  Check, Symbol Breakdown, Mistake Patterns, Emotion Patterns, Tag Patterns, and
-  Setup Breakdown remain whole-workspace.
+  progress, Review Session Coverage, Account Review Coverage, Direction Mix,
+  Opening Weekday Mix, Plan Check, Symbol Breakdown, Mistake Patterns, Emotion
+  Patterns, Tag Patterns, and Setup Breakdown remain whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

@@ -52,7 +52,8 @@ under the provisional identifier until that gate is cleared.
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
   Patterns v1, Tag Patterns v1, Direction Mix v1, Symbol Breakdown v1,
   Opening Weekday Mix v1,
-  Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
+  Review Session Coverage v1, Account Review Coverage v1, Dashboard Recent
+  Trade Continuation v1, Exact
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
   Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
@@ -257,8 +258,8 @@ observed plugin/device behavior:
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from performance,
   Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
-  Patterns, Emotion Patterns, Tag Patterns, Symbol Breakdown, and Review Session Coverage
-  analytics.
+  Patterns, Emotion Patterns, Tag Patterns, Symbol Breakdown, Review Session
+  Coverage, and Account Review Coverage analytics.
 - Daily Journal Stale-Head Recovery v1 preserves the raw form after a
   deterministic optimistic conflict, disables the obsolete submission, loads
   one fresh local snapshot, and displays its different newer head before the
@@ -452,6 +453,30 @@ observed plugin/device behavior:
   counts are cross-checks only. P&L, currency, Daily Journal, outcomes, and
   Trade Browser scope are not consumed; no rate, ranking, reward, advice,
   schema, store, archive, or digest-shape change is included.
+- Account Review Coverage v1 is the thirty-eighth bounded Slice D increment and
+  the thirty-second derived-only presentation/projection increment. Definition
+  `account-review-coverage-report-v1` is pinned by SHA-256
+  `a4c1021010d1c854db7b10d05475ef4cbe696c4a09e20d8c9e8f83fc711d308a`.
+  It includes every retained stable account, including accounts with no current
+  trades, in deterministic label-code-unit then stable-ID order; duplicate
+  labels are disambiguated by their retained account position. Every current
+  trade is conserved exactly once as draft, pending, completed, or open.
+  Global waiting reconciles `reviewProgress.pendingTrades` and equals draft
+  plus pending, while draft and completed totals reconcile their corresponding
+  progress counts. Open position state is explicit, overrides review-state
+  grouping, and is excluded from closed-cohort actions.
+  The report is count-only: it calculates no financial comparison, rate, rank,
+  prediction, or advice. A nonzero draft, pending, or completed closed cohort
+  can explicitly open Trades with an exact stable-account + closed-position +
+  review-state scope built from empty browser state. Activation revalidates the
+  cohort and destination, focuses the exact filter summary, and restores the
+  prior tab and browser state on mismatch. This route uses its own cohort
+  binder, not the eight non-Symbol per-trade continuation sources. No report or
+  route state enters persistence; matching-runtime export/restore recomputes
+  identical version, checksum, accounts, groups, counts, and stable subjects.
+  Account CRUD, broker identity, and financial account comparisons remain open.
+  Native SQLCipher, VoiceOver, keyboard, lifecycle, and Dynamic Type acceptance
+  are NOT RUN on Linux and remain a Mac/iPhone gate.
 - Trade Browser Scope v1 derives an all-account or stable single-account view
   over optional inclusive workspace-local allocation/activity dates. Exact
   contribution P&L, trade, allocation, and day counts reconcile from calendar
@@ -460,7 +485,7 @@ observed plugin/device behavior:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and all nine governed reports intentionally remain whole-workspace.
+  and all ten governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -784,10 +809,10 @@ observed plugin/device behavior:
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
   stale refresh, report/storage neutrality, 44-point controls, and no overflow
   at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
-- Reports Navigator v1 exposes eleven semantic targets: Performance Summary,
-  Journal Curve, Review Session Coverage, Direction Mix, Symbol Breakdown,
-  Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
-  Patterns, and Setup Breakdown in DOM order.
+- Reports Navigator v1 exposes twelve semantic targets: Performance Summary,
+  Journal Curve, Review Session Coverage, Account Review Coverage, Direction
+  Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns,
+  Emotion Patterns, Tag Patterns, and Setup Breakdown in DOM order.
   Dashboard enters Review Session Coverage or Plan Check directly, every
   section returns to the menu, and jumps preserve
   opened disclosures while moving focus below measured chrome without animation. At
@@ -950,8 +975,9 @@ tier-by-tier claim. Reverify before public comparative positioning.
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
-v1, Symbol Breakdown v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
-Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
+v1, Symbol Breakdown v1, Opening Weekday Mix v1, Review Session Coverage v1,
+Account Review Coverage v1, Dashboard Recent Trade Continuation v1, Exact Setup
+Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
 Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
@@ -960,9 +986,9 @@ Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
 v1, Exact Playbook Draft Scope v1, Quick Review Continuation v1, Dashboard
 Import Continuation v1, Review-Clear Plan Check Continuation v1,
-matching-runtime local restore, and all nine governed reports are implemented.
-Thirty-seven bounded Slice D increments are implemented in total; thirty-one
-remain derived-only. Reports exposes eleven semantic targets.
+matching-runtime local restore, and all ten governed reports are implemented.
+Thirty-eight bounded Slice D increments are implemented in total; thirty-two
+remain derived-only. Reports exposes twelve semantic targets.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Quick Review Continuation, Calendar-Day Reflection Continuation,
 and Daily Reflection Rhythm Continuation are the six write-capable exceptions.
@@ -983,6 +1009,7 @@ remains a human-gated HIGH pending a durable batch-receipt design; the narrower
 Batch Tag Known-Commit Refresh-Only Recovery v1 now prevents resolved saves
 from being submitted again after redraw failure.
 Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
-restore acceptance, verified Delete All Data, remaining report families, and
-later attachment round-trip remain—not broker connectivity, hosted sync,
-Android, recurring AI, or legacy cockpit extraction.
+restore acceptance, verified Delete All Data, account CRUD/broker identity,
+financial account comparisons, remaining report families, and later attachment
+round-trip remain—not broker connectivity, hosted sync, Android, recurring AI,
+or legacy cockpit extraction.
