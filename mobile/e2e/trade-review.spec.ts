@@ -107,7 +107,7 @@ async function installPreparedReviewCounters(page: Page): Promise<void> {
     root.dataset.reviewPreparedValueReads = "0";
     root.dataset.reviewRandomIdCalls = "0";
     const incrementValueReads = () => {
-      if (!(new Error().stack ?? "").includes("/assets/index-")) return;
+      if (!/\/assets\/[^/\s]+\.(?:c|m)?js/u.test(new Error().stack ?? "")) return;
       const reads = Number(root.dataset.reviewPreparedValueReads ?? "0") + 1;
       root.dataset.reviewPreparedValueReads = String(reads);
     };

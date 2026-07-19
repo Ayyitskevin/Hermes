@@ -13,6 +13,9 @@ import type {
   SqlRow,
   SqlRunResult,
 } from "../../application/sql-database";
+import { NativeJournalOpenCleanupError } from "./native-journal-open-error";
+
+export { NativeJournalOpenCleanupError } from "./native-journal-open-error";
 
 const DEFAULT_DATABASE_NAME = "hermes-journal";
 
@@ -203,16 +206,6 @@ export interface NativeJournalDatabaseOptions {
     | "closeConnection"
   >;
   readonly platform?: () => string;
-}
-
-export class NativeJournalOpenCleanupError extends AggregateError {
-  constructor(openFailure: unknown, cleanupFailures: readonly unknown[]) {
-    super(
-      [openFailure, ...cleanupFailures],
-      "Hermes could not confirm that the native journal connection closed after startup failed.",
-    );
-    this.name = "NativeJournalOpenCleanupError";
-  }
 }
 
 export class NativeJournalDatabaseFactory implements JournalDatabaseFactory {
