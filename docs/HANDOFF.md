@@ -1,10 +1,89 @@
 # Hermes Journal — active mobile handoff
 
-Status: Startup/module split and enforceable 500 kB JavaScript chunk contract shipped
-on main · implementation commit ff269fd · exact-head hosted CI passed · updated
-2026-07-19
+Status: Quick Review Continuation v1 shipped on main · implementation commit
+78b001c · exact-head hosted CI passed · updated 2026-07-19
 
 ## Current handoff
+
+task: Add a fast, local-first continuation from the canonical Review Queue into
+the existing exact trade-review flow so a young mobile trader can clear drafts
+and pending reviews without hunting through the journal.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Published 78b001c09fc8bad2276a8d1dc9a78024a9fb6a9a
+  (Quick Review continuation) directly to GitHub main.
+- Review now shows a compact Review now card immediately below the canonical
+  queue heading. It selects Drafts before Pending and opens the exact first
+  queue trade in the existing compact review sheet; demo and empty queues do
+  not render a launcher.
+- The compact sheet keeps outcome and execution evidence closed, prioritizes
+  setup, emotion, mistakes, playbook, rules, and reflection, and exposes tags,
+  risk, currency, and stop under More context. Up to six saved setup/emotion
+  chips are case-insensitively deduplicated while free-form input remains.
+- Save draft & pause returns focus to Review now. Mark reviewed & next refreshes
+  the canonical queue and opens the exact next validated trade; the final trade
+  returns focus to the queue-clear state. A blocked/no-op continuation surfaces
+  a visible error instead of silently advancing.
+- The launcher fails closed unless its queue/card/heading/action structure,
+  position, unique exact subject, enabled state, and internal containment all
+  validate. Post-click continuation also requires exactly one matching quick
+  review sheet.
+- Reused the immutable existing trade-review command and all exact-head,
+  stale-head, and known-commit recovery behavior. No schema, migration, store,
+  archive/export, report formula, preference, dependency, native-project,
+  network, money, security, or order path changed.
+- Updated product, roadmap, ledger, Mac handoff, and README evidence. This is
+  the 35th Slice D increment; 29 are derived-only and this is the sixth
+  write-capable product exception.
+
+verified:
+
+- cd mobile && npm ci — 164 packages installed; zero vulnerabilities.
+- cd mobile && npm run typecheck — exit 0. npm test — 832/832 across 70 files.
+  npm run test:boundary — 2/2. npm run test:bundle — 6/6.
+  npm run test:ios-sync — 8/8. npm audit --omit=dev — zero production
+  vulnerabilities.
+- cd mobile && npx playwright test --workers=1 — 120/120 production Chromium
+  journeys. Focused Quick Review continuation coverage — 4/4. Focused UI unit
+  coverage — 25/25.
+- cd mobile && npm run ios:copy — exit 0; 96 modules and five JavaScript chunks
+  copied into the iOS shell. npm run verify:bundle — largest chunk
+  assets/app-DcBvaM_K.js at 366,804/500,000 bytes.
+- cd mobile && npm run verify:ios-sync — nine production bundle files copied
+  byte-for-byte; SHA-256
+  b5529923340be19fd5b03fb11005c37e1bd580d966b80ad9fa36bea523d6262f;
+  generated identity, SQLite registration, native drift, and lock drift passed.
+- git diff --check and artifact scans — exit 0. Independent read-only reviews
+  found no remaining blocker after exact-placement and post-click hardening.
+- gh run view 29693513626 --json status,conclusion,headSha,jobs — exact SHA
+  78b001c09fc8bad2276a8d1dc9a78024a9fb6a9a, conclusion success; Mobile Linux
+  job 88210245108 and Legacy Python job 88210245095 both succeeded, including
+  the full browser smoke, iOS handoff, bundle, boundary, and dependency gates.
+
+assumptions:
+
+- The canonical local Review Queue remains the source of truth for next-trade
+  ordering: Drafts before Pending, preserving each section's existing order.
+- A compact continuation is a presentation of the existing review command, not
+  a new workflow or persistence contract.
+- Linux/Chromium evidence validates the web bundle and copied iOS artifact;
+  WKWebView and device behavior remain native acceptance work.
+
+open:
+
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  WKWebView continuation, SQLCipher, Keychain, lifecycle, VoiceOver, Dynamic
+  Type, and hardware-keyboard evidence are recorded on the reviewed Mac/device.
+- Fleet input/output guard evidence and Sonnet Stage 2 sign-off remain open.
+- The broader paired trading-and-journal product remains active; this milestone
+  ships the journal continuation only and adds no brokerage execution path.
+
+## Prior milestone — Startup/module split and bundle contract
 
 task: Split the production mobile startup bundle at its existing async recovery
 boundary and make Vite's 500 kB JavaScript chunk threshold an executable CI
