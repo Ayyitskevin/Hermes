@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-18
+Status: active delivery roadmap · updated 2026-07-19
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -59,7 +59,7 @@ under the provisional identifier until that gate is cleared.
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
   Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
   Generic CSV Receipt Review Continuation v1, Compact Trades Filters v1,
-  export, and
+  Quick Review Continuation v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -497,13 +497,32 @@ observed plugin/device behavior:
   render, preserving canonical snapshot order within each group. After a
   confirmed queue-origin single-review save or resolved
   batch-tag refresh redraws Journal, focus moves to the first surviving group
-  heading or the stable queue title when none survives. Existing versioned
+  heading or the stable **Review queue clear** heading when none survives.
+  Existing versioned
   review and atomic batch writes, recovery states, and ownership are unchanged;
   no queue/focus/group state enters SQLite, the browser journal, an archive,
   digest, report, or financial formula. Schema v4, the five primary tabs, ten
   report targets, and eight governed reports are unchanged. Native VoiceOver,
   hardware-keyboard, Dynamic Type, lifecycle, reflow, and focus acceptance
   remain a Mac/iPhone hold.
+- Quick Review Continuation v1 is the thirty-fifth bounded Slice D increment
+  and the sixth write-capable product exception. A local, nonempty Review Queue
+  exposes one **Review now** action for its canonical first draft, then first
+  not-started trade; demo and empty journals expose no launcher. The compact
+  existing review sheet keeps immutable outcome/execution evidence closed by
+  default, preserves every authored field, and offers at most six
+  case-insensitively unique saved setup/emotion choices without replacing free
+  entry. **Save draft & pause** redraws Journal and focuses **Review now**.
+  Completing through the unchanged versioned review and recovery path refreshes
+  the canonical queue and opens only the exact next validated trade; final
+  completion focuses **Review queue clear**. Missing, duplicate, detached,
+  disabled, stale, or tampered origin/subject evidence fails visibly before
+  modal, randomness, inert state, or persistence. A known-save continuation
+  failure stays visible and never repeats the write. No schema, migration, new
+  store command, archive/digest/export shape, report, formula, preference,
+  dependency, native source, or network path changed. Native SQLite,
+  VoiceOver, hardware-keyboard, lifecycle, and Dynamic Type acceptance remain
+  held for the Mac/iPhone gate.
 - Calendar-Day Reflection Continuation v1 renders the full-workspace Daily
   Journal state for the exact selected activity date inside its Trades card.
   Local non-future actions carry a canonical date that must agree with the
@@ -885,17 +904,17 @@ Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
-v1, Exact Playbook Draft Scope v1, matching-runtime local restore, and all nine
-governed reports are implemented. Thirty-four bounded Slice D increments are
-implemented in total; twenty-nine remain derived-only. Reports exposes eleven
-semantic targets.
+v1, Exact Playbook Draft Scope v1, Quick Review Continuation v1,
+matching-runtime local restore, and all nine governed reports are implemented.
+Thirty-five bounded Slice D increments are implemented in total; twenty-nine
+remain derived-only. Reports exposes eleven semantic targets.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
-Continuation, Calendar-Day Reflection Continuation, and Daily Reflection Rhythm
-Continuation are the five write-capable exceptions. The trade
-continuations reuse the existing versioned trade-review path; the calendar-day
-and rhythm continuations reuse the existing Daily Journal path without changing
-either persistence contract. Exact Playbook Scope and Draft Scope add no durable
-state.
+Continuation, Quick Review Continuation, Calendar-Day Reflection Continuation,
+and Daily Reflection Rhythm Continuation are the six write-capable exceptions.
+The Report, Dashboard, and Quick Review continuations reuse the existing
+versioned trade-review path; the calendar-day and rhythm continuations reuse the
+existing Daily Journal path without changing either persistence contract. Exact
+Playbook Scope and Draft Scope add no durable state.
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.

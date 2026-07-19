@@ -1,6 +1,6 @@
 # Hermes Journal product and technical blueprint
 
-Status: authoritative mobile product blueprint · 2026-07-18
+Status: authoritative mobile product blueprint · 2026-07-19
 
 ## Executive decision
 
@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-four bounded Slice D increments are implemented in the current workspace.
+Thirty-five bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -813,8 +813,8 @@ defaulted. The only rendered groups are nonempty **Drafts** then **Not
 started**, and each retains canonical snapshot order. After a confirmed
 queue-origin single-review save or a resolved batch-tag refresh rebuilds
 Journal, focus
-moves to the first surviving group heading or the stable queue title when the
-projection is empty. This changes only post-refresh display and
+moves to the first surviving group heading or the stable **Review queue clear**
+heading when the projection is empty. This changes only post-refresh display and
 focus: the existing versioned review and atomic batch commands, recovery
 states, and write ownership remain intact. It is a transient, render-only
 derived display: no group or focus state enters schema v4, a store, browser
@@ -1182,6 +1182,36 @@ integration, full-workspace isolation, and restore equality described above.
 The Reports surface now has eleven semantic targets and nine governed reports;
 the same five write-capable exceptions remain fixed.
 
+Quick Review Continuation v1 is the thirty-fifth bounded Slice D increment and
+the sixth write-capable product exception. A local-only **Review now** card
+exists only while the fail-closed Review Queue is nonempty. It resolves one
+exact subject from canonical **Drafts** then **Not started** order and rechecks
+one card, heading, action origin, stable subject, and first-queue membership
+before sheet markup, submission randomness, background inertness, or
+persistence can begin. Demo and empty workspaces expose no Quick Review action.
+
+The compact sheet preserves the full existing trade-review form and command.
+Outcome and immutable execution evidence are closed by default; setup, emotion,
+mistakes, playbook, rule adherence, and reflection remain primary, while tags,
+exact risk amount/currency, and planned stop move under **More context**. Setup
+and emotion expose at most six saved choices in source order after
+case-insensitive deduplication, while the underlying text inputs continue to
+accept custom values.
+
+**Save draft & pause** commits through the unchanged versioned review path,
+redraws Journal, and focuses **Review now**; the resulting draft becomes the
+canonical first subject. A completed save, exact replay, or known-commit refresh
+retry rebuilds the queue and opens the exact next validated subject. When none
+remains, focus moves to **Review queue clear**. A missing, duplicated, detached,
+stale, reordered, or tampered launcher fails before opening or writing. If a
+committed review cannot open the exact rebuilt continuation, Hermes shows a
+focused visible error and leaves the next action available without repeating
+the write. Existing optimistic-conflict and exact-command recovery behavior is
+unchanged. The increment adds no schema, migration, store command, persisted
+queue cursor, browser/session preference, archive/digest/export/restore shape,
+report, formula, dependency, native source, or network path; it is write-capable
+only because it exposes the existing trade-review save command.
+
 A post-publication Symbol Breakdown hardening milestone does not add another
 Slice D increment. It captures every reference in one dense indexed source
 cohort before reading any trade field; consumed snapshot fields, indexed slots,
@@ -1356,7 +1386,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-four Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-five Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1368,12 +1398,14 @@ Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
-v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, and Symbol Breakdown
-v1. Twenty-nine presentation/projection increments remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
-writes; Report Trade Continuation and Dashboard Recent Trade Continuation reuse
-the existing versioned trade-review save path, while Calendar-Day Reflection
+v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, Symbol Breakdown v1,
+and Quick Review Continuation v1. Twenty-nine presentation/projection increments
+remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
+writes; Report Trade Continuation, Dashboard Recent Trade Continuation, and
+Quick Review Continuation reuse the existing versioned trade-review save path,
+while Calendar-Day Reflection
 Continuation and Daily Reflection Rhythm Continuation reuse the existing Daily
-Journal path without changing either persistence contract. Those are the five
+Journal path without changing either persistence contract. Those are the six
 write-capable exceptions; Exact Playbook Scope and Draft Scope are session-only
 and derived-only.
 Daily Journal preserves the outer archive version while browser payload v2

@@ -5,8 +5,8 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
-The current source contains 34 bounded Slice D increments: 29 derived-only and
-the same five write-capable exceptions. Reports exposes 11 semantic targets and
+The current source contains 35 bounded Slice D increments: 29 derived-only and
+six write-capable exceptions. Reports exposes 11 semantic targets and
 nine governed reports. These source counts do not strengthen any native claim.
 
 ## Branch reconciliation record
@@ -338,7 +338,7 @@ and an App Store disclosure.
   queue summary exactly. Save a draft, complete reviews until one group and then
   the whole queue disappears, and apply a resolved batch tag; after each fresh
   redraw, visible focus must move to the first surviving group heading or, for
-  the empty queue, the stable **Trade review queue** title. During a stale,
+  the empty queue, the unique **Review queue clear** heading. During a stale,
   uncertain, blocked, or committed-but-not-redrawn result, focus must stay with
   the existing sheet/recovery surface; a refresh retry must not repeat a review
   or batch write. Inspect export and storage evidence to confirm no queue,
@@ -348,6 +348,32 @@ and an App Store disclosure.
   keyboard, background/foreground, force quit/relaunch, and 200% Dynamic Type at
   320 and 421 CSS pixels before marking Review Queue Focus native acceptance
   PASS.
+- In a local Journal with interleaved drafts and not-started closed trades,
+  confirm exactly one **Review now** card selects the first canonical draft,
+  otherwise the first canonical not-started subject. Demo and empty journals
+  must expose no Quick Review card/action. Open it and reconcile the exact
+  stable subject and origin before the compact sheet appears; outcome/execution
+  evidence must start closed, every underlying review field must remain
+  available, and setup/emotion quick choices must come only from current saved
+  vocabulary. Save a draft and confirm the fresh queue pauses on that draft with
+  focus on the rebuilt **Review now** heading. Complete it and confirm Hermes
+  redraws from a fresh local snapshot before opening and proving the exact next
+  canonical sheet. Complete the final item and confirm no Quick Review card or
+  action remains and the unique **Review queue clear** heading receives visible
+  focus.
+- For the same Quick Review fixture, duplicate, detach, move, disable, or tamper
+  the card/action origin or subject and confirm one visible focused failure
+  occurs before sheet markup, secure randomness, background inerting, SQLite,
+  or network work. After a positively saved completion, prevent the exact fresh
+  next action or sheet from reconciling: the saved review must remain current,
+  no fallback subject or second write may occur, a visible continuation error
+  must receive focus, and the fresh canonical Quick Review action must remain
+  usable. Repeat direct success, exact replay, stale-head handling, known-commit
+  refresh-only recovery, background/foreground, force-quit/relaunch, and two-
+  scene refresh with VoiceOver, a hardware keyboard, safe areas, and 200%
+  Dynamic Type at 320 and 421 CSS pixels before marking Quick Review
+  Continuation native acceptance PASS. Schema v4, archives, reports/formulas,
+  preferences, and the offline/no-order boundary must remain unchanged.
 - On Dashboard, build interleaved closed drafts and not-started reviews and
   confirm Weekly Review Rhythm chooses the first exact draft, then the first
   not-started trade, in canonical Review Queue order. Its heading must show the
@@ -797,6 +823,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Symbol Breakdown/navigation/continuation/restore | status | checksum + full cohort + exact symbol/asset collision fixtures + paging/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
+| Quick Review Continuation | status | canonical draft-first subject + local/demo/empty boundary + draft pause + exact fresh-next/clear focus + tamper/continuation failure + recovery/layout/lifecycle/SQLite/network evidence |
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
 | CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
 | Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
@@ -873,9 +900,20 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   multi-scene refresh, Dynamic Type, and duplicate-symbol exact-ID behavior are
   NOT RUN and must not inherit browser results. Keep native acceptance on hold
   until the device procedure above records the fixed group/order/count contract,
-  first-surviving-group or queue-title focus after both queue-origin
+  first-surviving-group or **Review queue clear** focus after both queue-origin
   single-review and batch refreshes, recovery-state focus ownership, and zero
   queue-specific durable state.
+- Quick Review Continuation v1 has only Linux/Chromium application, template,
+  continuation, tamper, focus, storage/network-neutrality, and 320px/200% reflow
+  evidence. Native SQLite/SQLCipher current-head observation, VoiceOver
+  announcement/order, hardware-keyboard focus, safe-area/chrome visibility,
+  background/foreground, force-quit/relaunch, two-scene refresh, and 320/421-
+  width 200% Dynamic Type are NOT RUN and must not inherit browser results. Keep
+  native acceptance held until the device procedure above proves canonical
+  draft-first identity, local/demo/empty boundaries, unchanged individual-
+  review recovery, draft pause, exact fresh-next activation or unique clear-
+  heading focus, fail-closed tamper, visible post-save continuation failure,
+  and zero additional durable or network state.
 - Dashboard Review Return Focus v1 has only Linux/Chromium origin, focus,
   fallback, and narrow-layout evidence. Native VoiceOver announcement/order,
   hardware-keyboard visible focus, safe-area/chrome positioning,

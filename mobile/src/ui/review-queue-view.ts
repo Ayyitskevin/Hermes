@@ -1,4 +1,7 @@
-import { buildReviewQueue } from "../application/review-queue";
+import {
+  buildReviewQueue,
+  firstReviewQueueTrade,
+} from "../application/review-queue";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { reviewTradeAction } from "./trade-review-sheet";
@@ -52,6 +55,29 @@ function queueGroup(
   </section>`;
 }
 
+function quickReviewCard(
+  queue: ReturnType<typeof buildReviewQueue>,
+  snapshot: JournalWorkspaceSnapshot,
+): string {
+  if (snapshot.provenance !== "local" || queue.waitingTradeCount === 0) return "";
+  const nextTrade = firstReviewQueueTrade(queue);
+  if (nextTrade === null) {
+    throw new Error("A nonempty review queue must have one exact next trade.");
+  }
+  const action = nextTrade.reviewStatus === "draft"
+    ? "Continue quick review"
+    : "Start quick review";
+  const queueOrder = queue.draftTradeCount === 0
+    ? "Not-started reviews are ready."
+    : `${countNoun(queue.draftTradeCount, "draft")} come first, then not-started reviews.`;
+  return `<article class="card quick-review-card" data-quick-review data-quick-review-subject="${escapeHtml(nextTrade.tradeSubjectId)}" aria-labelledby="quick-review-title">
+    <div class="section-title"><div><p class="card-label">ONE-THUMB REVIEW</p><h3 id="quick-review-title" tabindex="-1">Review now</h3></div><strong>${countNoun(queue.waitingTradeCount, "review")} waiting</strong></div>
+    <p>Work through one trade at a time. Execution and result evidence stay tucked away until you choose to inspect them.</p>
+    <p class="helper-text">${escapeHtml(queueOrder)} Saving a draft pauses the flow; completing a review opens the next exact trade.</p>
+    <div class="quick-actions">${reviewTradeAction(nextTrade, action, "quick-review")}</div>
+  </article>`;
+}
+
 function batchTagForm(snapshot: JournalWorkspaceSnapshot): string {
   return `<form class="card batch-review-form" id="batch-review-form" novalidate>
     <datalist id="batch-tag-options">${snapshot.reviewOptions.tags.map((tag) => `<option value="${escapeHtml(tag)}"></option>`).join("")}</datalist>
@@ -65,6 +91,7 @@ function batchTagForm(snapshot: JournalWorkspaceSnapshot): string {
 export function reviewQueueSection(snapshot: JournalWorkspaceSnapshot): string {
   const queue = buildReviewQueue(snapshot);
   const groups = queue.groups.map((group) => queueGroup(group, snapshot)).join("");
+  const quickReview = quickReviewCard(queue, snapshot);
   const batch = snapshot.provenance === "local" && queue.waitingTradeCount > 0
     ? batchTagForm(snapshot)
     : "";
@@ -73,13 +100,15 @@ export function reviewQueueSection(snapshot: JournalWorkspaceSnapshot): string {
     : `<div class="review-queue-groups">${groups}</div>`;
   return `<section aria-labelledby="review-queue-title" data-review-queue>
     <div class="section-title"><h2 id="review-queue-title" tabindex="-1">Trade review queue</h2><span>${queue.waitingTradeCount} waiting</span></div>
+    ${quickReview}
     ${batch}
     ${content}
   </section>`;
 }
 
 export function focusReviewQueueAfterRefresh(root: HTMLElement): void {
-  const target = root.querySelector<HTMLElement>("[data-review-queue-group-title]")
+  const target = root.querySelector<HTMLElement>("#review-queue-clear-title")
+    ?? root.querySelector<HTMLElement>("[data-review-queue-group-title]")
     ?? root.querySelector<HTMLElement>("#review-queue-title");
   if (target === null) return;
   const topbarBottom = root.querySelector<HTMLElement>(".topbar")

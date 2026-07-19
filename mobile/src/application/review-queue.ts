@@ -176,3 +176,9 @@ export function buildReviewQueue(
     groups,
   });
 }
+
+export function firstReviewQueueTrade(queue: ReviewQueue): TradePreview | null {
+  return queue.groups[0].trades[0]
+    ?? queue.groups[1].trades[0]
+    ?? null;
+}

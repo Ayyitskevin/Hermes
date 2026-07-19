@@ -41,6 +41,13 @@ describe("review queue view", () => {
 
     expect(html).toContain("data-review-queue");
     expect(html).toContain('<h2 id="review-queue-title" tabindex="-1">Trade review queue</h2><span>2 waiting</span>');
+    expect(html).toContain('class="card quick-review-card" data-quick-review');
+    expect(html).toContain(`data-quick-review-subject="${DEMO_WORKSPACE.trades[1]!.tradeSubjectId}"`);
+    expect(html).toContain('data-trade-review-origin="quick-review"');
+    expect(html).toContain("<strong>2 reviews waiting</strong>");
+    expect(html).toContain("Continue quick review");
+    expect(html).toContain("Execution and result evidence stay tucked away");
+    expect(html).toContain("Saving a draft pauses the flow");
     expect(html).toContain('id="batch-review-form"');
     expect(html).toContain('id="batch-review-error" role="alert" tabindex="-1" hidden');
     expect(html).toContain('data-review-queue-group="draft"');
@@ -65,6 +72,7 @@ describe("review queue view", () => {
     expect(html).toContain('data-review-queue-group="pending"');
     expect(html).not.toContain('id="batch-review-form"');
     expect(html).not.toContain("data-batch-review-subject");
+    expect(html).not.toContain("data-quick-review");
     expect(html).toContain("Continue draft");
     expect(html).toContain(">Review</button>");
   });
@@ -100,6 +108,7 @@ describe("review queue view", () => {
     expect(html).toContain("0 waiting");
     expect(html).not.toContain("data-review-queue-group=");
     expect(html).not.toContain('id="batch-review-form"');
+    expect(html).not.toContain("data-quick-review");
   });
 
   it("escapes review labels, stable identities, and batch vocabulary", () => {
@@ -154,6 +163,27 @@ describe("review queue view", () => {
 
     expect(groupTitle.style.scrollMarginTop).toBe("89px");
     expect(actions).toEqual(["scroll", "focus"]);
+  });
+
+  it("focuses the explicit clear heading before the stable queue title", () => {
+    let focused = false;
+    const clearTitle = {
+      style: { scrollMarginTop: "" },
+      scrollIntoView(): void {},
+      focus(): void { focused = true; },
+    };
+    const root = {
+      querySelector(selector: string): unknown {
+        if (selector === "#review-queue-clear-title") return clearTitle;
+        if (selector === "#review-queue-title") throw new Error("Clear state must win.");
+        return null;
+      },
+    };
+
+    focusReviewQueueAfterRefresh(root as unknown as HTMLElement);
+
+    expect(clearTitle.style.scrollMarginTop).toBe("16px");
+    expect(focused).toBe(true);
   });
 
   it("falls back to the stable queue title when no group remains", () => {

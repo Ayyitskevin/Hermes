@@ -5,7 +5,10 @@ import type {
   TradePreview,
 } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
-import { buildReviewQueue } from "./review-queue";
+import {
+  buildReviewQueue,
+  firstReviewQueueTrade,
+} from "./review-queue";
 
 function pending(trade: TradePreview): TradePreview {
   return {
@@ -86,6 +89,27 @@ describe("review queue projection", () => {
       && Object.isFrozen(group.trades)
       && Object.isFrozen(group.tradeSubjectIds)
     ))).toBe(true);
+  });
+
+  it("selects the first draft, then the first pending trade, then no trade", () => {
+    const source = DEMO_WORKSPACE.trades;
+    const draftFirstQueue = buildReviewQueue(snapshotWith([
+      pending(source[0]!),
+      draft(source[1]!),
+      ...source.slice(2),
+    ]));
+    const pendingOnlyQueue = buildReviewQueue(snapshotWith([
+      pending(source[0]!),
+      ...source.slice(1),
+    ]));
+    const emptyQueue = buildReviewQueue(DEMO_WORKSPACE);
+    expect(firstReviewQueueTrade(draftFirstQueue)?.tradeSubjectId).toBe(
+      source[1]!.tradeSubjectId,
+    );
+    expect(firstReviewQueueTrade(pendingOnlyQueue)?.tradeSubjectId).toBe(
+      source[0]!.tradeSubjectId,
+    );
+    expect(firstReviewQueueTrade(emptyQueue)).toBeNull();
   });
 
   it("detaches and deeply freezes validated queue trades from mutable source objects", () => {

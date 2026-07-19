@@ -148,8 +148,8 @@ submission-ready product:
   `reviewProgress`, and preserves canonical snapshot order inside fixed
   nonempty **Drafts** then **Not started** groups. After a confirmed
   queue-origin single-review save or resolved batch-tag refresh, focus moves to
-  the first surviving group heading, or to the stable queue title when no
-  unfinished trade remains. The existing versioned review and atomic
+  the first surviving group heading, or to the stable **Review queue clear**
+  heading when no unfinished trade remains. The existing versioned review and atomic
   batch write paths are unchanged. No queue, focus, or group state enters the
   schema, store, browser journal, archive, digest, governed reports, or
   financial formulas. It remains derived-only; schema v4, five primary tabs,
@@ -410,6 +410,27 @@ submission-ready product:
   reward, or advice is calculated; no schema, store, archive shape, native
   source, preference, dependency, or network path changed. Reports now expose
   eleven semantic targets and nine governed reports.
+- Quick Review Continuation v1 is the thirty-fifth bounded Slice D increment
+  and the sixth write-capable product exception. A local-only **Review now**
+  card appears only for a nonempty Review Queue and resolves its one exact
+  subject from the existing canonical **Drafts** then **Not started** order.
+  The compact sheet keeps outcome and immutable execution evidence closed by
+  default, promotes setup, emotion, mistakes, playbook, rules, and reflection,
+  and keeps tags, exact risk currency/amount, and planned stop under **More
+  context**. Setup and emotion may reuse up to six case-insensitively deduped
+  saved choices without blocking custom values.
+  **Save draft & pause** uses the existing versioned review command, redraws
+  Journal, and focuses **Review now**. A completed save, exact replay, or
+  confirmed-commit refresh retry rebuilds the queue and opens the exact next
+  validated subject; the final completion focuses **Review queue clear**. A
+  missing, duplicated, detached, stale, reordered, or tampered launcher fails
+  before sheet creation or a write, and an incoherent post-save continuation
+  shows a focused error without repeating the committed command. Existing
+  optimistic-conflict and exact-command recovery remain authoritative. No new
+  schema, migration, store command, browser/session cursor, archive/digest/
+  export shape, report, formula, preference, dependency, native source, or
+  network path is added; the exception exposes the existing trade-review write
+  path through a new bounded continuation.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

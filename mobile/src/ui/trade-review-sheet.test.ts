@@ -60,6 +60,29 @@ function localWorkspace(): JournalWorkspaceSnapshot {
   };
 }
 
+function quickReviewWorkspace(
+  reviewStatus: "pending" | "draft" = "pending",
+) {
+  const queued = {
+    ...trade(),
+    reviewStatus,
+    reviewId: reviewStatus === "pending" ? null : "review-quick-1",
+    reviewVersion: reviewStatus === "pending" ? null : 1,
+  } satisfies TradePreview;
+  const snapshot = {
+    ...localWorkspace(),
+    provenance: "local" as const,
+    trades: [queued],
+    reviewProgress: {
+      ...DEMO_WORKSPACE.reviewProgress,
+      pendingTrades: 1,
+      draftTrades: reviewStatus === "draft" ? 1 : 0,
+      completedTrades: 0,
+    },
+  } satisfies JournalWorkspaceSnapshot;
+  return { queued, snapshot };
+}
+
 describe("trade review sheet", () => {
   it("renders escaped execution facts, exact metric evidence, and versioned review inputs", () => {
     const html = tradeReviewSheetTemplate(trade(), localWorkspace());
@@ -87,6 +110,73 @@ describe("trade review sheet", () => {
     expect(html).toMatch(/class="settings-sheet trade-review-sheet"[^>]*tabindex="-1"/u);
     expect(html).not.toContain("Reload journal and reconcile");
     expect(html).not.toMatch(/place order|execute trade|send order/iu);
+    expect(html).not.toContain("data-quick-review-sheet");
+    expect(html).not.toContain("data-quick-review-evidence");
+  });
+
+  it("renders a compact, escaped Quick Review without changing the underlying form", () => {
+    const { queued, snapshot } = quickReviewWorkspace();
+    const vocabulary = {
+      ...snapshot,
+      reviewOptions: {
+        ...snapshot.reviewOptions,
+        setups: ["Opening range", "opening RANGE", "<Breakout>"],
+        emotions: ["Focused", "FOCUSED", "<Calm>"],
+      },
+    } satisfies JournalWorkspaceSnapshot;
+    const html = tradeReviewSheetTemplate(queued, vocabulary, undefined, "quick-review");
+    expect(html).toContain('data-quick-review-sheet="subject-1"');
+    expect(html).toMatch(/<details class="quick-review-evidence" data-quick-review-evidence><summary>/u);
+    expect(html).not.toMatch(/data-quick-review-evidence[^>]*\sopen(?:\s|>)/u);
+    expect(html).toContain("Execution inspection");
+    expect(html).toContain("Current metric evidence");
+    expect(html).toContain("Quick reflection");
+    expect(html).toContain("More context");
+    expect(html).toContain("Save draft &amp; pause");
+    expect(html).toContain("Finish quick review");
+    expect(html).toContain("1 review left");
+    expect(html.match(/data-quick-review-choice/g)).toHaveLength(4);
+    expect(html).toContain('aria-label="Use setup &lt;Breakout&gt;"');
+    expect(html).toContain('aria-label="Use emotion &lt;Calm&gt;"');
+    [
+      "review-setup",
+      "review-emotion",
+      "review-mistakes",
+      "review-tags",
+      "review-risk",
+      "review-risk-currency",
+      "review-stop",
+      "review-playbook",
+      "review-note",
+    ].forEach((id) => { expect(html).toContain(`id="${id}"`); });
+  });
+
+  it("starts only from the canonical draft-first trade and labels continuation", () => {
+    const { queued, snapshot } = quickReviewWorkspace("draft");
+    const pending = {
+      ...queued,
+      id: "subject-2",
+      tradeSubjectId: "subject-2",
+      reviewStatus: "pending" as const,
+      reviewId: null,
+      reviewVersion: null,
+    } satisfies TradePreview;
+    const multiSnapshot = {
+      ...snapshot,
+      trades: [pending, queued],
+      reviewProgress: {
+        ...snapshot.reviewProgress,
+        pendingTrades: 2,
+        draftTrades: 1,
+        completedTrades: 0,
+      },
+    } satisfies JournalWorkspaceSnapshot;
+    expect(() => tradeReviewSheetTemplate(
+      pending, multiSnapshot, undefined, "quick-review",
+    )).toThrow(/exact first waiting trade/u);
+    const draftHtml = tradeReviewSheetTemplate(queued, multiSnapshot, undefined, "quick-review");
+    expect(draftHtml).toContain("2 reviews left");
+    expect(draftHtml).toContain("Mark reviewed &amp; next");
   });
 
   it("labels exact report origins without changing the trade or browser scope", () => {

@@ -1,9 +1,9 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-18
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
 
-The current workspace contains 34 bounded Slice D increments: 29 derived-only
-presentation/projection increments and the same five write-capable exceptions.
+The current workspace contains 35 bounded Slice D increments: 29 derived-only
+presentation/projection increments and six write-capable exceptions.
 Reports exposes 11 semantic targets and nine governed reports.
 
 This document describes the source-of-truth boundary for the iOS journal. The
@@ -222,13 +222,63 @@ survivors **Drafts** then **Not started**, and preserves canonical snapshot
 order within each group. After a confirmed queue-origin single-review save or
 resolved batch-tag refresh,
 Journal redraws before focus moves to the first surviving group heading or the
-stable queue title when none survives. The existing review/batch persistence
+stable **Review queue clear** heading when none survives. The existing review/batch persistence
 path and its error/recovery focus states are unchanged. This is transient,
 render-only derived display: no queue, focus, or group state enters schema v4,
 SQLite, the browser journal, export/restore, an archive, digest, report, or
 financial formula. The five primary tabs, ten report targets, and eight governed
 reports remain unchanged. Native VoiceOver, hardware-keyboard, Dynamic Type,
 lifecycle, reflow, and focus acceptance remain a Mac/iPhone hold.
+
+### Quick-review continuation
+
+Quick Review Continuation v1 is the thirty-fifth bounded Slice D increment and
+the sixth write-capable product exception. It adds no store command or durable
+representation. A local, nonempty Review Queue exposes exactly one **Review
+now** card whose subject is the first trade in the canonical frozen queue:
+first draft in snapshot order, otherwise first not-started trade in snapshot
+order. Fictional demo and empty queues expose no Quick Review card or action.
+
+```text
+current local snapshot
+  → canonical draft-then-pending Review Queue
+  → one exact card + subject-bound Quick Review origin/action
+  → unchanged single-trade review preparation/write/recovery path
+  → confirmed save + fresh local snapshot + Journal redraw
+  → exact fresh next Quick Review action/sheet
+     or one exact Review queue clear heading
+```
+
+The compact sheet changes presentation only: immutable execution and current
+metric evidence start inside a closed disclosure; setup and emotion quick
+choices reuse at most six case-insensitively unique current vocabulary values;
+and every underlying review field remains available. **Save draft & pause**
+uses the existing immutable draft successor, redraws the fresh queue, and
+focuses the rebuilt **Review now** heading without opening another sheet.
+**Mark reviewed & next** or **Finish quick review** uses the same completed
+successor and exact-command, stale-head, and known-commit refresh-only recovery
+contracts as an ordinary individual review.
+
+Only a positively confirmed completed save followed by a successful fresh
+workspace redraw may continue. Hermes recomputes the canonical queue, rejects
+the just-completed subject if it remains first, revalidates one exact new card,
+origin, action, and subject, activates that action, and proves one exact matching
+sheet opened. When no subject remains, exactly one **Review queue clear** heading
+must exist inside the queue, no Quick Review card/action may remain, and that
+clear heading receives chrome-safe focus. If the exact continuation cannot be
+proved after the review was saved, Hermes keeps the saved successor, opens no
+fallback subject, and focuses a visible continuation error; restarting from the
+fresh Quick Review action performs no replay of the completed write.
+
+Missing, duplicated, detached, moved, disabled, origin-changed, or subject-
+tampered Quick Review card/action evidence fails visibly before sheet markup,
+secure randomness, background inerting, or persistence. A nonlocal refresh
+also blocks continuation. Uncertain, stale, blocked, and committed-but-not-
+redrawn outcomes remain owned by the unchanged individual-review recovery
+surface and never auto-advance. No queue cursor, session progress, choice,
+focus, or failure state enters schema v4, SQLite, browser journal state,
+preferences, export/restore, archives, digests, governed reports, financial
+formulas, native source, dependencies, or a network path.
 
 ### Calendar-day reflection continuation
 
@@ -1396,9 +1446,18 @@ Drafts-then-Not-started grouping, canonical within-group order, frozen
 containers, current-head and stable-ID fail-closed tables,
 waiting/draft/completed `reviewProgress` reconciliation, and duplicate-symbol
 exact identity. Browser journeys cover draft and completion regrouping,
-resolved batch-tag redraw, first-surviving-group or empty-queue-title focus,
+resolved batch-tag redraw, first-surviving-group or **Review queue clear** focus,
 recovery-state focus ownership, unchanged review/archive facts, and
 320/421px 200% reflow without adding persistence.
+Quick Review Continuation coverage adds canonical draft-first launcher and sheet
+identity, local-only/demo/empty boundaries, closed outcome evidence, bounded
+case-insensitive vocabulary reuse, draft pause and **Review now** focus,
+completion-driven exact fresh-next activation, final **Review queue clear**
+focus, pre-open tamper rejection, and visible post-save continuation failure.
+The production-bundle journeys reconcile exact immutable review-version/head/
+submission counts, browser-storage and network neutrality, 44-point controls,
+and 320px/200% reflow; they do not establish native SQLite, lifecycle, or
+accessibility acceptance.
 Calendar-Day Reflection Continuation coverage adds whole-journal exact-date
 head resolution, locked exact creation versus generic editable creation,
 malformed/duplicate head rejection, changed and deleted origin-attribute

@@ -11,6 +11,10 @@ import {
   type PreparedTradeReviewBatch,
   type TradeReviewCommitResult,
 } from "../application/journal-store";
+import {
+  buildReviewQueue,
+  firstReviewQueueTrade,
+} from "../application/review-queue";
 import { escapeHtml } from "../core/html";
 import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import type { TradeMetricEvidence } from "../core/trade-metrics";
@@ -29,10 +33,15 @@ function assetClassLabel(trade: TradePreview): "Stock" | "ETF" {
   return trade.assetClass === "etf" ? "ETF" : "Stock";
 }
 
+function countNoun(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 export type TradeReviewDisplayOrigin =
   | "dashboard-review-progress"
   | "manual-capture-review"
-  | "import-receipt-review";
+  | "import-receipt-review"
+  | "quick-review";
 
 export function reviewTradeAction(
   trade: TradePreview,
@@ -388,12 +397,63 @@ function options(values: readonly string[]): string {
   return values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
 }
 
+const QUICK_REVIEW_CHOICE_LIMIT = 6;
+
+interface QuickReviewQueueContext {
+  readonly queue: ReturnType<typeof buildReviewQueue>;
+  readonly trade: TradePreview;
+}
+
+function quickReviewQueueContext(
+  snapshot: JournalWorkspaceSnapshot,
+  tradeSubjectId?: string,
+): QuickReviewQueueContext | null {
+  if (snapshot.provenance !== "local") return null;
+  const queue = buildReviewQueue(snapshot);
+  if (queue.waitingTradeCount === 0) return null;
+  const trade = firstReviewQueueTrade(queue);
+  if (trade === null) {
+    throw new Error("A nonempty review queue must have one exact next trade.");
+  }
+  if (tradeSubjectId !== undefined && trade.tradeSubjectId !== tradeSubjectId) {
+    return null;
+  }
+  return Object.freeze({ queue, trade });
+}
+
+function quickReviewChoiceGroup(
+  targetId: "review-setup" | "review-emotion",
+  label: string,
+  values: readonly string[],
+  current: string,
+): string {
+  const seen = new Set<string>();
+  const choices = values.filter((value) => {
+    const key = value.trim().toLocaleLowerCase("en-US");
+    if (key.length === 0 || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, QUICK_REVIEW_CHOICE_LIMIT);
+  if (choices.length === 0) return "";
+  return `<div class="quick-review-choices" role="group" aria-label="${escapeHtml(label)} quick choices">
+    ${choices.map((choice) => `<button class="quick-review-choice" type="button" data-quick-review-choice data-quick-review-target="${targetId}" data-quick-review-value="${escapeHtml(choice)}" aria-label="${escapeHtml(`Use ${label.toLocaleLowerCase("en-US")} ${choice}`)}" aria-pressed="${choice.toLocaleLowerCase("en-US") === current.toLocaleLowerCase("en-US")}">${escapeHtml(choice)}</button>`).join("")}
+  </div>`;
+}
+
 export function tradeReviewSheetTemplate(
   trade: TradePreview,
   snapshot: JournalWorkspaceSnapshot,
   reportSource?: TradeReviewReportSource,
+  displayOrigin?: TradeReviewDisplayOrigin,
 ): string {
   const demoReadOnly = snapshot.provenance === "demo";
+  const quickReview = displayOrigin === "quick-review"
+    ? quickReviewQueueContext(snapshot, trade.tradeSubjectId)
+    : null;
+  if (displayOrigin === "quick-review" && quickReview === null) {
+    throw new Error("Quick review must open the exact first waiting trade.");
+  }
+
   const reportContext = reportSource === undefined
     ? ""
     : `<p class="helper-text trade-review-report-context" data-trade-review-report-context="${reportSource}">Opened from ${reportSourceLabel(reportSource)}. This full-workspace report does not use or change your Trades filters.</p>`;
@@ -415,10 +475,42 @@ export function tradeReviewSheetTemplate(
       ? `REVIEWED · VERSION ${trade.reviewVersion}`
     : trade.reviewStatus === "draft" ? "DRAFT REVIEW" : "REVIEW PENDING";
   const hasSavedReview = trade.reviewStatus !== "pending" && !invalidReviewIdentity;
+  const executionInspection = `<section aria-labelledby="execution-inspection-title"><div class="section-title"><h3 id="execution-inspection-title">Execution inspection</h3><span>${trade.executions.length} allocations</span></div>${executionTemplate(trade)}</section>`;
+  const metricInspection = `<section aria-labelledby="metric-evidence-title"><div class="section-title"><h3 id="metric-evidence-title">${hasSavedReview ? "Saved" : "Current"} metric evidence</h3><span>${invalidReviewIdentity ? "Version unavailable" : trade.reviewVersion === null ? "No saved review" : `Review version ${trade.reviewVersion}`}</span></div><p class="helper-text">These values reflect immutable executions and the ${hasSavedReview ? "saved review" : "current journal"} state from when this editor opened. Unsaved risk changes are not included.</p><div class="review-metric-grid">${metricEvidenceTemplate(trade.resultRMetric)}${metricEvidenceTemplate(trade.percentReturnMetric)}</div></section>`;
+  const inspection = quickReview === null
+    ? `${executionInspection}${metricInspection}`
+    : `<details class="quick-review-evidence" data-quick-review-evidence><summary>Outcome and execution evidence</summary><p class="helper-text">Open this only when you want the immutable fills and current result metrics. Reflection stays editable either way.</p>${executionInspection}${metricInspection}</details>`;
+  const setupField = `<label>Setup<input id="review-setup" type="text" maxlength="120" list="review-setup-options" value="${escapeHtml(setup)}" placeholder="e.g. Opening-range breakout" ${disabled} /></label>`;
+  const emotionField = `<label>Emotion<input id="review-emotion" type="text" maxlength="120" list="review-emotion-options" value="${escapeHtml(trade.emotion ?? "")}" placeholder="e.g. Focused" ${disabled} /></label>`;
+  const mistakesField = `<label>Mistakes<textarea id="review-mistakes" rows="2" placeholder="Comma or line separated" ${disabled}>${escapeHtml(trade.mistakes.join(", "))}</textarea></label>`;
+  const tagsField = `<label>Tags<textarea id="review-tags" rows="2" placeholder="Comma or line separated" ${disabled}>${escapeHtml(trade.tags.join(", "))}</textarea></label>`;
+  const riskField = `<label>Initial risk (${escapeHtml(riskCurrency)})<input id="review-risk" type="text" inputmode="decimal" value="${escapeHtml(trade.initialRisk?.amount ?? "")}" placeholder="User-confirmed amount" ${disabled} /></label>`;
+  const riskCurrencyField = `<label>Risk currency<select id="review-risk-currency" ${disabled}>${currencyOptions(riskCurrency, pnlCurrency)}</select></label>`;
+  const stopField = `<label>Planned stop<input id="review-stop" type="text" inputmode="decimal" value="${escapeHtml(trade.plannedStop ?? "")}" placeholder="Optional exact price" ${disabled} /></label>`;
+  const playbookField = `<label>Playbook<input id="review-playbook" type="text" maxlength="120" list="review-playbook-options" value="${escapeHtml(trade.playbook ?? "")}" placeholder="Optional playbook" ${disabled} /></label>`;
+  const setupChoices = quickReviewChoiceGroup("review-setup", "Setup", snapshot.reviewOptions.setups, setup);
+  const emotionChoices = quickReviewChoiceGroup("review-emotion", "Emotion", snapshot.reviewOptions.emotions, trade.emotion ?? "");
+  const riskCopy = `<p class="helper-text">Initial risk must be a positive amount you confirm in the trade's P&amp;L currency (${escapeHtml(pnlCurrency)}). Hermes preserves saved currency provenance and never copies risk from the position-size tool.</p>`;
+  const standardFields = `<div class="field-grid review-fields">${setupField}${emotionField}${mistakesField}${tagsField}${riskField}${riskCurrencyField}${stopField}${playbookField}</div>${riskCopy}`;
+  const quickFields = `<section class="quick-review-essential" aria-labelledby="quick-review-essential-title"><h3 id="quick-review-essential-title">Quick reflection</h3><p class="helper-text">Name the process before you inspect the outcome. Custom values stay available in every field.</p><div class="field-grid review-fields quick-review-fields"><div class="quick-review-field">${setupField}${setupChoices}</div><div class="quick-review-field">${emotionField}${emotionChoices}</div>${mistakesField}${playbookField}</div></section><details class="quick-review-more"><summary>More context</summary><div class="field-grid review-fields">${tagsField}${riskField}${riskCurrencyField}${stopField}</div>${riskCopy}</details>`;
+  const reviewFields = quickReview === null
+    ? standardFields
+    : quickFields;
+  const quickReviewProgress = quickReview === null
+    ? ""
+    : `<div class="quick-review-progress" data-quick-review-progress><strong>${countNoun(quickReview.queue.waitingTradeCount, "review")} left</strong><span>${quickReview.queue.draftTradeCount > 0 ? "Drafts stay first." : "Not-started reviews are ready."} Complete to continue; save a draft to pause.</span></div>`;
+  const quickReviewAttribute = quickReview === null
+    ? ""
+    : ` data-quick-review-sheet="${escapeHtml(trade.tradeSubjectId)}"`;
+  const completedAction = quickReview === null
+    ? "Mark reviewed"
+    : quickReview.queue.waitingTradeCount === 1
+      ? "Finish quick review"
+      : "Mark reviewed &amp; next";
   const saveActions = trade.reviewStatus === "completed"
     ? `<button class="primary-button" type="submit" data-review-state="completed">Save review changes</button>`
-    : `<button class="secondary-button" type="submit" data-review-state="draft">Save draft</button><button class="primary-button" type="submit" data-review-state="completed">Mark reviewed</button>`;
-  return `<div class="sheet-backdrop trade-review-backdrop" id="trade-review" data-trade-review-backdrop>
+    : `<button class="secondary-button" type="submit" data-review-state="draft">${quickReview === null ? "Save draft" : "Save draft &amp; pause"}</button><button class="primary-button" type="submit" data-review-state="completed">${completedAction}</button>`;
+  return `<div class="sheet-backdrop trade-review-backdrop" id="trade-review" data-trade-review-backdrop${quickReviewAttribute}>
     <section class="settings-sheet trade-review-sheet" role="dialog" aria-modal="true" aria-labelledby="trade-review-title" tabindex="-1">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-heading">
@@ -426,35 +518,18 @@ export function tradeReviewSheetTemplate(
         <button class="icon-button" type="button" data-trade-review-close aria-label="Close trade review">×</button>
       </div>
       ${reportContext}
+      ${quickReviewProgress}
       ${demoReadOnly
         ? `<p class="helper-text">This fictional demo review is read-only. Return to your local journal to save reviews.</p>`
         : invalidReviewIdentity
           ? `<p class="form-error" role="alert">This review state has no coherent immutable version identity. Saving is blocked until the journal is reloaded or repaired.</p>`
           : `<p class="helper-text">Review metadata creates a new immutable version. It never changes an execution or sends an order.</p>`}
-      <section aria-labelledby="execution-inspection-title">
-        <div class="section-title"><h3 id="execution-inspection-title">Execution inspection</h3><span>${trade.executions.length} allocations</span></div>
-        ${executionTemplate(trade)}
-      </section>
-      <section aria-labelledby="metric-evidence-title">
-        <div class="section-title"><h3 id="metric-evidence-title">${hasSavedReview ? "Saved" : "Current"} metric evidence</h3><span>${invalidReviewIdentity ? "Version unavailable" : trade.reviewVersion === null ? "No saved review" : `Review version ${trade.reviewVersion}`}</span></div>
-        <p class="helper-text">These values reflect immutable executions and the ${hasSavedReview ? "saved review" : "current journal"} state from when this editor opened. Unsaved risk changes are not included.</p>
-        <div class="review-metric-grid">${metricEvidenceTemplate(trade.resultRMetric)}${metricEvidenceTemplate(trade.percentReturnMetric)}</div>
-      </section>
+      ${inspection}
       <form id="trade-review-form" novalidate>
         <datalist id="review-setup-options">${options(snapshot.reviewOptions.setups)}</datalist>
         <datalist id="review-emotion-options">${options(snapshot.reviewOptions.emotions)}</datalist>
         <datalist id="review-playbook-options">${options(snapshot.reviewOptions.playbooks.map((playbook) => playbook.name))}</datalist>
-        <div class="field-grid review-fields">
-          <label>Setup<input id="review-setup" type="text" maxlength="120" list="review-setup-options" value="${escapeHtml(setup)}" placeholder="e.g. Opening-range breakout" ${disabled} /></label>
-          <label>Emotion<input id="review-emotion" type="text" maxlength="120" list="review-emotion-options" value="${escapeHtml(trade.emotion ?? "")}" placeholder="e.g. Focused" ${disabled} /></label>
-          <label>Mistakes<textarea id="review-mistakes" rows="2" placeholder="Comma or line separated" ${disabled}>${escapeHtml(trade.mistakes.join(", "))}</textarea></label>
-          <label>Tags<textarea id="review-tags" rows="2" placeholder="Comma or line separated" ${disabled}>${escapeHtml(trade.tags.join(", "))}</textarea></label>
-          <label>Initial risk (${escapeHtml(riskCurrency)})<input id="review-risk" type="text" inputmode="decimal" value="${escapeHtml(trade.initialRisk?.amount ?? "")}" placeholder="User-confirmed amount" ${disabled} /></label>
-          <label>Risk currency<select id="review-risk-currency" ${disabled}>${currencyOptions(riskCurrency, pnlCurrency)}</select></label>
-          <label>Planned stop<input id="review-stop" type="text" inputmode="decimal" value="${escapeHtml(trade.plannedStop ?? "")}" placeholder="Optional exact price" ${disabled} /></label>
-          <label>Playbook<input id="review-playbook" type="text" maxlength="120" list="review-playbook-options" value="${escapeHtml(trade.playbook ?? "")}" placeholder="Optional playbook" ${disabled} /></label>
-        </div>
-        <p class="helper-text">Initial risk must be a positive amount you confirm in the trade's P&amp;L currency (${escapeHtml(pnlCurrency)}). Hermes preserves saved currency provenance and never copies risk from the position-size tool.</p>
+        ${reviewFields}
         <fieldset class="review-rules" ${disabled}>
           <legend>Rule adherence</legend>
           <div id="review-rule-rows">${initialRules(trade, snapshot)}</div>
@@ -556,6 +631,33 @@ function bindRuleRemoval(container: HTMLElement): void {
   });
 }
 
+function bindQuickReviewChoices(container: HTMLElement): void {
+  container.querySelectorAll<HTMLButtonElement>("[data-quick-review-choice]")
+    .forEach((button) => {
+      const targetId = button.dataset.quickReviewTarget;
+      const choice = button.dataset.quickReviewValue;
+      if (
+        (targetId !== "review-setup" && targetId !== "review-emotion")
+        || choice === undefined
+      ) {
+        button.disabled = true;
+        return;
+      }
+      const input = container.querySelector<HTMLInputElement>(`#${targetId}`);
+      if (input === null) { button.disabled = true; return; }
+      const syncPressed = () => {
+        const normalized = input.value.trim().toLocaleLowerCase("en-US");
+        button.setAttribute("aria-pressed", String(normalized === choice.toLocaleLowerCase("en-US")));
+      };
+      input.addEventListener("input", syncPressed);
+      button.addEventListener("click", () => {
+        input.value = choice;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      syncPressed();
+    });
+}
+
 const tradeReviewActionBindings = new WeakMap<HTMLElement, AbortController>();
 
 function tradeReviewReportSource(
@@ -576,6 +678,78 @@ const MANUAL_CAPTURE_REVIEW_ORIGIN: TradeReviewDisplayOrigin =
   "manual-capture-review";
 const IMPORT_RECEIPT_REVIEW_ORIGIN: TradeReviewDisplayOrigin =
   "import-receipt-review";
+
+const QUICK_REVIEW_ORIGIN: TradeReviewDisplayOrigin = "quick-review";
+
+interface QuickReviewActionContext {
+  readonly card: HTMLElement;
+  readonly heading: HTMLElement;
+  readonly action: HTMLButtonElement;
+  readonly trade: TradePreview;
+}
+
+function quickReviewActionContext(
+  root: HTMLElement,
+  snapshot: JournalWorkspaceSnapshot,
+): QuickReviewActionContext | null {
+  const expected = quickReviewQueueContext(snapshot);
+  if (expected === null) return null;
+  const queues = Array.from(root.querySelectorAll<HTMLElement>("[data-review-queue]"));
+  const queueHeadings = Array.from(root.querySelectorAll<HTMLElement>("#review-queue-title"));
+  const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-quick-review]"));
+  const headings = Array.from(root.querySelectorAll<HTMLElement>("#quick-review-title"));
+  const actions = Array.from(root.querySelectorAll<HTMLButtonElement>(
+    `button[data-trade-review-origin="${QUICK_REVIEW_ORIGIN}"]`,
+  ));
+  const queue = queues[0];
+  const queueHeading = queueHeadings[0];
+  const card = cards[0];
+  const heading = headings[0];
+  const action = actions[0];
+  if (
+    queues.length !== 1
+    || queueHeadings.length !== 1
+    || cards.length !== 1
+    || headings.length !== 1
+    || actions.length !== 1
+    || queue === undefined
+    || queueHeading === undefined
+    || card === undefined
+    || heading === undefined
+    || action === undefined
+    || card.parentElement !== queue
+    || queue.firstElementChild?.contains(queueHeading) !== true
+    || queue.firstElementChild?.nextElementSibling !== card
+    || card.dataset.quickReviewSubject !== expected.trade.tradeSubjectId
+    || card.getAttribute("aria-labelledby") !== heading.id
+    || !card.contains(heading)
+    || !card.contains(action)
+    || card.closest("[data-review-queue-group]") !== null
+    || action.disabled
+    || action.dataset.reviewTrade !== expected.trade.tradeSubjectId
+  ) return null;
+  return Object.freeze({ card, heading, action, trade: expected.trade });
+}
+
+function quickReviewOrigin(
+  root: HTMLElement,
+  trigger: HTMLButtonElement,
+  snapshot: JournalWorkspaceSnapshot,
+): boolean | null {
+  const origin = trigger.dataset.tradeReviewOrigin;
+  if (origin === undefined) {
+    return trigger.closest("[data-quick-review]") === null
+      ? false : null;
+  }
+  if (origin !== QUICK_REVIEW_ORIGIN) {
+    return (
+      origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN
+      || origin === MANUAL_CAPTURE_REVIEW_ORIGIN
+      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN
+    ) ? false : null;
+  }
+  return quickReviewActionContext(root, snapshot)?.action === trigger ? true : null;
+}
 
 interface DashboardReviewProgressContext {
   readonly heading: HTMLElement;
@@ -650,7 +824,8 @@ function dashboardReviewProgressOrigin(
   }
   if (origin !== DASHBOARD_REVIEW_PROGRESS_ORIGIN) {
     return origin === MANUAL_CAPTURE_REVIEW_ORIGIN
-      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN ? false : null;
+      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN
+      || origin === QUICK_REVIEW_ORIGIN ? false : null;
   }
   return dashboardReviewProgressContext(root)?.action === trigger ? true : null;
 }
@@ -666,7 +841,8 @@ function manualCaptureReviewOrigin(
   if (origin === undefined) return section === null ? false : null;
   if (origin !== MANUAL_CAPTURE_REVIEW_ORIGIN) {
     return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN
-      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN ? false : null;
+      || origin === IMPORT_RECEIPT_REVIEW_ORIGIN
+      || origin === QUICK_REVIEW_ORIGIN ? false : null;
   }
   const sections = Array.from(root.querySelectorAll<HTMLElement>(
     "[data-manual-capture-review-continuation]",
@@ -691,7 +867,8 @@ function importReceiptReviewOrigin(
   if (origin === undefined) return section === null ? false : null;
   if (origin !== IMPORT_RECEIPT_REVIEW_ORIGIN) {
     return origin === DASHBOARD_REVIEW_PROGRESS_ORIGIN
-      || origin === MANUAL_CAPTURE_REVIEW_ORIGIN ? false : null;
+      || origin === MANUAL_CAPTURE_REVIEW_ORIGIN
+      || origin === QUICK_REVIEW_ORIGIN ? false : null;
   }
   const sections = Array.from(root.querySelectorAll<HTMLElement>(
     "[data-import-receipt-review-continuation]",
@@ -725,10 +902,31 @@ function showTradeReviewOpenError(
   focusChromeSafeElement(root, error, "nearest");
 }
 
+function showQuickReviewContinuationError(
+  root: HTMLElement,
+): void {
+  root.querySelector("[data-trade-review-open-error]")?.remove();
+  const error = document.createElement("p");
+  error.className = "form-error trade-review-open-error";
+  error.dataset.tradeReviewOpenError = "true";
+  error.dataset.quickReviewContinuationError = "true";
+  error.setAttribute("role", "alert");
+  error.tabIndex = -1;
+  error.textContent = "Review saved, but Hermes could not open the exact next queued trade. Start Quick Review again.";
+  const queue = root.querySelector<HTMLElement>("[data-review-queue]");
+  if (queue === null) root.append(error);
+  else {
+    const title = queue.querySelector<HTMLElement>(".section-title");
+    if (title === null) queue.prepend(error); else title.insertAdjacentElement("afterend", error);
+  }
+  focusChromeSafeElement(root, error, "nearest");
+}
+
 function focusAfterTradeReviewRefresh(
   root: HTMLElement,
   reportSource: TradeReviewReportSource | undefined,
   reviewQueueOrigin: boolean,
+  quickReviewDisplayOrigin: boolean,
   dashboardReviewOrigin: boolean,
   manualCaptureOrigin: boolean,
   importReceiptOrigin: boolean,
@@ -738,6 +936,11 @@ function focusAfterTradeReviewRefresh(
   if (reportSource !== undefined) {
     const targetId = TRADE_REVIEW_REPORT_SOURCE_METADATA[reportSource].targetId;
     target = root.querySelector<HTMLElement>(`#${targetId}`);
+  } else if (quickReviewDisplayOrigin) {
+    target = root.querySelector<HTMLElement>("#review-queue-clear-title")
+      ?? root.querySelector<HTMLElement>("#quick-review-title")
+      ?? root.querySelector<HTMLElement>("[data-review-queue-group-title]")
+      ?? root.querySelector<HTMLElement>("#review-queue-title");
   } else if (reviewQueueOrigin) {
     target = root.querySelector<HTMLElement>("[data-review-queue-group-title]")
       ?? root.querySelector<HTMLElement>("#review-queue-title");
@@ -902,9 +1105,11 @@ export function bindTradeReviewActions(
       );
       const manualCaptureOrigin = manualCaptureReviewOrigin(root, trigger);
       const importReceiptOrigin = importReceiptReviewOrigin(root, trigger);
+      const quickReviewDisplayOrigin = quickReviewOrigin(root, trigger, snapshot);
       const originCount = [
         reportSource !== undefined,
         reviewQueueOrigin,
+        quickReviewDisplayOrigin === true,
         dashboardReviewOrigin === true,
         manualCaptureOrigin === true,
         importReceiptOrigin === true,
@@ -914,6 +1119,7 @@ export function bindTradeReviewActions(
         || trade === null
         || !reportEvidenceMatches
         || dashboardReviewOrigin === null
+        || quickReviewDisplayOrigin === null
         || manualCaptureOrigin === null
         || importReceiptOrigin === null
         || originCount > 1
@@ -925,7 +1131,7 @@ export function bindTradeReviewActions(
       root.querySelector("#trade-review")?.remove();
       (root.querySelector(".app-shell") ?? root).insertAdjacentHTML(
         "beforeend",
-        tradeReviewSheetTemplate(trade, snapshot, reportSource),
+        tradeReviewSheetTemplate(trade, snapshot, reportSource, quickReviewDisplayOrigin === true ? QUICK_REVIEW_ORIGIN : undefined),
       );
       const backdrop = root.querySelector<HTMLElement>("#trade-review");
       const sheet = backdrop?.querySelector<HTMLElement>(".trade-review-sheet");
@@ -1085,6 +1291,76 @@ export function bindTradeReviewActions(
         status.textContent = "Trade review was not saved; refresh before reopening";
         error.focus({ preventScroll: true });
       };
+      const finishAfterSuccessfulRefresh = (
+        freshSnapshot: JournalWorkspaceSnapshot,
+      ) => {
+        saving = false;
+        uncertain = false;
+        backdrop.remove();
+        setBackgroundInert(false);
+        if (
+          quickReviewDisplayOrigin === true
+          && attemptedState === "completed"
+        ) {
+          try {
+            if (freshSnapshot.provenance !== "local") throw new Error("Quick review left the local journal.");
+            const freshQueue = buildReviewQueue(freshSnapshot);
+            const nextTrade = firstReviewQueueTrade(freshQueue);
+            if (nextTrade === null) {
+              const clearTitles = Array.from(root.querySelectorAll<HTMLElement>("#review-queue-clear-title"));
+              const quickCards = root.querySelectorAll("[data-quick-review]");
+              const quickActions = root.querySelectorAll(
+                `button[data-trade-review-origin="${QUICK_REVIEW_ORIGIN}"]`,
+              );
+              const clearTitle = clearTitles[0];
+              if (
+                clearTitles.length !== 1
+                || clearTitle === undefined
+                || quickCards.length !== 0
+                || quickActions.length !== 0
+                || clearTitle.closest("[data-review-queue]") === null
+              ) throw new Error("The cleared review queue is not coherent.");
+              focusChromeSafeElement(root, clearTitle);
+              return;
+            }
+            if (nextTrade.tradeSubjectId === trade.tradeSubjectId) {
+              throw new Error("The completed trade remained first in the review queue.");
+            }
+            const continuation = quickReviewActionContext(root, freshSnapshot);
+            if (
+              continuation === null
+              || continuation.trade.tradeSubjectId !== nextTrade.tradeSubjectId
+            ) throw new Error("The next Quick Review action is not coherent.");
+            continuation.action.click();
+            const continuedSheets = Array.from(root.querySelectorAll<HTMLElement>(
+              "[data-quick-review-sheet]",
+            ));
+            const continuedSheet = continuedSheets[0];
+            if (
+              continuedSheets.length !== 1
+              || continuedSheet === undefined
+              || continuedSheet.dataset.quickReviewSheet !== nextTrade.tradeSubjectId
+              || !continuedSheet.matches("#trade-review[data-trade-review-backdrop]")
+              || continuedSheet.querySelectorAll(".trade-review-sheet").length !== 1
+            ) throw new Error("The exact next Quick Review sheet did not open.");
+            return;
+          } catch {
+            showQuickReviewContinuationError(root);
+            return;
+          }
+        }
+        focusAfterTradeReviewRefresh(
+          root,
+          reportSource,
+          reviewQueueOrigin,
+          quickReviewDisplayOrigin,
+          dashboardReviewOrigin,
+          manualCaptureOrigin,
+          importReceiptOrigin,
+          trade.tradeSubjectId,
+        );
+      };
+
       const refreshAfterConfirmedSave = async (
         result: TradeReviewCommitResult,
         exactReplay: boolean,
@@ -1097,25 +1373,14 @@ export function bindTradeReviewActions(
           : attemptedState === "completed"
             ? `${trade.symbol} review completed.`
             : `${trade.symbol} review draft saved.`;
+        let freshSnapshot: JournalWorkspaceSnapshot;
         try {
-          await refresh(announcement);
+          freshSnapshot = await refresh(announcement);
         } catch {
           showCommittedRefreshFailure();
           return;
         }
-        saving = false;
-        uncertain = false;
-        backdrop.remove();
-        setBackgroundInert(false);
-        focusAfterTradeReviewRefresh(
-          root,
-          reportSource,
-          reviewQueueOrigin,
-          dashboardReviewOrigin,
-          manualCaptureOrigin,
-          importReceiptOrigin,
-          trade.tradeSubjectId,
-        );
+        finishAfterSuccessfulRefresh(freshSnapshot);
       };
 
       const close = (force = false) => {
@@ -1132,6 +1397,7 @@ export function bindTradeReviewActions(
           root,
           reportSource,
           reviewQueueOrigin,
+          quickReviewDisplayOrigin,
           dashboardReviewOrigin,
           manualCaptureOrigin,
           importReceiptOrigin,
@@ -1172,20 +1438,8 @@ export function bindTradeReviewActions(
         if (committed) {
           status.textContent = "Reloading the confirmed saved trade review";
           try {
-            await refresh("Journal reloaded after the saved trade review could not refresh.");
-            saving = false;
-            uncertain = false;
-            backdrop.remove();
-            setBackgroundInert(false);
-            focusAfterTradeReviewRefresh(
-              root,
-              reportSource,
-              reviewQueueOrigin,
-              dashboardReviewOrigin,
-              manualCaptureOrigin,
-              importReceiptOrigin,
-              trade.tradeSubjectId,
-            );
+            const freshSnapshot = await refresh("Journal reloaded after the saved trade review could not refresh.");
+            finishAfterSuccessfulRefresh(freshSnapshot);
           } catch {
             showCommittedRefreshFailure();
           }
@@ -1235,6 +1489,7 @@ export function bindTradeReviewActions(
       });
 
       bindRuleRemoval(ruleRows);
+      bindQuickReviewChoices(backdrop);
       backdrop.querySelector("#review-rule-add")?.addEventListener("click", () => {
         ruleRows.insertAdjacentHTML("beforeend", ruleRow(""));
         bindRuleRemoval(ruleRows);

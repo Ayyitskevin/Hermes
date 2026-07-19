@@ -1,7 +1,10 @@
 import { JournalApplication } from "../application/journal-application";
 import type { JournalImportReceipt } from "../application/journal-store";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
-import { buildReviewQueue } from "../application/review-queue";
+import {
+  buildReviewQueue,
+  firstReviewQueueTrade,
+} from "../application/review-queue";
 import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
@@ -304,10 +307,9 @@ function dashboardView(
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
   const hasInterimResults = snapshot.trades.some(hasInterimPartialMetrics);
   const reviewQueue = buildReviewQueue(snapshot);
-  const nextReview = reviewQueue.groups[0].trades[0]
-    ?? reviewQueue.groups[1].trades[0];
-  const reviewProgressState = nextReview === undefined ? "clear" : "waiting";
-  const reviewProgressSubject = nextReview === undefined
+  const nextReview = firstReviewQueueTrade(reviewQueue);
+  const reviewProgressState = nextReview === null ? "clear" : "waiting";
+  const reviewProgressSubject = nextReview === null
     ? ""
     : ` data-dashboard-review-subject="${escapeHtml(nextReview.tradeSubjectId)}"`;
   return `<section class="screen-stack" aria-labelledby="dashboard-title">
@@ -325,7 +327,7 @@ function dashboardView(
       <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2 id="dashboard-review-progress-title" data-dashboard-review-progress-title="${reviewProgressState}"${reviewProgressSubject} tabindex="-1">${reviewQueue.waitingTradeCount === 0 ? "Review queue clear" : `${countNoun(reviewQueue.waitingTradeCount, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
       <p>${snapshot.reviewProgress.completedTrades} completed · ${countNoun(snapshot.reviewProgress.draftTrades, "draft")} · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
       <div class="quick-actions review-progress-actions">
-        ${nextReview === undefined ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade", "dashboard-review-progress")}
+        ${nextReview === null ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade", "dashboard-review-progress")}
         <button class="text-button" type="button" data-route="reports" data-report-target="review-session-coverage-title">View session evidence</button>
       </div>
     </article>
