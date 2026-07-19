@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: Symbol Breakdown v1 verified locally · feature commit and hosted
-exact-commit evidence pending · updated 2026-07-18
+Status: Symbol Breakdown v1 shipped on main · feature commit `1fd7d46` ·
+hosted exact-commit CI passed · updated 2026-07-18
 
 ## Current handoff
 
@@ -93,9 +93,13 @@ verified:
 - `npm audit --omit=dev`, `git diff --check`, and `git diff --exit-code --
   mobile/ios mobile/package-lock.json` — exit 0; zero production
   vulnerabilities and no native/lock drift.
-- Exact-commit hosted CI, CocoaPods, Xcode, Simulator, physical iPhone,
-  SQLCipher/Keychain runtime, VoiceOver, Dynamic Type, hardware keyboard,
-  lifecycle, and multi-scene evidence are not claimed here.
+- `gh run view 29666646472 --json status,conclusion,headSha,jobs` — exact feature
+  SHA `1fd7d468c5671b21bfaba25ad3a23cb3aa48feab`, run conclusion `success`;
+  Legacy Python job `88138049978` and Mobile Linux job `88138049979` both
+  concluded `success`.
+- CocoaPods, Xcode, Simulator, physical iPhone, SQLCipher/Keychain runtime,
+  VoiceOver, Dynamic Type, hardware keyboard, lifecycle, and multi-scene
+  evidence are not claimed here.
 
 assumptions:
 
@@ -111,8 +115,7 @@ assumptions:
 
 open:
 
-- Publish the locally verified feature commit and record hosted exact-commit CI.
-  HOLD all native acceptance until the Mac/iPhone procedure proves
+- HOLD all native acceptance until the Mac/iPhone procedure proves
   checksum/cohort/collision equality, paging, drill-down, close/save focus,
   restore equality, accessibility, lifecycle, and zero durable/network change.
 - Later timing, drawdown, comparison, MAE/MFE, exit-efficiency, and account
