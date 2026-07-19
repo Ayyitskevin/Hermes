@@ -145,6 +145,7 @@
         "mobile/src/core/plan-adherence-report.ts",
         "mobile/src/core/symbol-breakdown-report.ts",
         "mobile/src/ui/symbol-breakdown-view.ts",
+        "mobile/src/adapters/session-journal-restore.test.ts",
         "docs/mobile/IOS_ROADMAP.md"
       ],
       "current_status": "Eleven report targets are navigable and nine are governed derived reports with bounded evidence continuation. Shipped count-only Symbol Breakdown groups every current trade exactly once by exact symbol plus asset class, preserves Stock/ETF collisions as separate Stock-first groups, and supports exact drill-down and restore equality. Remaining timing, drawdown, comparison, and broader-scope report families are open.",

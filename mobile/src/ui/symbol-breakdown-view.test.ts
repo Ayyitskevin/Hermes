@@ -219,24 +219,40 @@ describe("symbol-breakdown presentation", () => {
         clicks.push(listener);
       },
     };
-    const completeControls = {
-      list: { insertAdjacentHTML: (): never => { throw new Error("Unexpected append."); } },
-      status: { textContent: "", focus: (): never => { throw new Error("Unexpected focus."); } },
-      button: {
-        hidden: true,
-        textContent: "All trades shown",
-        addEventListener: (): never => { throw new Error("Unexpected listener."); },
-      },
-    };
     const controls = new Map<string, unknown>([
       ["[data-symbol-breakdown-groups]", groups],
       ["[data-symbol-breakdown-groups-showing]", groupStatus],
       ["[data-symbol-breakdown-groups-more]", groupButton],
     ]);
     for (let index = 0; index < 12; index += 1) {
-      controls.set(`[data-symbol-breakdown-evidence-list="${index}"]`, completeControls.list);
-      controls.set(`[data-symbol-breakdown-showing="${index}"]`, completeControls.status);
-      controls.set(`[data-symbol-breakdown-more="${index}"]`, completeControls.button);
+      const trade = snapshot.trades[index];
+      if (trade === undefined) throw new Error("Missing group test trade.");
+      const action = {
+        dataset: {
+          reviewTrade: trade.tradeSubjectId,
+          tradeReviewReportSource: "symbol-breakdown",
+        },
+      };
+      const row = {
+        dataset: { symbolBreakdownTrade: trade.tradeSubjectId },
+        querySelectorAll(selector: string): readonly typeof action[] {
+          expect(selector).toBe(".report-trade-action");
+          return [action];
+        },
+      };
+      const list = {
+        insertAdjacentHTML: (): never => { throw new Error("Unexpected append."); },
+        querySelectorAll(selector: string): readonly typeof row[] {
+          expect(selector).toBe("[data-symbol-breakdown-trade]");
+          return [row];
+        },
+      };
+      controls.set(`[data-symbol-breakdown-evidence-list="${index}"]`, list);
+      controls.set(`[data-symbol-breakdown-showing="${index}"]`, { textContent: "" });
+      controls.set(`[data-symbol-breakdown-more="${index}"]`, {
+        hidden: true,
+        textContent: "All trades shown",
+      });
     }
     const section = { querySelector: (selector: string): unknown => controls.get(selector) ?? null };
     const root = {
@@ -278,22 +294,39 @@ describe("symbol-breakdown presentation", () => {
     const inserted: string[] = [];
     const clicks: Array<() => void> = [];
     const focusedActions: number[] = [];
-    const actions = Array.from({ length: 56 }, (_, index) => ({
-      focus(options: FocusOptions): void {
-        expect(options).toEqual({ preventScroll: true });
-        focusedActions.push(index);
+    let renderedActionCount = 25;
+    const actions = Array.from({ length: 56 }, (_, index) => {
+      const trade = snapshot.trades[index];
+      if (trade === undefined) throw new Error("Missing contributor test trade.");
+      return {
+        dataset: {
+          reviewTrade: trade.tradeSubjectId,
+          tradeReviewReportSource: "symbol-breakdown",
+        },
+        focus(options: FocusOptions): void {
+          expect(options).toEqual({ preventScroll: true });
+          focusedActions.push(index);
+        },
+      };
+    });
+    const rows = actions.map((action) => ({
+      dataset: { symbolBreakdownTrade: action.dataset.reviewTrade },
+      querySelectorAll(selector: string): readonly typeof action[] {
+        expect(selector).toBe(".report-trade-action");
+        return [action];
       },
     }));
     const list = {
       insertAdjacentHTML(position: string, appendedHtml: string): void {
         expect(position).toBe("beforeend");
         inserted.push(appendedHtml);
+        renderedActionCount += appendedHtml.match(
+          /data-trade-review-report-source="symbol-breakdown"/g,
+        )?.length ?? 0;
       },
-      querySelectorAll(selector: string): readonly {
-        focus(options: FocusOptions): void;
-      }[] {
-        expect(selector).toBe(".report-trade-action");
-        return actions;
+      querySelectorAll(selector: string) {
+        expect(selector).toBe("[data-symbol-breakdown-trade]");
+        return rows.slice(0, renderedActionCount);
       },
     };
     const status = {

@@ -268,6 +268,262 @@ test(
 );
 
 test(
+  "symbol breakdown cannot be downgraded to an unscoped action and keeps its error visible",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await startDemo(page);
+    await page.evaluate(() => {
+      document.documentElement.dataset.testTextScale = "200";
+    });
+    await context.setOffline(true);
+    const storageBefore = await storageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const aapl = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
+    await aapl.locator(":scope > summary").click();
+    const action = aapl.locator("button[data-review-trade]");
+    await action.evaluate((element) => {
+      const section = element.closest("[data-symbol-breakdown]");
+      if (section === null) throw new Error("Symbol section is missing.");
+      element.setAttribute("data-review-trade", "demo-subject-amd");
+      element.removeAttribute("data-trade-review-report-source");
+      element.classList.remove("report-trade-action");
+      section.removeAttribute("data-symbol-breakdown");
+    });
+    await action.click();
+
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toHaveText(
+      "Hermes could not open this exact trade because its stable local identity is unavailable.",
+    );
+    await expect(error).toBeFocused();
+    await expectUnobscured(error);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    expect(await storageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "symbol breakdown binds repeated evidence to its exact ordered row",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await importRepeatedClosedTrades(page, 2);
+    await context.setOffline(true);
+    const storageBefore = await storageSnapshot(page);
+
+    const group = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
+    await group.locator(":scope > summary").click();
+    const rows = group.locator("[data-symbol-breakdown-trade]");
+    await expect(rows).toHaveCount(2);
+    await rows.evaluateAll((elements) => {
+      const first = elements[0];
+      const second = elements[1];
+      const firstAction = first?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      const secondAction = second?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      const firstId = first?.getAttribute("data-symbol-breakdown-trade");
+      const secondId = second?.getAttribute("data-symbol-breakdown-trade");
+      if (
+        first === undefined
+        || second === undefined
+        || firstAction === null
+        || firstAction === undefined
+        || secondAction === null
+        || secondAction === undefined
+        || firstId === null
+        || firstId === undefined
+        || secondId === null
+        || secondId === undefined
+      ) {
+        throw new Error("Repeated symbol evidence is incomplete.");
+      }
+      first.setAttribute("data-symbol-breakdown-trade", secondId);
+      firstAction.setAttribute("data-review-trade", secondId);
+      second.setAttribute("data-symbol-breakdown-trade", firstId);
+      secondAction.setAttribute("data-review-trade", firstId);
+    });
+    await rows.nth(0).locator("button[data-review-trade]").click();
+
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toBeFocused();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    expect(await storageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "symbol breakdown rejects a retained row after an earlier row is removed and retagged",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await importRepeatedClosedTrades(page, 2);
+    await context.setOffline(true);
+    const storageBefore = await storageSnapshot(page);
+
+    const group = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
+    await group.locator(":scope > summary").click();
+    const rows = group.locator("[data-symbol-breakdown-trade]");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toContainText("Trade 2 of 2");
+    await rows.evaluateAll((elements) => {
+      const first = elements[0];
+      const second = elements[1];
+      const firstId = first?.getAttribute("data-symbol-breakdown-trade");
+      const secondAction = second?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      if (
+        first === undefined
+        || second === undefined
+        || firstId === null
+        || firstId === undefined
+        || secondAction === null
+        || secondAction === undefined
+      ) {
+        throw new Error("Repeated symbol evidence is incomplete.");
+      }
+      first.remove();
+      second.setAttribute("data-symbol-breakdown-trade", firstId);
+      secondAction.setAttribute("data-review-trade", firstId);
+    });
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText("Trade 2 of 2");
+    await rows.nth(0).locator("button[data-review-trade]").click();
+
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toBeFocused();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    expect(await storageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "symbol breakdown binds a registered action to its original evidence row",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await importRepeatedClosedTrades(page, 2);
+    await context.setOffline(true);
+    const storageBefore = await storageSnapshot(page);
+
+    const group = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
+    await group.locator(":scope > summary").click();
+    const rows = group.locator("[data-symbol-breakdown-trade]");
+    await expect(rows).toHaveCount(2);
+    await rows.evaluateAll((elements) => {
+      const first = elements[0];
+      const second = elements[1];
+      const firstId = first?.getAttribute("data-symbol-breakdown-trade");
+      const firstAction = first?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      const replacement = second?.cloneNode(true) as HTMLElement | undefined;
+      const clonedAction = replacement?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      if (
+        first === undefined
+        || second === undefined
+        || firstId === null
+        || firstId === undefined
+        || firstAction === null
+        || firstAction === undefined
+        || replacement === undefined
+        || clonedAction === null
+        || clonedAction === undefined
+      ) {
+        throw new Error("Repeated symbol evidence is incomplete.");
+      }
+      clonedAction.remove();
+      replacement.setAttribute("data-symbol-breakdown-trade", firstId);
+      replacement.append(firstAction);
+      first.replaceWith(replacement);
+    });
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText("Trade 2 of 2");
+    await rows.nth(0).locator("button[data-review-trade]").click();
+
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toBeFocused();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    expect(await storageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "symbol row markers keep an unregistered clone fail-closed outside the section",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await importRepeatedClosedTrades(page, 2);
+    await context.setOffline(true);
+    const storageBefore = await storageSnapshot(page);
+
+    const group = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
+    await group.locator(":scope > summary").click();
+    const rows = group.locator("[data-symbol-breakdown-trade]");
+    await expect(rows).toHaveCount(2);
+    await rows.evaluateAll((elements) => {
+      const first = elements[0];
+      const second = elements[1];
+      const secondId = second?.getAttribute("data-symbol-breakdown-trade");
+      const clone = first?.cloneNode(true) as HTMLElement | undefined;
+      const action = clone?.querySelector<HTMLButtonElement>(
+        "button[data-review-trade]",
+      );
+      const destination = document.querySelector<HTMLElement>("#screen");
+      if (
+        first === undefined
+        || second === undefined
+        || secondId === null
+        || secondId === undefined
+        || clone === undefined
+        || action === null
+        || action === undefined
+        || destination === null
+      ) {
+        throw new Error("Repeated symbol evidence is incomplete.");
+      }
+      clone.dataset.testClonedSymbolRow = "true";
+      action.setAttribute("data-review-trade", secondId);
+      action.removeAttribute("data-trade-review-report-source");
+      action.classList.remove("report-trade-action");
+      destination.append(clone);
+    });
+    const clone = page.locator('[data-test-cloned-symbol-row="true"]');
+    await expect(clone).toContainText("Trade 1 of 2");
+    await clone.locator("button[data-review-trade]").click();
+
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toBeFocused();
+    await expectUnobscured(error);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    expect(await storageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
   "repeated symbol evidence stays distinguishable and focuses the first revealed action",
   async ({ page, context }) => {
     const externalRequests = logExternalRequests(page);

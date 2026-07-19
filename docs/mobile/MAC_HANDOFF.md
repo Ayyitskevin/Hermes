@@ -1009,13 +1009,17 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   VoiceOver announcement/order, hardware-keyboard focus, lifecycle, two-scene
   refresh, force-quit/relaunch, and 320/421-width 200% Dynamic Type are NOT RUN.
   Keep native acceptance held until every device procedure above is recorded.
-- Symbol Breakdown v1 has only Linux/Chromium definition, conservation,
-  navigation, continuation, restore, focus, and reflow evidence. Native
-  SQLCipher-derived cohort equality, same-symbol cross-account and Stock/ETF
-  collision behavior, VoiceOver announcement/order, hardware-keyboard focus,
-  background/foreground, force-quit/relaunch, two-scene refresh, and 320/421-
-  width 200% Dynamic Type are NOT RUN. Keep native acceptance held until the
-  procedure above records them without a durable or network write.
+- Symbol Breakdown v1 has Linux unit evidence for definition, fixed indexed-
+  cohort conservation, fail-closed inputs, and immutable output; matching-
+  runtime restore recomputation is proved by the Session-adapter Vitest, not a
+  browser archive journey. Chromium evidence covers navigation, continuation,
+  structural-origin and exact-row tamper rejection, chrome-safe focus, and
+  320/421px 200% reflow. Native SQLCipher-derived cohort equality, same-symbol
+  cross-account and Stock/ETF collision behavior, VoiceOver announcement/order,
+  hardware-keyboard focus, background/foreground, force-quit/relaunch, two-scene
+  refresh, and 320/421-width 200% Dynamic Type are NOT RUN. Keep native
+  acceptance held until the procedure above records them without a durable or
+  network write.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.

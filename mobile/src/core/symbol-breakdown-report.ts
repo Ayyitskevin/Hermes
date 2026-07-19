@@ -146,6 +146,58 @@ interface MutableSymbolGroup {
   readonly evidence: SymbolBreakdownTradeEvidence[];
 }
 
+interface CapturedSymbolBreakdownTrade {
+  readonly tradeSubjectId: TradePreview["tradeSubjectId"];
+  readonly accountLabel: TradePreview["accountLabel"];
+  readonly symbol: TradePreview["symbol"];
+  readonly assetClass: TradePreview["assetClass"];
+  readonly side: TradePreview["side"];
+  readonly tradedOn: TradePreview["tradedOn"];
+  readonly sessionLabel: TradePreview["sessionLabel"];
+  readonly status: TradePreview["status"];
+  readonly reviewStatus: TradePreview["reviewStatus"];
+}
+
+function ownSnapshotDataValue<Key extends keyof JournalWorkspaceSnapshot>(
+  snapshot: JournalWorkspaceSnapshot,
+  key: Key,
+): JournalWorkspaceSnapshot[Key] {
+  const descriptor = Object.getOwnPropertyDescriptor(snapshot, key);
+  if (descriptor === undefined || !("value" in descriptor)) {
+    throw new Error(
+      "Symbol-breakdown snapshot inputs must use own data properties.",
+    );
+  }
+  return descriptor.value as JournalWorkspaceSnapshot[Key];
+}
+
+function ownTradeDataValue<Key extends keyof TradePreview>(
+  trade: TradePreview,
+  key: Key,
+): TradePreview[Key] {
+  const descriptor = Object.getOwnPropertyDescriptor(trade, key);
+  if (descriptor === undefined || !("value" in descriptor)) {
+    throw new Error(
+      "Symbol-breakdown trade evidence must use own data properties.",
+    );
+  }
+  return descriptor.value as TradePreview[Key];
+}
+
+function captureTrade(trade: TradePreview): CapturedSymbolBreakdownTrade {
+  return {
+    tradeSubjectId: ownTradeDataValue(trade, "tradeSubjectId"),
+    accountLabel: ownTradeDataValue(trade, "accountLabel"),
+    symbol: ownTradeDataValue(trade, "symbol"),
+    assetClass: ownTradeDataValue(trade, "assetClass"),
+    side: ownTradeDataValue(trade, "side"),
+    tradedOn: ownTradeDataValue(trade, "tradedOn"),
+    sessionLabel: ownTradeDataValue(trade, "sessionLabel"),
+    status: ownTradeDataValue(trade, "status"),
+    reviewStatus: ownTradeDataValue(trade, "reviewStatus"),
+  };
+}
+
 function stableCompare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -186,7 +238,7 @@ function isValidStableIdentifier(value: unknown): value is string {
     && !hasControlCharacter(value);
 }
 
-function validatedSymbol(trade: TradePreview): string {
+function validatedSymbol(trade: CapturedSymbolBreakdownTrade): string {
   const symbol: unknown = trade.symbol;
   if (typeof symbol !== "string" || !SYMBOL_PATTERN.test(symbol)) {
     throw new Error(
@@ -196,7 +248,9 @@ function validatedSymbol(trade: TradePreview): string {
   return symbol;
 }
 
-function validatedAssetClass(trade: TradePreview): TradeAssetClass {
+function validatedAssetClass(
+  trade: CapturedSymbolBreakdownTrade,
+): TradeAssetClass {
   const assetClass: unknown = trade.assetClass;
   if (assetClass !== "stock" && assetClass !== "etf") {
     throw new Error(
@@ -206,7 +260,7 @@ function validatedAssetClass(trade: TradePreview): TradeAssetClass {
   return assetClass;
 }
 
-function validatedSide(trade: TradePreview): TradeSide {
+function validatedSide(trade: CapturedSymbolBreakdownTrade): TradeSide {
   const side: unknown = trade.side;
   if (side !== "long" && side !== "short") {
     throw new Error(
@@ -216,7 +270,7 @@ function validatedSide(trade: TradePreview): TradeSide {
   return side;
 }
 
-function validatedTradedOn(trade: TradePreview): string {
+function validatedTradedOn(trade: CapturedSymbolBreakdownTrade): string {
   const tradedOn: unknown = trade.tradedOn;
   if (
     typeof tradedOn !== "string"
@@ -240,7 +294,9 @@ function validatedTradedOn(trade: TradePreview): string {
   return tradedOn;
 }
 
-function validatedPositionStatus(trade: TradePreview): TradeStatus {
+function validatedPositionStatus(
+  trade: CapturedSymbolBreakdownTrade,
+): TradeStatus {
   const status: unknown = trade.status;
   if (status !== "open" && status !== "closed") {
     throw new Error(
@@ -251,7 +307,7 @@ function validatedPositionStatus(trade: TradePreview): TradeStatus {
 }
 
 function validatedReviewStatus(
-  trade: TradePreview,
+  trade: CapturedSymbolBreakdownTrade,
 ): TradePreview["reviewStatus"] {
   const reviewStatus: unknown = trade.reviewStatus;
   if (
@@ -267,7 +323,7 @@ function validatedReviewStatus(
 }
 
 function evidenceFromTrade(
-  trade: TradePreview,
+  trade: CapturedSymbolBreakdownTrade,
   symbol: string,
   assetClass: TradeAssetClass,
 ): SymbolBreakdownTradeEvidence {
@@ -301,10 +357,48 @@ function buildGroup(group: MutableSymbolGroup): SymbolBreakdownGroup {
 export function buildSymbolBreakdownReport(
   snapshot: JournalWorkspaceSnapshot,
 ): SymbolBreakdownReport {
+  const sourceTradeCollection = ownSnapshotDataValue(snapshot, "trades");
+  const timeZone = ownSnapshotDataValue(snapshot, "timeZone");
+  const accountLabel = ownSnapshotDataValue(snapshot, "accountLabel");
+  const periodLabel = ownSnapshotDataValue(snapshot, "periodLabel");
+  const sourceLengthDescriptor = Object.getOwnPropertyDescriptor(
+    sourceTradeCollection,
+    "length",
+  );
+  if (
+    !Array.isArray(sourceTradeCollection)
+    || sourceLengthDescriptor === undefined
+    || !("value" in sourceLengthDescriptor)
+    || !Number.isSafeInteger(sourceLengthDescriptor.value)
+    || sourceLengthDescriptor.value < 0
+  ) {
+    throw new Error(
+      "Symbol-breakdown source trades must be a dense indexed data cohort.",
+    );
+  }
+  const sourceTradeCount = sourceLengthDescriptor.value as number;
+  const sourceTradeReferences: TradePreview[] = [];
+  for (let index = 0; index < sourceTradeCount; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      sourceTradeCollection,
+      index,
+    );
+    if (
+      descriptor === undefined
+      || !("value" in descriptor)
+      || descriptor.value === undefined
+    ) {
+      throw new Error(
+        "Symbol-breakdown source trades must be a dense indexed data cohort.",
+      );
+    }
+    sourceTradeReferences.push(descriptor.value as TradePreview);
+  }
+  const sourceTrades = sourceTradeReferences.map(captureTrade);
   const mutableGroups = new Map<string, MutableSymbolGroup>();
   const tradeSubjectIds = new Set<string>();
 
-  for (const trade of snapshot.trades) {
+  for (const trade of sourceTrades) {
     if (
       !isValidStableIdentifier(trade.tradeSubjectId)
       || tradeSubjectIds.has(trade.tradeSubjectId)
@@ -338,10 +432,15 @@ export function buildSymbolBreakdownReport(
     (total, group) => total + group.evidence.length,
     0,
   );
+  const groupedTradeSubjectIds = groups.flatMap(
+    (group) => group.tradeSubjectIds,
+  );
   if (
-    tradeSubjectIds.size !== snapshot.trades.length
-    || groupedTradeCount !== snapshot.trades.length
-    || groupedEvidenceCount !== snapshot.trades.length
+    tradeSubjectIds.size !== sourceTrades.length
+    || groupedTradeCount !== sourceTrades.length
+    || groupedEvidenceCount !== sourceTrades.length
+    || groupedTradeSubjectIds.length !== sourceTrades.length
+    || new Set(groupedTradeSubjectIds).size !== sourceTrades.length
     || groups.some((group) => (
       group.tradeCount !== group.tradeSubjectIds.length
       || group.tradeCount !== group.evidence.length
@@ -360,10 +459,10 @@ export function buildSymbolBreakdownReport(
   const metadata: SymbolBreakdownReportMetadata = Object.freeze({
     version: SYMBOL_BREAKDOWN_REPORT_VERSION,
     definitionSha256: SYMBOL_BREAKDOWN_REPORT_DEFINITION_SHA256,
-    timeZone: snapshot.timeZone,
-    accountLabel: snapshot.accountLabel,
-    periodLabel: snapshot.periodLabel,
-    totalTradeCount: snapshot.trades.length,
+    timeZone,
+    accountLabel,
+    periodLabel,
+    totalTradeCount: sourceTrades.length,
     totalGroupCount: groups.length,
   });
 

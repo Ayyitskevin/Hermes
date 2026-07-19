@@ -907,22 +907,39 @@ symbol stored as Stock and ETF stays separate. Groups use symbol code-unit order
 and fixed Stock-before-ETF collision order; evidence uses traded date descending
 then stable subject ID.
 
-Canonical uppercase symbol, Stock/ETF asset class, Long/Short side, Open/Closed
-position state, Pending/Draft/Completed review state, real Gregorian YYYY-MM-DD
-from 1970 through 9999, and trimmed C0/C1-free subject identity validate or fail
+Before validation, the builder reads the snapshot trade collection once, captures
+its fixed dense indexed data cohort without consulting a custom iterator,
+captures every trade reference before reading any trade field, and reads every
+consumed scalar once. Every consumed snapshot field, indexed slot, and consumed
+trade field must be an own data property; accessors fail closed without
+invocation. Canonical
+uppercase symbol, Stock/ETF asset class, Long/Short side, Open/Closed position state,
+Pending/Draft/Completed review state, real Gregorian YYYY-MM-DD from 1970
+through 9999, and trimmed C0/C1-free subject identity then validate or fail
 closed without repair, dropping, or defaults. Position/review state is evidence
 only. Authored review content, Daily Journal state, result fields, and Trade
 Browser scope are not read. The builder is detached and deeply frozen; five-
 group and 25-contributor limits are transient presentation only. Otherwise
 indistinguishable repeated trades receive stable group-position labels, and
-each evidence page focuses its first newly revealed action. Activation rechecks
-one live section, exact group index and symbol/asset identity, one matching row
-and action, and current exact membership before opening. Exact stable-ID
-continuation returns ordinary close to its trigger and a save/reconciliation
-refresh to the Symbol Breakdown heading. The report calculates no P&L, rate,
-percentage, rank, comparison, reward, prediction, or advice. No report result
-enters SQLite, browser journal state, preferences, export/restore, archive shape,
-or report-input digests; restore recomputes exact equality from existing inputs.
+each evidence page focuses its first newly revealed action.
+
+At activation, any action structurally inside the one Symbol Breakdown section
+is a Symbol-origin action. Any action registered when rendered from that section
+remains Symbol-origin even if its source/class or ancestor section marker is
+removed or it is moved. Each rendered action
+is bound in memory to its original row element, group index, evidence ordinal,
+and stable subject ID. Activation rechecks that binding, the exact symbol/asset
+group, current row position, unique row/action membership, and current exact
+trade before opening. A registered action whose original row, ordinal, or
+identity no longer reconciles—and an unregistered clone retaining any Symbol-
+specific row, group, list, or card marker—fails visibly with chrome-safe focus
+and no write. Exact
+stable-ID continuation
+returns ordinary close to its trigger and a save/reconciliation refresh to the
+Symbol Breakdown heading. The report calculates no P&L, rate, percentage, rank,
+comparison, reward, prediction, or advice. No report result enters SQLite,
+browser journal state, preferences, export/restore, archive shape, or report-
+input digests; restore recomputes exact equality from existing inputs.
 The current ledger has no venue/listing identity, so later venue-aware grouping
 requires a separately versioned v2 definition rather than silently regrouping
 v1. No schema, store, archive, digest, native, dependency, or network boundary

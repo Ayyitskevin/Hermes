@@ -417,6 +417,147 @@ describe("symbol-breakdown report v1", () => {
     ]))).toThrow(message);
   });
 
+  it("rejects an accessor-backed source cohort without invoking it", () => {
+    let reads = 0;
+    const changingSnapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      get trades(): readonly TradePreview[] {
+        reads += 1;
+        return [cloneTrade(demoTrade("AAPL"), "accessor-cohort")];
+      },
+    };
+
+    expect(() => buildSymbolBreakdownReport(changingSnapshot))
+      .toThrow(/snapshot inputs must use own data properties/u);
+    expect(reads).toBe(0);
+  });
+
+  it("rejects a metadata accessor before it can mutate retained evidence", () => {
+    const first = cloneTrade(demoTrade("AAPL"), "metadata-first");
+    const second = { ...cloneTrade(demoTrade("MSFT"), "metadata-second") };
+    const originalSecondId = second.tradeSubjectId;
+    let reads = 0;
+    const mutatingSnapshot: JournalWorkspaceSnapshot = {
+      ...snapshot([first, second]),
+      get timeZone(): string {
+        reads += 1;
+        second.tradeSubjectId = "replacement-second";
+        return DEMO_WORKSPACE.timeZone;
+      },
+    };
+
+    expect(() => buildSymbolBreakdownReport(mutatingSnapshot))
+      .toThrow(/snapshot inputs must use own data properties/u);
+    expect(reads).toBe(0);
+    expect(second.tradeSubjectId).toBe(originalSecondId);
+  });
+
+  it("captures the exact indexed cohort without trusting its iterator", () => {
+    const trades = [
+      cloneTrade(demoTrade("AAPL"), "indexed-a"),
+      cloneTrade(demoTrade("MSFT"), "indexed-b"),
+    ];
+    let iteratorReads = 0;
+    Object.defineProperty(trades, Symbol.iterator, {
+      configurable: true,
+      value: function* manipulatedIterator(): Generator<TradePreview> {
+        iteratorReads += 1;
+        yield trades[0] as TradePreview;
+      },
+    });
+
+    const report = buildSymbolBreakdownReport(snapshot(trades));
+
+    expect(iteratorReads).toBe(0);
+    expect(report.metadata.totalTradeCount).toBe(2);
+    expect(report.groups.map((group) => group.symbol)).toEqual(["AAPL", "MSFT"]);
+  });
+
+  it("rejects an array-like cohort without invoking its length accessor", () => {
+    let reads = 0;
+    const arrayLike = {
+      0: cloneTrade(demoTrade("AAPL"), "array-like"),
+      get length(): number {
+        reads += 1;
+        return 1;
+      },
+    } as unknown as readonly TradePreview[];
+
+    expect(() => buildSymbolBreakdownReport({
+      ...DEMO_WORKSPACE,
+      trades: arrayLike,
+    })).toThrow(/dense indexed data cohort/u);
+    expect(reads).toBe(0);
+  });
+
+  it("rejects an accessor-backed indexed slot without invoking it", () => {
+    const trade = cloneTrade(demoTrade("AAPL"), "accessor-slot");
+    const trades = [trade];
+    let reads = 0;
+    Object.defineProperty(trades, "0", {
+      configurable: true,
+      enumerable: true,
+      get(): TradePreview {
+        reads += 1;
+        return trade;
+      },
+    });
+
+    expect(() => buildSymbolBreakdownReport(snapshot(trades)))
+      .toThrow(/dense indexed data cohort/u);
+    expect(reads).toBe(0);
+  });
+
+  it("rejects an inherited value in a sparse indexed cohort", () => {
+    const trades = new Array<TradePreview>(2);
+    trades[0] = cloneTrade(demoTrade("AAPL"), "dense-first");
+    const inherited = Object.create(Array.prototype) as TradePreview[];
+    inherited[1] = cloneTrade(demoTrade("MSFT"), "inherited-second");
+    Object.setPrototypeOf(trades, inherited);
+
+    expect(() => buildSymbolBreakdownReport(snapshot(trades)))
+      .toThrow(/dense indexed data cohort/u);
+  });
+
+  it("rejects a trade accessor before it can replace a later reference", () => {
+    const first = cloneTrade(demoTrade("AAPL"), "reference-first");
+    const originalSecond = cloneTrade(demoTrade("MSFT"), "reference-original");
+    const replacementSecond = cloneTrade(demoTrade("AMD"), "reference-replacement");
+    const trades = [first, originalSecond];
+    let symbolReads = 0;
+    Object.defineProperty(first, "symbol", {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        symbolReads += 1;
+        trades[1] = replacementSecond;
+        return "AAPL";
+      },
+    });
+
+    expect(() => buildSymbolBreakdownReport(snapshot(trades)))
+      .toThrow(/own data properties/u);
+    expect(symbolReads).toBe(0);
+    expect(trades[1]).toBe(originalSecond);
+  });
+
+  it("rejects an accessor-backed stable identity without invoking it", () => {
+    const trade = cloneTrade(demoTrade("AAPL"), "accessor-identity");
+    let reads = 0;
+    Object.defineProperty(trade, "tradeSubjectId", {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        reads += 1;
+        return "accessor-subject";
+      },
+    });
+
+    expect(() => buildSymbolBreakdownReport(snapshot([trade])))
+      .toThrow(/own data properties/u);
+    expect(reads).toBe(0);
+  });
+
   it("returns detached deeply frozen output and an empty dynamic cohort", () => {
     const mutable = { ...cloneTrade(demoTrade("AAPL"), "mutable") };
     const trades = [mutable];

@@ -122,6 +122,65 @@ export function reportTradeAction(
   return `<button class="secondary-button report-trade-action" type="button" data-review-trade="${escapeHtml(trade.tradeSubjectId)}" data-trade-review-report-source="${source}" aria-haspopup="dialog" aria-label="${escapeHtml(accessibleName)}">Open trade</button>`;
 }
 
+interface SymbolBreakdownReviewActionIdentity {
+  readonly tradeSubjectId: string;
+  readonly groupIndex: number;
+  readonly evidenceIndex: number;
+  readonly evidenceRow: HTMLElement;
+}
+
+const symbolBreakdownReviewActionIdentities = new WeakMap<
+  HTMLButtonElement,
+  SymbolBreakdownReviewActionIdentity
+>();
+
+const SYMBOL_BREAKDOWN_ORIGIN_SELECTOR = [
+  "[data-symbol-breakdown]",
+  "[data-symbol-breakdown-trade]",
+  "[data-symbol-breakdown-group-index]",
+  "[data-symbol-breakdown-evidence-list]",
+  ".symbol-breakdown-card",
+  ".symbol-breakdown-group",
+  ".symbol-breakdown-evidence-list",
+  ".symbol-breakdown-evidence",
+].join(", ");
+
+export function registerSymbolBreakdownReviewAction(
+  trigger: HTMLButtonElement,
+  evidenceRow: HTMLElement,
+  tradeSubjectId: string,
+  groupIndex: number,
+  evidenceIndex: number,
+): void {
+  if (
+    tradeSubjectId.length === 0
+    || !Number.isSafeInteger(groupIndex)
+    || groupIndex < 0
+    || !Number.isSafeInteger(evidenceIndex)
+    || evidenceIndex < 0
+  ) {
+    throw new Error("Symbol-breakdown review identity is invalid.");
+  }
+  const existing = symbolBreakdownReviewActionIdentities.get(trigger);
+  if (
+    existing !== undefined
+    && (
+      existing.tradeSubjectId !== tradeSubjectId
+      || existing.groupIndex !== groupIndex
+      || existing.evidenceIndex !== evidenceIndex
+      || existing.evidenceRow !== evidenceRow
+    )
+  ) {
+    throw new Error("A symbol-breakdown review action changed identity.");
+  }
+  symbolBreakdownReviewActionIdentities.set(trigger, Object.freeze({
+    tradeSubjectId,
+    groupIndex,
+    evidenceIndex,
+    evidenceRow,
+  }));
+}
+
 export function parseReviewList(value: string): readonly string[] {
   return value
     .split(/[\n,]/u)
@@ -652,52 +711,18 @@ function showTradeReviewOpenError(
 ): void {
   root.querySelector("[data-trade-review-open-error]")?.remove();
   const error = document.createElement("p");
-  error.className = "form-error";
+  error.className = "form-error trade-review-open-error";
   error.dataset.tradeReviewOpenError = "true";
   error.setAttribute("role", "alert");
   error.tabIndex = -1;
   error.textContent = "Hermes could not open this exact trade because its stable local identity is unavailable.";
   const dashboardCard = trigger.closest<HTMLElement>(".review-progress-card");
   if (dashboardCard !== null && root.contains(dashboardCard)) {
-    error.classList.add("trade-review-open-error");
     dashboardCard.append(error);
-    error.scrollIntoView({ behavior: "auto", block: "center" });
-    const topbar = root.querySelector<HTMLElement>(".topbar");
-    const topbarRect = topbar?.getBoundingClientRect();
-    const topbarPosition = topbar === null
-      ? ""
-      : window.getComputedStyle(topbar).position;
-    const topBoundary = (
-      (topbarPosition === "sticky" || topbarPosition === "fixed")
-      && topbarRect !== undefined
-      && topbarRect.bottom > 0
-    ) ? topbarRect.bottom : 0;
-    const tabbar = root.querySelector<HTMLElement>(".tabbar");
-    const tabbarRect = tabbar?.getBoundingClientRect();
-    const tabbarPosition = tabbar === null
-      ? ""
-      : window.getComputedStyle(tabbar).position;
-    const bottomBoundary = (
-      (tabbarPosition === "sticky" || tabbarPosition === "fixed")
-      && tabbarRect !== undefined
-      && tabbarRect.top < window.innerHeight
-    ) ? tabbarRect.top : window.innerHeight;
-    const margin = 8;
-    const minimumTop = topBoundary + margin;
-    const maximumBottom = bottomBoundary - margin;
-    const errorRect = error.getBoundingClientRect();
-    const availableHeight = Math.max(0, maximumBottom - minimumTop);
-    const desiredTop = errorRect.height <= availableHeight
-      ? Math.min(Math.max(errorRect.top, minimumTop), maximumBottom - errorRect.height)
-      : minimumTop;
-    const delta = errorRect.top - desiredTop;
-    if (Math.abs(delta) > 1) {
-      window.scrollBy({ top: delta, left: 0, behavior: "auto" });
-    }
   } else {
     trigger.insertAdjacentElement("afterend", error);
   }
-  error.focus({ preventScroll: true });
+  focusChromeSafeElement(root, error, "nearest");
 }
 
 function focusAfterTradeReviewRefresh(
@@ -798,11 +823,20 @@ function matchesSymbolBreakdownEvidence(
   const groupIndex = Number(groupIndexText);
   if (!Number.isSafeInteger(groupIndex)) return false;
 
+  const registeredIdentity = symbolBreakdownReviewActionIdentities.get(trigger);
+  if (
+    registeredIdentity === undefined
+    || registeredIdentity.groupIndex !== groupIndex
+  ) {
+    return false;
+  }
   const expectedGroup = buildSymbolBreakdownReport(snapshot).groups[groupIndex];
   if (expectedGroup === undefined) return false;
-  const expectedEvidence = expectedGroup.evidence.filter((candidate) => (
-    candidate.tradeSubjectId === trade.tradeSubjectId
+  const groupRows = Array.from(group.querySelectorAll<HTMLElement>(
+    "[data-symbol-breakdown-trade]",
   ));
+  const evidenceIndex = groupRows.indexOf(evidence);
+  const expectedEvidence = expectedGroup.evidence[registeredIdentity.evidenceIndex];
   const matchingRows = Array.from(section.querySelectorAll<HTMLElement>(
     "[data-symbol-breakdown-trade]",
   )).filter((row) => (
@@ -814,12 +848,19 @@ function matchesSymbolBreakdownEvidence(
     action.dataset.reviewTrade === trade.tradeSubjectId
   ));
 
-  return expectedEvidence.length === 1
-    && expectedEvidence[0]?.symbol === trade.symbol
-    && expectedEvidence[0]?.assetClass === trade.assetClass
+  return registeredIdentity.tradeSubjectId === trade.tradeSubjectId
+    && registeredIdentity.evidenceIndex === evidenceIndex
+    && registeredIdentity.evidenceRow === evidence
+    && expectedEvidence !== undefined
+    && expectedEvidence.tradeSubjectId === trade.tradeSubjectId
+    && expectedEvidence.symbol === trade.symbol
+    && expectedEvidence.assetClass === trade.assetClass
     && group.dataset.symbolBreakdownSymbol === expectedGroup.symbol
     && group.dataset.symbolBreakdownAssetClass === expectedGroup.assetClass
     && evidence.dataset.symbolBreakdownTrade === trade.tradeSubjectId
+    && groupRows.length <= expectedGroup.evidence.length
+    && groupRows[registeredIdentity.evidenceIndex]
+      === registeredIdentity.evidenceRow
     && matchingRows.length === 1
     && matchingRows[0] === evidence
     && matchingActions.length === 1
@@ -844,11 +885,16 @@ export function bindTradeReviewActions(
       if (trigger === null || !root.contains(trigger)) return;
       const reportSource = tradeReviewReportSource(trigger);
       const trade = resolveTradeReviewTrigger(snapshot, trigger);
-      const reportEvidenceMatches = reportSource !== "symbol-breakdown"
-        || (
+      const symbolBreakdownOrigin = (
+        symbolBreakdownReviewActionIdentities.has(trigger)
+        || trigger.closest(SYMBOL_BREAKDOWN_ORIGIN_SELECTOR) !== null
+      );
+      const reportEvidenceMatches = symbolBreakdownOrigin
+        ? reportSource === "symbol-breakdown" && (
           trade !== null
           && matchesSymbolBreakdownEvidence(root, snapshot, trigger, trade)
-        );
+        )
+        : reportSource !== "symbol-breakdown";
       const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
       const dashboardReviewOrigin = dashboardReviewProgressOrigin(
         root,

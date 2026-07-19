@@ -394,14 +394,25 @@ observed plugin/device behavior:
   in its exact `(symbol, assetClass)` group. The same symbol and asset class
   merges across accounts; an identical symbol stored as Stock and ETF remains
   separate, with groups ordered by symbol code unit then fixed Stock before ETF.
-  Evidence uses traded date descending then stable subject ID. Canonical symbol,
-  asset class, side, position/review state, real 1970–9999 Gregorian date, and
-  subject identity validate or fail closed without repair. Presentation reveals
-  five groups and 25 contributors per action, gives otherwise indistinguishable
+  Evidence uses traded date descending then stable subject ID. The builder
+  captures one fixed dense indexed data cohort without using a custom iterator,
+  captures every trade reference before reading any trade field, and reads each
+  consumed scalar once. Consumed snapshot fields, indexed slots, and consumed
+  trade fields must be own data properties; accessors fail closed without
+  invocation. Canonical symbol,
+  asset class, side, position/review state, real 1970–9999 Gregorian date, and subject
+  identity validate or fail closed without repair. Presentation reveals five
+  groups and 25 contributors per action, gives otherwise indistinguishable
   repeated trades stable group-position labels, and focuses each first newly
-  revealed action. Activation rechecks the unique live group, row, action, and
-  current exact membership before opening the stable-ID trade, with
-  trigger/heading return after close or save. Trade Browser
+  revealed action. Each rendered review action is bound in memory to its original
+  row element, group, evidence ordinal, and stable subject ID. Structural or
+  registered Symbol origin cannot be downgraded by stripping action/section
+  markers or moving the registered action. Activation rechecks the binding, exact
+  group and current row position, unique row/action membership, and current trade.
+  A mismatched registered row/ordinal/identity or an unregistered clone retaining
+  any Symbol-specific row/group/list/card marker fails visibly with chrome-safe
+  focus and no write. Valid continuation
+  returns to the trigger after close and the heading after save. Trade Browser
   scope, authored review content, Daily Journal state, and result fields are not
   consumed; restore recomputes identical version, checksum, groups, counts,
   order, and identities. No P&L, percentage, rate, rank, comparison, reward,

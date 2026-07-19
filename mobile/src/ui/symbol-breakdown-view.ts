@@ -7,7 +7,10 @@ import {
 } from "../core/symbol-breakdown-report";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot } from "../core/types";
-import { reportTradeAction } from "./trade-review-sheet";
+import {
+  registerSymbolBreakdownReviewAction,
+  reportTradeAction,
+} from "./trade-review-sheet";
 
 export const SYMBOL_BREAKDOWN_EVIDENCE_PAGE_SIZE = 25 as const;
 export const SYMBOL_BREAKDOWN_GROUP_PAGE_SIZE = 5 as const;
@@ -66,6 +69,55 @@ function validatedEvidence(
     throw new Error("Symbol-breakdown contributor evidence is inconsistent.");
   }
   return group.evidence;
+}
+
+function registerEvidenceActions(
+  list: HTMLElement,
+  contributors: readonly SymbolBreakdownTradeEvidence[],
+  groupIndex: number,
+  end: number,
+): readonly HTMLButtonElement[] {
+  const rows = Array.from(list.querySelectorAll<HTMLElement>(
+    "[data-symbol-breakdown-trade]",
+  ));
+  if (rows.length !== end) {
+    throw new Error(
+      `Symbol-breakdown evidence rows are incomplete for group ${groupIndex}.`,
+    );
+  }
+  const actions: HTMLButtonElement[] = [];
+  for (let index = 0; index < end; index += 1) {
+    const row = rows[index];
+    const evidence = contributors[index];
+    const rowActions = row === undefined
+      ? []
+      : Array.from(row.querySelectorAll<HTMLButtonElement>(
+        ".report-trade-action",
+      ));
+    const action = rowActions[0];
+    if (
+      row === undefined
+      || evidence === undefined
+      || row.dataset.symbolBreakdownTrade !== evidence.tradeSubjectId
+      || rowActions.length !== 1
+      || action === undefined
+      || action.dataset.reviewTrade !== evidence.tradeSubjectId
+      || action.dataset.tradeReviewReportSource !== "symbol-breakdown"
+    ) {
+      throw new Error(
+        `Symbol-breakdown evidence action ${index} is inconsistent.`,
+      );
+    }
+    registerSymbolBreakdownReviewAction(
+      action,
+      row,
+      evidence.tradeSubjectId,
+      groupIndex,
+      index,
+    );
+    actions.push(action);
+  }
+  return actions;
 }
 
 function evidenceTemplate(
@@ -227,6 +279,7 @@ function bindEvidenceGroup(
   if (list === null || status === null || button === null) {
     throw new Error(`Symbol-breakdown evidence controls are incomplete for group ${groupIndex}.`);
   }
+  registerEvidenceActions(list, contributors, groupIndex, shown);
   if (shown >= contributors.length) return;
 
   button.addEventListener("click", () => {
@@ -248,9 +301,13 @@ function bindEvidenceGroup(
         ))
         .join(""),
     );
-    const firstRevealedAction = Array.from(
-      list.querySelectorAll<HTMLButtonElement>(".report-trade-action"),
-    )[previous];
+    const actions = registerEvidenceActions(
+      list,
+      contributors,
+      groupIndex,
+      next,
+    );
+    const firstRevealedAction = actions[previous];
     if (firstRevealedAction === undefined) {
       throw new Error(
         "Symbol-breakdown evidence page " + previous + " cannot receive focus.",

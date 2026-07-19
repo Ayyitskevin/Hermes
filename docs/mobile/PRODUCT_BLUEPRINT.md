@@ -1182,6 +1182,21 @@ integration, full-workspace isolation, and restore equality described above.
 The Reports surface now has eleven semantic targets and nine governed reports;
 the same five write-capable exceptions remain fixed.
 
+A post-publication Symbol Breakdown hardening milestone does not add another
+Slice D increment. It captures every reference in one dense indexed source
+cohort before reading any trade field; consumed snapshot fields, indexed slots,
+and consumed trade fields must be own data properties, so accessors fail
+without invocation. It then binds each
+rendered review action in memory to its original row element, group, evidence
+ordinal, and stable subject identity. Structural or registered Symbol origin,
+exact current row position, unique membership, and the registered identity must
+all reconcile. Stripping markers or moving a registered action cannot downgrade
+its Symbol origin. A source, binding, group, row-position, membership, or identity
+mismatch—and an unregistered clone retaining a Symbol-specific marker—fails
+visibly before any writable review opens.
+The v1 definition/checksum, grouping outputs, persistence, archive/digest shape,
+dependencies, native surface, and network boundary remain unchanged.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
