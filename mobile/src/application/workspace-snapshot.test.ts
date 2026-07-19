@@ -9,6 +9,7 @@ import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import type {
   JournalLedgerSnapshot,
@@ -887,6 +888,7 @@ describe("journal workspace snapshot", () => {
     expect(buildSetupPerformanceReport(rescored)).toEqual(buildSetupPerformanceReport(snapshot));
     expect(buildMistakePatternsReport(rescored)).toEqual(buildMistakePatternsReport(snapshot));
     expect(buildEmotionPatternsReport(rescored)).toEqual(buildEmotionPatternsReport(snapshot));
+    expect(buildSymbolBreakdownReport(rescored)).toEqual(buildSymbolBreakdownReport(snapshot));
     expect(buildTagPatternsReport(rescored)).toEqual(buildTagPatternsReport(snapshot));
     expect(() => workspaceSnapshotFromLedger(ledger({
       dailyEntries: [...dailyEntries, { ...dailyEntries[0]!, id: "duplicate-head" }],

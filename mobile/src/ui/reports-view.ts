@@ -31,6 +31,10 @@ import {
   setupPerformanceSection,
 } from "./setup-performance-view";
 import {
+  bindSymbolBreakdownView,
+  symbolBreakdownSection,
+} from "./symbol-breakdown-view";
+import {
   bindTagPatternsView,
   tagPatternsSection,
 } from "./tag-patterns-view";
@@ -46,6 +50,7 @@ const REPORT_TARGET_IDS = Object.freeze([
   "performance-summary-title",
   "review-session-coverage-title",
   "direction-mix-title",
+  "symbol-breakdown-title",
   "opening-weekday-mix-title",
   "plan-check-title",
   "mistake-patterns-title",
@@ -64,6 +69,7 @@ function reportNavigation(): string {
       <li><a class="report-navigation-link" href="#cumulative-result-title" data-report-target="cumulative-result-title">Journal curve</a></li>
       <li><a class="report-navigation-link" href="#review-session-coverage-title" data-report-target="review-session-coverage-title">Review session coverage</a></li>
       <li><a class="report-navigation-link" href="#direction-mix-title" data-report-target="direction-mix-title">Direction mix</a></li>
+      <li><a class="report-navigation-link" href="#symbol-breakdown-title" data-report-target="symbol-breakdown-title">Symbol breakdown</a></li>
       <li><a class="report-navigation-link" href="#opening-weekday-mix-title" data-report-target="opening-weekday-mix-title">Opening weekday mix</a></li>
       <li><a class="report-navigation-link" href="#plan-check-title" data-report-target="plan-check-title">Plan check</a></li>
       <li><a class="report-navigation-link" href="#mistake-patterns-title" data-report-target="mistake-patterns-title">Mistake patterns</a></li>
@@ -388,6 +394,7 @@ export function reportsView(snapshot: JournalWorkspaceSnapshot): string {
     </section>
     ${reviewSessionCoverageSection(snapshot)}
     ${directionMixSection(snapshot)}
+    ${symbolBreakdownSection(snapshot)}
     ${openingWeekdayMixSection(snapshot)}
     ${planCheckSection(snapshot)}
     ${mistakePatternsSection(snapshot)}
@@ -404,6 +411,7 @@ export function bindReportsView(
   bindReportNavigation(root);
   bindReviewSessionCoverageView(root, snapshot);
   bindDirectionMixView(root, snapshot);
+  bindSymbolBreakdownView(root, snapshot);
   bindOpeningWeekdayMixView(root, snapshot);
   bindMistakePatternsView(root, snapshot);
   bindEmotionPatternsView(root, snapshot);

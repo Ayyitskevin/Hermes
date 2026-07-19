@@ -26,6 +26,11 @@ const REPORT_DESTINATIONS = [
     returnLink: "[data-direction-mix] > .section-title .report-menu-link",
   },
   {
+    link: "Symbol breakdown",
+    target: "#symbol-breakdown-title",
+    returnLink: "[data-symbol-breakdown] > .section-title .report-menu-link",
+  },
+  {
     link: "Opening weekday mix",
     target: "#opening-weekday-mix-title",
     returnLink:
@@ -145,6 +150,25 @@ async function reportFingerprint(page: Page): Promise<unknown> {
           "[data-direction-mix-trade]",
           "data-direction-mix-trade",
         ),
+      },
+      symbols: {
+        metadata: text("[data-symbol-breakdown] .symbol-breakdown-meta"),
+        groups: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            "[data-symbol-breakdown-group-index] > summary",
+          ),
+        ).map((summary) => summary.textContent?.replace(/\s+/gu, " ").trim()),
+        evidence: attributes(
+          "[data-symbol-breakdown-trade]",
+          "data-symbol-breakdown-trade",
+        ),
+        actions: Array.from(document.querySelectorAll<HTMLElement>(
+          "[data-symbol-breakdown-trade] .report-trade-action",
+        )).map((action) => [
+          action.getAttribute("data-review-trade"),
+          action.getAttribute("data-trade-review-report-source"),
+          action.getAttribute("aria-label"),
+        ]),
       },
       openingWeekday: {
         metadata: text(
@@ -322,6 +346,9 @@ test(
     const directionGroup = page.locator(
       '[data-direction-mix-group="long"]',
     );
+    const symbolGroup = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
     );
@@ -347,6 +374,7 @@ test(
       await reviewSessionGroups.nth(index).locator(":scope > summary").click();
     }
     await directionGroup.locator("summary").click();
+    await symbolGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
@@ -357,6 +385,7 @@ test(
       await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
     }
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
@@ -388,6 +417,7 @@ test(
       await expect(reviewSessionGroups.nth(index)).toHaveAttribute("open", "");
     }
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
@@ -972,6 +1002,7 @@ test(
     const summaries = page.locator([
       "[data-review-session-coverage-group] > summary",
       "[data-direction-mix-group] > summary",
+      "[data-symbol-breakdown-group-index] > summary",
       "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
@@ -1006,6 +1037,8 @@ test(
         "[data-review-session-coverage] *",
         "[data-direction-mix]",
         "[data-direction-mix] *",
+        "[data-symbol-breakdown]",
+        "[data-symbol-breakdown] *",
         "[data-opening-weekday-mix]",
         "[data-opening-weekday-mix] *",
         "[data-plan-check]",
@@ -1066,6 +1099,7 @@ test(
       '[data-review-session-coverage-group="current_streak"]',
     );
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
+    const symbolGroup = page.locator('[data-symbol-breakdown-group-index="0"]');
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
     );
@@ -1079,6 +1113,7 @@ test(
     );
     await reviewSessionGroup.locator(":scope > summary").click();
     await directionGroup.locator(":scope > summary").click();
+    await symbolGroup.locator(":scope > summary").click();
     await openingWeekdayGroup.locator(":scope > summary").click();
     await followedGroup.locator(":scope > summary").click();
     await mistakeGroup.locator(":scope > summary").click();
@@ -1086,6 +1121,7 @@ test(
     await tagGroup.locator(":scope > summary").click();
     await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(followedGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
@@ -1096,6 +1132,7 @@ test(
       "a[data-report-target]",
       "[data-review-session-coverage-group] > summary",
       "[data-direction-mix-group] > summary",
+      "[data-symbol-breakdown-group-index] > summary",
       "[data-opening-weekday-mix-group] > summary",
       "[data-plan-check-group] > summary",
       "[data-mistake-patterns-group-index] > summary",
@@ -1104,6 +1141,7 @@ test(
       "[data-setup-performance-group-index] > summary",
       '[data-review-session-coverage-group="current_streak"][open] .report-trade-action',
       '[data-direction-mix-group="long"][open] .report-trade-action',
+      '[data-symbol-breakdown-group-index="0"][open] .report-trade-action',
       '[data-opening-weekday-mix-group="wednesday"][open] .report-trade-action',
       '[data-plan-check-group="followed"][open] .report-trade-action',
       '[data-mistake-patterns-group-index="0"][open] .report-trade-action',
@@ -1168,6 +1206,7 @@ test(
         "[data-report-overview]",
         "[data-review-session-coverage]",
         "[data-direction-mix]",
+        "[data-symbol-breakdown]",
         "[data-opening-weekday-mix]",
         "[data-plan-check]",
         "[data-mistake-patterns]",
@@ -1211,6 +1250,9 @@ test(
       '[data-review-session-coverage-group="current_streak"]',
     );
     const directionGroup = page.locator('[data-direction-mix-group="long"]');
+    const symbolGroup = page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+    );
     const openingWeekdayGroup = page.locator(
       '[data-opening-weekday-mix-group="wednesday"]',
     );
@@ -1221,6 +1263,7 @@ test(
     const setupGroup = page.locator('[data-setup-performance-group-index="0"]');
     await reviewSessionGroup.locator("summary").click();
     await directionGroup.locator("summary").click();
+    await symbolGroup.locator("summary").click();
     await openingWeekdayGroup.locator("summary").click();
     await planGroup.locator("summary").click();
     await mistakeGroup.locator("summary").click();
@@ -1229,6 +1272,7 @@ test(
     await setupGroup.locator("summary").click();
     await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");
@@ -1473,6 +1517,7 @@ test(
 
     await expect(reviewSessionGroup).toHaveAttribute("open", "");
     await expect(directionGroup).toHaveAttribute("open", "");
+    await expect(symbolGroup).toHaveAttribute("open", "");
     await expect(openingWeekdayGroup).toHaveAttribute("open", "");
     await expect(planGroup).toHaveAttribute("open", "");
     await expect(mistakeGroup).toHaveAttribute("open", "");

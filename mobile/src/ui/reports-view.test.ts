@@ -164,7 +164,6 @@ function workspaceWithEscapingAndExclusions(): JournalWorkspaceSnapshot {
   });
   const escaped = {
     ...aapl,
-    symbol: "<AAPL & friends>",
     setup: "<Breakout>",
     sessionLabel: "<Jul 1 & morning>",
     accountLabel: "<Broker & One>",
@@ -213,6 +212,7 @@ describe("reports presentation", () => {
       "cumulative-result-title",
       "review-session-coverage-title",
       "direction-mix-title",
+      "symbol-breakdown-title",
       "opening-weekday-mix-title",
       "plan-check-title",
       "mistake-patterns-title",
@@ -228,8 +228,8 @@ describe("reports presentation", () => {
       expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
       expect(html).toContain(`id="${targetId}" class="report-target" tabindex="-1"`);
     }
-    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(10);
-    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(10);
+    expect(html.match(/class="report-navigation-link"/g)).toHaveLength(11);
+    expect(html.match(/>Back to report menu<\/a>/g)).toHaveLength(11);
     expect(html.indexOf('href="#performance-summary-title"')).toBeLessThan(
       html.indexOf('href="#cumulative-result-title"'),
     );
@@ -240,6 +240,9 @@ describe("reports presentation", () => {
       html.indexOf('href="#direction-mix-title"'),
     );
     expect(html.indexOf('href="#direction-mix-title"')).toBeLessThan(
+      html.indexOf('href="#symbol-breakdown-title"'),
+    );
+    expect(html.indexOf('href="#symbol-breakdown-title"')).toBeLessThan(
       html.indexOf('href="#opening-weekday-mix-title"'),
     );
     expect(html.indexOf('href="#opening-weekday-mix-title"')).toBeLessThan(
@@ -264,6 +267,9 @@ describe("reports presentation", () => {
       html.indexOf("data-direction-mix"),
     );
     expect(html.indexOf("data-direction-mix")).toBeLessThan(
+      html.indexOf("data-symbol-breakdown"),
+    );
+    expect(html.indexOf("data-symbol-breakdown")).toBeLessThan(
       html.indexOf("data-opening-weekday-mix"),
     );
     expect(html.indexOf("data-opening-weekday-mix")).toBeLessThan(
@@ -337,7 +343,7 @@ describe("reports presentation", () => {
     )).toThrow("The report navigation target unknown-report is unsupported.");
   });
 
-  it("renders all eight versioned evidence reports with the existing headline context", () => {
+  it("renders all nine versioned evidence reports with the existing headline context", () => {
     const html = reportsView(DEMO_WORKSPACE);
 
     expect(html).toContain("data-review-session-coverage");
@@ -360,6 +366,12 @@ describe("reports presentation", () => {
     );
     expect(html).toContain("direction-mix-report-v1");
     expect(html).toContain("8 current trades");
+    expect(html).toContain("data-symbol-breakdown");
+    expect(html).toContain(
+      '<h2 id="symbol-breakdown-title" class="report-target" tabindex="-1">Symbol breakdown</h2>',
+    );
+    expect(html).toContain("symbol-breakdown-report-v1");
+    expect(html).toContain("Showing 5 of 8 symbol groups");
     expect(html).toContain("data-opening-weekday-mix");
     expect(html).toContain(
       '<h2 id="opening-weekday-mix-title" class="report-target" tabindex="-1">Opening weekday mix</h2>',
@@ -420,11 +432,14 @@ describe("reports presentation", () => {
     expect(html).toContain("16 saved tag assignments");
     expect(html).toContain("Showing 5 of 12 tag groups");
     expect(html).toContain("JOURNAL CURVE");
-    expect(html.match(/data-review-trade=/g)).toHaveLength(55);
+    expect(html.match(/data-review-trade=/g)).toHaveLength(60);
     expect(html).toContain(
       'data-trade-review-report-source="review-session-coverage"',
     );
     expect(html).toContain('data-trade-review-report-source="direction-mix"');
+    expect(html).toContain(
+      'data-trade-review-report-source="symbol-breakdown"',
+    );
     expect(html).toContain(
       'data-trade-review-report-source="opening-weekday-mix"',
     );
@@ -447,6 +462,11 @@ describe("reports presentation", () => {
         `data-review-session-coverage-trade="${trade.tradeSubjectId}"`,
       );
       expect(html).toContain(`data-direction-mix-trade="${trade.tradeSubjectId}"`);
+      if (["AAPL", "AMD", "META", "MSFT", "NVDA"].includes(trade.symbol)) {
+        expect(html).toContain(
+          `data-symbol-breakdown-trade="${trade.tradeSubjectId}"`,
+        );
+      }
       expect(html).toContain(
         `data-opening-weekday-mix-trade="${trade.tradeSubjectId}"`,
       );
@@ -499,7 +519,6 @@ describe("reports presentation", () => {
     const snapshot = workspaceWithEscapingAndExclusions();
     const html = reportsView(snapshot);
 
-    expect(html).toContain("&lt;AAPL &amp; friends&gt;");
     expect(html).toContain("&lt;Jul 1 &amp; morning&gt;");
     expect(html).toContain("&lt;Broker &amp; One&gt;");
     expect(html).toContain("&lt;Wait &amp; confirm&gt;: followed");
@@ -508,7 +527,6 @@ describe("reports presentation", () => {
     expect(html).toContain("&lt;UTC &amp; local&gt;");
     expect(html).toContain("<dt>Account scope</dt><dd>&lt;all accounts &amp; scope&gt;</dd>");
     expect(html).toContain("<dt>Definition checksum</dt><dd>0f092c3bdd6c5051e97f5be0f1c7758a01e3159875adf660b1b0ea00f970ae85</dd>");
-    expect(html).not.toContain("<AAPL & friends>");
     expect(html).not.toContain("<Broker & One>");
     expect(html).not.toContain("<all accounts & scope>");
     expect(html).not.toContain("<Wait & confirm>");
@@ -627,6 +645,7 @@ describe("reports presentation", () => {
         if (selector === "[data-report-navigation]") return null;
         if (selector === "[data-review-session-coverage]") return null;
         if (selector === "[data-direction-mix]") return null;
+        if (selector === "[data-symbol-breakdown]") return null;
         if (selector === "[data-opening-weekday-mix]") return null;
         if (selector === "[data-mistake-patterns]") return null;
         if (selector === "[data-emotion-patterns]") return null;

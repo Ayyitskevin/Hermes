@@ -5,6 +5,10 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
+The current source contains 34 bounded Slice D increments: 29 derived-only and
+the same five write-capable exceptions. Reports exposes 11 semantic targets and
+nine governed reports. These source counts do not strengthen any native claim.
+
 ## Branch reconciliation record
 
 The divergent histories were reconciled without force on 2026-07-12 by merge
@@ -221,8 +225,8 @@ and an App Store disclosure.
   change visible cards only, expose the asset-class chip, and leave exact scope
   P&L/counts, the
   calendar, Dashboard, Review Session Coverage, Direction Mix, Opening Weekday
-  Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
-  Breakdown unchanged.
+  Mix, Symbol Breakdown, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, and Setup Breakdown unchanged.
   For duplicate symbols, confirm each heading and review action announces enough
   asset-class/account/session context to identify the intended trade.
 - Confirm the exact-filter disclosure starts collapsed with **none active**,
@@ -285,7 +289,7 @@ and an App Store disclosure.
   state. If an account or day disappears after refresh, confirm Hermes announces
   the recovery instead of silently broadening or trapping the app.
 - Confirm Dashboard headline P&L, equity, and review progress plus Direction
-  Mix, Opening Weekday Mix, Review Session Coverage, Plan Check, Mistake
+  Mix, Symbol Breakdown, Opening Weekday Mix, Review Session Coverage, Plan Check, Mistake
   Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain whole
   workspace while only Trades and the Dashboard calendar are scoped.
 - At 320 CSS pixels and 200% accessibility text, confirm account select, date
@@ -339,7 +343,7 @@ and an App Store disclosure.
   the existing sheet/recovery surface; a refresh retry must not repeat a review
   or batch write. Inspect export and storage evidence to confirm no queue,
   grouping, or focus state exists beyond the established review successors.
-  Schema v4, five primary tabs, ten report targets, eight governed reports, and
+  Schema v4, five primary tabs, eleven report targets, nine governed reports, and
   their digests/formulas must remain unchanged. Repeat with VoiceOver, hardware
   keyboard, background/foreground, force quit/relaunch, and 200% Dynamic Type at
   320 and 421 CSS pixels before marking Review Queue Focus native acceptance
@@ -595,6 +599,35 @@ and an App Store disclosure.
   one direction, verify each evidence action adds at most 25 contributors,
   status and focus remain exact, controls remain 44 points, and 200% Dynamic
   Type reflows without clipping.
+- In Reports, verify Symbol Breakdown shows `symbol-breakdown-report-v1`,
+  checksum
+  `33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`,
+  eight current trades, and eight demo groups in symbol code-unit order: AAPL
+  Stock, AMD Stock, META Stock, MSFT Stock, NVDA Stock, QQQ ETF, SPY ETF, and
+  TSLA Stock, each with count one. Reconcile every current trade exactly once
+  in its exact `(symbol, assetClass)` group and traded-date-descending then
+  stable-subject-ID evidence order. With local fixtures, prove exact same-symbol/
+  same-asset trades merge across accounts while an identical Stock/ETF symbol
+  stays in two groups with Stock first. Invalid canonical symbol, asset class,
+  side, position state, review state, real 1970–9999 date, or subject identity
+  must fail visibly without repair, drop, or default.
+- Reveal at least 12 Symbol Breakdown groups and at least 56 contributors in one
+  group. Each action must add at most five groups or 25 contributors, announce
+  exact live status, focus the first newly revealed group after group paging,
+  and focus the first newly revealed trade action after every contributor page.
+  Otherwise identical repeated trades must expose distinct stable **Trade n of
+  total** labels and action names. Keep 44-point controls and 320/421-width 200%
+  reflow. Tamper an action to another valid current subject and prove activation
+  rejects it by rechecking the exact live group/row/action membership. Open a
+  duplicate-symbol contributor only by stable subject ID; ordinary close
+  returns to its exact trigger and a saved
+  review returns to the Symbol Breakdown heading. Exercise every Trade Browser
+  scope/filter combination and prove the report stays whole-workspace and
+  unchanged. Confirm there is no P&L, result, percentage, rate, rank, comparison,
+  reward, prediction, or advice and no SQLite, preference, archive-shape, native,
+  or network work. After restore, version/checksum/groups/order/counts/identities
+  must equal the source. The current ledger has no venue/listing identity; any
+  future venue-aware contract must be separately versioned as v2.
 - In Reports, verify Opening Weekday Mix shows
   `opening-weekday-mix-report-v1`, checksum
   `6f205c00826d547f1f0640bec0acceac836e707c4a95287d2e35f4ae62e01cf8`,
@@ -620,11 +653,12 @@ and an App Store disclosure.
   check** from Dashboard and confirm focus lands on Plan Check rather than the
   generic Reports container. In the Report sections landmark, verify
   VoiceOver and hardware-keyboard order is Performance Summary, Journal Curve,
-  Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check,
-  Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup Breakdown. Open a
-  Review Session Coverage, Direction, Opening Weekday, Plan, Mistake, Emotion,
-  Tag, and Setup disclosure, visit all ten targets, and use every **Back to report
-  menu** link; focus must remain visible and all eight governed disclosures must
+  Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
+  Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup
+  Breakdown. Open a Review Session Coverage, Direction, Symbol Breakdown,
+  Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup disclosure, visit all
+  eleven targets, and use every **Back to report menu** link; focus must remain
+  visible and all nine governed disclosures must
   stay open. At
   320 CSS pixels and again in the 421–440 CSS-pixel device class with
   200% Dynamic Type, confirm the top bar scrolls
@@ -634,8 +668,8 @@ and an App Store disclosure.
   Reduce Motion and inspect the network log. This native row remains NOT RUN
   until observed on the Mac/iPhone candidate.
 - With VoiceOver and a hardware keyboard, open **Open trade** from a Review
-  Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-  Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown contributor.
+  Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown contributor.
   Confirm the action and sheet
   heading announce symbol, asset class, account, and session; duplicate symbols
   in different accounts/sessions open the stable-ID-matched trade, never the
@@ -643,18 +677,18 @@ and an App Store disclosure.
   visible focus to the exact trigger without changing the opened disclosures,
   loaded contributor/group pages, scroll, report evidence, or retained Trades
   account/date/day/search/facets.
-- Repeat after revealing Review Session Coverage, Direction, Opening Weekday,
-  and Plan contributors 26 and 51; Mistake, Emotion, Tag, and Setup contributors
+- Repeat after revealing Review Session Coverage, Direction, Symbol Breakdown,
+  Opening Weekday, and Plan contributors 26 and 51; Mistake, Emotion, Tag, and Setup contributors
   26 and 51; and a Mistake, Emotion, Tag, or Setup
   group appended after the initial five. Activate nested button content with
   pointer, keyboard, and VoiceOver. Unknown/tampered identity or
   source data must show a focused error without opening a sheet or making the
   background inert.
-- In a local journal, save a review from Review Session Coverage, Direction, and
-  Opening Weekday evidence, then save changes that move session coverage, a Plan
+- In a local journal, save a review from Review Session Coverage, Direction,
+  Symbol Breakdown, and Opening Weekday evidence, then save changes that move session coverage, a Plan
   classification, a Setup group, exact Mistake assignments, the exact Emotion
   assignment, and exact Tag assignments. Confirm
-  Direction and Opening Weekday membership stay fixed and every rebuilt report
+  Direction, Symbol Breakdown, and Opening Weekday membership stay fixed and every rebuilt report
   is announced with focus on the originating report heading, not a disconnected
   row. Repeat at 320 and 421 CSS pixels with 200% Dynamic Type, offline, and
   during lifecycle changes.
@@ -717,7 +751,7 @@ and an App Store disclosure.
   five groups, each evidence action adds at most 25 contributors, live status
   stays exact, focus moves to the first newly revealed group, controls remain
   44 points, and 200% text reflows at 320 CSS pixels without clipping.
-- After native export → empty-container restore, verify all eight governed
+- After native export → empty-container restore, verify all nine governed
   reports, their checksums, cohorts, exclusions, group/evidence order, exact
   values, and contributor identities equal the source. For Review Session
   Coverage, also prove exact equality of all session dates, classifications,
@@ -760,6 +794,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | VoiceOver/Dynamic Type/keyboard/layout | status | settings + observed result |
 | Files export/restore/continued writes | status | archive digests + result |
 | Review Session Coverage/navigation/continuation/restore | status | checksum + native fixtures/screenshots/focus/equality |
+| Symbol Breakdown/navigation/continuation/restore | status | checksum + full cohort + exact symbol/asset collision fixtures + paging/focus/equality |
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
@@ -974,6 +1009,13 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   VoiceOver announcement/order, hardware-keyboard focus, lifecycle, two-scene
   refresh, force-quit/relaunch, and 320/421-width 200% Dynamic Type are NOT RUN.
   Keep native acceptance held until every device procedure above is recorded.
+- Symbol Breakdown v1 has only Linux/Chromium definition, conservation,
+  navigation, continuation, restore, focus, and reflow evidence. Native
+  SQLCipher-derived cohort equality, same-symbol cross-account and Stock/ETF
+  collision behavior, VoiceOver announcement/order, hardware-keyboard focus,
+  background/foreground, force-quit/relaunch, two-scene refresh, and 320/421-
+  width 200% Dynamic Type are NOT RUN. Keep native acceptance held until the
+  procedure above records them without a durable or network write.
 - The checked-in icon/splash files are generated placeholders.
 - `Hermes Journal` and `app.hermesjournal.mobile` are working identifiers, not
   evidence of App Store or trademark availability.
@@ -984,7 +1026,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   matching Keychain item restores—remain unresolved until measured and
   reflected in privacy/help copy.
 - Manual entry, versioned reviews, governed Review Session Coverage, Direction
-  Mix, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
   Patterns, and Setup Breakdown, export generation, and Slice C-B local restore
   still need the persistence, response-loss, migration, accessibility, and
   lifecycle checks
@@ -994,7 +1036,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   state. They still need native
   accessibility, refresh/lifecycle, multi-scene, stale-choice, Dynamic Type,
   and hardware-keyboard checks. Browser evidence does not prove those native
-  behaviors. Review Session Coverage, Direction Mix, Opening Weekday Mix,
+  behaviors. Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
   Mistake Patterns, Emotion Patterns, Tag Patterns, and Report Trade
   Continuation are browser-verified only. Dashboard Recent Trade Continuation
   likewise has only browser-session evidence; native

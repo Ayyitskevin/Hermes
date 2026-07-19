@@ -48,6 +48,14 @@ async function reportFingerprint(page: Page): Promise<unknown> {
         groups: text("[data-direction-mix] .direction-mix-groups"),
         evidence: attributes("[data-direction-mix-trade]", "data-direction-mix-trade"),
       },
+      symbols: {
+        metadata: text("[data-symbol-breakdown] .symbol-breakdown-meta"),
+        groups: text("[data-symbol-breakdown] .symbol-breakdown-groups"),
+        evidence: attributes(
+          "[data-symbol-breakdown-trade]",
+          "data-symbol-breakdown-trade",
+        ),
+      },
       openingWeekday: {
         metadata: text(
           "[data-opening-weekday-mix] .opening-weekday-mix-meta",
@@ -233,6 +241,7 @@ test("exact card facets compose with search and scope without changing totals or
   const storageBefore = await localStorageSnapshot(page);
   await page.getByRole("button", { name: "Reports", exact: true }).click();
   await expect(page.locator("[data-direction-mix]")).toContainText("8 current trades");
+  await expect(page.locator("[data-symbol-breakdown]")).toContainText("8 current trades");
   await expect(page.locator("[data-opening-weekday-mix]"))
     .toContainText("8 current trades");
   await expect(page.locator("[data-plan-check]")).toContainText("8 of 8 trades");

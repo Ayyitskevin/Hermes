@@ -819,6 +819,32 @@ test("report review saves return to the source heading when evidence moves", asy
     page.locator('[data-direction-mix-group="long"] [data-direction-mix-trade]'),
   ).toHaveCount(2);
 
+  const aaplSymbol = page.locator(
+    '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"]',
+  );
+  await aaplSymbol.locator("summary").click();
+  const symbolAction = aaplSymbol.getByRole("button", {
+    name: /Open AAPL trade for the exact AAPL Stock symbol group/u,
+  });
+  await symbolAction.click();
+  const symbolDialog = page.getByRole("dialog", {
+    name: /AAPL trade review/u,
+  });
+  await expect(symbolDialog.locator("[data-trade-review-report-context]"))
+    .toHaveText(
+      "Opened from Symbol breakdown. This full-workspace report does not use or change your Trades filters.",
+    );
+  await symbolDialog.locator("#review-note").fill("Symbol report refresh.");
+  await symbolDialog.getByRole("button", { name: "Save review changes" }).click();
+
+  await expect(symbolDialog).toHaveCount(0);
+  await expect(page.locator("#symbol-breakdown-title")).toBeFocused();
+  await expect(
+    page.locator(
+      '[data-symbol-breakdown-symbol="AAPL"][data-symbol-breakdown-asset-class="stock"] [data-symbol-breakdown-trade]',
+    ),
+  ).toHaveCount(1);
+
   const openingThursday = page.locator(
     '[data-opening-weekday-mix-group="thursday"]',
   );

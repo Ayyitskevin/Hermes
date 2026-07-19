@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-07-17",
+  "as_of": "2026-07-18",
   "title": "TradeZella benefit translation ledger for Hermes Journal",
   "scope": "A source-backed product decision ledger. TradeZella is a capability benchmark only; Hermes remains an original, local-first journal and does not copy TradeZella naming, copy, trade dress, or interaction design.",
   "method": "Official TradeZella product and help pages establish advertised capabilities. Repository paths establish current Hermes behavior and holds. Dispositions are roadmap decisions, not estimates of market share, feature quality, retention, profitability, or causal impact.",
@@ -143,9 +143,11 @@
         "mobile/src/ui/reports-view.ts",
         "mobile/src/core/review-session-coverage-report.ts",
         "mobile/src/core/plan-adherence-report.ts",
+        "mobile/src/core/symbol-breakdown-report.ts",
+        "mobile/src/ui/symbol-breakdown-view.ts",
         "docs/mobile/IOS_ROADMAP.md"
       ],
-      "current_status": "Ten report targets are navigable and eight are governed derived reports with bounded evidence continuation. Remaining report families and broader scope are open.",
+      "current_status": "Eleven report targets are navigable and nine are governed derived reports with bounded evidence continuation. Shipped count-only Symbol Breakdown groups every current trade exactly once by exact symbol plus asset class, preserves Stock/ETF collisions as separate Stock-first groups, and supports exact drill-down and restore equality. Remaining timing, drawdown, comparison, and broader-scope report families are open.",
       "disposition": "shipped",
       "rationale": "The current governed-report pattern delivers the benchmark's pattern-finding benefit while preserving Hermes's inspectable-calculation advantage.",
       "gate": "Every new report requires a named definition version, checksum, conservation and exclusion rules, restore equality, and an explicit decision for incompatible inputs.",
@@ -342,11 +344,13 @@
       ],
       "hermes_evidence_paths": [
         "mobile/src/ui/reports-view.ts",
+        "mobile/src/core/symbol-breakdown-report.ts",
+        "mobile/src/ui/symbol-breakdown-view.ts",
         "mobile/src/core/trade-metrics.ts",
         "docs/mobile/PRODUCT_BLUEPRINT.md",
         "docs/mobile/IOS_ROADMAP.md"
       ],
-      "current_status": "Eight governed local reports cover several setup, rule, review, tag, emotion, mistake, direction, and weekday questions. MAE/MFE, exit efficiency, additional time views, and fuller account comparisons are not defined.",
+      "current_status": "Nine governed local reports cover setup, rule, review, tag, emotion, mistake, direction, exact symbol-plus-asset composition, and weekday questions. Symbol Breakdown is count-only, full-workspace, and derived-only; the current snapshot has no venue/listing identity, so any venue-aware regrouping requires a new definition version. MAE/MFE, exit efficiency, additional time and drawdown views, and fuller account comparisons are not defined.",
       "disposition": "prioritize-local",
       "rationale": "Additional deterministic reports deepen the core loop, but only where Hermes has the source data and a valid definition.",
       "gate": "Do not publish excursion or exit metrics until price-path source rights, sampling, timezone, corporate-action, multiplier, fee, and missing-data semantics are versioned and fixture-backed.",

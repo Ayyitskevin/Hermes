@@ -12,6 +12,24 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+function requireReportNodeRuntime() {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  const supported = (
+    (major === 22 && minor >= 16)
+    || (major === 23 && minor >= 11)
+    || major >= 24
+  );
+  if (!supported) {
+    throw new Error(
+      "Portable report builds require Node >=22.16.0, >=23.11.0, or >=24.0.0 "
+      + "for the fail-closed SQLite gate.",
+    );
+  }
+}
+
+requireReportNodeRuntime();
+const { DatabaseSync } = await import("node:sqlite");
+
 function resolvePluginRoot() {
   if (process.env.DATA_ANALYTICS_PLUGIN_ROOT) {
     return resolve(process.env.DATA_ANALYTICS_PLUGIN_ROOT);
@@ -57,10 +75,10 @@ const { chromiumDumpArguments, spawnChromiumDump } = await import(
 );
 
 const runtime = readPackagedReaderRuntime().html;
-// Data Analytics 0.2.8 uses a 100vw full-bleed top bar. In a tall report,
-// Chromium's non-overlay vertical scrollbar makes that rule eight pixels wider
-// than the document client area. Correct only that audited rule in memory; do
-// not modify the installed plugin or the canonical artifact payload.
+// Data Analytics 0.2.8 has two audited narrow-layout hazards in this report:
+// the 100vw full-bleed top bar and unbroken portable-markdown text. Patch only
+// those exact runtime rules in memory; never modify the installed plugin or
+// the canonical artifact payload.
 const unsafeFullBleed = [
   "  width: 100vw;",
   "  height: 48px;",
@@ -86,7 +104,7 @@ function replaceExactly(source, unsafe, safe, label) {
   const matches = source.split(unsafe).length - 1;
   if (matches !== 1) {
     throw new Error(
-      `Expected one known ${label} top-bar rule, found ${matches}; re-audit before building.`,
+      `Expected one known ${label} rule, found ${matches}; re-audit before building.`,
     );
   }
   return source.replace(unsafe, safe);
@@ -106,12 +124,18 @@ function patchSemanticFallback(html) {
     scrollbarSafeFallbackFullBleed,
     "semantic-fallback",
   );
-  if (patched.includes("width:100vw")) {
+  const portableMarkdownPatched = replaceExactly(
+    patched,
+    ".portable-markdown{max-width:820px}",
+    ".portable-markdown{max-width:820px;overflow-wrap:anywhere}",
+    "semantic-fallback portable-markdown",
+  );
+  if (portableMarkdownPatched.includes("width:100vw")) {
     throw new Error(
       "A 100vw rule remains after the audited top-bar patches; re-audit before building.",
     );
   }
-  return patched;
+  return portableMarkdownPatched;
 }
 
 function fallbackQaError(message) {
@@ -233,8 +257,149 @@ function resolveArtifactSource(inputPath, sourcePath) {
   throw new Error(`Artifact source path does not exist: ${sourcePath}`);
 }
 
+function canonicalSqlTokens(sql) {
+  const tokens = [];
+  let token = "";
+  const flush = () => {
+    if (token.length > 0) tokens.push(token);
+    token = "";
+  };
+
+  for (let index = 0; index < sql.length;) {
+    const character = sql[index];
+    const next = sql[index + 1];
+    if (character === "-" && next === "-") {
+      flush();
+      index += 2;
+      while (index < sql.length && sql[index] !== "\n") index += 1;
+      continue;
+    }
+    if (character === "'") {
+      flush();
+      let literal = "'";
+      index += 1;
+      let closed = false;
+      while (index < sql.length) {
+        const literalCharacter = sql[index];
+        literal += literalCharacter;
+        index += 1;
+        if (literalCharacter !== "'") continue;
+        if (sql[index] === "'") {
+          literal += "'";
+          index += 1;
+          continue;
+        }
+        closed = true;
+        break;
+      }
+      if (!closed) throw new Error("A portable SQL source has an open string literal.");
+      tokens.push(literal);
+      continue;
+    }
+    if (/\s/u.test(character)) {
+      flush();
+      index += 1;
+      continue;
+    }
+    if (character === "(" || character === ")" || character === "," || character === ";") {
+      flush();
+      tokens.push(character);
+      index += 1;
+      continue;
+    }
+    token += character;
+    index += 1;
+  }
+  flush();
+  return tokens.join(" ");
+}
+
+function executePortableSql(sql, sourceId) {
+  const database = new DatabaseSync(":memory:");
+  try {
+    database.exec("PRAGMA query_only = ON;");
+    const statement = database.prepare(sql);
+    if (statement.columns().length === 0) {
+      throw new Error("query returned no result columns");
+    }
+    return statement.all().map((row) => Object.fromEntries(Object.entries(row)));
+  } catch (error) {
+    throw new Error(
+      `Portable report ${sourceId} SQL could not be executed: ${error.message}`,
+    );
+  } finally {
+    database.close();
+  }
+}
+
+function assertSqlRows(sourceId, actualRows, expectedRows) {
+  if (!Array.isArray(actualRows) || actualRows.length !== expectedRows.length) {
+    throw new Error(
+      `Portable report ${sourceId} SQL returned the wrong row count.`,
+    );
+  }
+  for (let index = 0; index < expectedRows.length; index += 1) {
+    const actual = actualRows[index];
+    const expected = expectedRows[index];
+    if (actual === null || typeof actual !== "object" || Array.isArray(actual)) {
+      throw new Error(`Portable report ${sourceId} SQL row ${index + 1} is invalid.`);
+    }
+    const actualFields = Object.keys(actual);
+    const expectedFields = Object.keys(expected);
+    if (
+      actualFields.length !== expectedFields.length
+      || actualFields.some((field, fieldIndex) => field !== expectedFields[fieldIndex])
+      || expectedFields.some((field) => actual[field] !== expected[field])
+    ) {
+      throw new Error(
+        `Portable report ${sourceId} SQL row ${index + 1} does not match its dataset.`,
+      );
+    }
+  }
+}
+
+function validateSqlLineage(inputPath, artifact) {
+  const sourceIds = ["headline-query", "disposition-query", "priority-query"];
+  const results = {};
+  for (const sourceId of sourceIds) {
+    const sources = artifact.sources?.filter((candidate) => candidate.id === sourceId);
+    const manifestSources = artifact.manifest?.sources?.filter(
+      (candidate) => candidate.id === sourceId,
+    );
+    if (sources?.length !== 1 || manifestSources?.length !== 1) {
+      throw new Error(`Portable report must declare ${sourceId} exactly once per source list.`);
+    }
+    const [source] = sources;
+    const [manifestSource] = manifestSources;
+    if (
+      typeof source?.path !== "string"
+      || typeof source.query?.sql !== "string"
+      || manifestSource?.path !== source.path
+      || typeof manifestSource.query?.sql !== "string"
+    ) {
+      throw new Error(`Portable report is missing complete ${sourceId} SQL lineage.`);
+    }
+    const sourceSql = readFileSync(
+      resolveArtifactSource(inputPath, source.path),
+      "utf8",
+    );
+    const canonicalSource = canonicalSqlTokens(sourceSql);
+    if (
+      canonicalSource !== canonicalSqlTokens(source.query.sql)
+      || canonicalSource !== canonicalSqlTokens(manifestSource.query.sql)
+    ) {
+      throw new Error(
+        `Portable report ${sourceId} SQL file and embedded queries do not match.`,
+      );
+    }
+    results[sourceId] = executePortableSql(sourceSql, sourceId);
+  }
+  return results;
+}
+
 function validateLedgerLineage(inputPath) {
   const artifact = JSON.parse(readFileSync(inputPath, "utf8"));
+  const sqlResults = validateSqlLineage(inputPath, artifact);
   const ledgerSource = artifact.sources?.find((source) => source.id === "capability-ledger");
   if (typeof ledgerSource?.path !== "string") {
     throw new Error("Portable report is missing its capability-ledger source path.");
@@ -283,6 +448,7 @@ function validateLedgerLineage(inputPath) {
       );
     }
   }
+  assertSqlRows("headline-query", sqlResults["headline-query"], [expectedHeadline]);
 
   const labelToDisposition = {
     "Shipped": "shipped",
@@ -303,6 +469,11 @@ function validateLedgerLineage(inputPath) {
       throw new Error(`Portable report disposition ${label} does not match the ledger.`);
     }
   }
+  assertSqlRows(
+    "disposition-query",
+    sqlResults["disposition-query"],
+    allowed.map((disposition) => ({ disposition, count: counts[disposition] })),
+  );
 
   const priorities = artifact.snapshot?.datasets?.priority_roadmap;
   if (
@@ -314,10 +485,15 @@ function validateLedgerLineage(inputPath) {
       "Portable report roadmap row count and sequence must match prioritize-local ledger count.",
     );
   }
+  assertSqlRows("priority-query", sqlResults["priority-query"], priorities);
   return {
     capabilityDomains: ledger.capabilities.length,
     dispositionCounts: counts,
     priorityRows: priorities.length,
+    sqlSources: Object.keys(sqlResults).length,
+    sqlResultRows: Object.fromEntries(
+      Object.entries(sqlResults).map(([sourceId, rows]) => [sourceId, rows.length]),
+    ),
   };
 }
 

@@ -388,6 +388,28 @@ submission-ready product:
   exact Trade Browser state. No schema, persistence, store command, archive/
   digest/export shape, report, formula, preference, dependency, native source,
   or network path changed; the same five write-capable exceptions remain.
+- Symbol Breakdown v1 is the thirty-fourth bounded Slice D increment and the
+  twenty-ninth derived-only presentation/projection increment. Definition
+  `symbol-breakdown-report-v1`, pinned by checksum
+  `33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`,
+  counts every current full-workspace trade exactly once by exact saved symbol
+  plus asset class, with no exclusions. The same exact symbol and asset class
+  merge across accounts; the same symbol saved once as Stock and once as ETF
+  remains two groups, ordered Stock before ETF after stable symbol code-unit
+  order. Evidence uses traded date descending then stable subject ID. Repeated
+  trades with otherwise identical visible context receive stable **Trade n of
+  total** labels. The view reveals five groups and 25 contributors per action,
+  focuses each first newly revealed action, and rechecks the unique live row,
+  action, group, and current exact membership before opening only the stable-ID
+  trade. Ordinary close returns to the trigger, while a saved review returns to
+  the Symbol Breakdown heading. Trade Browser scope and filters are
+  not consumed, and matching-runtime export/restore recomputes equal report
+  evidence. Hermes currently stores no venue or listing identity, so any future
+  venue-aware grouping requires a separately versioned v2 definition rather
+  than silently changing v1. No P&L, result, rate, rank, comparison, prediction,
+  reward, or advice is calculated; no schema, store, archive shape, native
+  source, preference, dependency, or network path changed. Reports now expose
+  eleven semantic targets and nine governed reports.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all
@@ -480,9 +502,9 @@ submission-ready product:
   report exposes no P&L, currency, win rate, R, expectancy, percentage, rate,
   ranking, comparison, outcome claim, target, reward, prediction, or advice.
 - Reports Navigator v1 puts the existing Performance Summary, Journal Curve,
-  Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check,
-  Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown in one
-  semantic, DOM-ordered report menu.
+  Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday
+  Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
+  Breakdown in one semantic, DOM-ordered eleven-target report menu.
   Dashboard opens Review Session Coverage or Plan Check directly; every section
   returns to the menu; jumps preserve open evidence disclosures and move visible
   focus below live chrome.
@@ -492,9 +514,9 @@ submission-ready product:
   it performs no store write and changes no metric, curve input, report
   checksum, cohort, evidence order, archive, or digest.
 - Report Trade Continuation v1 adds an **Open trade** action to every Review
-  Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-  Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown contributor. It
-  resolves exactly one trade by stable subject ID and reuses the review/detail
+  Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, or Setup Breakdown
+  contributor. It resolves exactly one trade by stable subject ID and reuses the review/detail
   sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
   routing through or clearing Trades. Delegated activation covers contributors
@@ -523,8 +545,8 @@ submission-ready product:
   contribution. Search changes card visibility only. Scope is session-only and
   affects Trades plus the Dashboard calendar; headline metrics, equity, review
   progress, Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan
-  Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown
-  remain whole-workspace.
+  Check, Symbol Breakdown, Mistake Patterns, Emotion Patterns, Tag Patterns, and
+  Setup Breakdown remain whole-workspace.
 - Structured Trades Facets v1 ANDs the existing normalized search with four
   fixed, exact card filters: asset class (Stock/ETF), direction, position state,
   and review state. These session-only controls change visible Trades cards

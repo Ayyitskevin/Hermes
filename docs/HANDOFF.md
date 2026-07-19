@@ -1,9 +1,144 @@
 # Hermes Journal — active mobile handoff
 
+Status: Symbol Breakdown v1 verified locally · feature commit and hosted
+exact-commit evidence pending · updated 2026-07-18
+
+## Current handoff
+
+task: Deliver Symbol Breakdown v1 as a fail-closed, count-only governed report
+over every current full-workspace trade, grouped by exact symbol plus asset
+class, with bounded stable-ID evidence and no financial interpretation.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Definition `symbol-breakdown-report-v1` is pinned by SHA-256
+  `33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`.
+  Every current projection trade is included exactly once; there are no
+  exclusions.
+- Exact group identity is `(symbol, assetClass)`. Same-symbol/same-asset trades
+  merge across accounts; the same symbol stored as Stock and ETF remains two
+  groups. Groups use stable symbol code-unit order, then fixed Stock-before-ETF
+  order for a collision. Evidence uses traded date descending then stable
+  subject ID. Otherwise identical repeated trades receive stable **Trade n of
+  total** visible and accessible labels.
+- Canonical symbol, Stock/ETF asset class, Long/Short side, Open/Closed position
+  state, Pending/Draft/Completed review state, real Gregorian 1970–9999 date,
+  and unique trimmed C0/C1-free subject identity fail closed without repair,
+  dropping, or defaults. The builder and nested results are detached and deeply
+  frozen.
+- Reports now exposes 11 semantic targets in DOM order: Performance Summary,
+  Journal Curve, Review Session Coverage, Direction Mix, Symbol Breakdown,
+  Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, and Setup Breakdown. Nine targets are governed reports.
+- Presentation reveals five groups and 25 contributors per action. Every row
+  page focuses its first newly revealed action. Activation rechecks the unique
+  live section, group index, exact symbol/asset membership, evidence row,
+  action, and current stable-ID trade; a valid subject from another group fails
+  visibly before opening. Ordinary close returns to its trigger, while a review
+  save or reconciliation refresh returns to the Symbol Breakdown heading.
+  Trade Browser account/date/day/search/facet state is neither consumed nor
+  changed.
+- Matching-runtime export/restore recomputes exact version, checksum, cohort,
+  group/evidence order, counts, and contributor identities from existing ledger
+  inputs. No report output becomes durable state.
+- Symbol Breakdown is the 34th bounded Slice D increment and the 29th
+  derived-only presentation/projection increment. The same five write-capable
+  exceptions remain. No P&L, result, rate, percentage, rank, comparison,
+  prediction, reward, or advice is calculated.
+- No schema, migration, store command, archive/digest/export shape, protected
+  preference, native source, dependency, network path, credential, destructive
+  flow, order execution, or public profit ranking was added.
+- The current snapshot has no venue or listing identity. Any future venue-aware
+  grouping requires a separately defined/versioned v2; v1 may not be silently
+  regrouped.
+- The parity report builder now requires each governed SQL source exactly once
+  in both artifact lists, executes all three sources in query-only in-memory
+  SQLite, and compares exact columns, rows, values, and order with the
+  ledger-derived expectations and report datasets. The builder fails early on
+  unsupported Node runtimes; supported floors are 22.16, 23.11, and 24.0.
+
+verified:
+
+- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, zero
+  vulnerabilities. `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2.
+- `cd mobile && npm test` — exit 0; 820/820 across 70 files. This covers the
+  definition/checksum, conservation, exact collision rule, canonical
+  fail-closed inputs, deep freeze, ordering, empty cohort, UI paging, repeated
+  evidence labels, cross-group activation rejection, and focus behavior.
+- `cd mobile && npm run test:e2e -- e2e/symbol-breakdown-report.spec.ts
+  e2e/reports-navigation.spec.ts e2e/trade-browser-facets.spec.ts
+  e2e/trade-browser-scope.spec.ts e2e/trade-review.spec.ts` — 41/41. `npm run
+  test:e2e` — 111/111. Production Chromium covered exact drill-down,
+  close/save return, Trade Browser isolation, storage/network neutrality,
+  restore equality, tamper rejection, paging focus, and 320/421px 200% reflow.
+- `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
+  /tmp/hermes-symbol-breakdown-report.html` — exit 0; validation, packaging,
+  verification, source dialog, 1440/390px checks, SQL rows 1/4/6, and no-script
+  semantic fallback passed. `diff -u report.html
+  /tmp/hermes-symbol-breakdown-report.html` — exit 0; both SHA-256
+  `97ffbb184e7e4dfb9f414f056c762c5522244b6a259c847fa8203abe7a790bca`.
+- In a disposable artifact copy, changing headline SQL and both embedded copies
+  from 20 domains to 21, then rerunning the same builder command, exited 1 with
+  `Portable report headline-query SQL row 1 does not match its dataset.` This
+  proves a coordinated three-copy drift cannot bypass result validation.
+- `cd mobile && npm run ios:copy` and `npm run ios:sync` — exit 0; 95 modules and
+  one SQLite plugin synced; CocoaPods and `xcodebuild` were explicitly skipped.
+  `npm run verify:ios-sync` — exit 0; six production files matched byte-for-byte,
+  bundle SHA-256 `7dd2852369dbb3ab0fca9eae46267c7848fc168e2214d12460439d278669def6`.
+  `npm run test:ios-sync` — 8/8.
+- `npm audit --omit=dev`, `git diff --check`, and `git diff --exit-code --
+  mobile/ios mobile/package-lock.json` — exit 0; zero production
+  vulnerabilities and no native/lock drift.
+- Exact-commit hosted CI, CocoaPods, Xcode, Simulator, physical iPhone,
+  SQLCipher/Keychain runtime, VoiceOver, Dynamic Type, hardware keyboard,
+  lifecycle, and multi-scene evidence are not claimed here.
+
+assumptions:
+
+- Current `TradePreview.symbol`, `assetClass`, and stable subject ID remain the
+  only stored identity available for v1 grouping and drill-down. Account is
+  evidence context, not group identity.
+- Current full-workspace projection order and fields remain canonical inputs;
+  report construction never consumes Trade Browser scope or authored review
+  content.
+- Browser, SQL.js, and Linux evidence do not replace SQLite/WKWebView,
+  SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
+  physical-device proof.
+
+open:
+
+- Publish the locally verified feature commit and record hosted exact-commit CI.
+  HOLD all native acceptance until the Mac/iPhone procedure proves
+  checksum/cohort/collision equality, paging, drill-down, close/save focus,
+  restore equality, accessibility, lifecycle, and zero durable/network change.
+- Later timing, drawdown, comparison, MAE/MFE, exit-efficiency, and account
+  report families each require their own definition, inputs, checksum,
+  conservation/exclusions, drill-down, restore equality, and human product gate.
+- Two separate moderated fictional-data studies remain NOT RUN: five manual
+  participants and five generic-CSV participants. Do not pool cohorts or infer
+  activation, retention, causality, or trading outcomes from browser automation.
+- Fleet guard-layer screening was not evidenced; do not treat this handoff as
+  guard approval.
+- Do not claim full TradeZella parity, representative popularity causality,
+  native readiness, broader asset/broker support, hosted Connect, Android,
+  recurring AI, TestFlight/App Store submission, public pricing, execution,
+  advice, or comparative superiority from this milestone.
+- The user's autonomous parity goal remains active after this slice; this
+  handoff is a coherent milestone, not completion of the broad roadmap.
+
+## Prior milestone — Exact Playbook Draft Scope v1
+
+> Historical snapshot; current status and open items are superseded by the
+> active Symbol Breakdown v1 handoff above.
+
 Status: verified Exact Playbook Draft Scope v1 locally · feature commit ed74993
 · hosted exact-commit CI passed · updated 2026-07-18
 
-## Current handoff
+### Historical handoff
 
 task: Deliver Exact Playbook Draft Scope v1 as a fail-closed, derived-only path
 from a positive current draft count on one immutable Journal playbook card to

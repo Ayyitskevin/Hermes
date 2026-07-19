@@ -26,6 +26,7 @@ import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report
 import { buildPlanAdherenceReport } from "../core/plan-adherence-report";
 import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import {
   sessionJournalLedgerFromPayload,
@@ -182,6 +183,7 @@ describe("browser session user-data restore", () => {
       const beforePlan = buildPlanAdherenceReport(beforeSnapshot);
       const beforeReviewSessions = buildReviewSessionCoverageReport(beforeSnapshot);
       const beforeSetup = buildSetupPerformanceReport(beforeSnapshot);
+      const beforeSymbols = buildSymbolBreakdownReport(beforeSnapshot);
       const beforeTags = buildTagPatternsReport(beforeSnapshot);
       const prepared = await destination.prepareUserDataRestore(source.contents);
       await destination.commitUserDataRestore(prepared);
@@ -193,6 +195,7 @@ describe("browser session user-data restore", () => {
       const afterPlan = buildPlanAdherenceReport(afterSnapshot);
       const afterReviewSessions = buildReviewSessionCoverageReport(afterSnapshot);
       const afterSetup = buildSetupPerformanceReport(afterSnapshot);
+      const afterSymbols = buildSymbolBreakdownReport(afterSnapshot);
       const afterTags = buildTagPatternsReport(afterSnapshot);
       expect(afterSnapshot.calendar).toEqual(beforeSnapshot.calendar);
       expect(afterSnapshot.dailyJournal).toEqual(beforeSnapshot.dailyJournal);
@@ -202,6 +205,7 @@ describe("browser session user-data restore", () => {
       expect(afterPlan).toEqual(beforePlan);
       expect(afterReviewSessions).toEqual(beforeReviewSessions);
       expect(afterSetup).toEqual(beforeSetup);
+      expect(afterSymbols).toEqual(beforeSymbols);
       expect(afterMistakes).toEqual(beforeMistakes);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
       expect(afterTags).toEqual(beforeTags);

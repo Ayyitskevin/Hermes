@@ -100,6 +100,11 @@ describe("trade review sheet", () => {
       localWorkspace(),
       "opening-weekday-mix",
     );
+    const symbolHtml = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      "symbol-breakdown",
+    );
     const reviewSessionCoverageHtml = tradeReviewSheetTemplate(
       trade(),
       localWorkspace(),
@@ -126,6 +131,10 @@ describe("trade review sheet", () => {
       'data-trade-review-report-context="direction-mix"',
     );
     expect(directionHtml).toContain("Opened from Direction mix.");
+    expect(symbolHtml).toContain(
+      'data-trade-review-report-context="symbol-breakdown"',
+    );
+    expect(symbolHtml).toContain("Opened from Symbol breakdown.");
     expect(openingWeekdayHtml).toContain(
       'data-trade-review-report-context="opening-weekday-mix"',
     );
@@ -461,6 +470,19 @@ describe("trade review sheet", () => {
     );
     expect(directionAction).toContain(
       "Open &lt;AAPL&gt; trade for the short direction group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
+    );
+
+    const symbolAction = reportTradeAction(
+      snapshot,
+      "subject-2",
+      "symbol-breakdown",
+      "the exact AAPL Stock symbol group",
+    );
+    expect(symbolAction).toContain(
+      'data-trade-review-report-source="symbol-breakdown"',
+    );
+    expect(symbolAction).toContain(
+      "Open &lt;AAPL&gt; trade for the exact AAPL Stock symbol group — Stock, Secondary &amp; retirement, Jul 2 · Afternoon",
     );
 
     const openingWeekdayAction = reportTradeAction(

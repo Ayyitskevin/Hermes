@@ -1,6 +1,6 @@
 # Hermes Journal product and technical blueprint
 
-Status: authoritative mobile product blueprint · 2026-07-17
+Status: authoritative mobile product blueprint · 2026-07-18
 
 ## Executive decision
 
@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-three bounded Slice D increments are implemented in the current workspace.
+Thirty-four bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -437,7 +437,7 @@ assignments across all 3 fixed groups. P&L, currency, Daily Journal, outcome
 fields, and Trade Browser scope are not consumed. It is derived-only and adds
 no schema, store, archive, or digest-shape change.
 
-A dedicated browser archive test proves all eight governed reports recompute
+A dedicated browser archive test proves all nine governed reports recompute
 identically after export and restore.
 
 The count-only Direction Mix report uses definition
@@ -454,6 +454,35 @@ stable subject ID and renders 25 contributors per action. The report contains
 no P&L, win rate, R, expectancy, percentage, rate, ranking, causal, predictive,
 or advisory output. It is derived-only and adds no schema, store, archive, or
 digest-shape change.
+
+The count-only Symbol Breakdown report uses definition
+`symbol-breakdown-report-v1`, pinned by checksum
+`33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`.
+It consumes every trade in the current full-workspace projection exactly once,
+with no exclusions. The only group identity is exact `(symbol, assetClass)`:
+the same symbol and asset class merges across accounts, while the same symbol
+stored as Stock and ETF remains two groups. Groups use symbol code-unit order,
+then fixed Stock-before-ETF order for an identical symbol. Evidence uses traded
+date descending then stable subject ID; symbol, asset class, side, position
+state, review state, real Gregorian date, and unique stable subject identity
+validate or fail closed without repair, dropping, or defaults.
+
+The builder returns the complete detached, deeply frozen report. Presentation
+reveals five groups and 25 contributors per action. Repeated trades with
+otherwise identical visible context receive stable group-position labels, and
+each evidence page focuses its first newly revealed action. Activation rechecks
+the unique live section, group index, exact symbol/asset membership, evidence
+row, action, and current stable-ID trade before opening. Ordinary close returns
+to the exact trigger; an explicit review save or refresh returns focus to the
+Symbol Breakdown heading. The report ignores Trade Browser account/date/day/search/facet state,
+authored review content, Daily Journal state, and result fields. It calculates
+no P&L, rate, percentage, rank, comparison, reward, prediction, or advice.
+Matching-runtime restore must recompute identical version, checksum, groups,
+order, counts, and contributor identities from the existing ledger inputs.
+Hermes currently stores no venue or listing identity; adding one later requires
+a separately defined `symbol-breakdown-report-v2` rather than silently
+regrouping v1. This ninth governed report adds no schema, store, archive shape,
+digest input, preference, native source, dependency, or network change.
 
 The count-only Opening Weekday Mix report uses definition
 `opening-weekday-mix-report-v1`, pinned by checksum
@@ -491,8 +520,9 @@ trading or no-trade date, then edit it only by appending an optimistic immutable
 successor. The workspace-local date is durable identity. Headline, note,
 emotion, tags, and a self-reported process score are optional, but every version
 requires at least one authored signal; the score is excluded from performance,
-Review Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Setup
-Breakdown, Mistake Patterns, Emotion Patterns, and Tag Patterns analytics.
+Review Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix,
+Plan Check, Setup Breakdown, Mistake Patterns, Emotion Patterns, and Tag
+Patterns analytics.
 Schema v4 adds immutable versions,
 one guarded head per date, and shared-vocabulary assignments. Browser payload
 v2 and the native archive codecs covered by Linux tests preserve the complete
@@ -578,8 +608,8 @@ whole-trade realized-to-date P&L. Search changes visible cards but never scope
 totals. State is session-only, survives internal navigation/refresh while
 valid, and resets on local/demo switches or reload. It scopes Trades and the
 Dashboard calendar only: headline metrics, equity, review progress, Review
-Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain
+Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown remain
 whole-workspace. No schema, migration, journal store, archive, or report-
 definition version changed.
 
@@ -588,9 +618,9 @@ asset class (Stock/ETF), direction, position state, and review state—AND with
 the existing normalized text query over cards already admitted by the account,
 date, and selected-day scope. Facets and search change visible cards only. They
 never change exact contribution P&L, trade/allocation/day counts, calendar
-evidence, Dashboard metrics, Review Session Coverage, Direction Mix, Opening
-Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, or
-Setup Breakdown. Clear
+evidence, Dashboard metrics, Review Session Coverage, Direction Mix, Symbol
+Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
+Tag Patterns, or Setup Breakdown. Clear
 search and filters resets the query
 and facets while retaining scope; Clear all resets both layers.
 The state is session-only, survives internal navigation and valid refresh, and
@@ -620,11 +650,12 @@ store, archive, or governed report-definition change. Saved presets, persistent
 or report scope, and vocabulary/playbook management remain separate work.
 
 An eighth increment, Reports Navigator v1, reorganizes only the existing
-Reports presentation. Its semantic menu follows DOM order—Performance Summary,
-Journal Curve, Review Session Coverage, Direction Mix, Opening Weekday Mix,
-Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, then Setup
-Breakdown—and every destination has a stable focusable heading plus a return
-path. Dashboard's Review Session Coverage and Plan Check shortcuts land on
+Reports presentation. Its current eleven-target semantic menu follows DOM
+order—Performance Summary, Journal Curve, Review Session Coverage, Direction
+Mix, Symbol Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns,
+Emotion Patterns, Tag Patterns, then Setup Breakdown—and every destination has
+a stable focusable heading plus a return path. Dashboard's Review Session
+Coverage and Plan Check shortcuts land on
 their headings. In-page jumps measure the live top chrome,
 scroll without animation, then focus without a second scroll; opened report
 disclosures and DOM identity survive every jump. At widths through 480 CSS
@@ -637,8 +668,9 @@ digests are unchanged.
 
 A ninth increment, Report Trade Continuation v1, completes the explainable
 pattern-to-trade loop without adding a route or detail surface. Every Review
-Session Coverage, Direction Mix, Opening Weekday Mix, Plan Check, Mistake
-Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown contributor emits
+Session Coverage, Direction Mix, Symbol Breakdown, Opening Weekday Mix, Plan
+Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown
+contributor emits
 **Open trade** only after its stable trade-subject ID resolves to exactly one
 current trade. The existing review
 sheet opens in place with an allowlisted
@@ -1143,6 +1175,13 @@ preferences, archive/digest/export/restore shape, reports, formulas,
 dependencies, native sources, and network paths remain unchanged; the same five
 write-capable exceptions stay fixed.
 
+Symbol Breakdown v1 is the thirty-fourth bounded Slice D increment and the
+twenty-ninth derived-only presentation/projection increment. It ships the
+count-only definition, exact drill-down, report-navigation and return-focus
+integration, full-workspace isolation, and restore equality described above.
+The Reports surface now has eleven semantic targets and nine governed reports;
+the same five write-capable exceptions remain fixed.
+
 A recovery-continuity hardening milestone composes the fourth increment with
 Slice C-B rather than adding another product increment. In the browser
 development runtime, a UI-authored draft now has one executable journey through
@@ -1156,7 +1195,7 @@ remain separate gates.
 
 Still open in Slice D:
 
-- Drawdown, time-of-day, symbol, and remaining report
+- Drawdown, time-of-day, comparison, and remaining report
   families with reconciled drill-down, plus saved scope
   presets, saved view presets, persistent/report scope, fuller account
   management, and fuller vocabulary management. Playbook CRUD remains open
@@ -1302,7 +1341,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-three Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-four Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1314,8 +1353,8 @@ Dashboard Review Return Focus v1, Manual Entry Validation Focus v1, CSV
 Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
-v1, Exact Playbook Scope v1, and Exact Playbook Draft Scope v1. Twenty-eight
-presentation/projection increments remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
+v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, and Symbol Breakdown
+v1. Twenty-nine presentation/projection increments remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
 writes; Report Trade Continuation and Dashboard Recent Trade Continuation reuse
 the existing versioned trade-review save path, while Calendar-Day Reflection
 Continuation and Daily Reflection Rhythm Continuation reuse the existing Daily

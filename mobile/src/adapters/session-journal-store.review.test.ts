@@ -23,6 +23,7 @@ import { buildMistakePatternsReport } from "../core/mistake-patterns-report";
 import { buildOpeningWeekdayMixReport } from "../core/opening-weekday-mix-report";
 import { buildReviewSessionCoverageReport } from "../core/review-session-coverage-report";
 import { buildSetupPerformanceReport } from "../core/setup-performance-report";
+import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import { buildTagPatternsReport } from "../core/tag-patterns-report";
 import { SessionJournalStore } from "./session-journal-store";
 
@@ -273,6 +274,9 @@ describe("browser session trade reviews", () => {
       const beforeTags = buildTagPatternsReport(
         workspaceSnapshotFromLedger(first.ledger),
       );
+      const beforeSymbols = buildSymbolBreakdownReport(
+        workspaceSnapshotFromLedger(first.ledger),
+      );
 
       const edited = await store.commitTradeReviews(batch("setup-edited", [
         review("b", tradeSubjectId, {
@@ -304,6 +308,9 @@ describe("browser session trade reviews", () => {
       const afterTags = buildTagPatternsReport(
         workspaceSnapshotFromLedger(edited.ledger),
       );
+      const afterSymbols = buildSymbolBreakdownReport(
+        workspaceSnapshotFromLedger(edited.ledger),
+      );
 
       expect(before.groups.map((group) => [group.setup, group.tradeSubjectIds]))
         .toEqual([["Breakout", [tradeSubjectId]]]);
@@ -321,6 +328,7 @@ describe("browser session trade reviews", () => {
       });
       expect(afterDirection).toEqual(beforeDirection);
       expect(afterOpeningWeekdays).toEqual(beforeOpeningWeekdays);
+      expect(afterSymbols).toEqual(beforeSymbols);
       expect(beforeReviewSessions.metadata).toMatchObject({
         totalSessionCount: 1,
         reviewedSessionCount: 1,

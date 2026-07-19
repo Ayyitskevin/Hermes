@@ -50,7 +50,8 @@ under the provisional identifier until that gate is cleared.
   capture, versioned trade review, Durable Daily Journal v1, Trade Browser
   Scope v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports
   Navigator v1, Report Trade Continuation v1, Mistake Patterns v1, Emotion
-  Patterns v1, Tag Patterns v1, Direction Mix v1, Opening Weekday Mix v1,
+  Patterns v1, Tag Patterns v1, Direction Mix v1, Symbol Breakdown v1,
+  Opening Weekday Mix v1,
   Review Session Coverage v1, Dashboard Recent Trade Continuation v1, Exact
   Setup Facet v1, Review Queue Focus v1, Calendar-Day Reflection Continuation
   v1, Daily Reflection Return Focus v1, Exact Scoped Activity-Day Stepper v1,
@@ -256,7 +257,7 @@ observed plugin/device behavior:
   score, idempotent lost-response reconciliation, and read-only demo examples.
   The date is durable identity; the process score is excluded from performance,
   Direction Mix, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
-  Patterns, Emotion Patterns, Tag Patterns, and Review Session Coverage
+  Patterns, Emotion Patterns, Tag Patterns, Symbol Breakdown, and Review Session Coverage
   analytics.
 - Daily Journal Stale-Head Recovery v1 preserves the raw form after a
   deterministic optimistic conflict, disables the obsolete submission, loads
@@ -385,6 +386,29 @@ observed plugin/device behavior:
   presentation reveals 25 contributors per action. No financial, percentage,
   rate, rank, causal, predictive, advisory, schema, store, archive, or
   digest-shape change is included.
+- Symbol Breakdown v1 is a count-only report over every trade in the current
+  full-workspace projection. Definition `symbol-breakdown-report-v1` is pinned
+  by SHA-256
+  `33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`.
+  It has no exclusions: every valid unique stable-ID trade appears exactly once
+  in its exact `(symbol, assetClass)` group. The same symbol and asset class
+  merges across accounts; an identical symbol stored as Stock and ETF remains
+  separate, with groups ordered by symbol code unit then fixed Stock before ETF.
+  Evidence uses traded date descending then stable subject ID. Canonical symbol,
+  asset class, side, position/review state, real 1970–9999 Gregorian date, and
+  subject identity validate or fail closed without repair. Presentation reveals
+  five groups and 25 contributors per action, gives otherwise indistinguishable
+  repeated trades stable group-position labels, and focuses each first newly
+  revealed action. Activation rechecks the unique live group, row, action, and
+  current exact membership before opening the stable-ID trade, with
+  trigger/heading return after close or save. Trade Browser
+  scope, authored review content, Daily Journal state, and result fields are not
+  consumed; restore recomputes identical version, checksum, groups, counts,
+  order, and identities. No P&L, percentage, rate, rank, comparison, reward,
+  prediction, advice, schema, store, archive shape, digest input, preference,
+  native source, dependency, or network change is included. The current
+  snapshot has no venue/listing identity; any venue-aware grouping must be a
+  separately defined v2 rather than a silent v1 change.
 - Opening Weekday Mix v1 is a count-only report over every trade in the current
   full-workspace projection. Definition
   `opening-weekday-mix-report-v1` is pinned by SHA-256
@@ -425,7 +449,7 @@ observed plugin/device behavior:
   every card shows its account and separates scoped contribution from
   whole-trade P&L. Session state survives internal navigation and valid ledger
   refreshes, then resets on mode switch/reload. Dashboard headline/equity/review
-  and all eight governed reports intentionally remain whole-workspace.
+  and all nine governed reports intentionally remain whole-workspace.
 - Structured Trades Facets v1 adds fixed exact asset-class, direction,
   position-state, and review-state controls over already-scoped cards. The four
   facets AND with normalized search and never change scope evidence, exact P&L,
@@ -687,10 +711,10 @@ observed plugin/device behavior:
   summary. Production Chromium proves pointer, Enter, Space, sequential Tab,
   stale refresh, report/storage neutrality, 44-point controls, and no overflow
   at 320 and 421 CSS pixels with 200% text. No disclosure state is persisted.
-- Reports Navigator v1 exposes ten semantic targets: Performance Summary,
-  Journal Curve, Review Session Coverage, Direction Mix, Opening Weekday Mix,
-  Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
-  Breakdown in DOM order.
+- Reports Navigator v1 exposes eleven semantic targets: Performance Summary,
+  Journal Curve, Review Session Coverage, Direction Mix, Symbol Breakdown,
+  Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
+  Patterns, and Setup Breakdown in DOM order.
   Dashboard enters Review Session Coverage or Plan Check directly, every
   section returns to the menu, and jumps preserve
   opened disclosures while moving focus below measured chrome without animation. At
@@ -704,9 +728,9 @@ observed plugin/device behavior:
   fingerprints. This adds no schema, store, archive, digest input, formula,
   checksum, cohort, evidence-order, or pagination change.
 - Report Trade Continuation v1 opens the existing exact trade review/detail
-  sheet in place from every Direction Mix, Opening Weekday Mix, Review Session
-  Coverage, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and
-  Setup Breakdown contributor. Stable
+  sheet in place from every Direction Mix, Symbol Breakdown, Opening Weekday
+  Mix, Review Session Coverage, Plan Check, Mistake Patterns, Emotion Patterns,
+  Tag Patterns, and Setup Breakdown contributor. Stable
   subject IDs are
   validated at render and activation; asset
   class, account, and session disambiguate duplicate symbols; a replaceable
@@ -781,7 +805,7 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
 - Add templates, reminders, saved view presets only after an approved encrypted
   preference owner/migration and archive-export exclusion contract, fuller vocabulary/playbook
-  management, drawdown/time-of-day/symbol reports, deeper setup
+  management, drawdown/time-of-day/comparison reports, deeper setup
   comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
@@ -842,7 +866,7 @@ tier-by-tier claim. Reverify before public comparative positioning.
 Durable trade/day annotations, Trade Browser Scope v1, Structured Trades Facets
 v1, Dynamic Review Facets v1, Reports Navigator v1, Report Trade Continuation
 v1, Mistake Patterns v1, Emotion Patterns v1, Tag Patterns v1, Direction Mix
-v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
+v1, Symbol Breakdown v1, Opening Weekday Mix v1, Review Session Coverage v1, Dashboard Recent Trade
 Continuation v1, Exact Setup Facet v1, Review Queue Focus v1, Calendar-Day
 Reflection Continuation v1, Daily Reflection Return Focus v1, Compact Trades
 Filters v1, Exact Scoped Activity-Day Stepper v1, Dashboard Review Return
@@ -850,9 +874,10 @@ Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
-v1, Exact Playbook Draft Scope v1, matching-runtime local restore, and all eight
-governed reports are implemented. Thirty-three bounded Slice D increments are
-implemented in total; twenty-eight remain derived-only.
+v1, Exact Playbook Draft Scope v1, matching-runtime local restore, and all nine
+governed reports are implemented. Thirty-four bounded Slice D increments are
+implemented in total; twenty-nine remain derived-only. Reports exposes eleven
+semantic targets.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Calendar-Day Reflection Continuation, and Daily Reflection Rhythm
 Continuation are the five write-capable exceptions. The trade

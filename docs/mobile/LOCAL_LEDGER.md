@@ -1,6 +1,10 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + eight governed derived reports + trade-browser scope/facets + local restore · 2026-07-18
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-18
+
+The current workspace contains 34 bounded Slice D increments: 29 derived-only
+presentation/projection increments and the same five write-capable exceptions.
+Reports exposes 11 semantic targets and nine governed reports.
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -625,8 +629,8 @@ same-submission retries are idempotent, changed reuse or stale heads fail
 closed, and a lost response is reconciled by date plus the prepared revision.
 Demo entries are fictional and read-only. The daily process score is descriptive
 self-report evidence only; performance, Review Session Coverage, Direction Mix,
-Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake Patterns, Emotion
-Patterns, and Tag Patterns do not consume it. Review Session Coverage consumes
+Symbol Breakdown, Opening Weekday Mix, Plan Check, Setup Breakdown, Mistake
+Patterns, Emotion Patterns, and Tag Patterns do not consume it. Review Session Coverage consumes
 no Daily Journal entry, note, score, emotion, or tag.
 
 The editor treats a deterministic `entry_changed` separately from uncertain
@@ -806,9 +810,9 @@ Scope and visibility state are session-only: they are not stored in SQLite,
 browser journal state, exports, restores, or report archives. It survives
 internal navigation and valid ledger refreshes, resets on local/demo mode
 changes or reload, and affects Trades plus the Dashboard calendar only.
-Dashboard headline metrics, equity, review progress, Direction Mix, Opening
-Weekday Mix, Review Session Coverage, Plan Check, Mistake Patterns, Emotion
-Patterns, Tag Patterns, and Setup Breakdown consume the full snapshot.
+Dashboard headline metrics, equity, review progress, Direction Mix, Symbol
+Breakdown, Opening Weekday Mix, Review Session Coverage, Plan Check, Mistake
+Patterns, Emotion Patterns, Tag Patterns, and Setup Breakdown consume the full snapshot.
 This slice changes no schema, migration, store, archive, or governed report
 definition/version.
 
@@ -891,6 +895,39 @@ limit belongs only to transient presentation. No report state, definition
 input, or result enters SQLite, browser journal state, export/restore, archive
 shape, or report-input digests; restore recomputes from existing inputs.
 
+Symbol Breakdown v1 stays inside the same derived-report boundary. Its complete
+immutable builder consumes every current projection trade and groups only on
+the exact pair `(symbol, assetClass)`. `symbol-breakdown-report-v1` is pinned by
+SHA-256
+`33c47664633d24b75a80cde1dfac46e366f2e04ecccc852ce807792743cb8aef`.
+There are no exclusions: each current trade contributes exactly once, summed
+group and evidence counts equal the full projection, and stable subject IDs are
+unique. Exact same-symbol/same-asset trades merge across accounts; the same
+symbol stored as Stock and ETF stays separate. Groups use symbol code-unit order
+and fixed Stock-before-ETF collision order; evidence uses traded date descending
+then stable subject ID.
+
+Canonical uppercase symbol, Stock/ETF asset class, Long/Short side, Open/Closed
+position state, Pending/Draft/Completed review state, real Gregorian YYYY-MM-DD
+from 1970 through 9999, and trimmed C0/C1-free subject identity validate or fail
+closed without repair, dropping, or defaults. Position/review state is evidence
+only. Authored review content, Daily Journal state, result fields, and Trade
+Browser scope are not read. The builder is detached and deeply frozen; five-
+group and 25-contributor limits are transient presentation only. Otherwise
+indistinguishable repeated trades receive stable group-position labels, and
+each evidence page focuses its first newly revealed action. Activation rechecks
+one live section, exact group index and symbol/asset identity, one matching row
+and action, and current exact membership before opening. Exact stable-ID
+continuation returns ordinary close to its trigger and a save/reconciliation
+refresh to the Symbol Breakdown heading. The report calculates no P&L, rate,
+percentage, rank, comparison, reward, prediction, or advice. No report result
+enters SQLite, browser journal state, preferences, export/restore, archive shape,
+or report-input digests; restore recomputes exact equality from existing inputs.
+The current ledger has no venue/listing identity, so later venue-aware grouping
+requires a separately versioned v2 definition rather than silently regrouping
+v1. No schema, store, archive, digest, native, dependency, or network boundary
+changes.
+
 Opening Weekday Mix v1 stays inside the same derived-report boundary. Its
 complete immutable builder consumes every current projection trade and groups
 only on the exact canonical `tradedOn` opening date already derived from the
@@ -955,16 +992,16 @@ browser journal state, export/restore, archive shape, or report-input digests;
 restore recomputes the report from existing calendar and current-review inputs.
 
 Reports Navigator v1 remains inside that same derived boundary. It adds no
-scope or result state: its ten semantic in-page links target Performance
-Summary, Journal Curve, Review Session Coverage, Direction Mix, Opening Weekday
-Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
-Breakdown markup. Dashboard shortcuts may enter Review Session Coverage and
+scope or result state: its eleven semantic in-page links target Performance
+Summary, Journal Curve, Review Session Coverage, Direction Mix, Symbol
+Breakdown, Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns,
+Tag Patterns, and Setup Breakdown markup. Dashboard shortcuts may enter Review Session Coverage and
 Plan Check directly. Activating a link scrolls and focuses
 current DOM only; open disclosure state survives because no report is rebuilt.
 The responsive top-bar position and clipped-control focus correction are
 presentation behavior only. No navigation value enters SQLite, browser journal
 state, local preferences, export/restore, archive digests, report-input digests,
-or governed definitions. All eight governed report builders receive the full
+or governed definitions. All nine governed report builders receive the full
 workspace snapshot and retain the same checksums, cohorts, exact values,
 ordering, and progressive limits.
 
@@ -974,8 +1011,8 @@ trade-subject ID must resolve to exactly one trade in the reconciled full
 snapshot before Hermes renders an **Open trade** control, and activation repeats
 that exact validation against the current render snapshot. Symbols, visible
 labels, DOM position, and Trade Browser search are never identity fallback.
-The allowlisted Review-Session-Coverage/Direction/Opening-Weekday/Plan/Mistake/
-Emotion/Tag/Setup source and captured trigger live only in the current sheet
+The allowlisted Review-Session-Coverage/Direction/Symbol-Breakdown/Opening-
+Weekday/Plan/Mistake/Emotion/Tag/Setup source and captured trigger live only in the current sheet
 closure and DOM attributes.
 They do not enter
 SQLite, browser journal state, Trade Browser state, preferences, URLs, exports,
@@ -1138,7 +1175,7 @@ or plugin-runtime evidence.
   destination; the replacement file must earn its own preview. Successful
   commit focuses the stable rendered screen after the old commit control is
   removed.
-- All eight governed reports remain derived-only across native and browser
+- All nine governed reports remain derived-only across native and browser
   export/restore. A matching-runtime restored snapshot must recompute identical
   versions, checksums, cohorts, exclusions, fixed or exact group order, evidence
   order, values, and stable contributor identities; no report output is restored
@@ -1288,6 +1325,15 @@ status neutrality, result and authored-review neutrality, stable ordering,
 immutability, exact browser restore recomputation, 25-row pagination,
 count-only copy, stable-ID continuation, save-driven heading focus return,
 Trades-scope isolation, and 320/421px 200% reflow.
+Symbol Breakdown coverage adds the pinned checksum, exact `(symbol, assetClass)`
+identity, same-asset cross-account merging, Stock-before-ETF collision order,
+full-cohort conservation, canonical symbol/asset/side/status/review/date/subject
+  fail-closed tables, evidence-only state neutrality, stable group and evidence
+  order, deep immutability, exact browser restore recomputation, five/25 paging,
+  stable repeated-trade position labels, first-new-action paging focus,
+  count-only copy, activation-time exact membership revalidation, stable-ID
+  continuation, ordinary-close trigger return, save-driven heading return,
+  Trade Browser isolation, and 320/421px 200% reflow.
 Opening Weekday Mix coverage adds checksum, full-cohort conservation, fixed
 Monday-through-Sunday grouping and zero-count groups, canonical Gregorian date
 and stable-ID rejection, direction/position evidence validation, review/result/
@@ -1313,12 +1359,13 @@ keyboard focus with no internal or document overflow at 320px/200% text and at
 the 421px/200% breakpoint edge.
 Report Trade Continuation coverage adds exact render/activation identity,
 escaped source/action metadata, progressive Review Session Coverage, Direction,
-Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup row/group actions,
+Symbol Breakdown, Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup row/group actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
-fail-closed unknown identity before inert state, offline read-only inspection,
-retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
-trigger return, source-heading return after Review-Session-Coverage/Direction/
-Opening-Weekday saves and after moving Plan/Setup/Mistake/Emotion/Tag evidence,
+  fail-closed unknown identity before inert state, offline read-only inspection,
+  retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
+  trigger return, source-heading return after Review-Session-Coverage/Direction/
+  Symbol-Breakdown/Opening-Weekday saves and after moving Plan/Setup/Mistake/
+  Emotion/Tag evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Dashboard Recent Trade Continuation coverage adds exact QQQ/META/SPY/AMD demo
 order, semantic asset/account/session context, distinct stable-ID targeting for
@@ -1376,6 +1423,13 @@ and tamper rollback, VoiceOver, hardware-keyboard focus, lifecycle/two-scene
 refresh, preference/SQLite/network neutrality, and 320/421-width 200% Dynamic
 Type remain Mac/iPhone evidence gates; browser proof must not be treated as
 native acceptance.
+Symbol Breakdown native acceptance is NOT RUN. Prove the checksum, full cohort,
+same-symbol cross-account and Stock/ETF collision fixtures, five/25 paging,
+stable-ID drill-down, close/save focus return, whole-workspace isolation,
+restore equality, VoiceOver, hardware-keyboard focus, lifecycle/two-scene
+refresh, preference/SQLite/network neutrality, and 320/421-width 200% Dynamic
+Type on the Mac/iPhone candidate; browser proof must not be treated as native
+acceptance.
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

@@ -12,6 +12,7 @@ import {
   type TradeReviewCommitResult,
 } from "../application/journal-store";
 import { escapeHtml } from "../core/html";
+import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import type { TradeMetricEvidence } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { focusChromeSafeElement } from "./focus-chrome-safe";
@@ -47,6 +48,7 @@ export function reviewTradeAction(
 export type TradeReviewReportSource =
   | "plan-check"
   | "direction-mix"
+  | "symbol-breakdown"
   | "opening-weekday-mix"
   | "review-session-coverage"
   | "mistake-patterns"
@@ -59,6 +61,10 @@ const TRADE_REVIEW_REPORT_SOURCE_METADATA = Object.freeze({
   "direction-mix": Object.freeze({
     label: "Direction mix",
     targetId: "direction-mix-title",
+  }),
+  "symbol-breakdown": Object.freeze({
+    label: "Symbol breakdown",
+    targetId: "symbol-breakdown-title",
   }),
   "opening-weekday-mix": Object.freeze({
     label: "Opening weekday mix",
@@ -753,6 +759,73 @@ function resolveTradeReviewTrigger(
   return candidates.length === 1 ? candidates[0] ?? null : null;
 }
 
+function matchesSymbolBreakdownEvidence(
+  root: HTMLElement,
+  snapshot: JournalWorkspaceSnapshot,
+  trigger: HTMLButtonElement,
+  trade: TradePreview,
+): boolean {
+  const sections = Array.from(root.querySelectorAll<HTMLElement>(
+    "[data-symbol-breakdown]",
+  ));
+  const section = trigger.closest<HTMLElement>("[data-symbol-breakdown]");
+  const group = trigger.closest<HTMLElement>(
+    "[data-symbol-breakdown-group-index]",
+  );
+  const evidence = trigger.closest<HTMLElement>(
+    "[data-symbol-breakdown-trade]",
+  );
+  if (
+    sections.length !== 1
+    || section === null
+    || section !== sections[0]
+    || group === null
+    || evidence === null
+    || !section.contains(group)
+    || !group.contains(evidence)
+    || !evidence.contains(trigger)
+  ) {
+    return false;
+  }
+
+  const groupIndexText = group.dataset.symbolBreakdownGroupIndex;
+  if (
+    groupIndexText === undefined
+    || !/^(?:0|[1-9][0-9]*)$/u.test(groupIndexText)
+  ) {
+    return false;
+  }
+  const groupIndex = Number(groupIndexText);
+  if (!Number.isSafeInteger(groupIndex)) return false;
+
+  const expectedGroup = buildSymbolBreakdownReport(snapshot).groups[groupIndex];
+  if (expectedGroup === undefined) return false;
+  const expectedEvidence = expectedGroup.evidence.filter((candidate) => (
+    candidate.tradeSubjectId === trade.tradeSubjectId
+  ));
+  const matchingRows = Array.from(section.querySelectorAll<HTMLElement>(
+    "[data-symbol-breakdown-trade]",
+  )).filter((row) => (
+    row.dataset.symbolBreakdownTrade === trade.tradeSubjectId
+  ));
+  const matchingActions = Array.from(section.querySelectorAll<HTMLButtonElement>(
+    'button[data-trade-review-report-source="symbol-breakdown"]',
+  )).filter((action) => (
+    action.dataset.reviewTrade === trade.tradeSubjectId
+  ));
+
+  return expectedEvidence.length === 1
+    && expectedEvidence[0]?.symbol === trade.symbol
+    && expectedEvidence[0]?.assetClass === trade.assetClass
+    && group.dataset.symbolBreakdownSymbol === expectedGroup.symbol
+    && group.dataset.symbolBreakdownAssetClass === expectedGroup.assetClass
+    && evidence.dataset.symbolBreakdownTrade === trade.tradeSubjectId
+    && matchingRows.length === 1
+    && matchingRows[0] === evidence
+    && matchingActions.length === 1
+    && matchingActions[0] === trigger;
+}
+
 export function bindTradeReviewActions(
   root: HTMLElement,
   application: JournalApplication,
@@ -771,6 +844,11 @@ export function bindTradeReviewActions(
       if (trigger === null || !root.contains(trigger)) return;
       const reportSource = tradeReviewReportSource(trigger);
       const trade = resolveTradeReviewTrigger(snapshot, trigger);
+      const reportEvidenceMatches = reportSource !== "symbol-breakdown"
+        || (
+          trade !== null
+          && matchesSymbolBreakdownEvidence(root, snapshot, trigger, trade)
+        );
       const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
       const dashboardReviewOrigin = dashboardReviewProgressOrigin(
         root,
@@ -788,6 +866,7 @@ export function bindTradeReviewActions(
       if (
         reportSource === null
         || trade === null
+        || !reportEvidenceMatches
         || dashboardReviewOrigin === null
         || manualCaptureOrigin === null
         || importReceiptOrigin === null

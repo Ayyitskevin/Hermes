@@ -1,4 +1,4 @@
--- Source: capability-ledger.json (schema_version 1, as_of 2026-07-17).
+-- Source: capability-ledger.json (schema_version 1, as_of 2026-07-18).
 -- Sequence is a product recommendation, not measured impact or adoption.
 -- build-report.mjs proves that row count and sequence match the prioritize-local
 -- ledger count; recommendation text remains an explicitly reviewed decision.
@@ -21,7 +21,7 @@ WITH priority_roadmap(sequence, capability, first_increment, decision_gate, succ
       'Templates never auto-classify, overwrite evidence, or imply causality.',
       'Create, edit, apply, export, and restore reproduce exact ordered content and explicit application evidence.'),
     (5, 'Deeper observational reports',
-      'Resolve Symbol Breakdown eligibility first; define each later timing, drawdown, or comparison family separately.',
+      'Use the shipped count-only Symbol Breakdown foundation; define each later timing, drawdown, or comparison family separately.',
       'Every report needs a version, checksum, conservation, exclusions, restore equality, and exact drill-down.',
       'Each published report reproduces from the current ledger and accounts for every eligible or excluded record.'),
     (6, 'Native data lifecycle and attachments',

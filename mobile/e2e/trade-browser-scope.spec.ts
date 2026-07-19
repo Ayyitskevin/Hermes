@@ -76,6 +76,17 @@ test("account, activity range, search, and day scope compose without changing go
   await expect(page.locator("[data-plan-check]")).toContainText("2 demo accounts");
   await expect(page.locator("[data-setup-performance]")).toContainText("8 of 8 trades");
   await expect(page.locator("[data-setup-performance]")).toContainText("2 demo accounts");
+  await expect(page.locator("[data-symbol-breakdown]")).toContainText("8 current trades");
+  await expect(
+    page.locator("[data-symbol-breakdown-group-index] > summary strong")
+      .allTextContents(),
+  ).resolves.toEqual([
+    "AAPL · Stock",
+    "AMD · Stock",
+    "META · Stock",
+    "MSFT · Stock",
+    "NVDA · Stock",
+  ]);
 
   await page.getByRole("button", { name: "Trades", exact: true }).click();
   await expect(page.locator(".trade-card")).toHaveCount(2);
