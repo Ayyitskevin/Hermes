@@ -1,10 +1,99 @@
 # Hermes Journal — active mobile handoff
 
-Status: Symbol Breakdown v1 shipped and hardened on main · feature commit
-`1fd7d46` · hardening commit `0815d5e` · hosted exact-commit CI passed · updated
+Status: Startup/module split and enforceable 500 kB JavaScript chunk contract shipped
+on main · implementation commit ff269fd · exact-head hosted CI passed · updated
 2026-07-19
 
 ## Current handoff
+
+task: Split the production mobile startup bundle at its existing async recovery
+boundary and make Vite's 500 kB JavaScript chunk threshold an executable CI
+contract without changing product, storage, or native behavior.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Published ff269fdd56aa705d9912b3f23e609e12b9dd92c6
+  (Split mobile startup bundle and enforce chunk budget) directly to GitHub
+  main.
+- main.ts now loads the native SQLite connection/store only in the native branch
+  and loads the existing whole UI module inside the already-awaited
+  startApplication callback. The browser branch does not request native chunks.
+  A UI-chunk failure closes the constructed JournalApplication before recovery;
+  a native-chunk failure occurs before database construction.
+- NativeJournalOpenCleanupError moved byte-for-byte into a lightweight module.
+  connection.ts imports and re-exports that exact constructor, preserving
+  instanceof identity and the non-retryable cleanup classification without
+  statically loading the native SQLite adapter.
+- Added verify-mobile-bundle.mjs and six fail-closed Node tests. The verifier
+  recursively checks .js/.mjs/.cjs chunks, rejects nested or root symlinks,
+  rejects empty bundles and invalid limits, and fails when any chunk exceeds
+  500,000 bytes. CI unit-tests the verifier and applies it to the exact bundle
+  copied into the iOS shell.
+- The production graph is five relative JavaScript chunks. The initial entry is
+  211.91 kB and the largest UI chunk is 359,489 bytes; the former 685.86 kB
+  single-chunk warning is gone without raising or suppressing Vite's threshold.
+- Updated the prepared-review E2E probe to recognize any emitted production
+  JavaScript asset instead of hard-coding the former index chunk name. The
+  exact stale-review journey and the full suite pass after the split.
+- No schema, migration, store command, archive/export shape, native project,
+  dependency lock, network path, security boundary, product definition,
+  financial formula, order path, or public-facing behavior changed.
+
+verified:
+
+- cd mobile && npm ci — 164 packages installed; zero vulnerabilities.
+- cd mobile && npm run typecheck — exit 0. npm run test:boundary — 2/2.
+  npm test — 828/828 across 70 files. npm run test:bundle — 6/6.
+  npm run test:ios-sync — 8/8. npm audit --omit=dev — zero production
+  vulnerabilities.
+- Focused stale-review E2E — 1/1. Exact cd mobile && npm run test:e2e — exit 0;
+  116/116 production Chromium journeys.
+- cd mobile && npm run ios:sync — exit 0; 96 modules, five JavaScript chunks,
+  no oversized-chunk warning, one SQLite plugin registered. CocoaPods and
+  xcodebuild were explicitly skipped because they are unavailable on Linux.
+- cd mobile && npm run verify:bundle — five chunks; largest
+  assets/app-DkXMXyDs.js at 359,489/500,000 bytes.
+- cd mobile && npm run verify:ios-sync — nine production files copied
+  byte-for-byte; SHA-256
+  ffe8c3c291e9fb74a3f2931364f6a183ac4781cd6fa0b39a3f132850649dd528;
+  generated identity and encrypted-SQLite registration passed.
+- git diff --check and native/package-lock drift checks — exit 0. Three
+  independent read-only reviews found no remaining blocker after .mjs and
+  root-symlink hardening.
+- gh run view 29675119712 --json status,conclusion,headSha,jobs — exact SHA
+  ff269fdd56aa705d9912b3f23e609e12b9dd92c6, conclusion success; Mobile Linux
+  job 88161071594 and Legacy Python job 88161071608 both succeeded, including
+  the new verifier test and production bundle gate.
+
+assumptions:
+
+- Vite 8.1.4's default warning contract remains 500 decimal kB and treats only
+  chunks larger than the limit as violations; equality is covered explicitly.
+- Relative local chunks under base ./ remain compatible with the existing
+  script-src self CSP and Capacitor copy boundary. Chromium proves the browser
+  UI chunk; native WKWebView loading remains part of Mac/device acceptance.
+- The parity report is a viewable checked-in artifact, but its proprietary
+  external Data Analytics generator is not redistributed or claimed
+  clean-checkout reproducible.
+
+open:
+
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  WKWebView chunk loading, SQLCipher, Keychain, lifecycle, VoiceOver, Dynamic
+  Type, and hardware-keyboard evidence are recorded on the reviewed Mac/device.
+- Opening Hour Mix v1 remains HOLD + CLARIFY pending a human product contract;
+  no implementation was started.
+- Parity-report hosted regeneration remains HOLD pending a license-safe,
+  immutable generator strategy. Do not vendor the proprietary plugin without
+  explicit redistribution authority.
+- Guard screening and Sonnet final review remain downstream. No further Hermes
+  slice is active in this session.
+
+## Prior milestone — Symbol Breakdown v1
 
 task: Harden shipped Symbol Breakdown v1 so its full-workspace source cohort and
 stable-ID review drill-down fail closed under accessor, iterator, and DOM
