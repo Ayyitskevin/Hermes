@@ -453,6 +453,28 @@ submission-ready product:
   migration, store command, parser, archive/digest/export shape, report,
   formula, preference, dependency, native source, or network path; the six
   write-capable exceptions remain unchanged.
+- Review-Clear Plan Check Continuation v1 is the thirty-seventh bounded Slice D
+  increment and the thirty-first derived-only presentation/navigation
+  increment. A coherent private queue with zero waiting reviews and at least
+  one completed reviewed closed trade now exposes one explicit **Open plan
+  check** action from both the Dashboard clear state and Journal's **Review
+  queue clear** state. The final review still redraws and focuses the clear
+  heading; Hermes never auto-routes after a save. Explicit activation rechecks
+  the current fail-closed Review Queue, captured origin/count, exact original
+  control, and fixed full-journal `plan-check-title`, then focuses the existing
+  governed Plan Check. An unresolved local manual-recovery scan or confirmed
+  import/manual-save recovery suppresses the action until the journal is
+  reconciled. A moved, cloned,
+  duplicated, replaced, stale, or changing origin/destination returns to the
+  exact source with a focused error.
+  Demo, empty, waiting, and zero-completed workspaces retain their previous
+  behavior. Plan Check remains observational and honestly renders its existing
+  small-cohort state; no report is ranked or chosen dynamically, and no report
+  version, checksum, cohort, formula, exclusion, evidence, or drill-down
+  changes. No schema, migration, store command, review write, preference,
+  cursor, archive/export shape, dependency, native source, file, network,
+  security, advice, order, or brokerage-execution path is added; the six
+  write-capable exceptions remain fixed.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

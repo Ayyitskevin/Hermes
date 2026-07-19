@@ -2,7 +2,7 @@
 
 Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
 
-The current workspace contains 36 bounded Slice D increments: 30 derived-only
+The current workspace contains 37 bounded Slice D increments: 31 derived-only
 presentation/projection increments and six write-capable exceptions.
 Reports exposes 11 semantic targets and nine governed reports.
 
@@ -321,6 +321,48 @@ manual-save recovery retains its own exact retry without weakening either
 identity. No schema, migration, parser, store command, archive/digest/export
 shape, report, formula, preference, dependency, native source, or network path
 changes. Generic CSV remains stock-only and the six write-capable exceptions
+remain fixed.
+
+### Review-clear Plan Check continuation
+
+Review-Clear Plan Check Continuation v1 is the thirty-seventh bounded Slice D
+increment and the thirty-first derived-only presentation/navigation increment.
+It adds no ledger fact, store command, preference, route record, or durable
+completion flag. Eligibility is rederived from the existing fail-closed Review
+Queue and current snapshot on every render and activation.
+
+```text
+coherent private current snapshot
+  → canonical Review Queue has zero waiting trades
+  → at least one completed reviewed closed trade reconciles
+  → exact Dashboard or Journal clear-state action
+  → explicit user activation; no post-save auto-route
+  → exact existing full-workspace Plan Check + focused plan-check-title
+     or source redraw + one focused generic failure
+```
+
+The continuation freezes only its origin, the reconciled completed-trade count,
+and the fixed `plan-check-title`. Dashboard requires the unique clear review-
+progress card, heading, original action, existing session-evidence action, and
+failure target. Journal requires the unique clear queue, heading, empty state,
+original action, and failure target with no queue groups, Quick Review, or batch
+form. A moved, cloned, duplicated, replaced, disabled, stale, or count-mismatched
+origin fails before navigation. Reports must rebuild one exact screen, Plan
+Check section, and focusable title. The live section must equal a fresh render
+from the same snapshot, including governed metadata and evidence; it is checked
+again after focus so a focus-time change rolls back to the source. An unresolved
+local manual-recovery scan or confirmed import/manual-save commit awaiting
+recovery suppresses both origins instead of deriving from a snapshot whose
+redraw is not yet reconciled.
+
+The final review save remains owned by the existing versioned review path and
+focuses its clear heading. This continuation performs only later, explicit
+navigation. It does not choose among reports, scope Plan Check to one receipt,
+or alter its governed version, checksum, cohort, exclusions, formula, evidence,
+pagination, or drill-down. Demo, empty, waiting, and zero-completed workspaces
+derive no continuation. No schema, migration, store command, review write,
+archive/digest/export shape, dependency, native source, file, network, advice,
+order, or brokerage-execution path changes; the six write-capable exceptions
 remain fixed.
 
 ### Calendar-day reflection continuation

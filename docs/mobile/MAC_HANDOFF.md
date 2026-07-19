@@ -5,7 +5,7 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
-The current source contains 36 bounded Slice D increments: 30 derived-only and
+The current source contains 37 bounded Slice D increments: 31 derived-only and
 six write-capable exceptions. Reports exposes 11 semantic targets and
 nine governed reports. These source counts do not strengthen any native claim.
 
@@ -164,6 +164,23 @@ and an App Store disclosure.
   restore, and sizing absent. Prove only the stable receipt retry can continue,
   an injected/moved/disabled/extra control fails visibly, no file is reread or
   recommitted, and successful retry restores ordinary current-journal views.
+- Complete the last waiting local trade review from both Dashboard and Quick
+  Review. Confirm each save redraws and focuses **Review queue clear** without
+  navigation, then activate the later explicit **Open plan check** control with
+  touch, VoiceOver, Return, and Space from Dashboard and Journal. Require one
+  unique full-journal Plan Check, honest small-cohort/observational copy, and
+  unobscured focus on `plan-check-title`. Demo, empty, waiting, and a coherent
+  local workspace with no completed closed review must retain their prior
+  behavior. Repeat at 320 and 421 points with 200% Dynamic Type, safe areas,
+  onscreen/hardware keyboard, background/foreground, force quit/relaunch, and
+  two scenes; reconcile zero SQLite, protected-preference, file, and network
+  mutation from navigation. Move, replace, clone, duplicate, disable, or alter
+  the captured origin/count, then remove, hide, duplicate, move, or change the
+  destination during focus. Every attempt must return to the exact source with
+  one focused error and no fallback report, review replay, or write.
+  Repeat through cold/replayed onboarding with a delayed manual-recovery scan:
+  neither origin may appear before the scan resolves, and a no-result scan must
+  release the currently visible eligible Dashboard or Journal only afterward.
 - In a fresh journal, manually enter an opening and closing fill with fees.
   Confirm the review step shows the canonical values, the result reconciles,
   no import receipt is manufactured, and force quit/relaunch preserves both
@@ -952,6 +969,22 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   review recovery, draft pause, exact fresh-next activation or unique clear-
   heading focus, fail-closed tamper, visible post-save continuation failure,
   and zero additional durable or network state.
+- Review-Clear Plan Check Continuation v1 has only Linux/Chromium projection,
+  origin/destination integrity, source rollback, focus, offline,
+  pre/post journal-state and report-digest equality, storage/network-neutrality,
+  and both-origin 320/421px at 200% text evidence. Browser recovery injection
+  also proves that unresolved local manual-recovery scans and confirmed import
+  or manual commits suppress stale clear-state actions until reconciliation.
+  Native
+  SQLite/SQLCipher observation, VoiceOver announcement/order, hardware-keyboard
+  focus, safe-area/chrome visibility, background/foreground,
+  force-quit/relaunch, two-scene refresh, and Dynamic Type acceptance are NOT
+  RUN and must not inherit browser results. Keep native acceptance held until
+  the device procedure above proves local-clear/completed eligibility, unchanged
+  demo/empty/waiting/zero-completed states, post-save clear-heading focus,
+  separate explicit activation, fixed full-journal Plan Check focus and copy,
+  fail-closed changed origin/destination behavior, and zero durable or network
+  mutation.
 - Dashboard Review Return Focus v1 has only Linux/Chromium origin, focus,
   fallback, and narrow-layout evidence. Native VoiceOver announcement/order,
   hardware-keyboard visible focus, safe-area/chrome positioning,

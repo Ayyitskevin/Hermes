@@ -548,6 +548,24 @@ observed plugin/device behavior:
   stock-only; the six write-capable exceptions stay fixed. Native VoiceOver,
   hardware-keyboard, Dynamic Type, lifecycle, Files, WKWebView, and physical-
   device acceptance remain held for the Mac/iPhone gate.
+- Review-Clear Plan Check Continuation v1 is the thirty-seventh bounded Slice D
+  increment and the thirty-first derived-only presentation/navigation
+  increment. A private snapshot exposes **Open plan check** on Dashboard and
+  Journal only when the fail-closed Review Queue reconciles zero waiting trades
+  and at least one completed reviewed closed trade. Final review completion
+  continues to focus **Review queue clear** without automatic navigation. A
+  later explicit activation rechecks the captured origin/count and exact
+  control topology, opens only the fixed exact snapshot-derived full-workspace
+  Plan Check, and proves one unique focusable `plan-check-title`; changed origin or
+  destination evidence redraws the exact source with a focused error. Demo,
+  empty, waiting, and zero-completed states are unchanged. No Plan Check
+  version/checksum/cohort/formula/exclusion/evidence/drill-down, schema, store
+  command, review write, preference, cursor, archive/export shape, dependency,
+  native source, file, network, advice, order, or broker path changes. Native
+  VoiceOver, hardware-keyboard, Dynamic Type, safe-area, lifecycle, and
+  physical-device acceptance remain held for the Mac/iPhone gate. An unresolved
+  local manual-recovery scan or confirmed import/manual-save recovery suppresses
+  both origins until the snapshot reconciles.
 - Calendar-Day Reflection Continuation v1 renders the full-workspace Daily
   Journal state for the exact selected activity date inside its Trades card.
   Local non-future actions carry a canonical date that must agree with the
@@ -941,9 +959,10 @@ Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
 v1, Exact Playbook Draft Scope v1, Quick Review Continuation v1, Dashboard
-Import Continuation v1, matching-runtime local restore, and all nine governed
-reports are implemented. Thirty-six bounded Slice D increments are implemented
-in total; thirty remain derived-only. Reports exposes eleven semantic targets.
+Import Continuation v1, Review-Clear Plan Check Continuation v1,
+matching-runtime local restore, and all nine governed reports are implemented.
+Thirty-seven bounded Slice D increments are implemented in total; thirty-one
+remain derived-only. Reports exposes eleven semantic targets.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Quick Review Continuation, Calendar-Day Reflection Continuation,
 and Daily Reflection Rhythm Continuation are the six write-capable exceptions.

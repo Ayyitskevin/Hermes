@@ -6,6 +6,10 @@ import {
   firstReviewQueueTrade,
 } from "../application/review-queue";
 import {
+  buildReviewClearPlanCheckContinuation,
+  type ReviewClearPlanCheckContinuation,
+} from "../application/review-clear-plan-check-continuation";
+import {
   buildExactAccountTradeScope,
 } from "../application/account-overview";
 import {
@@ -91,6 +95,15 @@ import {
   bindTradeReviewActions,
   reviewTradeAction,
 } from "./trade-review-sheet";
+import {
+  bindReviewClearPlanCheckContinuation,
+  clearReviewClearPlanCheckContinuationBinding,
+  focusReviewClearPlanCheckDestination,
+  removeDisplacedReviewClearPlanCheckArtifacts,
+  reviewClearPlanCheckAction,
+  reviewClearPlanCheckFailure,
+  showReviewClearPlanCheckFailure,
+} from "./review-clear-plan-check-continuation";
 import {
   bindReportsView,
   focusReportSection,
@@ -325,6 +338,7 @@ function dashboardView(
   snapshot: JournalWorkspaceSnapshot,
   browser: TradeBrowserResult,
   importContinuation: DashboardImportContinuation | null,
+  planCheckContinuation: ReviewClearPlanCheckContinuation | null,
 ): string {
   if (importContinuation?.kind === "confirmed-recovery") {
     return dashboardImportRecoveryView(importContinuation);
@@ -339,6 +353,29 @@ function dashboardView(
   const reviewProgressSubject = nextReview === null
     ? ""
     : ` data-dashboard-review-subject="${escapeHtml(nextReview.tradeSubjectId)}"`;
+  if (
+    planCheckContinuation !== null
+    && (
+      planCheckContinuation.origin !== "dashboard"
+      || nextReview !== null
+      || planCheckContinuation.completedTradeCount
+        !== snapshot.reviewProgress.completedTrades
+    )
+  ) {
+    throw new Error("The Dashboard review-clear Plan Check continuation is inconsistent.");
+  }
+  const reviewClearOrigin = planCheckContinuation === null
+    ? ""
+    : ' data-review-clear-plan-check-origin="dashboard"';
+  const reviewProgressAction = nextReview === null
+    ? planCheckContinuation === null
+      ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>`
+      : reviewClearPlanCheckAction(planCheckContinuation)
+    : reviewTradeAction(
+      nextReview,
+      nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade",
+      "dashboard-review-progress",
+    );
   return `<section class="screen-stack" aria-labelledby="dashboard-title">
     <div class="screen-heading">
       <div><p class="eyebrow">${escapeHtml(snapshot.accountLabel)} · ${escapeHtml(snapshot.periodLabel)}</p><h1 id="dashboard-title">Dashboard</h1></div>
@@ -350,13 +387,14 @@ function dashboardView(
       <strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>
       <span>${escapeHtml(signedR(performance.netR, "—"))} · ${countNoun(performance.tradeCount, "trade")} with realized P&amp;L${performance.rTradeCount === performance.tradeCount ? "" : ` · R on ${performance.rTradeCount}`}${hasInterimResults ? " · includes interim partial exits" : ""}</span>
     </article>
-    <article class="card review-progress-card" data-dashboard-review-progress="${reviewProgressState}"${reviewProgressSubject}>
+    <article class="card review-progress-card" data-dashboard-review-progress="${reviewProgressState}"${reviewProgressSubject}${reviewClearOrigin}>
       <div class="section-title"><div><p class="card-label">WEEKLY REVIEW RHYTHM</p><h2 id="dashboard-review-progress-title" data-dashboard-review-progress-title="${reviewProgressState}"${reviewProgressSubject} tabindex="-1">${reviewQueue.waitingTradeCount === 0 ? "Review queue clear" : `${countNoun(reviewQueue.waitingTradeCount, "review")} waiting`}</h2></div><strong>${snapshot.reviewProgress.streakSessions} session streak</strong></div>
       <p>${snapshot.reviewProgress.completedTrades} completed · ${countNoun(snapshot.reviewProgress.draftTrades, "draft")} · ${snapshot.reviewProgress.reviewedSessions} of ${snapshot.reviewProgress.tradingSessions} trading sessions reviewed.</p>
       <div class="quick-actions review-progress-actions">
-        ${nextReview === null ? `<button class="secondary-button" type="button" data-route="journal">Open review journal</button>` : reviewTradeAction(nextReview, nextReview.reviewStatus === "draft" ? "Continue next review" : "Review next trade", "dashboard-review-progress")}
+        ${reviewProgressAction}
         <button class="text-button" type="button" data-route="reports" data-report-target="review-session-coverage-title">View session evidence</button>
       </div>
+      ${planCheckContinuation === null ? "" : reviewClearPlanCheckFailure(planCheckContinuation)}
     </article>
     ${importContinuation === null ? "" : dashboardImportContinuationCard(importContinuation)}
     <div class="metric-grid">
@@ -386,6 +424,7 @@ function dashboardView(
 function journalView(
   snapshot: JournalWorkspaceSnapshot,
   playbookTradeScope: PlaybookTradeScopeProjection,
+  planCheckContinuation: ReviewClearPlanCheckContinuation | null,
 ): string {
   const today = snapshot.provenance === "local"
     ? workspaceTodayIsoDate(snapshot.timeZone)
@@ -413,7 +452,7 @@ function journalView(
       <strong>${snapshot.reviewProgress.completedTrades} completed</strong>
       <span>${snapshot.reviewProgress.pendingTrades} waiting · ${snapshot.reviewProgress.draftTrades} drafts · ${snapshot.reviewProgress.streakSessions} consecutive reviewed sessions</span>
     </article>
-    ${reviewQueueSection(snapshot)}
+    ${reviewQueueSection(snapshot, planCheckContinuation)}
     ${dailyReflectionRhythmSection(snapshot, today)}
     <section aria-labelledby="daily-notes-title">
       <div class="section-title"><h2 id="daily-notes-title" tabindex="-1">Daily notes</h2><span>${snapshot.dailyJournal.length} entries</span></div>
@@ -512,6 +551,7 @@ function viewFor(
   persistence: JournalApplication["persistence"],
   browser: TradeBrowserResult,
   dashboardImportContinuation: DashboardImportContinuation | null,
+  reviewClearPlanCheckContinuation: ReviewClearPlanCheckContinuation | null,
   manualCapture: ManualCaptureReviewContinuation | null,
   importReceiptReview: ImportReceiptReviewContinuation | null,
   importReceiptReviewPageStart: number,
@@ -523,13 +563,18 @@ function viewFor(
       snapshot,
       browser,
       dashboardImportContinuation,
+      reviewClearPlanCheckContinuation,
     );
     case "trades": return tradesView(snapshot, browser, manualCapture);
     case "journal":
       if (playbookTradeScope === null) {
         throw new Error("The Journal playbook projection is unavailable.");
       }
-      return journalView(snapshot, playbookTradeScope);
+      return journalView(
+        snapshot,
+        playbookTradeScope,
+        reviewClearPlanCheckContinuation,
+      );
     case "reports": return reportsView(snapshot);
     case "more": return moreView(
       snapshot,
@@ -918,6 +963,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   let manualCaptureReference: ManualCaptureCommitReference | null = null;
   let manualCaptureContinuation: ManualCaptureReviewContinuation | null = null;
   let pendingManualCaptureReference: PendingManualCaptureReference | null = null;
+  let manualRecoveryScanIsPending = snapshot.provenance === "local";
   let manualCaptureAttemptGeneration = 0;
   let importReceiptReviewEvidence: ImportReceiptReviewEvidence | null = null;
   let importReceiptReviewContinuation: ImportReceiptReviewContinuation | null = null;
@@ -1233,18 +1279,30 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     const dashboardImportContinuation = tab === "dashboard"
       ? buildDashboardImportContinuation(snapshot, pendingImportReceiptReview)
       : null;
+    const knownCommitRecoveryIsPending = manualRecoveryScanIsPending
+      || pendingManualCaptureReference !== null
+      || pendingImportReceiptReview?.origin === "confirmed-post-commit";
+    const reviewClearPlanCheckContinuation = (
+      (tab === "dashboard" || tab === "journal")
+      && !knownCommitRecoveryIsPending
+    )
+      ? buildReviewClearPlanCheckContinuation(snapshot, tab)
+      : null;
     const playbookTradeScope = tab === "journal"
       ? preparePlaybookTradeScope(snapshot)
       : null;
     if (screen) {
       clearDashboardImportContinuationBinding(root);
+      clearReviewClearPlanCheckContinuationBinding(root);
       removeDisplacedDashboardImportArtifacts(root);
+      removeDisplacedReviewClearPlanCheckArtifacts(root);
       screen.innerHTML = viewFor(
         tab,
         snapshot,
         application.persistence,
         browser,
         dashboardImportContinuation,
+        reviewClearPlanCheckContinuation,
         manualCaptureForView,
         tab === "more" ? importReceiptReviewContinuation : null,
         importReceiptReviewPageStart,
@@ -1312,6 +1370,41 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           announceStatus("The exact import step was unavailable. Nothing was read or saved.");
         },
       });
+    }
+    if (reviewClearPlanCheckContinuation !== null) {
+      bindReviewClearPlanCheckContinuation(
+        root,
+        snapshot,
+        reviewClearPlanCheckContinuation,
+        {
+          open: (continuation) => {
+            manualCaptureAttemptGeneration += 1;
+            importReceiptReviewAttemptGeneration += 1;
+            render("reports", false);
+            try {
+              focusReviewClearPlanCheckDestination(root, snapshot);
+              announceStatus(
+                "Review queue complete. Plan Check opened with full-journal observational evidence.",
+              );
+            } catch {
+              render(continuation.origin, false);
+              showReviewClearPlanCheckFailure(root, continuation);
+              announceStatus(
+                "The exact Plan Check continuation was unavailable. Your journal did not change.",
+              );
+            }
+          },
+          fail: (continuation) => {
+            manualCaptureAttemptGeneration += 1;
+            importReceiptReviewAttemptGeneration += 1;
+            render(continuation.origin, false);
+            showReviewClearPlanCheckFailure(root, continuation);
+            announceStatus(
+              "The exact Plan Check continuation was unavailable. Your journal did not change.",
+            );
+          },
+        },
+      );
     }
     if (tab === "journal" && playbookTradeScope !== null) {
       bindPlaybookTradeScope(root, playbookTradeScope, {
@@ -2103,11 +2196,21 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       return;
     }
     recoveringManualExecution = true;
+    if (!manualRecoveryScanIsPending) {
+      manualRecoveryScanIsPending = true;
+      if (currentTab === "dashboard") render("dashboard", false);
+    }
     try {
       const recoveredManualExecutions = await application.loadRecoverableManualExecutions();
       const recoveredCount = recoveredManualExecutions.length;
       const recovered = recoveredManualExecutions.at(-1);
-      if (recovered === undefined) return;
+      if (recovered === undefined) {
+        manualRecoveryScanIsPending = false;
+        if (currentTab === "dashboard" || currentTab === "journal") {
+          render(currentTab, false);
+        }
+        return;
+      }
       const reference = Object.freeze({
         outcome: "duplicate" as const,
         executionId: recovered.executionId,
@@ -2120,6 +2223,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
           : `${recoveredCount} executions were already saved and awaiting confirmation; no duplicates were created. Continuing with the newest confirmation.`,
         false,
       );
+      if (result.status === "complete" || pendingManualCaptureReference !== null) {
+        manualRecoveryScanIsPending = false;
+      }
       result.focus();
       if (result.status === "complete") await acknowledgeManualCapture(reference);
     } catch {
@@ -2135,6 +2241,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
+    manualRecoveryScanIsPending = mode === "local";
     clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     render("dashboard", false);
@@ -2150,13 +2257,16 @@ export async function startApp({ root, application, onboarding }: AppDependencie
   root.querySelector("#settings-open")?.addEventListener("click", openSettings);
   root.querySelector("#settings-close")?.addEventListener("click", closeSettings);
   root.querySelector("#mode-toggle")?.addEventListener("click", async () => {
-    snapshot = snapshot.provenance === "demo"
+    const mode = snapshot.provenance === "demo" ? "local" : "demo";
+    snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
+    manualRecoveryScanIsPending = mode === "local";
     clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
     closeSettings();
     render("dashboard");
+    if (mode === "local") await recoverNewestManualExecution();
   });
   settings?.addEventListener("click", (event) => {
     if (event.target === settings) closeSettings();

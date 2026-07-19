@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
 import {
+  buildReviewClearPlanCheckContinuation,
+} from "../application/review-clear-plan-check-continuation";
+import {
   focusReviewQueueAfterRefresh,
   reviewQueueSection,
 } from "./review-queue-view";
@@ -109,6 +112,42 @@ describe("review queue view", () => {
     expect(html).not.toContain("data-review-queue-group=");
     expect(html).not.toContain('id="batch-review-form"');
     expect(html).not.toContain("data-quick-review");
+  });
+
+  it("continues a clear private queue into the existing full-journal Plan Check", () => {
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      provenance: "local",
+      provenanceLabel: "ON-DEVICE JOURNAL",
+    };
+    const continuation = buildReviewClearPlanCheckContinuation(snapshot, "journal");
+    if (continuation === null) throw new Error("Expected a review-clear continuation.");
+    const html = reviewQueueSection(snapshot, continuation);
+
+    expect(html).toContain('data-review-queue-waiting="0"');
+    expect(html).toContain('data-review-clear-plan-check-origin="journal"');
+    expect(html).toContain('data-review-clear-plan-check="journal"');
+    expect(html).toContain('data-review-clear-plan-check-error="journal"');
+    expect(html).toContain("full-journal Plan Check");
+    expect(html).toContain("observational and may still be a small cohort");
+    expect(html).not.toContain('data-route="reports"');
+  });
+
+  it("rejects a mismatched review-clear continuation instead of repairing it", () => {
+    const snapshot: JournalWorkspaceSnapshot = {
+      ...DEMO_WORKSPACE,
+      provenance: "local",
+      provenanceLabel: "ON-DEVICE JOURNAL",
+    };
+    const continuation = buildReviewClearPlanCheckContinuation(snapshot, "dashboard");
+    if (continuation === null) throw new Error("Expected a review-clear continuation.");
+
+    expect(() => reviewQueueSection(snapshot, continuation)).toThrow(/inconsistent/u);
+    expect(() => reviewQueueSection(snapshot, {
+      ...continuation,
+      origin: "journal",
+      completedTradeCount: continuation.completedTradeCount + 1,
+    })).toThrow(/inconsistent/u);
   });
 
   it("escapes review labels, stable identities, and batch vocabulary", () => {

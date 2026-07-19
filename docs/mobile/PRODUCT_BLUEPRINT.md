@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-six bounded Slice D increments are implemented in the current workspace.
+Thirty-seven bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -1261,6 +1261,37 @@ export shape, report, formula, preference, dependency, native source, or network
 path. The existing importer remains stock-only and the six write-capable
 exceptions remain fixed.
 
+Review-Clear Plan Check Continuation v1 is the thirty-seventh bounded Slice D
+increment and the thirty-first derived-only presentation/navigation increment.
+It closes the home contract's review → insight gap without inventing a new
+insight: `buildReviewQueue` must reconcile a private local snapshot with zero
+waiting reviews and at least one completed reviewed closed trade. Only then do
+the Dashboard clear-state action and Journal's **Review queue clear** state
+expose **Open plan check**. Demo, empty, waiting, and zero-completed states keep
+their prior actions and copy.
+
+The final review save, exact replay, or known-commit refresh still redraws its
+origin and focuses the existing clear heading first; no save auto-navigates.
+While a local manual-save recovery scan is unresolved, or a confirmed import or
+manual-save commit is awaiting exact recovery, neither origin derives this
+continuation from the potentially stale snapshot.
+On a separate explicit activation, Hermes rederives the same queue state and
+requires the captured completed count, one exact original action/error/source
+structure, and the fixed `plan-check-title`. Reports must rebuild the exact
+snapshot-derived Plan Check content, including metadata and evidence, with one
+focusable heading; a moved, cloned, duplicated,
+replaced, stale, hidden, or focus-time-changing origin/destination redraws the
+exact source and focuses one generic error instead of guessing a fallback.
+
+Plan Check remains full-workspace and observational. Its existing governed
+definition, checksum, cohort, exclusions, small-cohort copy, evidence,
+pagination, and stable-ID drill-down are unchanged; Hermes does not rank
+reports or infer a personalized “best” insight. The continuation adds no
+schema, migration, store command, review write, preference or cursor,
+archive/digest/export/restore shape, financial definition, dependency, native
+source, file access, network path, advice, signal, order, or brokerage
+execution. The six write-capable exceptions remain fixed.
+
 A post-publication Symbol Breakdown hardening milestone does not add another
 Slice D increment. It captures every reference in one dense indexed source
 cohort before reading any trade field; consumed snapshot fields, indexed slots,
@@ -1435,7 +1466,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-six Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-seven Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1448,8 +1479,9 @@ Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
 v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, Symbol Breakdown v1,
-Quick Review Continuation v1, and Dashboard Import Continuation v1. Thirty
-presentation/projection/navigation increments remain derived-only. Durable
+Quick Review Continuation v1, Dashboard Import Continuation v1, and Review-Clear
+Plan Check Continuation v1. Thirty-one presentation/projection/navigation
+increments remain derived-only. Durable
 Daily Journal owns checksum-pinned schema-v4 daily
 writes; Report Trade Continuation, Dashboard Recent Trade Continuation, and
 Quick Review Continuation reuse the existing versioned trade-review save path,

@@ -560,7 +560,9 @@ test("Dashboard review saves return focus to the exact rebuilt review rhythm", a
   await expect(rhythm.locator(
     'button[data-trade-review-origin="dashboard-review-progress"]',
   )).toHaveCount(0);
-  await expect(rhythm.getByRole("button", { name: "Open review journal" })).toBeVisible();
+  await expect(rhythm.getByRole("button", {
+    name: "Open Plan Check for 2 completed reviewed trades",
+  })).toBeVisible();
   const focusLayout = await heading.evaluate((element) => {
     const title = element.getBoundingClientRect();
     const topbar = document.querySelector<HTMLElement>(".topbar")?.getBoundingClientRect();

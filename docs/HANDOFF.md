@@ -1,9 +1,114 @@
 # Hermes Journal — active mobile handoff
 
-Status: Dashboard Import Continuation v1 shipped on main · implementation
-commit 53c17f6 · exact-head hosted CI passed · updated 2026-07-19
+Status: Review-Clear Plan Check Continuation v1 locally verified · direct-main
+publication and exact-head hosted CI pending · updated 2026-07-19
 
 ## Current handoff
+
+task: Add one fail-closed, explicit continuation from a completed local review
+queue to the existing full-journal Plan Check without auto-routing after save or
+changing durable journal/report state.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Implemented Review-Clear Plan Check Continuation v1 as the thirty-seventh
+  bounded Slice D increment and thirty-first derived-only presentation/
+  navigation increment.
+- A coherent private Dashboard or Journal with zero canonical waiting reviews
+  and at least one completed reviewed closed trade now exposes one explicit
+  **Open plan check** action. Demo, empty, waiting, open-only zero-completed,
+  and other zero-completed states retain their prior controls and copy.
+- The final review save still redraws and focuses **Review queue clear**. Only a
+  later user activation rederives the fail-closed queue, verifies the captured
+  origin/count and exact bound control topology, and opens the fixed
+  full-workspace `plan-check-title`; no save auto-routes.
+- The destination must be one exact fresh render of the same snapshot-derived
+  Plan Check, including governed metadata, evidence, canonical Reports index,
+  and neighbors. It is verified again after focus; moved, cloned, duplicated,
+  replaced, hidden, clipped, stale, or focus-time-changing origin/destination
+  evidence returns to the exact source with one focused generic error.
+- Every local startup/replayed-onboarding recovery scan suppresses both origins
+  before the first eligible render, independent of onboarding state. A no-result
+  scan releases the current Dashboard or Journal only after it resolves;
+  confirmed import/manual-save recovery remains suppressed until the committed
+  snapshot is reconciled. Previous bindings are aborted and displaced app-owned
+  origin/destination artifacts are removed before redraw.
+- Added application/view tests and eight production-Chromium journeys covering
+  both origins, pointer/Enter/Space, 320/421px at 200% text, touch-size and
+  unobscured focus, offline use, unchanged archive state/report digests and
+  payload data, storage/network neutrality, demo/empty/waiting/open-only gates,
+  confirmed-commit suppression and release, mutation-observed startup/no-result
+  scans, origin topology/visibility/identity/attribute tampering, destination
+  removal/change/clipping/same-stack movement, rollback, cleanup, and retry.
+- Updated README, Product Blueprint, iOS Roadmap, Local Ledger, and Mac handoff
+  evidence. No schema, migration, store command, review write, preference,
+  cursor, archive/digest/export/restore shape, report definition, financial
+  formula, dependency, native project, file, network, security, advice, order,
+  or brokerage-execution path changed; the six write-capable exceptions remain
+  fixed.
+
+verified:
+
+- `cd mobile && npm ci` — 164 packages installed; zero vulnerabilities.
+  `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2. `npm test` —
+  847/847 across 73 files. `npm run test:bundle` — 6/6. `npm run
+  test:ios-sync` — 8/8. `npm audit --omit=dev` — zero production
+  vulnerabilities.
+- `cd mobile && npm run test:e2e` — 133/133 production-Chromium journeys,
+  including all eight Review-Clear Plan Check journeys and every prior Hermes
+  browser flow. The final assertion-hardened continuation file also passed 8/8
+  in isolation.
+- `/tmp/hermes-review-clear-plan-check-venv-20260719/bin/ruff check .` — all
+  checks passed. The same isolated environment's `pytest -q` — 228/228 with
+  one third-party deprecation warning.
+- `cd mobile && npm run ios:sync` — 100 modules transformed, five JavaScript
+  chunks, and only the pinned SQLite plugin registered; CocoaPods and
+  xcodebuild were explicitly skipped on Linux. `npm run verify:bundle` —
+  largest `assets/app-gIOxQein.js` at 409,482/500,000 bytes. `npm run
+  verify:ios-sync` — nine production files copied byte-for-byte at SHA-256
+  `da5a5c9186726f9145b05e3b53130adc6de75efd8fb9c42f00b4ce40cf0f9f0a`;
+  generated identity, SQLite registration, native drift, and lock drift passed.
+- `git diff --check`, explicit source/scope scans, generated-file review, and
+  native/lock drift checks passed. Independent architecture, implementation,
+  test, product, and documentation audits found no remaining P0-P2 issue after
+  startup-scan, canonical-destination, and assertion hardening. Direct-main
+  publication and exact-head hosted CI remain pending.
+
+assumptions:
+
+- The current local snapshot and in-session recovery state remain authoritative.
+  An unresolved local manual-recovery scan is deliberately fail-closed, but this
+  slice does not claim that transient continuation guidance persists across
+  relaunch.
+- Review Queue remains the sole eligibility owner, and the existing governed
+  Plan Check render remains the destination source of truth. The continuation
+  neither ranks reports nor records that an insight was viewed.
+- Chromium validates the production web artifact and browser accessibility
+  boundary. Linux bundle/config/copy evidence does not prove WKWebView, native
+  focus order, SQLCipher, Keychain, or device behavior.
+
+open:
+
+- Publish the reviewed implementation directly to GitHub `main`, require exact-
+  head hosted CI success, then replace this pending evidence with immutable
+  implementation commit and run/job identifiers.
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  SQLCipher/Keychain, lifecycle, VoiceOver, Dynamic Type, safe-area, hardware-
+  keyboard, Files/WKWebView, and multi-scene evidence are recorded on the
+  reviewed Mac/device.
+- Fleet input/output guard evidence and Sonnet Stage 2 sign-off remain open.
+- The broader paired trading-and-journal product remains active. Brokerage
+  connection, funded execution, and human-cohort validation remain separate,
+  human-gated scopes.
+
+## Prior milestone — Dashboard Import Continuation v1
+
+Status: Dashboard Import Continuation v1 shipped on main · implementation
+commit 53c17f6 · exact-head hosted CI passed · updated 2026-07-19
 
 task: Add one fail-closed, offline continuation from a nonempty local Dashboard
 to the existing generic stock CSV importer, while preserving confirmed import

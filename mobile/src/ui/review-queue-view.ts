@@ -2,8 +2,15 @@ import {
   buildReviewQueue,
   firstReviewQueueTrade,
 } from "../application/review-queue";
+import type {
+  ReviewClearPlanCheckContinuation,
+} from "../application/review-clear-plan-check-continuation";
 import { escapeHtml } from "../core/html";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
+import {
+  reviewClearPlanCheckAction,
+  reviewClearPlanCheckFailure,
+} from "./review-clear-plan-check-continuation";
 import { reviewTradeAction } from "./trade-review-sheet";
 
 const REVIEW_QUEUE_GROUP_LABEL = Object.freeze({
@@ -88,17 +95,35 @@ function batchTagForm(snapshot: JournalWorkspaceSnapshot): string {
   </form>`;
 }
 
-export function reviewQueueSection(snapshot: JournalWorkspaceSnapshot): string {
+export function reviewQueueSection(
+  snapshot: JournalWorkspaceSnapshot,
+  planCheckContinuation: ReviewClearPlanCheckContinuation | null = null,
+): string {
   const queue = buildReviewQueue(snapshot);
+  if (
+    planCheckContinuation !== null
+    && (
+      planCheckContinuation.origin !== "journal"
+      || snapshot.provenance !== "local"
+      || queue.waitingTradeCount !== 0
+      || planCheckContinuation.completedTradeCount
+        !== snapshot.reviewProgress.completedTrades
+    )
+  ) {
+    throw new Error("The Journal review-clear Plan Check continuation is inconsistent.");
+  }
   const groups = queue.groups.map((group) => queueGroup(group, snapshot)).join("");
   const quickReview = quickReviewCard(queue, snapshot);
   const batch = snapshot.provenance === "local" && queue.waitingTradeCount > 0
     ? batchTagForm(snapshot)
     : "";
-  const content = queue.waitingTradeCount === 0
+  const clearContent = planCheckContinuation === null
     ? `<article class="empty-state"><h3 id="review-queue-clear-title" tabindex="-1" data-review-queue-clear-title>Review queue clear</h3><p>Every closed trade has a completed, versioned reflection.</p></article>`
+    : `<article class="empty-state" data-review-clear-plan-check-origin="journal"><h3 id="review-queue-clear-title" tabindex="-1" data-review-queue-clear-title>Review queue clear</h3><p>Every closed trade has a completed, versioned reflection. Continue into the existing full-journal Plan Check; its evidence is observational and may still be a small cohort.</p><div class="quick-actions">${reviewClearPlanCheckAction(planCheckContinuation)}</div>${reviewClearPlanCheckFailure(planCheckContinuation)}</article>`;
+  const content = queue.waitingTradeCount === 0
+    ? clearContent
     : `<div class="review-queue-groups">${groups}</div>`;
-  return `<section aria-labelledby="review-queue-title" data-review-queue>
+  return `<section aria-labelledby="review-queue-title" data-review-queue data-review-queue-waiting="${queue.waitingTradeCount}">
     <div class="section-title"><h2 id="review-queue-title" tabindex="-1">Trade review queue</h2><span>${queue.waitingTradeCount} waiting</span></div>
     ${quickReview}
     ${batch}
