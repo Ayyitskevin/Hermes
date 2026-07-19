@@ -30,9 +30,9 @@ function countNoun(count: number, singular: string, plural = `${singular}s`): st
 export function importTool(snapshot: JournalWorkspaceSnapshot): string {
   const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const accountValue = "";
-  return `<article class="card import-tool" aria-labelledby="import-tool-title">
+  return `<article class="card import-tool" data-import-tool aria-labelledby="import-tool-title">
     <p class="card-label">GENERIC BROKER CSV</p>
-    <h2 id="import-tool-title">Import executions</h2>
+    <h2 id="import-tool-title" data-import-tool-title tabindex="-1">Import executions</h2>
     <p>Hermes previews and validates the file before one atomic on-device commit. Required columns: symbol, side, quantity, price, and execution time.</p>
     <form id="csv-import-form" novalidate>
       <div class="field-grid">
@@ -42,7 +42,7 @@ export function importTool(snapshot: JournalWorkspaceSnapshot): string {
         <label>CSV file<input id="import-file" name="file" type="file" accept=".csv,text/csv,text/plain" required /></label>
       </div>
       <p class="helper-text">Timestamps without an offset use the selected IANA time zone. The first journal version intentionally prevents mixed-currency aggregation.</p>
-      <button class="primary-button" type="submit">Preview CSV</button>
+      <button class="primary-button" type="submit" data-import-preview-submit>Preview CSV</button>
       <p id="import-status" class="result-count" role="status" aria-live="polite" tabindex="-1"></p>
       <div id="import-preview"></div>
     </form>

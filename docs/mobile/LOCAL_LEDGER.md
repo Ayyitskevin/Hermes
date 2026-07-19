@@ -2,7 +2,7 @@
 
 Status: implemented execution + versioned trade/day review + receipt/rhythm projections + nine governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
 
-The current workspace contains 35 bounded Slice D increments: 29 derived-only
+The current workspace contains 36 bounded Slice D increments: 30 derived-only
 presentation/projection increments and six write-capable exceptions.
 Reports exposes 11 semantic targets and nine governed reports.
 
@@ -279,6 +279,49 @@ surface and never auto-advance. No queue cursor, session progress, choice,
 focus, or failure state enters schema v4, SQLite, browser journal state,
 preferences, export/restore, archives, digests, governed reports, financial
 formulas, native source, dependencies, or a network path.
+
+### Dashboard import continuation
+
+Dashboard Import Continuation v1 is the thirty-sixth bounded Slice D increment
+and the thirtieth derived-only presentation/navigation increment. It persists
+no cursor, launcher, file, receipt-recovery, or focus state. A nonempty local
+snapshot derives one secondary **Import latest session** card after the exact
+Dashboard review-progress card. Empty provenance retains the existing inline
+importer and demo provenance derives no continuation.
+
+```text
+current local snapshot
+  → exact Dashboard heading/account/net-result/review-progress/import chain
+  → original Import latest session action
+  → exact More heading/manual/import/form/control chain
+  → focused Import executions heading
+  → no automatic file selection, read, preview, preparation, or commit
+```
+
+The binder captures the one original card and action. Activation requires their
+current identity, stable kind, canonical placement, and root-global uniqueness;
+the destination requires one visible/enabled account, time-zone, currency, file,
+Preview action, status, and preview container inside the existing bound form.
+One independently confirmed manual-save retry may occupy its exact position
+after the screen heading. A replaced, cloned, moved, or duplicated origin action
+fails when attempted. Destination evidence additionally fails when missing,
+cloned, moved, duplicated, hidden, disabled, or unable to receive focus, before
+a file read or write; any displaced app-owned interactive artifact is removed
+before Dashboard rebuilds. Route activation changes no ledger,
+browser/protected storage, or network state.
+
+Confirmed-post-commit CSV receipt recovery outranks stale snapshot provenance.
+Dashboard then renders only the exact receipt continuation and its known-commit
+boundary. More renders the exact receipt retry followed by read-only export and
+the product boundary; manual/CSV capture, stale latest/history evidence,
+receipt review/rollback, restore, and sizing controls are absent. The retry must
+be the only button in its failure card and must match the stable receipt ID;
+success returns to the existing receipt-review continuation. A simultaneous
+manual-save recovery retains its own exact retry without weakening either
+identity. No schema, migration, parser, store command, archive/digest/export
+shape, report, formula, preference, dependency, native source, or network path
+changes. Generic CSV remains stock-only and the six write-capable exceptions
+remain fixed.
 
 ### Calendar-day reflection continuation
 
@@ -1479,6 +1522,20 @@ The production-bundle journeys reconcile exact immutable review-version/head/
 submission counts, browser-storage and network neutrality, 44-point controls,
 and 320px/200% reflow; they do not establish native SQLite, lifecycle, or
 accessibility acceptance.
+Dashboard Import Continuation coverage adds empty/local/demo gating, exact
+Dashboard and More topology, optional manual-save recovery composition,
+keyboard and pointer activation, real Chromium offline routing, zero file read,
+unchanged local storage, no external request, and 320/421px 200% reflow/focus
+evidence. Adversarial journeys cover repeated activation; moved actions, cards,
+review/card pairs, import tools, and bound forms; action/card clones; missing
+status; disabled Preview/retry; duplicated tools; displaced confirmed recovery;
+and injected recovery-only capture controls. Confirmed-post-commit journeys
+prove stale snapshot precedence, exact retry focus, no stale history/review/
+rollback/restore/sizing/capture controls, displaced-artifact cleanup, and no
+file reread or storage mutation. Cross-flow coverage keeps a confirmed manual
+save retry coherent while opening the generic importer. This is browser bundle
+evidence, not native Files, WKWebView, SQLite/SQLCipher, lifecycle, VoiceOver,
+hardware-keyboard, or Dynamic Type acceptance.
 Calendar-Day Reflection Continuation coverage adds whole-journal exact-date
 head resolution, locked exact creation versus generic editable creation,
 malformed/duplicate head rejection, changed and deleted origin-attribute
@@ -1537,6 +1594,11 @@ keyboard, Dynamic Type, and duplicate-symbol acceptance also remain NOT RUN.
 Dashboard Review Return Focus native VoiceOver announcement, keyboard focus,
 safe-area and Dynamic Type layout, lifecycle, force-quit/relaunch, and
 multi-scene refresh/fallback acceptance also remain NOT RUN.
+Dashboard Import Continuation native Files/WKWebView routing, SQLCipher receipt
+recovery, VoiceOver announcement/order, hardware-keyboard focus, safe-area and
+Dynamic Type layout, lifecycle, force-quit/relaunch, and multi-scene recovery
+acceptance remain NOT RUN; browser evidence must not be treated as native
+acceptance.
 CSV Preview Feedback Focus native VoiceOver announcement/order, hardware-
 keyboard focus, safe-area/chrome layout, lifecycle, force-quit/relaunch,
 multi-scene behavior, SQLite observation, and 320/421-width 200% Dynamic Type

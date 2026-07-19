@@ -558,9 +558,10 @@ test("a proven CSV commit retries only its receipt refresh", async ({ page }) =>
   await expect(recovery).toHaveCount(1);
   await expect(recovery).not.toContainText(secondPrivateDetail);
   await expect(recoveryHeading).toBeFocused();
-  await expect(page.locator(".import-history-row").filter({
-    hasText: "refresh-only.csv",
-  })).toHaveCount(1);
+  await expect(page.locator(".import-history-row")).toHaveCount(0);
+  await expect(page.locator("[data-review-import-receipt]")).toHaveCount(0);
+  await expect(page.locator("[data-rollback-receipt]")).toHaveCount(0);
+  await expect(page.locator("#user-data-restore-form")).toHaveCount(0);
   expect(await page.evaluate(() => (
     document.documentElement.dataset.csvCommitMapReads
   ))).toBe("0");

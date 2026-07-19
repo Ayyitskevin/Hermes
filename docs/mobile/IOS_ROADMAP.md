@@ -59,7 +59,7 @@ under the provisional identifier until that gate is cleared.
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
   Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
   Generic CSV Receipt Review Continuation v1, Compact Trades Filters v1,
-  Quick Review Continuation v1, export, and
+  Quick Review Continuation v1, Dashboard Import Continuation v1, export, and
   matching-runtime local restore are implemented.
   Browser Recovery
   Continuity proves a restored daily draft can append and survive a second
@@ -523,6 +523,31 @@ observed plugin/device behavior:
   dependency, native source, or network path changed. Native SQLite,
   VoiceOver, hardware-keyboard, lifecycle, and Dynamic Type acceptance remain
   held for the Mac/iPhone gate.
+- Dashboard Import Continuation v1 is the thirty-sixth bounded Slice D increment
+  and the thirtieth derived-only presentation/navigation increment. One
+  secondary **Import latest session** action follows the canonical local
+  Dashboard review-progress card and routes to the existing generic stock CSV
+  importer; empty keeps its inline importer and demo exposes none. Activation
+  rechecks the exact Dashboard chain, original card/action, optional confirmed-
+  manual recovery, exact More/manual/import adjacency, and every required form/
+  file/Preview/status/preview control. It focuses **Import executions** without
+  opening a picker, reading a file, previewing, preparing, committing,
+  persisting, touching browser/protected storage, or networking. A replaced,
+  cloned, moved, or duplicated origin action fails visibly when attempted.
+  Destination evidence additionally fails when missing, cloned, moved,
+  duplicated, hidden, disabled, or unable to receive focus; displaced
+  interactive artifacts are removed before rebuild.
+  Confirmed-post-commit receipt recovery outranks stale snapshot provenance and
+  renders dedicated recovery-only Dashboard/More surfaces: capture, stale
+  receipt history, review/rollback, restore, and sizing are withheld while the
+  import flow retains one exact receipt retry plus read-only export. An
+  independently confirmed manual-save retry may coexist in its own canonical
+  position. No schema, migration, parser,
+  store command, archive/digest/export shape, report, formula, preference,
+  dependency, native source, or network path changed. Generic CSV remains
+  stock-only; the six write-capable exceptions stay fixed. Native VoiceOver,
+  hardware-keyboard, Dynamic Type, lifecycle, Files, WKWebView, and physical-
+  device acceptance remain held for the Mac/iPhone gate.
 - Calendar-Day Reflection Continuation v1 renders the full-workspace Daily
   Journal state for the exact selected activity date inside its Trades card.
   Local non-future actions carry a canonical date that must agree with the
@@ -915,10 +940,10 @@ Focus v1, Manual Entry Validation Focus v1, CSV Preview Feedback Focus v1,
 Import Receipt Reconciliation v1, Daily Reflection Rhythm v1, Guided Account
 Overview v1, Manual Capture Review Continuation v1, Generic CSV Receipt Review
 Continuation v1, Daily Reflection Rhythm Continuation v1, Exact Playbook Scope
-v1, Exact Playbook Draft Scope v1, Quick Review Continuation v1,
-matching-runtime local restore, and all nine governed reports are implemented.
-Thirty-five bounded Slice D increments are implemented in total; twenty-nine
-remain derived-only. Reports exposes eleven semantic targets.
+v1, Exact Playbook Draft Scope v1, Quick Review Continuation v1, Dashboard
+Import Continuation v1, matching-runtime local restore, and all nine governed
+reports are implemented. Thirty-six bounded Slice D increments are implemented
+in total; thirty remain derived-only. Reports exposes eleven semantic targets.
 Durable Daily Journal, Report Trade Continuation, Dashboard Recent Trade
 Continuation, Quick Review Continuation, Calendar-Day Reflection Continuation,
 and Daily Reflection Rhythm Continuation are the six write-capable exceptions.

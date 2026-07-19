@@ -178,6 +178,22 @@ p { line-height: 1.55; }
 
 .result-card > span { color: #cbc8d3; font-size: .88rem; }
 .empty-result-card > strong { font-family: "Archivo", system-ui, sans-serif; font-size: clamp(2rem, 10vw, 3.9rem); letter-spacing: -.055em; }
+.dashboard-import-continuation {
+  min-width: 0;
+  display: grid;
+  gap: .75rem;
+  border-color: rgb(92 225 230 / 24%);
+  background: linear-gradient(135deg, rgb(92 225 230 / 7%), rgb(155 124 255 / 8%));
+}
+.dashboard-import-continuation p { margin: 0; }
+.dashboard-import-continuation .quick-actions { align-items: stretch; }
+.dashboard-import-recovery { border-color: rgb(255 190 92 / 36%); background: rgb(255 190 92 / 6%); }
+#import-tool-title:focus,
+[data-dashboard-import-continuation-title]:focus,
+[data-dashboard-import-continuation-error]:focus {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
 .positive { color: var(--positive); }
 .negative { color: var(--negative); }
 .metric-grid, .two-up, .quick-actions {
@@ -972,8 +988,8 @@ p { line-height: 1.55; }
 .import-receipt-review p,
 .import-receipt-review-failure h2,
 .import-receipt-review-failure p { min-width: 0; overflow-wrap: anywhere; }
-#import-receipt-review-title:focus-visible,
-#import-receipt-review-failure-title:focus-visible,
+#import-receipt-review-title:focus,
+#import-receipt-review-failure-title:focus,
 .import-receipt-review-row h3:focus {
   outline: 2px solid var(--cyan);
   outline-offset: 3px;

@@ -431,6 +431,28 @@ submission-ready product:
   export shape, report, formula, preference, dependency, native source, or
   network path is added; the exception exposes the existing trade-review write
   path through a new bounded continuation.
+- Dashboard Import Continuation v1 is the thirty-sixth bounded Slice D
+  increment and the thirtieth derived-only presentation/navigation increment.
+  After a local journal exists, a secondary **Import latest session** action
+  sits after the canonical review-progress card and opens the existing generic
+  stock CSV importer in More. Empty Dashboard keeps its one inline importer;
+  demo exposes no action. Activation validates the exact Dashboard chain and
+  exact More heading/manual/import/form/control topology, then focuses
+  **Import executions** without opening a picker or reading, previewing,
+  preparing, committing, persisting, or networking. A confirmed CSV commit
+  whose receipt continuation cannot redraw takes precedence over a stale
+  empty/local snapshot: Dashboard and More switch to an exact receipt-recovery
+  surface with capture, stale receipt history, review/rollback, restore, and
+  sizing controls withheld. The import flow retains only the exact receipt
+  retry plus read-only export; an independently confirmed manual-save retry may
+  coexist in its own canonical position. A replaced, cloned, moved, or
+  duplicated origin action fails visibly when attempted. Invalid destination
+  evidence also fails visibly when missing, cloned, moved, duplicated, hidden,
+  disabled, or unable to receive focus, and displaced interactive artifacts are
+  removed before Dashboard is rebuilt. The increment adds no schema,
+  migration, store command, parser, archive/digest/export shape, report,
+  formula, preference, dependency, native source, or network path; the six
+  write-capable exceptions remain unchanged.
 - A mobile trade-detail review sheet with execution inspection, exact R/return
   evidence, pending/draft/completed queues, and versioned-review session streaks.
 - A versioned, deterministic plaintext journal export that captures all

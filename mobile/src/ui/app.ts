@@ -42,6 +42,16 @@ import {
   calendarDayAnnouncement,
   calendarDaySection,
 } from "./calendar-day-view";
+import {
+  bindDashboardImportContinuation,
+  buildDashboardImportContinuation,
+  clearDashboardImportContinuationBinding,
+  dashboardImportContinuationCard,
+  focusDashboardImportDestination,
+  removeDisplacedDashboardImportArtifacts,
+  showDashboardImportContinuationFailure,
+  type DashboardImportContinuation,
+} from "./dashboard-import-continuation";
 import { bindImportForm, importTool } from "./import-tool";
 import {
   bindImportReceiptReviewActions,
@@ -298,10 +308,27 @@ function emptyDashboardView(snapshot: JournalWorkspaceSnapshot): string {
   </section>`;
 }
 
+function dashboardImportRecoveryView(
+  continuation: Extract<DashboardImportContinuation, { readonly kind: "confirmed-recovery" }>,
+): string {
+  return `<section class="screen-stack" aria-labelledby="dashboard-title">
+    <div class="screen-heading">
+      <div><p class="eyebrow">CSV RECEIPT · COMMIT CONFIRMED</p><h1 id="dashboard-title">Dashboard</h1></div>
+      <span class="source-label">RECOVERY ONLY</span>
+    </div>
+    ${dashboardImportContinuationCard(continuation)}
+    <article class="card privacy-card"><p class="card-label">KNOWN COMMIT BOUNDARY</p><h2>Do not import the file again</h2><p>Hermes keeps new capture controls out of this stale workspace view until the exact saved receipt can rebuild its review continuation.</p></article>
+  </section>`;
+}
+
 function dashboardView(
   snapshot: JournalWorkspaceSnapshot,
   browser: TradeBrowserResult,
+  importContinuation: DashboardImportContinuation | null,
 ): string {
+  if (importContinuation?.kind === "confirmed-recovery") {
+    return dashboardImportRecoveryView(importContinuation);
+  }
   if (snapshot.provenance === "empty") return emptyDashboardView(snapshot);
   const performance = snapshot.performance;
   const recentTrades = [...snapshot.trades].reverse().slice(0, 4);
@@ -318,7 +345,7 @@ function dashboardView(
       <span class="source-label">${escapeHtml(snapshot.provenanceLabel)}</span>
     </div>
     ${accountOverviewSection(snapshot)}
-    <article class="result-card">
+    <article class="result-card" data-dashboard-net-result>
       <p class="card-label">NET P&amp;L</p>
       <strong class="${resultClass(performance.netPnl)}">${escapeHtml(signedCurrency(performance.netPnl, snapshot.currencyCode))}</strong>
       <span>${escapeHtml(signedR(performance.netR, "—"))} · ${countNoun(performance.tradeCount, "trade")} with realized P&amp;L${performance.rTradeCount === performance.tradeCount ? "" : ` · R on ${performance.rTradeCount}`}${hasInterimResults ? " · includes interim partial exits" : ""}</span>
@@ -331,6 +358,7 @@ function dashboardView(
         <button class="text-button" type="button" data-route="reports" data-report-target="review-session-coverage-title">View session evidence</button>
       </div>
     </article>
+    ${importContinuation === null ? "" : dashboardImportContinuationCard(importContinuation)}
     <div class="metric-grid">
       <article class="card"><p class="card-label">WIN RATE</p><strong class="metric">${performance.winRatePct.toFixed(0)}%</strong><span>wins versus losses</span></article>
       <article class="card"><p class="card-label">PROFIT FACTOR</p><strong class="metric">${performance.profitFactor?.toFixed(2) ?? "—"}</strong><span>gross profit ÷ gross loss</span></article>
@@ -461,9 +489,9 @@ function moreView(
     <div class="screen-heading"><div><p class="eyebrow">DATA + TOOLS</p><h1 id="more-title">More</h1></div><span class="demo-badge">${modeLabel(snapshot)}</span></div>
     ${snapshot.provenance === "demo" ? `<article class="card"><p class="card-label">FICTIONAL WORKSPACE</p><h2>Demo stays separate</h2><p>Manual entry and CSV import stay in your private journal; demo records are never written to the ledger.</p></article>` : confirmedImportRecovery ? "" : manualCaptureCard()}
     ${snapshot.provenance === "demo" || confirmedImportRecovery ? "" : importTool(snapshot)}
-    ${latestImportReceiptCard(snapshot)}
-    ${importReceiptHistorySection(snapshot)}
-    ${importReceiptReview === null ? "" : importReceiptReviewSection(
+    ${confirmedImportRecovery ? "" : latestImportReceiptCard(snapshot)}
+    ${confirmedImportRecovery ? "" : importReceiptHistorySection(snapshot)}
+    ${confirmedImportRecovery || importReceiptReview === null ? "" : importReceiptReviewSection(
       snapshot,
       importReceiptReview,
       importReceiptReviewPageStart,
@@ -472,8 +500,8 @@ function moreView(
       pendingImportReceiptReview,
     )}
     ${snapshot.provenance === "demo" ? "" : userDataExportCard(persistence)}
-    ${snapshot.provenance === "demo" ? "" : userDataRestoreCard(snapshot.provenance === "empty", persistence)}
-    ${sizingTool()}
+    ${snapshot.provenance === "demo" || confirmedImportRecovery ? "" : userDataRestoreCard(snapshot.provenance === "empty", persistence)}
+    ${confirmedImportRecovery ? "" : sizingTool()}
     <article class="card privacy-card"><p class="card-label">PRODUCT BOUNDARY</p><h2>Review, never trade</h2><p>Hermes stores execution facts locally, derives trades deterministically, and never places or modifies a brokerage order.${snapshot.importHistory.length === 0 ? " Manual fills remain independent facts; CSV imports also create reversible receipts." : activeHistory.length === 0 ? " Every recorded import is rolled back; manual facts remain independent." : " Every active import can be rolled back from its receipt."}</p></article>
   </section>`;
 }
@@ -483,6 +511,7 @@ function viewFor(
   snapshot: JournalWorkspaceSnapshot,
   persistence: JournalApplication["persistence"],
   browser: TradeBrowserResult,
+  dashboardImportContinuation: DashboardImportContinuation | null,
   manualCapture: ManualCaptureReviewContinuation | null,
   importReceiptReview: ImportReceiptReviewContinuation | null,
   importReceiptReviewPageStart: number,
@@ -490,7 +519,11 @@ function viewFor(
   playbookTradeScope: PlaybookTradeScopeProjection | null,
 ): string {
   switch (tab) {
-    case "dashboard": return dashboardView(snapshot, browser);
+    case "dashboard": return dashboardView(
+      snapshot,
+      browser,
+      dashboardImportContinuation,
+    );
     case "trades": return tradesView(snapshot, browser, manualCapture);
     case "journal":
       if (playbookTradeScope === null) {
@@ -1197,15 +1230,21 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       }
     }
     const manualCaptureForView = tab === "trades" ? manualCaptureContinuation : null;
+    const dashboardImportContinuation = tab === "dashboard"
+      ? buildDashboardImportContinuation(snapshot, pendingImportReceiptReview)
+      : null;
     const playbookTradeScope = tab === "journal"
       ? preparePlaybookTradeScope(snapshot)
       : null;
     if (screen) {
+      clearDashboardImportContinuationBinding(root);
+      removeDisplacedDashboardImportArtifacts(root);
       screen.innerHTML = viewFor(
         tab,
         snapshot,
         application.persistence,
         browser,
+        dashboardImportContinuation,
         manualCaptureForView,
         tab === "more" ? importReceiptReviewContinuation : null,
         importReceiptReviewPageStart,
@@ -1254,6 +1293,26 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       },
       announceFailure: announceStatus,
     });
+    if (tab === "dashboard" && dashboardImportContinuation !== null) {
+      bindDashboardImportContinuation(root, dashboardImportContinuation, {
+        open: (continuation) => {
+          manualCaptureAttemptGeneration += 1;
+          importReceiptReviewAttemptGeneration += 1;
+          render("more", false);
+          focusDashboardImportDestination(root, continuation);
+          announceStatus(continuation.kind === "import"
+            ? "Import latest session opened. Choose an account and CSV; nothing is read until Preview CSV."
+            : "Saved import recovery opened. Do not import the CSV again; retry only its exact receipt continuation.");
+        },
+        fail: () => {
+          manualCaptureAttemptGeneration += 1;
+          importReceiptReviewAttemptGeneration += 1;
+          render("dashboard", false);
+          showDashboardImportContinuationFailure(root);
+          announceStatus("The exact import step was unavailable. Nothing was read or saved.");
+        },
+      });
+    }
     if (tab === "journal" && playbookTradeScope !== null) {
       bindPlaybookTradeScope(root, playbookTradeScope, {
         openPlaybook: (playbookName, reviewState, expectedTradeCount) => {
@@ -1361,20 +1420,24 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     }
     if (tab === "reports") bindReportsView(root, snapshot);
     if (tab === "more") {
-      bindSizingForm(root);
+      const confirmedImportRecovery = pendingImportReceiptReview?.origin
+        === "confirmed-post-commit";
+      if (!confirmedImportRecovery) bindSizingForm(root);
       bindUserDataExport(root, application);
-      bindUserDataRestore(root, application, async (announcement) => {
-        snapshot = await application.loadWorkspace();
-        render(currentTab, false);
-        announceStatus(announcement);
-      });
-      bindImportReceiptReviewActions(root, snapshot, {
-        openReceipt: async (receiptId) => {
-          const result = await continueImportReceiptReview(receiptId);
-          result.focus();
-        },
-      });
-      if (importReceiptReviewContinuation !== null) {
+      if (!confirmedImportRecovery) {
+        bindUserDataRestore(root, application, async (announcement) => {
+          snapshot = await application.loadWorkspace();
+          render(currentTab, false);
+          announceStatus(announcement);
+        });
+        bindImportReceiptReviewActions(root, snapshot, {
+          openReceipt: async (receiptId) => {
+            const result = await continueImportReceiptReview(receiptId);
+            result.focus();
+          },
+        });
+      }
+      if (!confirmedImportRecovery && importReceiptReviewContinuation !== null) {
         bindImportReceiptReviewView(
           root,
           snapshot,

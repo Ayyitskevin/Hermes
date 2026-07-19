@@ -5,7 +5,7 @@ physical-device verification, archives, TestFlight, and App Store upload are not
 Run this handoff on a Mac with Node 22.12+ and the current App Store-required
 Xcode installed.
 
-The current source contains 35 bounded Slice D increments: 29 derived-only and
+The current source contains 36 bounded Slice D increments: 30 derived-only and
 six write-capable exceptions. Reports exposes 11 semantic targets and
 nine governed reports. These source counts do not strengthen any native claim.
 
@@ -142,6 +142,28 @@ and an App Store disclosure.
   file producing a new zero-version receipt rather than returning the old
   source identity. Generic CSV remains stock-only; do not infer relaunch
   persistence or broader broker/asset semantics.
+- Establish a nonempty local journal, return to Dashboard, and activate the
+  secondary **Import latest session** action with touch, VoiceOver, Return, and
+  Space. Confirm the empty Dashboard still has only its inline importer and demo
+  has no continuation. On local Dashboard, verify the action follows review
+  progress, is at least 44 points, and opens/focuses the existing **Import
+  executions** heading without opening Files or reading a file. Repeat at 320
+  and 421 points with 200% Dynamic Type, safe areas, onscreen/hardware keyboard,
+  background/foreground, force quit/relaunch, and two scenes; reconcile zero
+  SQLite/protected-preference/network change from routing alone. While an exact
+  confirmed-manual retry is visible, prove both it and the import route retain
+  their distinct canonical positions and identities. Replace, move, clone, or
+  duplicate the origin action and attempt it; separately remove, move, clone,
+  duplicate, hide, disable, or prevent focus on one destination control. Confirm
+  a generic focused failure, no picker/read/write, and no displaced interactive
+  artifact remains.
+- Force a CSV commit to succeed while receipt-continuation refresh/render fails,
+  including a stale empty snapshot. Dashboard must show **Finish saved import**
+  instead of fresh capture. More must show the one exact receipt retry plus
+  read-only export, with manual/CSV capture, latest/history, review/rollback,
+  restore, and sizing absent. Prove only the stable receipt retry can continue,
+  an injected/moved/disabled/extra control fails visibly, no file is reread or
+  recommitted, and successful retry restores ordinary current-journal views.
 - In a fresh journal, manually enter an opening and closing fill with fees.
   Confirm the review step shows the canonical values, the result reconciles,
   no import receipt is manufactured, and force quit/relaunch preserves both
@@ -839,6 +861,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Dashboard recent-trade continuation | status | order + stable-ID duplicate fixture + focus/layout/lifecycle evidence |
 | Dashboard Review Return Focus | status | exact origin + waiting/clear heading + direct/replay/refresh/fallback/lifecycle evidence |
 | Quick Review Continuation | status | canonical draft-first subject + local/demo/empty boundary + draft pause + exact fresh-next/clear focus + tamper/continuation failure + recovery/layout/lifecycle/SQLite/network evidence |
+| Dashboard Import Continuation | status | local/empty/demo boundary + exact Dashboard/More topology + offline no-file-read route + confirmed-receipt recovery-only suppression + manual-recovery composition + tamper/cleanup/focus/layout/lifecycle/SQLite/network evidence |
 | Manual Entry Validation Focus | status | invalid account/symbol/decimal/time-zone/offset + values/identity/modal/focus/scroll/correction/dismissal/SQLite/network evidence |
 | CSV Preview Feedback Focus | status | missing/oversize/read/preparation failure + stale-read cancellation + ready/invalid title + values/file/stale-preview/mapping/focus/layout/SQLite/network evidence |
 | Import Receipt Reconciliation | status | source/accepted/rejected/skipped/new-or-restored/already-present/warning conservation + demo rollback suppression + disclosure/focus/layout/SQLite/network evidence |
@@ -1022,6 +1045,15 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   acceptance held until demo/rolled-back noninteraction, stock-only copy,
   no-dismiss confirmed recovery, history-only dismissal, exact focus, and
   unchanged report/network boundaries are observed on device.
+- Dashboard Import Continuation v1 has only Linux/Chromium offline routing,
+  exact topology/tamper cleanup, manual-recovery composition, confirmed-receipt
+  suppression, storage/request neutrality, focus, and 320/421px 200% reflow
+  evidence. Native Files/WKWebView no-read behavior, live SQLCipher receipt
+  recovery, VoiceOver announcement/order, Return/Space navigation, safe-area
+  visibility, onscreen/hardware keyboard, Dynamic Type, background/foreground,
+  force-quit/relaunch, and multi-scene state remain NOT RUN. Keep native
+  acceptance held until the two procedures above are recorded without another
+  file read, persistence command, protected-preference mutation, or request.
 - Calendar-Day Reflection Continuation v1 has only Linux/Chromium exact-date,
   recovery-focus, and reflow evidence. Native SQLite/SQLCipher persistence,
   two-scene stale/unknown-result behavior, relaunch, lifecycle, VoiceOver,

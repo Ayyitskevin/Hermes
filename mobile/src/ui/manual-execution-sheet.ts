@@ -17,7 +17,7 @@ export function manualExecutionAction(label = "Add execution"): string {
 }
 
 export function manualCaptureCard(): string {
-  return `<article class="card manual-capture-card">
+  return `<article class="card manual-capture-card" data-manual-capture-card>
     <p class="card-label">QUICK CAPTURE</p>
     <h2>Add one execution</h2>
     <p>Record a fill in under a minute. Hermes reviews the exact values before one atomic on-device save.</p>

@@ -326,7 +326,7 @@ attachments, and report digests in airplane mode.
 
 ### Slice D — insight and mobile depth
 
-Thirty-five bounded Slice D increments are implemented in the current workspace.
+Thirty-six bounded Slice D increments are implemented in the current workspace.
 The first is an offline plan-adherence report over the current projection and
 current saved review heads. A completed closed trade with exact realized P&L is
 classified as
@@ -1228,6 +1228,39 @@ queue cursor, browser/session preference, archive/digest/export/restore shape,
 report, formula, dependency, native source, or network path; it is write-capable
 only because it exposes the existing trade-review save command.
 
+Dashboard Import Continuation v1 is the thirty-sixth bounded Slice D increment
+and the thirtieth derived-only presentation/navigation increment. It completes
+the first home-loop step after a journal exists: the local Dashboard renders one
+secondary **Import latest session** action immediately after its canonical
+review-progress state, while the empty Dashboard keeps its existing inline
+importer and demo remains noninteractive. The action opens the existing generic
+stock CSV importer in More and focuses **Import executions**; it never opens the
+file picker or reads a file automatically.
+
+Activation requires one exact current Dashboard, optional exact confirmed-manual
+recovery, account overview, net-result card, review-progress card, continuation
+card, and original action in canonical order. Its destination requires one exact
+More heading, optional exact manual recovery, manual-capture card, import tool,
+form, account/time-zone/currency/file controls, Preview action, status, and
+preview container. A replaced, cloned, moved, or duplicated origin action fails
+with one generic focused alert when attempted. Destination evidence additionally
+fails when missing, cloned, moved, duplicated, hidden, disabled, or unable to
+receive focus; displaced actionable artifacts are removed before Dashboard is
+rebuilt. Navigation performs no file
+read, preview, preparation, commit, persistence, protected/browser storage, or
+network request.
+
+A confirmed CSV commit followed by unreadable or unrenderable receipt guidance
+outranks stale snapshot provenance. Dashboard becomes recovery-only and More
+exposes the one exact receipt retry with read-only export; manual/CSV capture,
+stale latest/history cards, review/rollback, restore, and sizing controls are
+withheld until receipt continuation succeeds. An independent confirmed-manual
+retry may appear in its exact position without weakening either identity. This
+increment adds no schema, migration, parser, store command, archive/digest/
+export shape, report, formula, preference, dependency, native source, or network
+path. The existing importer remains stock-only and the six write-capable
+exceptions remain fixed.
+
 A post-publication Symbol Breakdown hardening milestone does not add another
 Slice D increment. It captures every reference in one dense indexed source
 cohort before reading any trade field; consumed snapshot fields, indexed slots,
@@ -1402,7 +1435,7 @@ sync, dependency audit, native/lock drift check, and whitespace check.
 
 Slice C-B pairs the export manifest with current-schema, matching-runtime,
 empty-journal-only restore and idempotent exact-retry reconciliation. The
-thirty-five Slice D increments add Plan Check, governed Setup Breakdown,
+thirty-six Slice D increments add Plan Check, governed Setup Breakdown,
 allocation-day calendar evidence, Durable Daily Journal v1, Trade Browser Scope
 v1, Structured Trades Facets v1, Dynamic Review Facets v1, Reports Navigator
 v1, Report Trade Continuation v1, Mistake Patterns v1, Compact Trades Filters
@@ -1415,8 +1448,9 @@ Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
 Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
 Generic CSV Receipt Review Continuation v1, Daily Reflection Rhythm Continuation
 v1, Exact Playbook Scope v1, Exact Playbook Draft Scope v1, Symbol Breakdown v1,
-and Quick Review Continuation v1. Twenty-nine presentation/projection increments
-remain derived-only. Durable Daily Journal owns checksum-pinned schema-v4 daily
+Quick Review Continuation v1, and Dashboard Import Continuation v1. Thirty
+presentation/projection/navigation increments remain derived-only. Durable
+Daily Journal owns checksum-pinned schema-v4 daily
 writes; Report Trade Continuation, Dashboard Recent Trade Continuation, and
 Quick Review Continuation reuse the existing versioned trade-review save path,
 while Calendar-Day Reflection

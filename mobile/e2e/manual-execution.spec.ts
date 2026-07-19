@@ -381,6 +381,16 @@ test("a known manual save retries only continuation after destination failure", 
     document.documentElement.dataset.manualCommitMapReads
   )))).toBeGreaterThan(0);
 
+  const recurringImport = page.getByRole("button", { name: "Import latest session" });
+  await expect(recurringImport).toHaveCount(1);
+  await recurringImport.click();
+  await expect(page.getByRole("heading", { name: "Import executions" })).toBeFocused();
+  await expect(page.locator("[data-manual-capture-review-failure]")).toHaveCount(1);
+  await expect(page.locator("[data-import-tool]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.locator("[data-manual-capture-review-failure]")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Import latest session" })).toHaveCount(1);
+
   await page.evaluate(() => {
     document.documentElement.dataset.manualCommitMapReads = "0";
   });
