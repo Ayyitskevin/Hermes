@@ -1,13 +1,14 @@
 # Hermes Journal — active mobile handoff
 
-Status: Symbol Breakdown v1 shipped on main · feature commit `1fd7d46` ·
-hosted exact-commit CI passed · updated 2026-07-18
+Status: Symbol Breakdown v1 shipped and hardened on main · feature commit
+`1fd7d46` · hardening commit `0815d5e` · hosted exact-commit CI passed · updated
+2026-07-19
 
 ## Current handoff
 
-task: Deliver Symbol Breakdown v1 as a fail-closed, count-only governed report
-over every current full-workspace trade, grouped by exact symbol plus asset
-class, with bounded stable-ID evidence and no financial interpretation.
+task: Harden shipped Symbol Breakdown v1 so its full-workspace source cohort and
+stable-ID review drill-down fail closed under accessor, iterator, and DOM
+identity tampering without changing its definition or product boundary.
 
 stage: codex
 
@@ -25,6 +26,12 @@ produced:
   order for a collision. Evidence uses traded date descending then stable
   subject ID. Otherwise identical repeated trades receive stable **Trade n of
   total** visible and accessible labels.
+- Before validation, snapshot `trades`, `timeZone`, `accountLabel`, and
+  `periodLabel`, the array length and every indexed trade slot, and every
+  consumed trade field must be own data properties. All indexed trade references
+  are captured before any trade field is read; a custom iterator is never
+  consulted; accessors fail without invocation; emitted stable-ID cardinality
+  and uniqueness are rechecked after grouping.
 - Canonical symbol, Stock/ETF asset class, Long/Short side, Open/Closed position
   state, Pending/Draft/Completed review state, real Gregorian 1970–9999 date,
   and unique trimmed C0/C1-free subject identity fail closed without repair,
@@ -35,16 +42,24 @@ produced:
   Opening Weekday Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag
   Patterns, and Setup Breakdown. Nine targets are governed reports.
 - Presentation reveals five groups and 25 contributors per action. Every row
-  page focuses its first newly revealed action. Activation rechecks the unique
-  live section, group index, exact symbol/asset membership, evidence row,
-  action, and current stable-ID trade; a valid subject from another group fails
-  visibly before opening. Ordinary close returns to its trigger, while a review
-  save or reconciliation refresh returns to the Symbol Breakdown heading.
-  Trade Browser account/date/day/search/facet state is neither consumed nor
-  changed.
-- Matching-runtime export/restore recomputes exact version, checksum, cohort,
+  page focuses its first newly revealed action. Each rendered review action is
+  registered to its original row element, group index, evidence ordinal, and
+  stable subject ID. A registered action retains Symbol origin after its source,
+  class, or ancestor section marker is removed or it is moved. Activation of a
+  button retaining `data-review-trade` rechecks the source, unique live section,
+  exact group and symbol/asset identity, current row position, original row
+  element, evidence ordinal, row/action uniqueness, and current stable-ID trade.
+  A detected registered mismatch or an unregistered clone retaining a Symbol-
+  specific row/group/list/card marker fails visibly with chrome-safe focus before
+  opening and performs no write. Removing `data-review-trade` makes it inert to
+  delegated review activation; it cannot open a review or write. Ordinary
+  close returns to its trigger, while a review save or reconciliation refresh
+  returns to the Symbol Breakdown heading. Trade Browser account/date/day/search/
+  facet state is neither consumed nor changed.
+- Matching-runtime restore recomputes exact version, checksum, cohort,
   group/evidence order, counts, and contributor identities from existing ledger
-  inputs. No report output becomes durable state.
+  inputs. Equality is proved by the Session-adapter Vitest, not a browser or
+  native archive journey. No report output becomes durable state.
 - Symbol Breakdown is the 34th bounded Slice D increment and the 29th
   derived-only presentation/projection increment. The same five write-capable
   exceptions remain. No P&L, result, rate, percentage, rank, comparison,
@@ -55,48 +70,55 @@ produced:
 - The current snapshot has no venue or listing identity. Any future venue-aware
   grouping requires a separately defined/versioned v2; v1 may not be silently
   regrouped.
-- The parity report builder now requires each governed SQL source exactly once
-  in both artifact lists, executes all three sources in query-only in-memory
-  SQLite, and compares exact columns, rows, values, and order with the
-  ledger-derived expectations and report datasets. The builder fails early on
-  unsupported Node runtimes; supported floors are 22.16, 23.11, and 24.0.
+- The parity report builder requires each governed SQL source exactly once in
+  both artifact lists and executes all three sources in query-only in-memory
+  SQLite. SQL result rows match their embedded datasets exactly where defined.
+  Headline validation reconciles four selected fields; disposition validation
+  reconciles category counts, not narrative fields or row order; priority
+  validation reconciles ledger count and sequence before comparing SQL rows with
+  the embedded dataset. This is not broader capability-identity proof. The
+  builder fails early on unsupported Node runtimes; supported floors are 22.16,
+  23.11, and 24.0.
 
 verified:
 
-- `cd mobile && npm ci` — exit 0; 164 packages installed, 165 audited, zero
-  vulnerabilities. `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2.
-- `cd mobile && npm test` — exit 0; 820/820 across 70 files. This covers the
-  definition/checksum, conservation, exact collision rule, canonical
-  fail-closed inputs, deep freeze, ordering, empty cohort, UI paging, repeated
-  evidence labels, cross-group activation rejection, and focus behavior.
-- `cd mobile && npm run test:e2e -- e2e/symbol-breakdown-report.spec.ts
-  e2e/reports-navigation.spec.ts e2e/trade-browser-facets.spec.ts
-  e2e/trade-browser-scope.spec.ts e2e/trade-review.spec.ts` — 41/41. `npm run
-  test:e2e` — 111/111. Production Chromium covered exact drill-down,
-  close/save return, Trade Browser isolation, storage/network neutrality,
-  restore equality, tamper rejection, paging focus, and 320/421px 200% reflow.
+- `cd mobile && npm run typecheck` — exit 0. `cd mobile && npm run
+  test:boundary` — 2/2. `cd mobile && npm audit --omit=dev` — zero production
+  vulnerabilities.
+- `cd mobile && npm test -- src/core/symbol-breakdown-report.test.ts` — 34/34.
+  `cd mobile && npm test` — 828/828 across 70 files. This covers fixed indexed
+  capture, ignored custom iteration, accessor rejection without invocation,
+  conservation, immutable output, and presentation paging.
+- `cd mobile && npm run test:e2e -- e2e/symbol-breakdown-report.spec.ts` — 10/10.
+  `cd mobile && npm run test:e2e` — 116/116. Production Chromium covered exact
+  drill-down, close/save return, Trade Browser isolation, storage/network
+  neutrality, registered-origin and exact-row/ordinal tamper rejection, bounded
+  progressive paging focus, and 320/421px 200% reflow. Restore equality is
+  covered instead by the matching-runtime Session-adapter Vitest in
+  `mobile/src/adapters/session-journal-restore.test.ts`.
 - `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
   /tmp/hermes-symbol-breakdown-report.html` — exit 0; validation, packaging,
   verification, source dialog, 1440/390px checks, SQL rows 1/4/6, and no-script
-  semantic fallback passed. `diff -u report.html
+  semantic fallback passed. `diff -u docs/mobile/tradezella-parity/report.html
   /tmp/hermes-symbol-breakdown-report.html` — exit 0; both SHA-256
   `97ffbb184e7e4dfb9f414f056c762c5522244b6a259c847fa8203abe7a790bca`.
-- In a disposable artifact copy, changing headline SQL and both embedded copies
-  from 20 domains to 21, then rerunning the same builder command, exited 1 with
-  `Portable report headline-query SQL row 1 does not match its dataset.` This
-  proves a coordinated three-copy drift cannot bypass result validation.
-- `cd mobile && npm run ios:copy` and `npm run ios:sync` — exit 0; 95 modules and
-  one SQLite plugin synced; CocoaPods and `xcodebuild` were explicitly skipped.
-  `npm run verify:ios-sync` — exit 0; six production files matched byte-for-byte,
-  bundle SHA-256 `7dd2852369dbb3ab0fca9eae46267c7848fc168e2214d12460439d278669def6`.
-  `npm run test:ios-sync` — 8/8.
-- `npm audit --omit=dev`, `git diff --check`, and `git diff --exit-code --
-  mobile/ios mobile/package-lock.json` — exit 0; zero production
-  vulnerabilities and no native/lock drift.
-- `gh run view 29666646472 --json status,conclusion,headSha,jobs` — exact feature
-  SHA `1fd7d468c5671b21bfaba25ad3a23cb3aa48feab`, run conclusion `success`;
-  Legacy Python job `88138049978` and Mobile Linux job `88138049979` both
+- `cd mobile && npm run ios:copy` — exit 0; the 95-module build copied the public
+  bundle into the iOS shell. CocoaPods and `xcodebuild` were not run.
+  `cd mobile && npm run verify:ios-sync` — exit 0; six production files matched
+  byte-for-byte, latest
+  bundle SHA-256 `dfb11db5b2893292bfd5e58d995732f3ad594e74c2c54d24171dd1421d3e326f`.
+  `cd mobile && npm run test:ios-sync` — 8/8.
+- `git diff --check` and `git diff --exit-code --
+  mobile/ios/App/App.xcodeproj mobile/ios/App/Podfile
+  mobile/ios/App/Podfile.lock mobile/package-lock.json` — exit 0; no tracked
+  native-project, CocoaPods, or lockfile drift.
+- `gh run view 29672087958 --json status,conclusion,headSha,jobs` — exact
+  hardening SHA `0815d5e8b789580e40b34787d19662789204f214`, conclusion `success`;
+  Mobile Linux job `88152881360` and Legacy Python job `88152881366` both
   concluded `success`.
+- `gh run view 29672087958 --job 88152881360 --log |
+  rg 'index-Dd1sy_fq.js|Some chunks are larger than 500 kB'` — exit 0; the main
+  bundle was 685.86 kB minified (167.34 kB gzip) and emitted the >500 kB warning.
 - CocoaPods, Xcode, Simulator, physical iPhone, SQLCipher/Keychain runtime,
   VoiceOver, Dynamic Type, hardware keyboard, lifecycle, and multi-scene
   evidence are not claimed here.
@@ -109,6 +131,9 @@ assumptions:
 - Current full-workspace projection order and fields remain canonical inputs;
   report construction never consumes Trade Browser scope or authored review
   content.
+- Input hardening evidence covers typed plain snapshots, ordinary arrays/trades,
+  sparse or inherited slots, custom iterators, and accessors. Hostile JavaScript
+  Proxies are outside the claimed plain-snapshot contract.
 - Browser, SQL.js, and Linux evidence do not replace SQLite/WKWebView,
   SQLCipher, Keychain, VoiceOver, Dynamic Type, lifecycle, Simulator, or
   physical-device proof.
@@ -118,6 +143,17 @@ open:
 - HOLD all native acceptance until the Mac/iPhone procedure proves
   checksum/cohort/collision equality, paging, drill-down, close/save focus,
   restore equality, accessibility, lifecycle, and zero durable/network change.
+- Opening Hour Mix v1 is HOLD + CLARIFY pending a human product contract.
+  Recommended contract: count-only full workspace; fixed 00–23 workspace-local
+  buckets by first-entry time; DST folds share a bucket; missing hours are zero;
+  version/checksum/conservation/fail-closed/stable-ID drill-down/restore; and no
+  P&L, ranking, comparison, or market-session inference.
+- Vite's 685.86 kB main bundle remains above its 500 kB warning threshold; code
+  splitting or warning-policy changes are deferred and no optimization is claimed.
+- Checked-in parity-report regeneration remains local-only: hosted CI does not
+  rebuild or diff it, and the builder dynamically selects an unpinned installed
+  external Data Analytics plugin cache, so a clean checkout is not self-contained.
+  Pin the generator and add CI regeneration before claiming hosted reproducibility.
 - Later timing, drawdown, comparison, MAE/MFE, exit-efficiency, and account
   report families each require their own definition, inputs, checksum,
   conservation/exclusions, drill-down, restore equality, and human product gate.
