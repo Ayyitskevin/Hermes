@@ -1,7 +1,7 @@
 # Hermes Journal — active mobile handoff
 
-Status: Review-Clear Plan Check Continuation v1 locally verified · direct-main
-publication and exact-head hosted CI pending · updated 2026-07-19
+Status: Review-Clear Plan Check Continuation v1 shipped on main · implementation
+commit 3de0dcf · exact-head hosted CI passed · updated 2026-07-19
 
 ## Current handoff
 
@@ -75,8 +75,12 @@ verified:
 - `git diff --check`, explicit source/scope scans, generated-file review, and
   native/lock drift checks passed. Independent architecture, implementation,
   test, product, and documentation audits found no remaining P0-P2 issue after
-  startup-scan, canonical-destination, and assertion hardening. Direct-main
-  publication and exact-head hosted CI remain pending.
+  startup-scan, canonical-destination, and assertion hardening.
+- `gh run view 29702833626 --json status,conclusion,headSha,jobs` — exact SHA
+  3de0dcf9994dedaae29d2d3582a5bed6df4b2af5, conclusion success; Mobile Linux
+  job 88234705961 and Legacy Python job 88234705970 both succeeded, including
+  the full browser smoke, no-order boundary, iOS handoff, bundle, and dependency
+  gates.
 
 assumptions:
 
@@ -93,9 +97,6 @@ assumptions:
 
 open:
 
-- Publish the reviewed implementation directly to GitHub `main`, require exact-
-  head hosted CI success, then replace this pending evidence with immutable
-  implementation commit and run/job identifiers.
 - HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
   SQLCipher/Keychain, lifecycle, VoiceOver, Dynamic Type, safe-area, hardware-
   keyboard, Files/WKWebView, and multi-scene evidence are recorded on the
