@@ -707,9 +707,24 @@ and an App Store disclosure.
   Opening Weekday, and Plan contributors 26 and 51; Mistake, Emotion, Tag, and Setup contributors
   26 and 51; and a Mistake, Emotion, Tag, or Setup
   group appended after the initial five. Activate nested button content with
-  pointer, keyboard, and VoiceOver. Unknown/tampered identity or
-  source data must show a focused error without opening a sheet or making the
-  background inert.
+  pointer, keyboard, and VoiceOver. For each of the eight non-Symbol sources,
+  substitute another valid current subject ID; then change its allowlisted
+  source and its exact group/list/row/ordinal semantic marker. Move and replace
+  the original row/action, strip its source and class, and duplicate its action.
+  Every attempt must show a focused error without opening a sheet, making the
+  background inert, or writing. Repeat the existing specialized Symbol
+  alternate-group, stripped-origin, moved-row, and cloned-action checks to prove
+  the shared dispatcher did not weaken it.
+- Capture an exact contributor-26 suffix and an exact groups-6-through-10
+  suffix, return to a fresh initial render, inject each copied suffix, and
+  activate an unrelated or already-complete captured control. Neither suffix
+  may become openable. Replace or detach the original five-group control before
+  invoking it, and duplicate an action after genuine paging; both must fail.
+  Then use the original app-owned controls and prove only the exact next bounded
+  delta—up to 25 rows or five groups—opens the stable-ID-matched trade and
+  returns focus. This
+  native integrity row remains NOT RUN until observed on the Mac/iPhone
+  candidate.
 - In a local journal, save a review from Review Session Coverage, Direction,
   Symbol Breakdown, and Opening Weekday evidence, then save changes that move session coverage, a Plan
   classification, a Setup group, exact Mistake assignments, the exact Emotion

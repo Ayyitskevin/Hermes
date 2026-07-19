@@ -20,6 +20,12 @@ import { buildSymbolBreakdownReport } from "../core/symbol-breakdown-report";
 import type { TradeMetricEvidence } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { focusChromeSafeElement } from "./focus-chrome-safe";
+import {
+  captureVisibleGovernedReportReviewActions,
+  isGovernedReportReviewOrigin,
+  matchesRegisteredGovernedReportReviewAction,
+  registerVisibleGovernedReportReviewActions,
+} from "./report-review-action-integrity";
 
 const METRIC_REASON: Readonly<Record<NonNullable<TradeMetricEvidence["nullReason"]>, string>> = {
   no_realized_exit: "No realized exit exists yet.",
@@ -1080,8 +1086,12 @@ export function bindTradeReviewActions(
   tradeReviewActionBindings.get(root)?.abort();
   const binding = new AbortController();
   tradeReviewActionBindings.set(root, binding);
+  captureVisibleGovernedReportReviewActions(root, snapshot);
   root.addEventListener("click", (event) => {
       const eventTarget = event.target;
+      if (eventTarget instanceof Element) {
+        registerVisibleGovernedReportReviewActions(root, snapshot, eventTarget);
+      }
       const trigger = eventTarget instanceof Element
         ? eventTarget.closest<HTMLButtonElement>("button[data-review-trade]")
         : null;
@@ -1092,12 +1102,26 @@ export function bindTradeReviewActions(
         symbolBreakdownReviewActionIdentities.has(trigger)
         || trigger.closest(SYMBOL_BREAKDOWN_ORIGIN_SELECTOR) !== null
       );
-      const reportEvidenceMatches = symbolBreakdownOrigin
-        ? reportSource === "symbol-breakdown" && (
-          trade !== null
-          && matchesSymbolBreakdownEvidence(root, snapshot, trigger, trade)
-        )
-        : reportSource !== "symbol-breakdown";
+      const governedReportOrigin = isGovernedReportReviewOrigin(trigger);
+      const reportEvidenceMatches = reportSource === undefined
+        ? !symbolBreakdownOrigin && !governedReportOrigin
+        : reportSource === null
+          ? false
+          : reportSource === "symbol-breakdown"
+            ? symbolBreakdownOrigin
+              && !governedReportOrigin
+              && trade !== null
+              && matchesSymbolBreakdownEvidence(root, snapshot, trigger, trade)
+            : !symbolBreakdownOrigin
+              && governedReportOrigin
+              && trade !== null
+              && matchesRegisteredGovernedReportReviewAction(
+                root,
+                snapshot,
+                trigger,
+                reportSource,
+                trade.tradeSubjectId,
+              );
       const reviewQueueOrigin = trigger.closest("[data-review-queue-group]") !== null;
       const dashboardReviewOrigin = dashboardReviewProgressOrigin(
         root,

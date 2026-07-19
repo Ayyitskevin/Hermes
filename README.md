@@ -541,11 +541,18 @@ submission-ready product:
   sheet in place, so
   duplicate symbols are qualified by asset class, account, and session without
   routing through or clearing Trades. Delegated activation covers contributors
-  and progressively appended report rows/groups. Ordinary close returns to the
-  exact row; a save or refresh that rebuilds evidence returns to the originating
-  report heading. The report source is transient DOM context. No report-origin
-  or selected-trade state is persisted; Trades state and the report,
-  review-persistence, checksum, and archive contracts remain unchanged.
+  and progressively appended report rows/groups. Symbol Breakdown retains its
+  specialized exact action contract; the other eight sources recheck the
+  captured source/group/list/row/ordinal/action tuple against current governed
+  output. Only a previously captured app-owned pagination control may register
+  the exact next bounded page—up to 25 rows or five groups. Injected, moved,
+  replaced, duplicated, stripped, or retagged evidence fails with a focused
+  error before inert state or persistence. Ordinary close returns to the exact
+  row; a save or refresh
+  that rebuilds evidence returns to the originating report heading. The report
+  source is transient DOM context. No report-origin or selected-trade state is
+  persisted; Trades state and the report, review-persistence, checksum, and
+  archive contracts remain unchanged.
 - Dashboard Recent Trade Continuation v1 turns the unchanged four newest
   projected Recent trades rows into semantic **Open trade** actions. Each row
   exposes asset class, account, and full session context, while activation

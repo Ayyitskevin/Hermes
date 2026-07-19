@@ -1084,13 +1084,30 @@ closure and DOM attributes.
 They do not enter
 SQLite, browser journal state, Trade Browser state, preferences, URLs, exports,
 restores, digests, report definitions, or archives. Opening and closing perform
-no store operations. A review save uses the existing stable-subject review
+no store operations. Symbol Breakdown retains its specialized exact
+group/row/action registration. For each of the other eight sources, the
+controlled render captures the original section, group, evidence list, row,
+action, evidence ordinal, stable subject ID, and exact source-specific semantic
+identity. Activation rebuilds the current governed projection and accepts only
+that unique tuple in the same live node positions. No visible label, alternate
+valid subject, source tag, group index, session date, exact pattern label, or
+DOM placement can substitute for it.
+
+Only a captured app-owned pagination control can extend the registered set.
+The control is bound to one exact operation: the next page of up to 25
+contributors for one group, or up to five groups with each initial contributor
+page. The original
+prefix and every unrelated group must retain the same DOM nodes, governed
+identities, and cardinalities. An injected suffix, no-op or cross-control
+click, detached/replaced control, moved/replaced row or action, duplicate
+action, stripped origin marker, or nonconserving section remains unregistered
+and fails with a focused error before inert state or a command. Activation
+itself is validate-only. A review save uses the existing stable-subject review
 command and may legitimately rebuild report membership; focus then returns to
 the originating heading instead of treating a replacement row as the same DOM
-node. Report
-builders, progressive limits, and exact-total derivation and ownership remain
-unchanged; account/date/day/search/facets stay independently owned and
-untouched by opening or closing the continuation.
+node. Report builders, progressive limits, and exact-total derivation and
+ownership remain unchanged; account/date/day/search/facets stay independently
+owned and untouched by opening or closing the continuation.
 
 Dashboard Recent Trade Continuation v1 uses the same stable-subject review
 boundary without adding report-origin semantics. The existing four newest
@@ -1428,11 +1445,15 @@ Report Trade Continuation coverage adds exact render/activation identity,
 escaped source/action metadata, progressive Review Session Coverage, Direction,
 Symbol Breakdown, Opening Weekday, Plan, Mistake, Emotion, Tag, and Setup row/group actions,
 nested-child post-bind delegation, exact-ID-over-visible-label selection,
-  fail-closed unknown identity before inert state, offline read-only inspection,
-  retained disclosures/DOM/scroll/report/storage and Trade Browser filters, exact
-  trigger return, source-heading return after Review-Session-Coverage/Direction/
-  Symbol-Breakdown/Opening-Weekday saves and after moving Plan/Setup/Mistake/
-  Emotion/Tag evidence,
+  all-eight non-Symbol alternate-valid-ID rejection, exact source-specific
+  group/list/row/ordinal semantics, genuine bounded row/group registration,
+  copied-suffix/no-op/cross-control and detached-control rejection, original-
+  node and action-cardinality checks, fail-closed unknown/retagged/moved/
+  replaced/duplicated/stripped evidence before inert state, offline read-only
+  inspection, retained disclosures/DOM/scroll/report/storage and Trade Browser
+  filters, exact trigger return, source-heading return after Review-Session-
+  Coverage/Direction/Symbol-Breakdown/Opening-Weekday saves and after moving
+  Plan/Setup/Mistake/Emotion/Tag evidence,
 focus trapping, 44-point controls, and 320/421px 200% no-overflow evidence.
 Dashboard Recent Trade Continuation coverage adds exact QQQ/META/SPY/AMD demo
 order, semantic asset/account/session context, distinct stable-ID targeting for

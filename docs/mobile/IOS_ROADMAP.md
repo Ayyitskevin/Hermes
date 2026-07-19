@@ -768,13 +768,24 @@ observed plugin/device behavior:
   covers progressively appended rows and groups. A missing or duplicate
   render-time match aborts an incoherent report; activation-time invalid
   identity/source data shows a focused error without inert state or a store
-  call. Close returns to the exact row, while a save or reconciliation refresh
-  that rebuilds the report returns to the allowlisted source heading.
+  call. The eight non-Symbol sources now bind every original action to its
+  section, group, list, row, ordinal, and current source-specific governed
+  identity. Only its captured app-owned pagination control may register the
+  exact next bounded page of up to 25 rows or five groups; copied or
+  cross-control suffixes and moved, replaced, duplicated, stripped, retagged,
+  or cardinality-mismatched evidence fail closed. Symbol Breakdown keeps its
+  separately tested specialized validator. Close returns to the exact row,
+  while a save or reconciliation refresh that rebuilds the report returns to
+  the allowlisted source heading.
   Production Chromium proves offline demo inspection, exact-ID-over-label
-  behavior, conflicting retained Trade Browser scope/search/facets,
-  disclosure/DOM/scroll/report/storage continuity, dynamic post-bind
-  activation, fail-closed unknown identity, 44-point controls, focus trapping,
-  and no overflow at 320 and 421 CSS pixels with 200% text. No route,
+  behavior, conflicting retained Trade Browser scope/search/facets, all-eight
+  alternate-valid-ID rejection, exact app-owned group/evidence paging,
+  copied-suffix and replaced-control rejection, action cardinality, semantic
+  and DOM-node tamper rejection, disclosure/DOM/scroll/report/storage
+  continuity, dynamic post-bind activation, fail-closed unknown identity,
+  44-point controls, focus trapping, and no overflow at 320 and 421 CSS pixels
+  with 200% text. This is integrity hardening, not another Slice D increment.
+  No route,
   browser-state, schema, store, archive, formula, checksum, cohort definition
   or eligibility rule, order, or pagination change.
 - Dashboard Recent Trade Continuation v1 keeps the existing four-row

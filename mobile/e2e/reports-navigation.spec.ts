@@ -89,6 +89,45 @@ async function startDemo(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
+async function importRepeatedClosedTrades(
+  page: Page,
+  tradeCount: number,
+): Promise<void> {
+  await page.addInitScript(
+    (key) => window.localStorage.setItem(key, "complete"),
+    ONBOARDING_KEY,
+  );
+  await page.goto("/");
+  const startedAt = Date.parse("2026-07-09T14:00:00.000Z");
+  const rows = Array.from({ length: tradeCount }, (_, index) => {
+    const openedAt = new Date(startedAt + index * 120_000).toISOString();
+    const closedAt = new Date(startedAt + index * 120_000 + 60_000).toISOString();
+    return [
+      `aapl-${index}-in,AAPL,BTO,1,100,0,USD,${openedAt}`,
+      `aapl-${index}-out,AAPL,STC,1,101,0,USD,${closedAt}`,
+    ];
+  }).flat();
+  const csv = [
+    "execution_id,symbol,side,quantity,price,fee,currency,executed_at",
+    ...rows,
+    "",
+  ].join("\r\n");
+  await page.locator("#import-file").setInputFiles({
+    name: "repeated-aapl.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
+  await page.locator("#import-account").fill("Primary brokerage");
+  await page.getByRole("button", { name: "Preview CSV" }).click();
+  await page.getByRole("button", {
+    name: `Import ${tradeCount * 2} executions`,
+  }).click();
+  await expect(
+    page.getByRole("heading", { name: "More", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Reports", exact: true }).click();
+}
+
 async function localStorageSnapshot(page: Page): Promise<readonly string[]> {
   return page.evaluate(() => (
     Array.from({ length: window.localStorage.length }, (_, index) => {
@@ -904,6 +943,22 @@ test(
       "demo-subject-aapl",
       "demo-subject-msft",
     ]);
+    const appendedGroupAction = planFollowed.locator(
+      '[data-tag-patterns-trade="demo-subject-meta"] .report-trade-action',
+    );
+    await appendedGroupAction.click();
+    const appendedGroupDialog = page.getByRole("dialog", {
+      name: /META trade review · Stock · Demo Brokerage · Jul 8 · Morning/u,
+    });
+    await expect(appendedGroupDialog).toBeVisible();
+    await expect(
+      appendedGroupDialog.locator("[data-trade-review-report-context]"),
+    ).toHaveText(
+      "Opened from Tag patterns. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(appendedGroupDialog).toHaveCount(0);
+    await expect(appendedGroupAction).toBeFocused();
     await expect(section.locator("dt").allTextContents())
       .resolves.not.toContain("Currency");
     for (const prohibited of [
@@ -924,6 +979,174 @@ test(
     await expect(section).toContainText(
       "does not read tag vocabulary, Daily Journal tags, trade results, or Trades filters",
     );
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "report group pagination registers only an exact app-owned suffix",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await startDemo(page);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+
+    const section = page.locator("[data-tag-patterns]");
+    const groups = section.locator("[data-tag-patterns-group-index]");
+    const showGroups = section.getByRole("button", {
+      name: "Show 5 more tag groups",
+    });
+    await showGroups.click();
+    await expect(groups).toHaveCount(10);
+    const exactSuffixHtml = await groups.evaluateAll((elements) => (
+      elements.slice(5).map((element) => element.outerHTML).join("")
+    ));
+
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await expect(groups).toHaveCount(5);
+    await section.locator("[data-tag-patterns-groups]").evaluate(
+      (list, html) => list.insertAdjacentHTML("beforeend", html),
+      exactSuffixHtml,
+    );
+    await section.locator('[data-tag-patterns-more="0"]').evaluate(
+      (control) => (control as HTMLButtonElement).click(),
+    );
+    await section.locator(
+      '[data-tag-patterns-group-index="6"] > summary',
+    ).click();
+    const injectedAction = section.locator(
+      '[data-tag-patterns-group-index="6"] '
+        + '[data-tag-patterns-trade="demo-subject-meta"] '
+        + ".report-trade-action",
+    );
+    await injectedAction.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const error = page.locator("[data-trade-review-open-error]");
+    await expect(error).toBeFocused();
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await expect(groups).toHaveCount(5);
+    await showGroups.evaluate((control) => {
+      const clone = control.cloneNode(true) as HTMLButtonElement;
+      clone.id = "replacement-tag-groups-more";
+      control.replaceWith(clone);
+      (control as HTMLButtonElement).click();
+    });
+    await expect(groups).toHaveCount(10);
+    await section.locator(
+      '[data-tag-patterns-group-index="6"] > summary',
+    ).click();
+    const detachedControlAction = section.locator(
+      '[data-tag-patterns-group-index="6"] '
+        + '[data-tag-patterns-trade="demo-subject-meta"] '
+        + ".report-trade-action",
+    );
+    await detachedControlAction.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("[data-trade-review-open-error]")).toBeFocused();
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await showGroups.click();
+    await expect(groups).toHaveCount(10);
+    await section.locator(
+      '[data-tag-patterns-group-index="6"] > summary',
+    ).click();
+    const exactAction = section.locator(
+      '[data-tag-patterns-group-index="6"] '
+        + '[data-tag-patterns-trade="demo-subject-meta"] '
+        + ".report-trade-action",
+    );
+    await exactAction.evaluate((action) => {
+      const clone = action.cloneNode(true) as HTMLButtonElement;
+      clone.id = "duplicate-tag-report-action";
+      action.insertAdjacentElement("afterend", clone);
+    });
+    await exactAction.first().click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("[data-trade-review-open-error]")).toBeFocused();
+    await page.locator("#duplicate-tag-report-action").evaluate((action) => {
+      action.remove();
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+    });
+
+    await exactAction.click();
+    const dialog = page.getByRole("dialog", {
+      name: /META trade review · Stock · Demo Brokerage · Jul 8 · Morning/u,
+    });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(exactAction).toBeFocused();
+    expect(await localStorageSnapshot(page)).toEqual(storageBefore);
+    expect(externalRequests).toEqual([]);
+  },
+);
+
+test(
+  "a report action appended after the 25-row evidence boundary keeps its exact identity",
+  async ({ page, context }) => {
+    const externalRequests = logExternalRequests(page);
+    await importRepeatedClosedTrades(page, 26);
+    await context.setOffline(true);
+    const storageBefore = await localStorageSnapshot(page);
+
+    const section = page.locator("[data-direction-mix]");
+    const group = section.locator('[data-direction-mix-group="long"]');
+    await group.locator(":scope > summary").click();
+    const actions = group.locator(".report-trade-action");
+    await expect(actions).toHaveCount(25);
+    const showMore = group.getByRole("button", { name: "Show 1 more" });
+    await showMore.click();
+    await expect(actions).toHaveCount(26);
+    const exactSuffixHtml = await actions.nth(25).evaluate(
+      (element) => element.closest("[data-direction-mix-trade]")?.outerHTML,
+    );
+    if (exactSuffixHtml === undefined) {
+      throw new Error("Missing exact Direction mix suffix.");
+    }
+
+    await page.getByRole("button", { name: "Trades", exact: true }).click();
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await group.locator(":scope > summary").click();
+    await expect(actions).toHaveCount(25);
+    await group.locator("[data-direction-mix-evidence-list]").evaluate(
+      (list, html) => list.insertAdjacentHTML("beforeend", html),
+      exactSuffixHtml,
+    );
+    await section.locator('[data-direction-mix-more="1"]').evaluate(
+      (control) => (control as HTMLButtonElement).click(),
+    );
+    const injectedAction = actions.nth(25);
+    await injectedAction.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const injectedError = page.locator("[data-trade-review-open-error]");
+    await expect(injectedError).toBeFocused();
+    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    await injectedAction.evaluate((element) => {
+      element.closest("[data-direction-mix-trade]")?.remove();
+    });
+    await expect(actions).toHaveCount(25);
+
+    await showMore.click();
+    await expect(actions).toHaveCount(26);
+    const appendedAction = actions.nth(25);
+    await appendedAction.click();
+
+    const dialog = page.getByRole("dialog", { name: /AAPL trade review/u });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator("[data-trade-review-report-context]")).toHaveText(
+      "Opened from Direction mix. This full-workspace report does not use or change your Trades filters.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(appendedAction).toBeFocused();
     expect(await localStorageSnapshot(page)).toEqual(storageBefore);
     expect(externalRequests).toEqual([]);
   },
@@ -1441,77 +1664,259 @@ test(
     await expect(tagAction).toBeFocused();
     await expectUnobscured(tagAction);
 
+    const setupAction = page.locator(
+      '[data-setup-performance-trade="demo-subject-spy"] .report-trade-action',
+    );
+    await expect(setupAction).toHaveAccessibleName(
+      "Open SPY trade — ETF, Demo Swing, Jul 7 · Afternoon",
+    );
+    await setupAction.click();
+    const setupDialog = page.getByRole("dialog", {
+      name: /SPY trade review · ETF · Demo Swing · Jul 7 · Afternoon/u,
+    });
+    await expect(setupDialog).toBeVisible();
+    await expect(setupDialog.locator("[data-trade-review-report-context]"))
+      .toHaveText(
+        "Opened from Setup breakdown. This full-workspace report does not use or change your Trades filters.",
+      );
+    await page.keyboard.press("Escape");
+    await expect(setupDialog).toHaveCount(0);
+    await expect(setupAction).toBeFocused();
+    await expectUnobscured(setupAction);
+
+    const expectExactTradeOpenBlocked = async () => {
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      const error = page.locator("[data-trade-review-open-error]");
+      await expect(error).toHaveText(
+        "Hermes could not open this exact trade because its stable local identity is unavailable.",
+      );
+      await expect(error).toBeFocused();
+      await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
+    };
+
+    for (const candidate of [
+      {
+        action: reviewSessionAction,
+        originalId: "demo-subject-qqq",
+        alternateId: "demo-subject-aapl",
+      },
+      {
+        action: directionAction,
+        originalId: "demo-subject-aapl",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action: openingWeekdayAction,
+        originalId: "demo-subject-aapl",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action,
+        originalId: "demo-subject-aapl",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action: mistakeAction,
+        originalId: "demo-subject-spy",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action: emotionAction,
+        originalId: "demo-subject-meta",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action: tagAction,
+        originalId: "demo-subject-spy",
+        alternateId: "demo-subject-qqq",
+      },
+      {
+        action: setupAction,
+        originalId: "demo-subject-spy",
+        alternateId: "demo-subject-qqq",
+      },
+    ]) {
+      await candidate.action.evaluate((element, alternateId) => {
+        element.dataset.reviewTrade = alternateId;
+      }, candidate.alternateId);
+      await candidate.action.click();
+      await expectExactTradeOpenBlocked();
+      await candidate.action.evaluate((element, originalId) => {
+        document.querySelector("[data-trade-review-open-error]")?.remove();
+        element.dataset.reviewTrade = originalId;
+      }, candidate.originalId);
+    }
+
     await action.evaluate((element) => {
-      const clone = element.cloneNode(true) as HTMLButtonElement;
-      clone.id = "appended-report-trade";
-      clone.innerHTML = "<span>Open appended trade</span>";
-      element.insertAdjacentElement("afterend", clone);
+      element.dataset.tradeReviewReportSource = "direction-mix";
     });
-    const appended = page.locator("#appended-report-trade");
-    await appended.locator("span").click();
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(appended).toBeFocused();
+    await action.click();
+    await expectExactTradeOpenBlocked();
+    await action.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.dataset.tradeReviewReportSource = "plan-check";
+    });
 
-    await appended.evaluate((element) => {
-      element.dataset.reviewTrade = "demo-subject-qqq";
+    await action.evaluate((element) => {
+      const group = element.closest<HTMLElement>("[data-plan-check-group]");
+      if (group === null) throw new Error("Missing Plan check group.");
+      group.dataset.planCheckGroup = "broken";
     });
-    await appended.locator("span").click();
-    const exactIdDialog = page.getByRole("dialog", {
-      name: /QQQ trade review · ETF · Demo Swing · Jul 9 · Morning/u,
+    await action.click();
+    await expectExactTradeOpenBlocked();
+    await action.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      const group = element.closest<HTMLElement>("[data-plan-check-group]");
+      if (group === null) throw new Error("Missing Plan check group.");
+      group.dataset.planCheckGroup = "followed";
     });
-    await expect(exactIdDialog).toBeVisible();
-    await expect(exactIdDialog.locator("#trade-review-title")).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(appended).toBeFocused();
 
-    await appended.evaluate((element) => {
+    await reviewSessionAction.evaluate((element) => {
+      const time = element.closest("[data-review-session-coverage-trade]")
+        ?.querySelector<HTMLTimeElement>("time[datetime]");
+      if (time === undefined || time === null) {
+        throw new Error("Missing review-session evidence date.");
+      }
+      time.dateTime = "2026-07-08";
+    });
+    await reviewSessionAction.click();
+    await expectExactTradeOpenBlocked();
+    await reviewSessionAction.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      const time = element.closest("[data-review-session-coverage-trade]")
+        ?.querySelector<HTMLTimeElement>("time[datetime]");
+      if (time === undefined || time === null) {
+        throw new Error("Missing review-session evidence date.");
+      }
+      time.dateTime = "2026-07-09";
+    });
+
+    await mistakeAction.evaluate((element) => {
+      const label = element.closest("[data-mistake-patterns-group-index]")
+        ?.querySelector<HTMLElement>(
+          ":scope > summary .plan-check-summary-label > strong",
+        );
+      if (label === undefined || label === null) {
+        throw new Error("Missing mistake-pattern group label.");
+      }
+      label.textContent = "Different mistake";
+    });
+    await mistakeAction.click();
+    await expectExactTradeOpenBlocked();
+    await mistakeAction.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      const label = element.closest("[data-mistake-patterns-group-index]")
+        ?.querySelector<HTMLElement>(
+          ":scope > summary .plan-check-summary-label > strong",
+        );
+      if (label === undefined || label === null) {
+        throw new Error("Missing mistake-pattern group label.");
+      }
+      label.textContent = "Chased entry";
+    });
+
+    await action.evaluate((element) => {
       element.dataset.tradeReviewReportSource = "unknown-report";
     });
-    await appended.locator("span").click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    const invalidSourceError = page.locator(
-      "[data-trade-review-open-error]",
-    );
-    await expect(invalidSourceError).toHaveText(
-      "Hermes could not open this exact trade because its stable local identity is unavailable.",
-    );
-    await expect(invalidSourceError).toBeFocused();
-    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
-    await appended.evaluate((element) => {
+    await action.click();
+    await expectExactTradeOpenBlocked();
+    await action.evaluate((element) => {
       document.querySelector("[data-trade-review-open-error]")?.remove();
       element.dataset.tradeReviewReportSource = "plan-check";
     });
 
-    await appended.evaluate((element) => {
+    await action.evaluate((element) => {
       delete element.dataset.tradeReviewReportSource;
     });
-    await appended.locator("span").click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    const missingSourceError = page.locator(
-      "[data-trade-review-open-error]",
-    );
-    await expect(missingSourceError).toHaveText(
-      "Hermes could not open this exact trade because its stable local identity is unavailable.",
-    );
-    await expect(missingSourceError).toBeFocused();
-    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
-    await appended.evaluate((element) => {
+    await action.click();
+    await expectExactTradeOpenBlocked();
+    await action.evaluate((element) => {
       document.querySelector("[data-trade-review-open-error]")?.remove();
       element.dataset.tradeReviewReportSource = "plan-check";
     });
 
-    await appended.evaluate((element) => {
+    await action.evaluate((element) => {
       element.dataset.reviewTrade = "missing-subject";
     });
-    await appended.locator("span").click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.locator("[data-trade-review-open-error]")).toHaveText(
-      "Hermes could not open this exact trade because its stable local identity is unavailable.",
-    );
-    await expect(page.locator("#screen")).not.toHaveAttribute("inert", "");
-    await appended.evaluate((element) => {
+    await action.click();
+    await expectExactTradeOpenBlocked();
+    await action.evaluate((element) => {
       document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.dataset.reviewTrade = "demo-subject-aapl";
+    });
+
+    await setupAction.evaluate((element) => {
+      element.id = "stripped-report-trade";
+      element.classList.remove("report-trade-action");
+      delete element.dataset.tradeReviewReportSource;
+      element.dataset.reviewTrade = "demo-subject-qqq";
+    });
+    const stripped = page.locator("#stripped-report-trade");
+    await stripped.click();
+    await expectExactTradeOpenBlocked();
+    await stripped.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      element.classList.add("report-trade-action");
+      element.dataset.tradeReviewReportSource = "setup-performance";
+      element.dataset.reviewTrade = "demo-subject-spy";
+      element.removeAttribute("id");
+    });
+
+    await directionAction.evaluate((element) => {
+      const group = element.closest<HTMLElement>(
+        "[data-direction-mix-group-index]",
+      );
+      if (group === null) throw new Error("Missing Direction mix group.");
+      group.dataset.directionMixGroupIndex = "9";
+    });
+    await directionAction.click();
+    await expectExactTradeOpenBlocked();
+    await directionAction.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      const group = element.closest<HTMLElement>(
+        "[data-direction-mix-group-index]",
+      );
+      if (group === null) throw new Error("Missing Direction mix group.");
+      group.dataset.directionMixGroupIndex = "0";
+    });
+
+    await openingWeekdayAction.evaluate((element) => {
+      const row = element.closest<HTMLElement>("[data-opening-weekday-mix-trade]");
+      const group = row?.closest<HTMLElement>(
+        "[data-opening-weekday-mix-group-index]",
+      );
+      if (row === undefined || row === null || group === undefined || group === null) {
+        throw new Error("Missing Opening weekday evidence row.");
+      }
+      const marker = document.createElement("span");
+      marker.id = "opening-weekday-row-marker";
+      marker.hidden = true;
+      row.insertAdjacentElement("beforebegin", marker);
+      group.append(row);
+    });
+    await openingWeekdayAction.click();
+    await expectExactTradeOpenBlocked();
+    await openingWeekdayAction.evaluate((element) => {
+      document.querySelector("[data-trade-review-open-error]")?.remove();
+      const row = element.closest<HTMLElement>("[data-opening-weekday-mix-trade]");
+      const marker = document.querySelector<HTMLElement>(
+        "#opening-weekday-row-marker",
+      );
+      if (row === undefined || row === null || marker === null) {
+        throw new Error("Missing Opening weekday evidence marker.");
+      }
+      marker.replaceWith(row);
+    });
+
+    await action.evaluate((element) => {
+      const clone = element.cloneNode(true) as HTMLButtonElement;
+      clone.id = "replacement-report-trade";
+      element.replaceWith(clone);
+    });
+    const replacement = page.locator("#replacement-report-trade");
+    await replacement.click();
+    await expectExactTradeOpenBlocked();
+    await page.locator("[data-trade-review-open-error]").evaluate((element) => {
       element.remove();
     });
 

@@ -675,15 +675,31 @@ contributor emits
 current trade. The existing review
 sheet opens in place with an allowlisted
 transient report source; its action and heading qualify duplicate symbols by
-asset class, account, and session. One replaceable delegated listener covers
+asset class, account, and session. One abortable delegated listener covers
 initially rendered and progressively appended contributors and report groups.
-Rendering requires exactly one stable-ID
-match and aborts an incoherent report; activation-time blank, unknown,
-duplicate, or tampered identity/source data shows a focused error before inert
-state or persistence. Close returns to the exact connected trigger; a save or
-reconciliation refresh that rebuilds Reports focuses the originating Plan or
-pattern heading because the contributor may have moved or left its cohort. The
-full-workspace reports do not consume or change Trade Browser
+Rendering requires exactly one stable-ID match and aborts an incoherent report.
+Symbol Breakdown retains its specialized exact group/row/action validator. For
+the other eight sources, the controlled render captures the original section,
+group, evidence list, row, action, evidence ordinal, stable subject, and
+source-specific semantic identity. Activation re-runs the current governed
+builder and requires the captured tuple to remain unique and exact: Plan
+classification, Direction group, Opening weekday, Review Session date and
+classification, or exact Mistake/Emotion/Tag/Setup label as applicable.
+
+Only a previously captured app-owned pagination control may extend that
+identity set. Controls are captured at the controlled render or with an exact
+registered group page. Each control's operation must produce the next bounded
+suffix—25 contributors at most in only its group or five groups at most with
+their initial contributor pages—while every captured prefix remains the same
+node in the same position.
+A copied suffix, no-op or cross-control pagination, alternate valid subject or
+source, semantic/index change, moved row, replaced node/control, duplicate
+action, stripped marker, or mismatched cardinality fails with a focused error
+before inert state or persistence. Activation is validate-only and cannot
+register injected evidence. Close returns to the exact connected trigger; a
+save or reconciliation refresh that rebuilds Reports focuses the originating
+Plan or pattern heading because the contributor may have moved or left its
+cohort. The full-workspace reports do not consume or change Trade Browser
 account/date/day/search/facet state. No URL, selected-trade state, schema,
 migration, store, archive, digest input, formula, definition, checksum, cohort
 definition or eligibility rule, ordering, or pagination changes.
