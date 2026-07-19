@@ -1,9 +1,106 @@
 # Hermes Journal — active mobile handoff
 
-Status: Quick Review Continuation v1 shipped on main · implementation commit
-78b001c · exact-head hosted CI passed · updated 2026-07-19
+Status: Report Trade Continuation v1 integrity hardening shipped on main ·
+implementation commit dc56cf5 · exact-head hosted CI passed · updated
+2026-07-19
 
 ## Current handoff
+
+task: Harden every governed report-to-trade continuation so only the exact
+captured source/group/list/row/action identity from current report output can
+open the existing review sheet, including progressively revealed evidence.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Published dc56cf5ee45cb102eb3779f1ba31f443228966f0 directly to GitHub main.
+- Added `mobile/src/ui/report-review-action-integrity.ts` for the eight
+  non-Symbol sources: Review Session Coverage, Direction Mix, Opening Weekday
+  Mix, Plan Check, Mistake Patterns, Emotion Patterns, Tag Patterns, and Setup
+  Breakdown. Each controlled render captures the original section, group,
+  evidence list, row, action, ordinal, stable subject, and source-specific
+  governed identity.
+- Activation rebuilds the current report and requires the exact captured tuple
+  and DOM placement. Alternate valid current IDs or sources, changed
+  classification/direction/weekday/session date or exact pattern label, moved
+  rows, replaced actions, stripped origins, and duplicate action cardinality
+  fail with the existing focused error before dialog insertion, inert state, or
+  persistence.
+- Progressive registration is operation-bound. A previously captured app-owned
+  control may add only the exact next bounded page: up to 25 contributors in
+  its one group, or up to five groups with their initial contributor pages.
+  Injected suffixes, no-op/cross-control laundering, detached or replaced
+  controls, prefix replacement, unrelated row changes, and nonconserving
+  section actions cannot register themselves. Activation is validate-only.
+- Kept Symbol Breakdown's separately hardened group/row/action validator and
+  routed it through the tightened shared dispatcher without changing its
+  contract. Generic non-report trade actions remain valid.
+- Expanded production-Chromium coverage across all eight non-Symbol sources,
+  the exact 26th evidence row, an exact appended Tag group, copied group/row
+  suffixes, replaced controls, duplicate actions, semantic/index/date/label
+  tampering, row movement, source stripping, and alternate valid identities.
+- Updated README, Product Blueprint, iOS Roadmap, Local Ledger, and Mac handoff
+  evidence. This is integrity hardening, not another Slice D increment.
+- No report builder, version, checksum, cohort, eligibility rule, formula,
+  evidence order, progressive limit, schema, migration, store, archive/export,
+  digest, dependency, native project, preference, network, money, security,
+  order, or brokerage-execution path changed.
+
+verified:
+
+- `cd mobile && npm ci` — 164 packages installed; zero vulnerabilities.
+  `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2. `npm test` —
+  832/832 across 70 files. `npm run test:bundle` — 6/6. `npm run
+  test:ios-sync` — 8/8. `npm audit --omit=dev` — zero production
+  vulnerabilities.
+- `cd mobile && npm run test:e2e` — 122/122 production-Chromium journeys.
+  Combined Reports plus specialized Symbol regression — 24/24. The focused
+  adversarial group-pagination case — 1/1.
+- `cd mobile && npm run ios:sync` — 97 modules transformed and only the pinned
+  SQLite plugin registered; CocoaPods and xcodebuild were explicitly skipped
+  on Linux. `npm run verify:bundle` — five JavaScript chunks, largest
+  `assets/app-CyvYEQmN.js` at 383,357/500,000 bytes. `npm run
+  verify:ios-sync` — nine production files copied byte-for-byte at SHA-256
+  `771e5444bb91edd1e8e47609477b89cd60e822a34908b34a97e99e0490c5f10f`;
+  generated identity, SQLite registration, native drift, and lock drift passed.
+- `git diff --check` and explicit staged-scope checks passed. Independent
+  architecture, product/release, and phone UX/accessibility audits found no
+  blocker after operation-bound paging and documentation precision fixes.
+- `gh run view 29696737079 --json status,conclusion,headSha,jobs` — exact SHA
+  dc56cf5ee45cb102eb3779f1ba31f443228966f0, conclusion success; Mobile Linux
+  job 88218680275 and Legacy Python job 88218680286 both succeeded, including
+  the browser smoke, no-order boundary, iOS handoff, bundle, and dependency
+  gates.
+
+assumptions:
+
+- Governed builders and the controlled report render remain the source of
+  truth. DOM identity is captured only at that render or after an exact
+  app-owned page delta; later arbitrary DOM content is untrusted.
+- The integrity state machine is exercised at its production-DOM boundary in
+  Chromium. Linux bundle/config evidence does not prove WKWebView or native
+  accessibility behavior.
+- Report continuation remains local journal navigation into an existing review
+  command. It is not broker integration, order execution, advice, or a durable
+  report state.
+
+open:
+
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  WKWebView exact-action and progressive-paging behavior, SQLCipher, Keychain,
+  lifecycle, VoiceOver, Dynamic Type, and hardware-keyboard evidence are
+  recorded on the reviewed Mac/device.
+- The focused invalid-action alert has not separately been measured at
+  320/421px with 200% text; valid actions and sheets pass those Chromium
+  widths, and invalid actions already use the existing pre-inert focused alert.
+- Fleet input/output guard evidence and Sonnet Stage 2 sign-off remain open.
+- The broader paired trading-and-journal product remains active. This hardening
+  adds no brokerage connection or funded trade-execution path.
+
+## Prior milestone — Quick Review Continuation v1
 
 task: Add a fast, local-first continuation from the canonical Review Queue into
 the existing exact trade-review flow so a young mobile trader can clear drafts
