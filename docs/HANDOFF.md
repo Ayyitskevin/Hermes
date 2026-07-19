@@ -1,10 +1,113 @@
 # Hermes Journal — active mobile handoff
 
-Status: Report Trade Continuation v1 integrity hardening shipped on main ·
-implementation commit dc56cf5 · exact-head hosted CI passed · updated
-2026-07-19
+Status: Dashboard Import Continuation v1 shipped on main · implementation
+commit 53c17f6 · exact-head hosted CI passed · updated 2026-07-19
 
 ## Current handoff
+
+task: Add one fail-closed, offline continuation from a nonempty local Dashboard
+to the existing generic stock CSV importer, while preserving confirmed import
+recovery over stale workspace state.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Published 53c17f6b51e9c24e7e5e72799953df2bca72c8d8 directly to GitHub
+  main as Dashboard Import Continuation v1, the 36th bounded Slice D increment
+  and 30th derived-only presentation/navigation increment.
+- A nonempty local Dashboard now renders one secondary **Import latest
+  session** action immediately after the canonical review-progress card. Empty
+  Dashboard retains its inline importer, and demo exposes no import action.
+- Normal-import activation validates the exact current Dashboard heading,
+  optional confirmed manual-save recovery, account overview, net result, review
+  progress, continuation card, and original action. Replaced, cloned, moved, or
+  duplicated attempted actions fail with the existing focused, privacy-safe
+  error. Confirmed-recovery activation instead validates its exact recovery
+  card and stable receipt identity before opening recovery-only More.
+- The normal action opens the existing More screen and requires the exact heading,
+  optional manual recovery, manual-capture card, generic importer, bound form,
+  account/time-zone/currency/file controls, Preview action, status, and preview
+  container. Missing, cloned, moved, duplicated, hidden, disabled, or
+  unfocusable destination evidence fails before a picker, file read, preview,
+  preparation, commit, persistence, or network request.
+- A confirmed CSV commit whose receipt continuation cannot redraw takes
+  precedence over stale snapshot provenance, including stale empty state.
+  Dashboard and More become recovery-only: manual/CSV capture, stale receipt
+  cards/history, receipt review/rollback, restore, and sizing are withheld. The
+  exact receipt retry plus read-only export remains; an independent confirmed
+  manual-save retry may coexist in its own exact position.
+- Repeated activation is guarded, previous render bindings are aborted, and
+  displaced app-owned import, recovery, history, restore, sizing, and export
+  artifacts are removed before Dashboard rebuilds.
+- Added production unit and Chromium coverage for local/empty/demo gating,
+  320/421px at 200% text, keyboard/pointer routing, actual browser offline mode,
+  unchanged local storage, zero external requests and file reads, origin and
+  destination tampering, focus ownership, confirmed recovery, and cross-flow
+  manual-save recovery composition.
+- Updated README, Product Blueprint, iOS Roadmap, Local Ledger, and Mac handoff
+  evidence. No schema, migration, parser, store command, archive/digest/export
+  shape, report, formula, preference, dependency, native project, network,
+  security, money, order, or brokerage-execution path changed; the six
+  write-capable exceptions remain fixed.
+
+verified:
+
+- `cd mobile && npm ci` — 164 packages installed; zero vulnerabilities.
+  `npm run typecheck` — exit 0. `npm run test:boundary` — 2/2. `npm test` —
+  836/836 across 71 files. `npm run test:bundle` — 6/6. `npm run
+  test:ios-sync` — 8/8. `npm audit --omit=dev` — zero production
+  vulnerabilities.
+- `cd mobile && npm run test:e2e` — 125/125 production-Chromium journeys,
+  including all three Dashboard Import Continuation journeys and every prior
+  Hermes browser flow.
+- `cd mobile && npm run ios:sync` — 98 modules transformed, five JavaScript
+  chunks, and only the pinned SQLite plugin registered; CocoaPods and
+  xcodebuild were explicitly skipped on Linux. `npm run verify:bundle` —
+  largest `assets/app-CFjPcuq0.js` at 396,133/500,000 bytes. `npm run
+  verify:ios-sync` — nine production files copied byte-for-byte at SHA-256
+  `29e47bb3399c4b4e47388cb3fc3bb644e066b5574053715edc41ffb65b479eb1`;
+  generated identity, SQLite registration, native drift, and lock drift passed.
+- `git diff --check`, explicit staged-scope checks, and artifact scans passed.
+  Independent architecture, product/phone UX, scope, documentation, and final-
+  publication audits found no blocker after recovery suppression and claim-
+  precision fixes.
+- `gh run view 29699228616 --json status,conclusion,headSha,jobs` — exact SHA
+  53c17f6b51e9c24e7e5e72799953df2bca72c8d8, conclusion success; Mobile Linux
+  job 88225300901 and Legacy Python job 88225300880 both succeeded, including
+  the full browser smoke, no-order boundary, iOS handoff, bundle, and dependency
+  gates.
+
+assumptions:
+
+- The current local snapshot and in-session confirmed-commit recovery context
+  remain authoritative. Recovery deliberately outranks stale provenance, but
+  this slice does not claim that its transient guidance survives relaunch.
+- The generic importer remains stock-only and user-initiated. This continuation
+  is synchronous local navigation into the existing preview-first tool; it does
+  not select or read a file, connect a broker, place an order, or provide
+  advice.
+- Exact DOM topology is a fail-closed presentation boundary, not authorization
+  for persistence. Chromium validates the production web artifact; Linux copy
+  evidence does not prove WKWebView or native accessibility behavior.
+
+open:
+
+- HOLD native acceptance until CocoaPods, Xcode, Simulator, physical iPhone,
+  Files/WKWebView routing, SQLCipher receipt recovery, Keychain, lifecycle,
+  VoiceOver, Dynamic Type, safe-area, hardware-keyboard, and multi-scene
+  evidence are recorded on the reviewed Mac/device.
+- Confirmed-recovery reflow is covered at 421px/200%; the generic invalid-route
+  alert does not have a separate scaled chrome-geometry assertion. These are
+  browser evidence gaps, not native passes.
+- Fleet input/output guard evidence and Sonnet Stage 2 sign-off remain open.
+- The broader paired trading-and-journal product remains active. Brokerage
+  connection, funded execution, and human-cohort validation remain separate,
+  human-gated scopes.
+
+## Prior milestone — Report Trade Continuation integrity
 
 task: Harden every governed report-to-trade continuation so only the exact
 captured source/group/list/row/action identity from current report output can
