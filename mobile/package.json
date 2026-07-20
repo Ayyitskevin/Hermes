@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:boundary": "vitest run src/core/mobile-boundary.test.ts",
-    "test:integrity": "vitest run src/core/instrument-support.test.ts src/core/trade-invariants.test.ts src/core/journal-integrity.test.ts src/core/csv.test.ts src/core/normalize-trades.test.ts src/application/import-receipt-reconciliation.test.ts src/application/prepare-csv-import.test.ts",
+    "test:integrity": "vitest run src/core/instrument-support.test.ts src/core/trade-invariants.test.ts src/core/journal-integrity.test.ts src/core/journal-integrity-active-heads.test.ts src/core/csv.test.ts src/core/normalize-trades.test.ts src/application/import-receipt-reconciliation.test.ts src/application/prepare-csv-import.test.ts",
     "test:bundle": "node --test scripts/verify-mobile-bundle.node-test.mjs",
     "test:ios-sync": "node --test scripts/verify-ios-sync.node-test.mjs",
     "test:watch": "vitest",

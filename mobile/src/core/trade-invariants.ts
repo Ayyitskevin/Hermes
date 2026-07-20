@@ -28,6 +28,9 @@ export type TradeInvariantCode =
   | "lot_matches_unreconciled"
   | "report_includes_unknown_trade"
   | "report_double_counts_trade"
+  | "report_retains_voided_trade"
+  | "allocation_references_inactive_execution"
+  | "open_partial_realized_inconsistent"
   | "normalization_nondeterministic"
   | "import_receipt_unreconciled";
 
@@ -318,6 +321,125 @@ export function assertReportCohortTraceable(
   }
 }
 
+/**
+ * After a void/rollback, no published subject may remain from the pre-void set
+ * unless it is still in the active projection (shared multi-receipt heads).
+ */
+export function assertPublishedReportsExcludeVoided(
+  activeSubjectIds: readonly string[],
+  publishedSubjectIds: readonly string[],
+  voidedSubjectIds: readonly string[],
+): void {
+  assertReportCohortTraceable(activeSubjectIds, publishedSubjectIds);
+  const active = new Set(activeSubjectIds);
+  for (const id of voidedSubjectIds) {
+    if (active.has(id)) continue;
+    if (publishedSubjectIds.includes(id)) {
+      fail(
+        "report_retains_voided_trade",
+        `Published report still includes voided trade subject ${id}.`,
+      );
+    }
+  }
+}
+
+/**
+ * Every allocation and lot-match edge must point at an active execution head.
+ * Inactive/voided executions must not contribute fragments to the projection.
+ */
+export function assertAllocationsReferenceActiveExecutions(
+  projection: TradeNormalizationResult,
+  activeExecutionIds: ReadonlySet<string> | readonly string[],
+): void {
+  const active = activeExecutionIds instanceof Set
+    ? activeExecutionIds
+    : new Set(activeExecutionIds);
+  for (const allocation of projection.allocations) {
+    if (!active.has(allocation.executionId)) {
+      fail(
+        "allocation_references_inactive_execution",
+        `Allocation ${allocation.id} references inactive execution ${allocation.executionId}.`,
+      );
+    }
+  }
+  for (const execution of projection.executions) {
+    if (!active.has(execution.id)) {
+      fail(
+        "allocation_references_inactive_execution",
+        `Normalized execution list retains inactive execution ${execution.id}.`,
+      );
+    }
+  }
+}
+
+/**
+ * Open/partial realized consistency on projected trades:
+ * - exited quantity never exceeds entered (also in quantity invariants);
+ * - OPEN with exits is a partial: remaining > 0 and exited > 0;
+ * - lot-match quantities for a trade equal that trade's exited quantity;
+ * - CLOSED trades have no remaining open lot quantity.
+ */
+export function assertOpenPartialRealizedConsistency(
+  projection: TradeNormalizationResult,
+): void {
+  assertTradeQuantityInvariants(projection.trades);
+  assertLotMatchesReconcile(projection);
+
+  const exitedByTrade = new Map<string, string>();
+  for (const match of projection.lotMatches) {
+    exitedByTrade.set(
+      match.tradeId,
+      sumSignedDecimals([exitedByTrade.get(match.tradeId) ?? "0", match.quantity]),
+    );
+  }
+
+  for (const trade of projection.trades) {
+    const matchedExit = exitedByTrade.get(trade.id) ?? "0";
+    if (compareSignedDecimals(matchedExit, trade.exitedQuantity) !== 0) {
+      fail(
+        "open_partial_realized_inconsistent",
+        `Trade ${trade.id} lot-match qty ${matchedExit} != exitedQuantity ${trade.exitedQuantity}.`,
+        trade.id,
+      );
+    }
+    if (trade.status === "OPEN") {
+      if (compareSignedDecimals(trade.remainingQuantity, "0") <= 0) {
+        fail(
+          "open_partial_realized_inconsistent",
+          `Open trade ${trade.id} has non-positive remaining quantity.`,
+          trade.id,
+        );
+      }
+      if (
+        compareSignedDecimals(trade.exitedQuantity, "0") > 0
+        && compareSignedDecimals(trade.remainingQuantity, "0") <= 0
+      ) {
+        fail(
+          "open_partial_realized_inconsistent",
+          `Partial open trade ${trade.id} is not open after exits.`,
+          trade.id,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Active-head integrity: normalize active executions only, enforce quantity,
+ * money, lot, allocation, and open/partial realized invariants.
+ */
+export function assertActiveHeadProjectionIntegrity(
+  executions: readonly LedgerExecution[],
+): TradeNormalizationResult {
+  const projection = assertNormalizationDeterministic(executions);
+  assertAllocationsReferenceActiveExecutions(
+    projection,
+    executions.map((execution) => execution.id),
+  );
+  assertOpenPartialRealizedConsistency(projection);
+  return projection;
+}
+
 /** Two normalizations of the same ordered executions must be byte-identical in money and qty. */
 export function assertNormalizationDeterministic(
   executions: readonly LedgerExecution[],
@@ -360,5 +482,5 @@ export function assertNormalizationDeterministic(
 export function assertActiveLedgerIntegrity(
   executions: readonly LedgerExecution[],
 ): TradeNormalizationResult {
-  return assertNormalizationDeterministic(executions);
+  return assertActiveHeadProjectionIntegrity(executions);
 }

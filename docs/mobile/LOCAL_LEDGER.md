@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore + journal integrity suite (unsupported-instrument fail-closed, golden fixtures, projection invariants) · 2026-07-20
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore + journal integrity suite (unsupported-instrument fail-closed, golden fixtures, projection invariants, active-head void/rollback report exclusion, open/partial realized consistency) · 2026-07-20
 
 The current workspace contains 38 bounded Slice D increments: 32 derived-only
 presentation/projection increments and six write-capable exceptions.
@@ -103,9 +103,14 @@ daylight-saving wall times use `csv_ambiguous_local_time` /
 `csv_nonexistent_local_time` and also block commit rather than guessing an
 offset. Pure projection invariants (`trade-invariants`) additionally enforce
 closed quantity ≤ entered, no duplicate execution IDs, receipt row partitions,
-deterministic normalization, and report cohort traceability back to active
-heads. Golden fixtures live under `mobile/src/fixtures/journal-integrity/` and
-run via `npm run test:integrity`.
+deterministic normalization, report cohort traceability back to active heads,
+allocations that only reference active execution IDs, and open/partial realized
+consistency (lot-match qty = exited qty; remaining open after partials).
+Void/rollback of a receipt removes its exclusive heads and recomputes
+projections so governed reports and headline performance never republish voided
+subjects or closed-round-trip totals after a close receipt is voided. Golden
+fixtures live under `mobile/src/fixtures/journal-integrity/` and run via
+`npm run test:integrity` (includes `journal-integrity-active-heads`).
 
 ## Manual execution sequence
 
