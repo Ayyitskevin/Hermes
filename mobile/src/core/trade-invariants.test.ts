@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import type { LedgerExecution, TradeProjection } from "./ledger";
 import { normalizeTrades } from "./normalize-trades";
 import {
+  assertActiveHeadProjectionIntegrity,
   assertActiveLedgerIntegrity,
+  assertAllocationsReferenceActiveExecutions,
   assertImportReceiptReconciles,
   assertNoDuplicateExecutionIds,
+  assertOpenPartialRealizedConsistency,
+  assertPublishedReportsExcludeVoided,
   assertReportCohortTraceable,
   assertTradeQuantityInvariants,
   TradeInvariantError,
@@ -188,6 +192,40 @@ describe("trade invariants", () => {
     expect(first.moneyTotals).toEqual(second.moneyTotals);
     expect(first.lotMatches.map((match) => match.grossPnl)).toEqual(
       second.lotMatches.map((match) => match.grossPnl),
+    );
+  });
+
+  it("accepts open partial remaining quantity and rejects inactive allocation refs", () => {
+    const executions = [
+      execution({ id: "entry", occurredAtUs: "1", quantity: "10", price: "100" }),
+      execution({
+        id: "partial-exit",
+        occurredAtUs: "2",
+        side: "SELL",
+        quantity: "4",
+        price: "110",
+      }),
+    ];
+    const projection = assertActiveHeadProjectionIntegrity(executions);
+    expect(projection.trades[0]).toMatchObject({
+      status: "OPEN",
+      enteredQuantity: "10",
+      exitedQuantity: "4",
+      remainingQuantity: "6",
+    });
+    assertOpenPartialRealizedConsistency(projection);
+    assertAllocationsReferenceActiveExecutions(projection, ["entry", "partial-exit"]);
+    expectInvariant(
+      () => assertAllocationsReferenceActiveExecutions(projection, ["entry"]),
+      "allocation_references_inactive_execution",
+    );
+  });
+
+  it("rejects published cohorts that retain voided subjects", () => {
+    assertPublishedReportsExcludeVoided(["a"], ["a"], ["voided"]);
+    expectInvariant(
+      () => assertPublishedReportsExcludeVoided([], ["voided"], ["voided"]),
+      "report_includes_unknown_trade",
     );
   });
 });

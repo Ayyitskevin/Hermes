@@ -1,0 +1,2 @@
+Symbol,Side,Quantity,Price,Fee,Currency,Timestamp,ExecutionId
+AAPL,SELL,6,108.50,0.60,USD,2026-07-01T14:00:00-04:00,open-partial-close
