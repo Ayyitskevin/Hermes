@@ -85,6 +85,7 @@ cd mobile
 npm ci
 npm run typecheck
 npm run test:boundary
+npm run test:integrity
 npm test
 npm run test:e2e
 npm run ios:sync
@@ -92,6 +93,10 @@ npm audit --omit=dev
 cd ..
 git diff --check
 ```
+
+`npm run test:integrity` is the focused journal lifecycle gate (CSV golden
+fixtures, instrument support, trade invariants, normalize, import receipt
+reconciliation, prepare/verify). CI runs it before the full unit suite.
 
 Run Ruff/Pytest when legacy Python changes. Do not claim native readiness from
 Linux: CocoaPods, Xcode, Simulator, physical-device, Keychain, SQLCipher,

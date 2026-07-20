@@ -2,6 +2,7 @@ import {
   canonicalizeDecimal,
   type CanonicalDecimal,
 } from "./decimal";
+import { classifyCoreInstrumentSymbol } from "./instrument-support";
 
 export interface CsvLimits {
   /** Maximum UTF-8 bytes in the complete decoded document. */
@@ -75,6 +76,7 @@ export type CsvRowIssueCode =
   | "csv_column_count_mismatch"
   | "csv_missing_value"
   | "csv_invalid_symbol"
+  | "csv_unsupported_instrument"
   | "csv_invalid_side"
   | "csv_invalid_quantity"
   | "csv_invalid_price"
@@ -1124,13 +1126,38 @@ function previewRecord(
   }
   const symbol = symbolSource === null ? null : validatedSymbol(symbolSource.value);
   if (symbolSource !== null && symbol === null) {
-    issues.push(rowIssue(
-      record,
-      "csv_invalid_symbol",
-      "Use 1-32 ASCII letters, digits, dots, slashes, colons, underscores, or hyphens.",
-      "symbol",
-      symbolSource.cell,
-    ));
+    // Prefer a precise unsupported-instrument code when the raw token is a
+    // known non-equity form (e.g. ES=F) rather than a generic charset error.
+    const rawSymbol = symbolSource.value.trim().toLocaleUpperCase("en-US");
+    const support = classifyCoreInstrumentSymbol(rawSymbol);
+    if (!support.ok && support.kind !== "unknown_non_equity") {
+      issues.push(rowIssue(
+        record,
+        "csv_unsupported_instrument",
+        support.message,
+        "symbol",
+        symbolSource.cell,
+      ));
+    } else {
+      issues.push(rowIssue(
+        record,
+        "csv_invalid_symbol",
+        "Use 1-32 ASCII letters, digits, dots, slashes, colons, underscores, or hyphens.",
+        "symbol",
+        symbolSource.cell,
+      ));
+    }
+  } else if (symbol !== null && symbolSource !== null) {
+    const support = classifyCoreInstrumentSymbol(symbol);
+    if (!support.ok) {
+      issues.push(rowIssue(
+        record,
+        "csv_unsupported_instrument",
+        support.message,
+        "symbol",
+        symbolSource.cell,
+      ));
+    }
   }
   const side = sideSource === null ? null : parseSideAlias(sideSource.value);
   if (side !== null && !side.ok) {
@@ -1175,9 +1202,13 @@ function previewRecord(
   }
 
   const hasError = issues.some((issue) => issue.severity === "error");
+  const instrumentSupported = symbol === null
+    ? false
+    : classifyCoreInstrumentSymbol(symbol).ok;
   if (
     hasError
     || symbol === null
+    || !instrumentSupported
     || side === null
     || !side.ok
     || quantity === null

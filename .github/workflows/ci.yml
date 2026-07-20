@@ -51,6 +51,8 @@ jobs:
         run: npm run typecheck
       - name: Enforce the mobile no-network and no-order boundary
         run: npm run test:boundary
+      - name: Journal integrity suite
+        run: npm run test:integrity
       - name: Unit tests
         run: npm test
       - name: Unit-test the mobile bundle size verifier

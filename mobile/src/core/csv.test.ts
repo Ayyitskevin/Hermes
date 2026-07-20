@@ -423,6 +423,23 @@ describe("generic execution CSV preview", () => {
     }));
   });
 
+  it("rejects option, futures, and crypto symbols as unsupported instruments", () => {
+    const result = previewGenericCsvImport(
+      "Symbol,Side,Quantity,Price,Timestamp\n"
+      + "AAPL250117C00150000,BUY,1,2.5,2026-01-02T15:00:00Z\n"
+      + "ES=F,BUY,1,5200,2026-01-02T14:30:00Z\n"
+      + "BTC-USD,BUY,1,65000,2026-01-02T16:00:00Z\n"
+      + "AAPL,BUY,1,100,2026-01-02T14:00:00Z",
+      { timeZone: "UTC" },
+    );
+    expect(result.status).toBe("invalid");
+    expect(result.validRows).toBe(1);
+    expect(result.rejectedRows).toBe(3);
+    expect(result.issues.filter((issue) => issue.code === "csv_unsupported_instrument"))
+      .toHaveLength(3);
+    expect(result.rows[0]?.symbol).toBe("AAPL");
+  });
+
   it("blocks blank/duplicate headers, invalid configuration, and ragged rows", () => {
     const badHeader = previewGenericCsvImport(
       "Symbol,symbol,Side,Quantity,Price,Timestamp,\nAAPL,AAPL,BUY,1,100,2026-07-01T00:00Z,x",

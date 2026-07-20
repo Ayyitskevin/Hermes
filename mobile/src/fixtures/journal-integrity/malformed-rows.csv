@@ -1,0 +1,6 @@
+Symbol,Side,Quantity,Price,Fee,Currency,Timestamp
+AAPL,BUY,1,100.00,0.00,USD,2026-07-01T13:30:00Z
+,SELL,1,101.00,0.00,USD,2026-07-01T14:00:00Z
+NVDA,LONG,1e2,0,-1,US$,2026-02-30 09:30
+,,,,,,
+TSLA,BUY,2,250.00,0.10,USD,not-a-timestamp
