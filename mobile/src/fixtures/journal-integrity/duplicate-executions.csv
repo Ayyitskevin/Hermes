@@ -1,0 +1,3 @@
+Symbol,Side,Quantity,Price,Fee,Currency,Timestamp,ExecutionId
+MSFT,BUY,5,400.00,0.50,USD,2026-07-03T10:00:00-04:00,dup-fill-1
+MSFT,SELL,5,410.00,0.50,USD,2026-07-03T15:00:00-04:00,dup-fill-2

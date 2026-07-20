@@ -1,6 +1,6 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore · 2026-07-19
+Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore + journal integrity suite (unsupported-instrument fail-closed, golden fixtures, projection invariants) · 2026-07-20
 
 The current workspace contains 38 bounded Slice D increments: 32 derived-only
 presentation/projection increments and six write-capable exceptions.
@@ -90,6 +90,22 @@ the commit; Hermes does not silently import only the convenient subset of a
 financial file. Capability validation also rejects pre-1970 timestamps,
 sub-microsecond values, unsupported currencies, and fee precision/ranges that
 the SQLite schema cannot persist, so “Ready to import” matches commit capability.
+
+Generic CSV remains stock/ETF-only and always materializes accepted rows as
+stock with multiplier `1`. The Core instrument support boundary
+(`classifyCoreInstrumentSymbol`) therefore rejects OCC option contract roots
+(`AAPL250117C00150000`), futures forms (`ES=F`, `ESZ25`), and common crypto
+pairs (`BTC-USD`, `ETHUSDT`) with machine-readable
+`csv_unsupported_instrument` issues and user-visible exclusion reasons. A file
+that mixes valid equities with unsupported instruments stays `invalid` end to
+end — valid rows are never committed alone. Ambiguous or nonexistent
+daylight-saving wall times use `csv_ambiguous_local_time` /
+`csv_nonexistent_local_time` and also block commit rather than guessing an
+offset. Pure projection invariants (`trade-invariants`) additionally enforce
+closed quantity ≤ entered, no duplicate execution IDs, receipt row partitions,
+deterministic normalization, and report cohort traceability back to active
+heads. Golden fixtures live under `mobile/src/fixtures/journal-integrity/` and
+run via `npm run test:integrity`.
 
 ## Manual execution sequence
 
