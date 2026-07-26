@@ -76,9 +76,11 @@ submission-ready product:
   guarded full-document retry. It never opens browser/demo storage as a native
   fallback, never renders raw plugin/database detail, and withholds retry when
   teardown cannot be confirmed.
-- Versioned STRICT SQLite migrations for immutable import provenance, execution
-  versions, current heads, FIFO projections, fees, receipts, rollbacks, and
-  durable manual-submission reconciliation.
+- Versioned STRICT SQLite migrations through schema v5 for immutable import
+  provenance, execution versions, current heads, FIFO projections, fees,
+  receipts, rollbacks, durable manual-submission reconciliation, and the Local
+  Playbook Library. The v5 migration checksum is
+  `52ab663289a86a97bab754ccacf58b9f111fa87a55c166162d343fb0ae115e52`.
 - Capacitor configuration that requires SQLCipher-backed storage, plus a native
   adapter that generates a random passphrase and hands it to the pinned SQLite
   plugin's secret API. Native SQLCipher/Keychain operation remains a Mac/iPhone
@@ -93,6 +95,17 @@ submission-ready product:
 - Immutable v3 trade-review versions attached to durable trade subjects, with
   notes, setup/mistake/emotion tags, playbooks, rule outcomes, exact initial
   risk, optional planned stop, optimistic concurrency, and atomic batch tagging.
+- Local Playbook Library V1 is implemented as a separate user-owned definition
+  store. Stable IDs own immutable create/edit/archive/restore versions with
+  exact ordered name/rule snapshots and deterministic current heads. Applying
+  a saved revision to a review is explicit and stores that exact immutable
+  identity; free-text playbook work remains ad hoc, and Hermes never guesses or
+  promotes legacy review-derived names into the editable library. Schema v5
+  adds exactly five durable tables: `playbook_definitions`,
+  `playbook_definition_versions`, `playbook_definition_rules`,
+  `playbook_definition_heads`, and
+  `trade_review_playbook_definition_links`. User-authored reflection templates
+  remain open work.
 - Immutable v4 day-level journal versions keyed by workspace-local date. Users
   can explicitly save a draft or completed reflection on trading and no-trade
   days, edit only through an optimistic successor version, and optionally add a
@@ -370,8 +383,10 @@ submission-ready product:
   local playbook—remains honestly selected with zero visible cards. Missing,
   duplicated, stale, detached, count-mismatched, or tampered card/action
   evidence fails visibly and restores the prior tab and Trade Browser state.
-  Playbook names remain the current immutable identity; CRUD requires a separate
-  stable-ID migration. No schema, persistence, store command, archive/digest/
+  At that derived-only milestone, playbook names were its immutable identity and
+  CRUD required a separate stable-ID migration. Local Playbook Library V1 now
+  owns that separate durable identity; this older scope contract still does not
+  infer one from review text. No scope state enters persistence, archive/digest/
   export shape, report, formula, preference, dependency, native source, or
   network path changed; the same five write-capable exceptions remain.
 - Exact Playbook Draft Scope v1 is the thirty-third bounded Slice D increment
@@ -502,10 +517,16 @@ submission-ready product:
   in-memory development artifact, not a native backup.
 - A local-only, previewed Slice C-B restore implementation for current
   `hermes-journal-export` v1 files. The native adapter, covered by Linux
-  repository/codec tests, accepts only `sqlite-table-set` v1; the browser
-  development runtime accepts only `browser-session-state` v2 and is not native
-  recovery evidence. Restore revalidates the selected archive, never merges or
-  overwrites an existing journal, and treats an exact
+  repository/codec tests, exports `sqlite-table-set` payload v2 for schema v5
+  and also accepts the prior schema-v4 native payload v1. The browser development
+  runtime exports `browser-session-state` payload v3 and also accepts prior
+  browser payload v2. Each legacy decoder verifies the original state, report,
+  and summary before migrating to an empty explicit playbook library with null
+  review-definition links. Current native v2/schema-v5 and browser-v3 restores
+  preserve full definition/version/rule/head/submission/link history; re-export
+  reproduces exact portable state/report digests and summaries. Browser evidence is not native
+  recovery evidence. Restore never merges or overwrites an existing journal and
+  treats an exact
   already-restored state as an idempotent retry. The UI rejects files larger
   than 64 MiB before reading them; the parser independently enforces the same
   67,108,864-byte UTF-8 limit.
@@ -695,8 +716,9 @@ submission-ready product:
   conflicting browser state; draft actions render only for a positive separately
   reconciled draft count and never open the editor automatically. Incoherent or
   tampered action evidence fails visibly without changing the prior view. The
-  scope remains session-only; playbook CRUD and stable durable
-  identity remain separately gated work.
+  facet and cohort scope remain session-only. Local Playbook Library V1 now owns
+  separately persisted stable definition identity and CRUD; legacy review-derived
+  names remain ad hoc and are never promoted or guessed into that library.
 - Working trade search and fixed-fractional position sizing.
 - Safe-area, keyboard/focus, reduced-motion, Dynamic Type, and 44-point control coverage.
 - CI for locked dependencies, types, unit tests, browser flows, production
@@ -718,15 +740,17 @@ response-loss recovery, low-storage, and near-limit memory behavior still
 require the Mac/device gate. Slice C-B restores a current-schema archive on its
 matching runtime, but that file is not a complete native backup: attachment
 catalog v1 is empty, archives containing attachments are rejected, and native
-lifecycle behavior remains unverified. The current build deliberately rejects
-older browser payloads and pre-v4 native table sets; a pre-release legacy file
-must first be restored by its exact old runtime, then opened/migrated and
-exported again with the current build. Attachments, Delete All Data, saved scope
-presets, persistent/report scoping, full account and vocabulary/playbook
-management, human-gated generic-CSV asset-class semantics, and the remaining
-report families remain Phase 1 work. Native v3→v4 migration, Daily Journal
-relaunch/Files export/restore/continued writes, VoiceOver, and small-screen
-behavior still require Mac/iPhone evidence.
+lifecycle behavior remains unverified. The current build restores the prior
+browser payload v2 and prior schema-v4 native payload v1 only after verifying
+their original digest/report/summary claims, then migrates them without
+guessing legacy playbooks into the explicit library. Attachments, Delete All
+Data, saved scope presets, persistent/report scoping, fuller account and
+vocabulary management, user-authored reflection templates, human-gated
+generic-CSV asset-class semantics, and the remaining report families remain
+Phase 1 work. Native v4→v5 retained-data/interruption migration, playbook
+persistence and exact snapshot links, SQLCipher/Keychain, Files restore and
+continued writes, VoiceOver, and small-screen behavior are NOT RUN and still
+require Mac/iPhone evidence.
 Saved Views also remain held because private filter labels currently have no
 approved protected preference adapter; plaintext WebView `localStorage` is not
 an acceptable persistence downgrade. Shipping them requires an explicitly

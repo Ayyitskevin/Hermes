@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { TradeReviewCommitStatusUncertainError } from "../application/journal-application";
-import { JournalTradeReviewError } from "../application/journal-store";
+import {
+  JournalTradeReviewError,
+  type JournalPlaybookDefinitionRecord,
+} from "../application/journal-store";
 import { deriveTradeMetricsV1 } from "../core/trade-metrics";
 import type { JournalWorkspaceSnapshot, TradePreview } from "../core/types";
 import { DEMO_WORKSPACE } from "../data/demo";
@@ -647,5 +650,92 @@ describe("trade review sheet", () => {
       ...snapshot,
       trades: [primary, { ...secondary, tradeSubjectId: "subject-1" }],
     }, "subject-1", "plan-check")).toThrow(/exactly one trade/u);
+  });
+});
+
+describe("trade review saved playbook application", () => {
+  const definition: JournalPlaybookDefinitionRecord = {
+    id: "a".repeat(64),
+    versionId: "b".repeat(64),
+    version: 3,
+    revision: "c".repeat(64),
+    name: "Opening range",
+    state: "active",
+    rules: ["Wait for confirmation", "Respect the stop"],
+    recordedAtUs: "1782864000000000",
+  };
+
+  it("keeps matching free text ad hoc until the user explicitly applies a revision", () => {
+    const candidate = {
+      ...trade(),
+      playbook: definition.name,
+      playbookDefinition: null,
+      rules: [],
+    } satisfies TradePreview;
+    const html = tradeReviewSheetTemplate(
+      candidate,
+      localWorkspace(),
+      undefined,
+      undefined,
+      [definition],
+    );
+
+    expect(html).toContain(`value="${definition.id}"`);
+    expect(html).toContain("Opening range · v3");
+    expect(html).toContain("Apply selected revision");
+    expect(html).toContain("Free-text playbook work remains ad hoc");
+    expect(html).not.toContain(
+      `data-playbook-revision="${definition.revision}" selected`,
+    );
+  });
+
+  it("reflects only an exact immutable reference and never guesses by name", () => {
+    const exact = {
+      ...trade(),
+      playbook: definition.name,
+      playbookDefinition: {
+        id: definition.id,
+        versionId: definition.versionId,
+        revision: definition.revision,
+      },
+      rules: definition.rules.map((text, index) => ({
+        ruleId: `rule-${index}`,
+        text,
+        outcome: "unreviewed" as const,
+      })),
+    } satisfies TradePreview;
+    const exactHtml = tradeReviewSheetTemplate(
+      exact,
+      localWorkspace(),
+      undefined,
+      undefined,
+      [definition],
+    );
+    const staleHtml = tradeReviewSheetTemplate(
+      { ...exact, playbookDefinition: { ...exact.playbookDefinition, revision: "d".repeat(64) } },
+      localWorkspace(),
+      undefined,
+      undefined,
+      [definition],
+    );
+
+    expect(exactHtml).toMatch(new RegExp(
+      `data-playbook-revision="${definition.revision}"[^>]* selected`,
+      "u",
+    ));
+    expect(exactHtml).toContain("already links one exact immutable saved revision");
+    expect(staleHtml).not.toMatch(/data-playbook-revision="[c]+"[^>]* selected/u);
+  });
+
+  it("does not offer archived heads for new application", () => {
+    const html = tradeReviewSheetTemplate(
+      trade(),
+      localWorkspace(),
+      undefined,
+      undefined,
+      [{ ...definition, state: "archived" }],
+    );
+    expect(html).not.toContain(`value="${definition.id}"`);
+    expect(html).toMatch(/id="review-playbook-library" disabled/u);
   });
 });

@@ -8,6 +8,7 @@ import {
 } from "../application/prepare-trade-review";
 import {
   JournalTradeReviewError,
+  type JournalPlaybookDefinitionRecord,
   type PreparedTradeReviewBatch,
   type TradeReviewCommitResult,
 } from "../application/journal-store";
@@ -451,6 +452,7 @@ export function tradeReviewSheetTemplate(
   snapshot: JournalWorkspaceSnapshot,
   reportSource?: TradeReviewReportSource,
   displayOrigin?: TradeReviewDisplayOrigin,
+  library: readonly JournalPlaybookDefinitionRecord[] = [],
 ): string {
   const demoReadOnly = snapshot.provenance === "demo";
   const quickReview = displayOrigin === "quick-review"
@@ -471,6 +473,15 @@ export function tradeReviewSheetTemplate(
       || trade.reviewVersion < 1;
   const readOnly = demoReadOnly || invalidReviewIdentity;
   const disabled = readOnly ? "disabled" : "";
+  const activeDefinitions = snapshot.provenance === "local"
+    ? library.filter((definition) => definition.state === "active")
+    : [];
+  const selectedDefinition = activeDefinitions.find((definition) => (
+    definition.id === trade.playbookDefinition?.id
+    && definition.versionId === trade.playbookDefinition.versionId
+    && definition.revision === trade.playbookDefinition.revision
+  ));
+  const libraryDisabled = readOnly || activeDefinitions.length === 0;
   const setup = trade.hasClassifiedSetup ? trade.setup : "";
   const note = trade.note === "No journal note added." ? "" : trade.note;
   const pnlCurrency = tradePnlCurrency(trade, snapshot);
@@ -494,11 +505,19 @@ export function tradeReviewSheetTemplate(
   const riskCurrencyField = `<label>Risk currency<select id="review-risk-currency" ${disabled}>${currencyOptions(riskCurrency, pnlCurrency)}</select></label>`;
   const stopField = `<label>Planned stop<input id="review-stop" type="text" inputmode="decimal" value="${escapeHtml(trade.plannedStop ?? "")}" placeholder="Optional exact price" ${disabled} /></label>`;
   const playbookField = `<label>Playbook<input id="review-playbook" type="text" maxlength="120" list="review-playbook-options" value="${escapeHtml(trade.playbook ?? "")}" placeholder="Optional playbook" ${disabled} /></label>`;
+  const libraryField = `<section class="review-playbook-library" aria-labelledby="review-playbook-library-title">
+    <label id="review-playbook-library-title">Saved playbook revision<select id="review-playbook-library" ${libraryDisabled ? "disabled" : ""}>
+      <option value="">Choose a saved playbook</option>
+      ${activeDefinitions.map((definition) => `<option value="${escapeHtml(definition.id)}" data-playbook-version="${escapeHtml(definition.versionId)}" data-playbook-revision="${escapeHtml(definition.revision)}"${selectedDefinition?.id === definition.id ? " selected" : ""}>${escapeHtml(definition.name)} · v${definition.version}</option>`).join("")}
+    </select></label>
+    <button class="secondary-button" id="review-playbook-apply" type="button" ${libraryDisabled ? "disabled" : ""}>Apply selected revision</button>
+    <p class="helper-text" id="review-playbook-application-status" role="status">${trade.playbookDefinition === null || trade.playbookDefinition === undefined ? "No saved revision is linked. Free-text playbook work remains ad hoc." : "This review already links one exact immutable saved revision."}</p>
+  </section>`;
   const setupChoices = quickReviewChoiceGroup("review-setup", "Setup", snapshot.reviewOptions.setups, setup);
   const emotionChoices = quickReviewChoiceGroup("review-emotion", "Emotion", snapshot.reviewOptions.emotions, trade.emotion ?? "");
   const riskCopy = `<p class="helper-text">Initial risk must be a positive amount you confirm in the trade's P&amp;L currency (${escapeHtml(pnlCurrency)}). Hermes preserves saved currency provenance and never copies risk from the position-size tool.</p>`;
-  const standardFields = `<div class="field-grid review-fields">${setupField}${emotionField}${mistakesField}${tagsField}${riskField}${riskCurrencyField}${stopField}${playbookField}</div>${riskCopy}`;
-  const quickFields = `<section class="quick-review-essential" aria-labelledby="quick-review-essential-title"><h3 id="quick-review-essential-title">Quick reflection</h3><p class="helper-text">Name the process before you inspect the outcome. Custom values stay available in every field.</p><div class="field-grid review-fields quick-review-fields"><div class="quick-review-field">${setupField}${setupChoices}</div><div class="quick-review-field">${emotionField}${emotionChoices}</div>${mistakesField}${playbookField}</div></section><details class="quick-review-more"><summary>More context</summary><div class="field-grid review-fields">${tagsField}${riskField}${riskCurrencyField}${stopField}</div>${riskCopy}</details>`;
+  const standardFields = `<div class="field-grid review-fields">${setupField}${emotionField}${mistakesField}${tagsField}${riskField}${riskCurrencyField}${stopField}${playbookField}${libraryField}</div>${riskCopy}`;
+  const quickFields = `<section class="quick-review-essential" aria-labelledby="quick-review-essential-title"><h3 id="quick-review-essential-title">Quick reflection</h3><p class="helper-text">Name the process before you inspect the outcome. Custom values stay available in every field.</p><div class="field-grid review-fields quick-review-fields"><div class="quick-review-field">${setupField}${setupChoices}</div><div class="quick-review-field">${emotionField}${emotionChoices}</div>${mistakesField}${playbookField}${libraryField}</div></section><details class="quick-review-more"><summary>More context</summary><div class="field-grid review-fields">${tagsField}${riskField}${riskCurrencyField}${stopField}</div>${riskCopy}</details>`;
   const reviewFields = quickReview === null
     ? standardFields
     : quickFields;
@@ -1082,6 +1101,7 @@ export function bindTradeReviewActions(
   snapshot: JournalWorkspaceSnapshot,
   setBackgroundInert: (inert: boolean) => void,
   refresh: (announcement: string) => Promise<JournalWorkspaceSnapshot>,
+  library: readonly JournalPlaybookDefinitionRecord[] = [],
 ): void {
   tradeReviewActionBindings.get(root)?.abort();
   const binding = new AbortController();
@@ -1155,7 +1175,7 @@ export function bindTradeReviewActions(
       root.querySelector("#trade-review")?.remove();
       (root.querySelector(".app-shell") ?? root).insertAdjacentHTML(
         "beforeend",
-        tradeReviewSheetTemplate(trade, snapshot, reportSource, quickReviewDisplayOrigin === true ? QUICK_REVIEW_ORIGIN : undefined),
+        tradeReviewSheetTemplate(trade, snapshot, reportSource, quickReviewDisplayOrigin === true ? QUICK_REVIEW_ORIGIN : undefined, library),
       );
       const backdrop = root.querySelector<HTMLElement>("#trade-review");
       const sheet = backdrop?.querySelector<HTMLElement>(".trade-review-sheet");
@@ -1512,17 +1532,56 @@ export function bindTradeReviewActions(
         trapFocus(sheet, event);
       });
 
+      let acceptedPlaybookName = trade.playbook ?? "";
+      let appliedDefinition: NonNullable<TradePreview["playbookDefinition"]> | null =
+        trade.playbookDefinition ?? null;
+      const playbookInput = backdrop.querySelector<HTMLInputElement>("#review-playbook");
+      const librarySelect = backdrop.querySelector<HTMLSelectElement>("#review-playbook-library");
+      const libraryApply = backdrop.querySelector<HTMLButtonElement>("#review-playbook-apply");
+      const libraryStatus = backdrop.querySelector<HTMLElement>(
+        "#review-playbook-application-status",
+      );
+      const visibleLibrary = snapshot.provenance === "local"
+        ? library.filter((definition) => definition.state === "active")
+        : [];
+      const clearAppliedDefinition = (message: string) => {
+        if (appliedDefinition === null) return;
+        appliedDefinition = null;
+        if (librarySelect !== null) librarySelect.value = "";
+        if (libraryStatus !== null) libraryStatus.textContent = message;
+      };
+      ruleRows.addEventListener("input", (event) => {
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement
+          && target.name === "review-rule-name"
+        ) {
+          clearAppliedDefinition(
+            "Rule text changed. This review is ad hoc until you explicitly apply a saved revision again.",
+          );
+        }
+      });
+      ruleRows.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target instanceof Element && target.closest("[data-review-rule-remove]") !== null) {
+          clearAppliedDefinition(
+            "A rule was removed. This review is ad hoc until you explicitly apply a saved revision again.",
+          );
+        }
+      });
       bindRuleRemoval(ruleRows);
       bindQuickReviewChoices(backdrop);
       backdrop.querySelector("#review-rule-add")?.addEventListener("click", () => {
+        clearAppliedDefinition(
+          "A rule was added. This review is ad hoc until you explicitly apply a saved revision again.",
+        );
         ruleRows.insertAdjacentHTML("beforeend", ruleRow(""));
         bindRuleRemoval(ruleRows);
         ruleRows.querySelectorAll<HTMLInputElement>('input[name="review-rule-name"]')
           .item(ruleRows.querySelectorAll('input[name="review-rule-name"]').length - 1)
           ?.focus();
       });
-      let acceptedPlaybookName = trade.playbook ?? "";
-      backdrop.querySelector<HTMLInputElement>("#review-playbook")?.addEventListener("change", (event) => {
+      playbookInput?.addEventListener("change", (event) => {
         const input = event.currentTarget;
         if (!(input instanceof HTMLInputElement)) return;
         const nextName = input.value.trim();
@@ -1530,6 +1589,11 @@ export function bindTradeReviewActions(
           nextName.toLocaleLowerCase("en-US")
           === acceptedPlaybookName.trim().toLocaleLowerCase("en-US")
         ) {
+          if (nextName !== acceptedPlaybookName.trim()) {
+            clearAppliedDefinition(
+              "Playbook text changed. This review is ad hoc until you explicitly apply a saved revision again.",
+            );
+          }
           acceptedPlaybookName = nextName;
           input.value = nextName;
           return;
@@ -1544,10 +1608,59 @@ export function bindTradeReviewActions(
           input.value = acceptedPlaybookName;
           return;
         }
+        clearAppliedDefinition(
+          "Playbook text or rules changed. This review is ad hoc until you explicitly apply a saved revision again.",
+        );
         ruleRows.innerHTML = configured?.rules.map((rule) => ruleRow(rule)).join("") ?? "";
         acceptedPlaybookName = nextName;
         input.value = nextName;
         bindRuleRemoval(ruleRows);
+      });
+      libraryApply?.addEventListener("click", () => {
+        if (librarySelect === null || playbookInput === null || libraryStatus === null) return;
+        const matches = visibleLibrary.filter((definition) => (
+          definition.id === librarySelect.value
+        ));
+        const definition = matches.length === 1 ? matches[0] : undefined;
+        const option = librarySelect.selectedOptions.item(0);
+        if (
+          definition === undefined
+          || option === null
+          || option.value !== definition.id
+          || option.dataset.playbookVersion !== definition.versionId
+          || option.dataset.playbookRevision !== definition.revision
+        ) {
+          libraryStatus.textContent = "Choose one current saved revision before applying it.";
+          return;
+        }
+        const currentRules = Array.from(
+          ruleRows.querySelectorAll<HTMLInputElement>('input[name="review-rule-name"]'),
+          (input) => input.value.trim(),
+        ).filter((rule) => rule.length > 0);
+        const exactCurrent = appliedDefinition?.id === definition.id
+          && appliedDefinition.versionId === definition.versionId
+          && appliedDefinition.revision === definition.revision
+          && playbookInput.value.trim() === definition.name
+          && currentRules.length === definition.rules.length
+          && currentRules.every((rule, index) => rule === definition.rules[index]);
+        if (exactCurrent) {
+          libraryStatus.textContent = `${definition.name} version ${definition.version} is already applied exactly.`;
+          return;
+        }
+        if (
+          (playbookInput.value.trim().length > 0 || currentRules.length > 0)
+          && !window.confirm("Apply this saved revision and replace the current playbook name and rule work?")
+        ) return;
+        playbookInput.value = definition.name;
+        acceptedPlaybookName = definition.name;
+        ruleRows.innerHTML = definition.rules.map((rule) => ruleRow(rule)).join("");
+        bindRuleRemoval(ruleRows);
+        appliedDefinition = Object.freeze({
+          id: definition.id,
+          versionId: definition.versionId,
+          revision: definition.revision,
+        });
+        libraryStatus.textContent = `${definition.name} version ${definition.version} applied. Saving will link this exact immutable revision.`;
       });
 
       reviewLatest.addEventListener("click", async () => {
@@ -1694,6 +1807,12 @@ export function bindTradeReviewActions(
         error.hidden = true;
         uncertainPrepared = null;
         const playbookName = value(form, "review-playbook").trim();
+        if (
+          appliedDefinition !== null
+          && playbookName !== acceptedPlaybookName.trim()
+        ) {
+          clearAppliedDefinition("Edited playbook text will save as ad hoc review work.");
+        }
         const rules: TradeReviewRuleInput[] = Array.from(
           ruleRows.querySelectorAll<HTMLElement>("[data-review-rule-row]"),
         )
@@ -1718,7 +1837,11 @@ export function bindTradeReviewActions(
             mistakes: parseReviewList(value(form, "review-mistakes")),
             tags: parseReviewList(value(form, "review-tags")),
             emotion: value(form, "review-emotion"),
-            playbook: playbookName.length === 0 ? null : { name: playbookName, rules },
+            playbook: playbookName.length === 0 ? null : {
+              name: playbookName,
+              rules,
+              definition: appliedDefinition,
+            },
             initialRisk: riskAmount.length === 0
               ? null
               : {

@@ -26,9 +26,14 @@ import {
   JournalDailyEntryError,
   JournalImportError,
   JournalManualExecutionError,
+  JournalPlaybookDefinitionError,
   JournalRestoreError,
   JournalTradeReviewError,
 } from "../../application/journal-store";
+import {
+  type PreparedPlaybookDefinitionCommand,
+  verifyPreparedPlaybookDefinition,
+} from "../../application/prepare-playbook-definition";
 import {
   canonicalJournalArchiveJson,
   createJournalExportArtifact,
@@ -143,6 +148,23 @@ interface LoadedReviewState {
 
 interface LoadedDailyEntryState {
   readonly dailyEntries: readonly JournalDailyEntryRecord[];
+}
+
+interface LoadedPlaybookDefinitionHead {
+  readonly id: string;
+  readonly versionId: string;
+  readonly version: number;
+  readonly revision: string;
+  readonly name: string;
+  readonly state: "active" | "archived";
+  readonly rules: readonly string[];
+  readonly recordedAtUs: string;
+}
+
+interface ReviewPlaybookDefinitionReference {
+  readonly id: string;
+  readonly versionId: string;
+  readonly revision: string;
 }
 
 function requireText(row: SqlRow, column: string): string {
@@ -357,6 +379,295 @@ export class SqliteJournalStore implements JournalStore {
       return this.loadWithinConnection();
     });
   }
+  async loadPlaybookLibrary(): Promise<readonly LoadedPlaybookDefinitionHead[]> {
+    return this.withRegularStoreOperation(async () => {
+      this.assertOpen();
+      await this.verifySchema();
+      return this.loadPlaybookLibraryWithinConnection();
+    });
+  }
+
+  async commitPlaybookDefinition(command: PreparedPlaybookDefinitionCommand) {
+    return this.withRegularStoreOperation(async () => {
+      this.assertOpen();
+      await this.verifySchema();
+      let definition: PreparedPlaybookDefinitionCommand;
+      try {
+        definition = verifyPreparedPlaybookDefinition(command);
+      } catch (error) {
+        throw new JournalPlaybookDefinitionError({
+          code: "definition_changed",
+          message: error instanceof Error
+            ? error.message
+            : "The playbook definition is invalid.",
+        });
+      }
+
+      const transactionResult = await this.database.transaction(async () => {
+        const observedNowMs = this.runtime.nowMs();
+        if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+          throw new JournalPlaybookDefinitionError({
+            code: "submission_changed",
+            message: "The journal clock is outside the supported playbook range.",
+          });
+        }
+        const workspaceRows = await this.database.query<SqlRow>(
+          "SELECT id FROM workspaces WHERE id = ? AND archived_at_ms IS NULL LIMIT 1",
+          [WORKSPACE_ID],
+        );
+        if (workspaceRows[0] === undefined) {
+          throw new JournalPlaybookDefinitionError({
+            code: "definition_changed",
+            message: "Add or import an execution before saving a playbook.",
+          });
+        }
+
+        const existingRows = await this.database.query<SqlRow>(
+          `SELECT id, playbook_id, revision_sha256
+             FROM playbook_definition_versions
+            WHERE workspace_id = ? AND submission_id = ?
+            LIMIT 1`,
+          [WORKSPACE_ID, definition.submissionId],
+        );
+        const existing = existingRows[0];
+        if (existing !== undefined) {
+          if (
+            requireText(existing, "id") !== definition.versionId
+            || requireText(existing, "playbook_id") !== definition.playbookId
+            || requireText(existing, "revision_sha256") !== definition.revision
+          ) {
+            throw new JournalPlaybookDefinitionError({
+              code: "submission_changed",
+              message: "This playbook submission was already saved with different values.",
+            });
+          }
+          return {
+            outcome: "duplicate" as const,
+            playbookId: definition.playbookId,
+            versionId: definition.versionId,
+          };
+        }
+
+        const headRows = await this.database.query<SqlRow>(
+          `SELECT head.definition_version_id, head.current_state,
+                  version.version_number, version.recorded_at_ms,
+                  version.name_snapshot, version.normalized_name
+             FROM playbook_definition_heads AS head
+             JOIN playbook_definition_versions AS version
+               ON version.id = head.definition_version_id
+              AND version.workspace_id = head.workspace_id
+              AND version.playbook_id = head.playbook_id
+            WHERE head.workspace_id = ? AND head.playbook_id = ?
+            LIMIT 1`,
+          [WORKSPACE_ID, definition.playbookId],
+        );
+        const head = headRows[0];
+        const previousVersionId = head === undefined
+          ? null
+          : requireText(head, "definition_version_id");
+
+        if (definition.action === "create") {
+          const identityRows = await this.database.query<SqlRow>(
+            `SELECT id, create_submission_id
+               FROM playbook_definitions
+              WHERE workspace_id = ?
+                AND (id = ? OR create_submission_id = ?)
+              LIMIT 1`,
+            [WORKSPACE_ID, definition.playbookId, definition.submissionId],
+          );
+          if (
+            identityRows[0] !== undefined
+            || head !== undefined
+            || definition.expectedPreviousVersionId !== null
+          ) {
+            throw new JournalPlaybookDefinitionError({
+              code: "definition_changed",
+              message: "This playbook identity already exists. Reload the library.",
+            });
+          }
+        } else if (
+          head === undefined
+          || previousVersionId !== definition.expectedPreviousVersionId
+        ) {
+          throw new JournalPlaybookDefinitionError({
+            code: "definition_changed",
+            message: "This playbook changed on another screen. Reload it before saving.",
+          });
+        }
+
+        const previousState = head === undefined
+          ? null
+          : requireText(head, "current_state");
+        const validTransition = definition.action === "create"
+          ? previousState === null && definition.state === "active"
+          : definition.action === "edit"
+            ? previousState === "active" && definition.state === "active"
+            : definition.action === "archive"
+              ? previousState === "active" && definition.state === "archived"
+              : previousState === "archived" && definition.state === "active";
+        if (!validTransition) {
+          throw new JournalPlaybookDefinitionError({
+            code: "invalid_transition",
+            message: `A playbook cannot ${definition.action} from its current state.`,
+          });
+        }
+
+        if (
+          head !== undefined
+          && (definition.action === "archive" || definition.action === "restore")
+        ) {
+          const currentRules = await this.loadPlaybookDefinitionRuleTexts(previousVersionId!);
+          if (
+            requireText(head, "name_snapshot") !== definition.name
+            || requireText(head, "normalized_name") !== definition.normalizedName
+            || currentRules.length !== definition.rules.length
+            || currentRules.some((rule, index) => rule !== definition.rules[index]?.text)
+          ) {
+            throw new JournalPlaybookDefinitionError({
+              code: "invalid_transition",
+              message: "Archive and restore keep the exact current playbook name and rules.",
+            });
+          }
+        }
+
+        const duplicateNameRows = await this.database.query<SqlRow>(
+          `SELECT playbook_id
+             FROM playbook_definition_heads
+            WHERE workspace_id = ? AND normalized_current_name = ?
+              AND playbook_id <> ?
+            LIMIT 1`,
+          [WORKSPACE_ID, definition.normalizedName, definition.playbookId],
+        );
+        if (duplicateNameRows[0] !== undefined) {
+          throw new JournalPlaybookDefinitionError({
+            code: "duplicate_name",
+            message: "Another active or archived playbook already uses this name.",
+          });
+        }
+
+        const previousVersion = head === undefined
+          ? 0
+          : requireSafeInteger(head, "version_number");
+        const previousRecordedAtMs = head === undefined
+          ? 0
+          : requireSafeInteger(head, "recorded_at_ms");
+        const recordedAtMs = Math.max(observedNowMs, previousRecordedAtMs);
+
+        if (definition.action === "create") {
+          await this.database.run(
+            `INSERT INTO playbook_definitions (
+              id, workspace_id, create_submission_id, created_at_ms
+            ) VALUES (?, ?, ?, ?)`,
+            [definition.playbookId, WORKSPACE_ID, definition.submissionId, recordedAtMs],
+          );
+        }
+        await this.database.run(
+          `INSERT INTO playbook_definition_versions (
+            id, workspace_id, playbook_id, version_number,
+            supersedes_version_id, action, submission_id, revision_sha256,
+            name_snapshot, normalized_name, state, recorded_at_ms
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            definition.versionId,
+            WORKSPACE_ID,
+            definition.playbookId,
+            previousVersion + 1,
+            previousVersionId,
+            definition.action,
+            definition.submissionId,
+            definition.revision,
+            definition.name,
+            definition.normalizedName,
+            definition.state,
+            recordedAtMs,
+          ],
+        );
+        for (const rule of definition.rules) {
+          await this.database.run(
+            `INSERT INTO playbook_definition_rules (
+              definition_version_id, workspace_id, playbook_id, ordinal,
+              rule_text_snapshot, normalized_rule_text
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              definition.versionId,
+              WORKSPACE_ID,
+              definition.playbookId,
+              rule.ordinal,
+              rule.text,
+              rule.normalizedText,
+            ],
+          );
+        }
+
+        if (previousVersionId === null) {
+          await this.database.run(
+            `INSERT INTO playbook_definition_heads (
+              workspace_id, playbook_id, definition_version_id,
+              normalized_current_name, current_state, changed_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              WORKSPACE_ID,
+              definition.playbookId,
+              definition.versionId,
+              definition.normalizedName,
+              definition.state,
+              recordedAtMs,
+            ],
+          );
+        } else {
+          const update = await this.database.run(
+            `UPDATE playbook_definition_heads
+                SET definition_version_id = ?, normalized_current_name = ?,
+                    current_state = ?, changed_at_ms = ?
+              WHERE workspace_id = ? AND playbook_id = ?
+                AND definition_version_id = ?`,
+            [
+              definition.versionId,
+              definition.normalizedName,
+              definition.state,
+              recordedAtMs,
+              WORKSPACE_ID,
+              definition.playbookId,
+              previousVersionId,
+            ],
+          );
+          if (update.changes !== 1) {
+            throw new JournalPlaybookDefinitionError({
+              code: "definition_changed",
+              message: "This playbook changed while it was being saved.",
+            });
+          }
+        }
+        return {
+          outcome: "committed" as const,
+          playbookId: definition.playbookId,
+          versionId: definition.versionId,
+        };
+      });
+
+      const library = await this.loadPlaybookLibraryWithinConnection();
+      const current = library.find(({ id }) => id === transactionResult.playbookId);
+      const persisted = await this.loadPlaybookDefinitionVersionWithinConnection(
+        transactionResult.playbookId,
+        transactionResult.versionId,
+      );
+      if (
+        current === undefined
+        || persisted === null
+        || persisted.revision !== definition.revision
+      ) {
+        throw new Error("The committed playbook definition lost its current head.");
+      }
+      if (
+        transactionResult.outcome === "committed"
+        && current.versionId !== persisted.versionId
+      ) {
+        throw new Error("The committed playbook definition did not become the current head.");
+      }
+      return { outcome: transactionResult.outcome, definition: persisted, library };
+    });
+  }
+
 
   async loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence> {
     return this.withRegularStoreOperation(async () => {
@@ -483,7 +794,10 @@ export class SqliteJournalStore implements JournalStore {
           rolledBackImports: sqliteArchiveTable(durable, "import_rollbacks").rowCount,
           reviewVersions: sqliteArchiveTable(durable, "trade_review_versions").rowCount,
           reviewTerms: sqliteArchiveTable(durable, "review_terms").rowCount,
-          playbooks: sqliteArchiveTable(durable, "playbooks").rowCount,
+          playbooks: String(
+            BigInt(sqliteArchiveTable(durable, "playbooks").rowCount)
+            + BigInt(sqliteArchiveTable(durable, "playbook_definitions").rowCount),
+          ),
         }),
         stateSha256: durable.stateSha256,
         reportSha256,
@@ -1299,7 +1613,12 @@ export class SqliteJournalStore implements JournalStore {
               message: "This review submission was already saved with different values.",
             });
           }
-          existingReviewIds.set(review.submissionId, requireText(existing, "id"));
+          const existingReviewId = requireText(existing, "id");
+          await this.assertReviewPlaybookDefinitionLink(
+            existingReviewId,
+            review.playbook?.definition ?? null,
+          );
+          existingReviewIds.set(review.submissionId, existingReviewId);
         }
       }
       if (existingReviewIds.size > 0 && existingReviewIds.size < verifiedReviews.length) {
@@ -1378,6 +1697,9 @@ export class SqliteJournalStore implements JournalStore {
           : requireSafeInteger(head, "recorded_at_ms");
         const recordedAtMs = Math.max(observedNowMs, previousRecordedAtMs);
         const reviewId = this.runtime.newId("trade-review");
+        const playbookDefinition = await this.validateReviewPlaybookDefinition(
+          review.playbook,
+        );
         const playbook = await this.ensureReviewPlaybook(review.playbook, recordedAtMs);
 
         await this.database.run(
@@ -1410,7 +1732,6 @@ export class SqliteJournalStore implements JournalStore {
             review.state === "completed" ? recordedAtMs : null,
           ],
         );
-
         const assignments: readonly {
           readonly category: JournalReviewTermCategory;
           readonly values: readonly string[];
@@ -1462,6 +1783,23 @@ export class SqliteJournalStore implements JournalStore {
               ],
             );
           }
+        }
+
+        if (playbookDefinition !== null) {
+          await this.database.run(
+            `INSERT INTO trade_review_playbook_definition_links (
+              review_version_id, workspace_id, trade_subject_id,
+              playbook_id, definition_version_id, revision_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              reviewId,
+              WORKSPACE_ID,
+              review.tradeSubjectId,
+              playbookDefinition.id,
+              playbookDefinition.versionId,
+              playbookDefinition.revision,
+            ],
+          );
         }
 
         if (previousReviewId === null) {
@@ -2038,6 +2376,72 @@ export class SqliteJournalStore implements JournalStore {
     return { id, rules };
   }
 
+  private async validateReviewPlaybookDefinition(
+    playbook: PreparedTradeReview["playbook"],
+  ): Promise<ReviewPlaybookDefinitionReference | null> {
+    if (playbook === null || playbook.definition === null) return null;
+    const definition = playbook.definition;
+    const rows = await this.database.query<SqlRow>(
+      `SELECT version.playbook_id, version.revision_sha256, version.name_snapshot
+         FROM playbook_definition_versions AS version
+         JOIN playbook_definitions AS identity
+           ON identity.id = version.playbook_id
+          AND identity.workspace_id = version.workspace_id
+        WHERE version.workspace_id = ? AND version.playbook_id = ?
+          AND version.id = ?
+        LIMIT 1`,
+      [WORKSPACE_ID, definition.id, definition.versionId],
+    );
+    const row = rows[0];
+    if (
+      row === undefined
+      || requireText(row, "playbook_id") !== definition.id
+      || requireText(row, "revision_sha256") !== definition.revision
+      || requireText(row, "name_snapshot") !== playbook.name
+    ) {
+      throw new JournalTradeReviewError({
+        code: "review_changed",
+        message: "The selected playbook revision no longer matches this review draft.",
+      });
+    }
+    const rules = await this.loadPlaybookDefinitionRuleTexts(definition.versionId);
+    if (
+      rules.length !== playbook.rules.length
+      || rules.some((text, index) => text !== playbook.rules[index]?.name)
+    ) {
+      throw new JournalTradeReviewError({
+        code: "review_changed",
+        message: "The selected playbook rules no longer match this review draft.",
+      });
+    }
+    return definition;
+  }
+
+  private async assertReviewPlaybookDefinitionLink(
+    reviewVersionId: string,
+    expected: ReviewPlaybookDefinitionReference | null,
+  ): Promise<void> {
+    const rows = await this.database.query<SqlRow>(
+      `SELECT playbook_id, definition_version_id, revision_sha256
+         FROM trade_review_playbook_definition_links
+        WHERE workspace_id = ? AND review_version_id = ?`,
+      [WORKSPACE_ID, reviewVersionId],
+    );
+    const matches = expected === null
+      ? rows.length === 0
+      : rows.length === 1
+        && rows[0] !== undefined
+        && requireText(rows[0], "playbook_id") === expected.id
+        && requireText(rows[0], "definition_version_id") === expected.versionId
+        && requireText(rows[0], "revision_sha256") === expected.revision;
+    if (!matches) {
+      throw new JournalTradeReviewError({
+        code: "review_changed",
+        message: "The saved review lost its exact playbook definition link.",
+      });
+    }
+  }
+
   private async verifySqliteRestoreSource(
     source: DecodedSqliteJournalRestoreArchive,
   ): Promise<VerifiedSqliteRestoreEvidence> {
@@ -2058,7 +2462,10 @@ export class SqliteJournalStore implements JournalStore {
       rolledBackImports: sqliteArchiveTable(durable, "import_rollbacks").rowCount,
       reviewVersions: sqliteArchiveTable(durable, "trade_review_versions").rowCount,
       reviewTerms: sqliteArchiveTable(durable, "review_terms").rowCount,
-      playbooks: sqliteArchiveTable(durable, "playbooks").rowCount,
+      playbooks: String(
+        BigInt(sqliteArchiveTable(durable, "playbooks").rowCount)
+        + BigInt(sqliteArchiveTable(durable, "playbook_definitions").rowCount),
+      ),
     });
     if (reportSha256 !== source.claimedReportSha256) {
       throw new Error("The restored journal report digest does not match the selected archive.");
@@ -2692,6 +3099,110 @@ export class SqliteJournalStore implements JournalStore {
     return { dailyEntries };
   }
 
+  private async loadPlaybookDefinitionRuleTexts(
+    definitionVersionId: string,
+  ): Promise<readonly string[]> {
+    const rows = await this.database.query<SqlRow>(
+      `SELECT ordinal, rule_text_snapshot
+         FROM playbook_definition_rules
+        WHERE workspace_id = ? AND definition_version_id = ?
+        ORDER BY ordinal`,
+      [WORKSPACE_ID, definitionVersionId],
+    );
+    return rows.map((row, index) => {
+      if (requireSafeInteger(row, "ordinal") !== index) {
+        throw new Error("A playbook definition has non-contiguous rule ordering.");
+      }
+      return requireText(row, "rule_text_snapshot");
+    });
+  }
+
+  private async loadPlaybookDefinitionVersionWithinConnection(
+    playbookId: string,
+    versionId: string,
+  ): Promise<LoadedPlaybookDefinitionHead | null> {
+    const rows = await this.database.query<SqlRow>(
+      `SELECT id, playbook_id, version_number, revision_sha256,
+              name_snapshot, state,
+              CAST(recorded_at_ms AS TEXT) AS recorded_at_ms_text
+         FROM playbook_definition_versions
+        WHERE workspace_id = ? AND playbook_id = ? AND id = ?
+        LIMIT 1`,
+      [WORKSPACE_ID, playbookId, versionId],
+    );
+    const row = rows[0];
+    if (row === undefined) return null;
+    const state = requireText(row, "state");
+    if (state !== "active" && state !== "archived") {
+      throw new Error("SQLite returned an invalid playbook definition state.");
+    }
+    if (
+      requireText(row, "id") !== versionId
+      || requireText(row, "playbook_id") !== playbookId
+    ) {
+      throw new Error("SQLite returned the wrong immutable playbook definition version.");
+    }
+    return {
+      id: playbookId,
+      versionId,
+      version: requireSafeInteger(row, "version_number"),
+      revision: requireText(row, "revision_sha256"),
+      name: requireText(row, "name_snapshot"),
+      state,
+      rules: await this.loadPlaybookDefinitionRuleTexts(versionId),
+      recordedAtUs: `${requireText(row, "recorded_at_ms_text")}000`,
+    };
+  }
+
+  private async loadPlaybookLibraryWithinConnection(): Promise<
+    readonly LoadedPlaybookDefinitionHead[]
+  > {
+    const rows = await this.database.query<SqlRow>(
+      `SELECT definition.id, head.definition_version_id,
+              head.normalized_current_name, head.current_state,
+              version.version_number, version.revision_sha256,
+              version.name_snapshot, version.normalized_name, version.state,
+              CAST(version.recorded_at_ms AS TEXT) AS recorded_at_ms_text
+         FROM playbook_definition_heads AS head
+         JOIN playbook_definitions AS definition
+           ON definition.id = head.playbook_id
+          AND definition.workspace_id = head.workspace_id
+         JOIN playbook_definition_versions AS version
+           ON version.id = head.definition_version_id
+          AND version.workspace_id = head.workspace_id
+          AND version.playbook_id = head.playbook_id
+        WHERE head.workspace_id = ?
+        ORDER BY head.normalized_current_name, definition.id`,
+      [WORKSPACE_ID],
+    );
+    const library: LoadedPlaybookDefinitionHead[] = [];
+    for (const row of rows) {
+      const state = requireText(row, "state");
+      if (state !== "active" && state !== "archived") {
+        throw new Error("SQLite returned an invalid playbook definition state.");
+      }
+      if (
+        requireText(row, "current_state") !== state
+        || requireText(row, "normalized_current_name")
+          !== requireText(row, "normalized_name")
+      ) {
+        throw new Error("A playbook definition head does not match its immutable version.");
+      }
+      const versionId = requireText(row, "definition_version_id");
+      library.push({
+        id: requireText(row, "id"),
+        versionId,
+        version: requireSafeInteger(row, "version_number"),
+        revision: requireText(row, "revision_sha256"),
+        name: requireText(row, "name_snapshot"),
+        state,
+        rules: await this.loadPlaybookDefinitionRuleTexts(versionId),
+        recordedAtUs: `${requireText(row, "recorded_at_ms_text")}000`,
+      });
+    }
+    return library;
+  }
+
   private async loadReviewState(): Promise<LoadedReviewState> {
     const termRows = await this.database.query<SqlRow>(
       `SELECT id, category, name
@@ -2746,6 +3257,10 @@ export class SqliteJournalStore implements JournalStore {
       `SELECT version.id, version.trade_subject_id, version.version_number,
               version.revision_sha256, version.state, version.note_text,
               version.playbook_id, playbook.name AS playbook_name,
+              link.playbook_id AS definition_playbook_id,
+              link.definition_version_id AS definition_version_id,
+              link.revision_sha256 AS definition_revision_sha256,
+              definition.name_snapshot AS definition_name_snapshot,
               version.initial_risk_amount_text, version.risk_currency_code,
               version.planned_stop_price_text, version.result_r_metric_id,
               version.result_r_metric_version, version.percent_return_metric_id,
@@ -2758,6 +3273,14 @@ export class SqliteJournalStore implements JournalStore {
           AND version.workspace_id = head.workspace_id
           AND version.trade_subject_id = head.trade_subject_id
          LEFT JOIN playbooks AS playbook ON playbook.id = version.playbook_id
+         LEFT JOIN trade_review_playbook_definition_links AS link
+           ON link.review_version_id = version.id
+          AND link.workspace_id = version.workspace_id
+          AND link.trade_subject_id = version.trade_subject_id
+         LEFT JOIN playbook_definition_versions AS definition
+           ON definition.id = link.definition_version_id
+          AND definition.workspace_id = link.workspace_id
+          AND definition.playbook_id = link.playbook_id
         WHERE head.workspace_id = ?
         ORDER BY version.recorded_at_ms, version.id`,
       [WORKSPACE_ID],
@@ -2814,12 +3337,23 @@ export class SqliteJournalStore implements JournalStore {
       ? []
       : await this.database.query<SqlRow>(
         `SELECT result.review_version_id, result.playbook_rule_id,
-                result.rule_name_snapshot, result.outcome
+                result.rule_name_snapshot, result.outcome,
+                link.definition_version_id AS linked_definition_version_id,
+                definition_rule.rule_text_snapshot AS definition_rule_text_snapshot
            FROM trade_review_rule_results AS result
            JOIN trade_review_heads AS head
              ON head.review_version_id = result.review_version_id
             AND head.workspace_id = result.workspace_id
             AND head.trade_subject_id = result.trade_subject_id
+           LEFT JOIN trade_review_playbook_definition_links AS link
+             ON link.review_version_id = result.review_version_id
+            AND link.workspace_id = result.workspace_id
+            AND link.trade_subject_id = result.trade_subject_id
+           LEFT JOIN playbook_definition_rules AS definition_rule
+             ON definition_rule.definition_version_id = link.definition_version_id
+            AND definition_rule.workspace_id = link.workspace_id
+            AND definition_rule.playbook_id = link.playbook_id
+            AND definition_rule.ordinal = result.ordinal
           WHERE result.workspace_id = ?
           ORDER BY result.review_version_id, result.ordinal`,
         [WORKSPACE_ID],
@@ -2831,10 +3365,18 @@ export class SqliteJournalStore implements JournalStore {
         throw new Error("SQLite returned an invalid rule-review outcome.");
       }
       const reviewId = requireText(row, "review_version_id");
+      const linkedDefinitionVersionId = nullableText(
+        row,
+        "linked_definition_version_id",
+      );
+      const definitionRuleText = nullableText(row, "definition_rule_text_snapshot");
+      if ((linkedDefinitionVersionId === null) !== (definitionRuleText === null)) {
+        throw new Error("A linked review rule lost its exact definition snapshot.");
+      }
       const rules = rulesByReview.get(reviewId) ?? [];
       rules.push({
         ruleId: requireText(row, "playbook_rule_id"),
-        text: requireText(row, "rule_name_snapshot"),
+        text: definitionRuleText ?? requireText(row, "rule_name_snapshot"),
         outcome: outcome as JournalReviewRuleOutcome,
       });
       rulesByReview.set(reviewId, rules);
@@ -2863,6 +3405,27 @@ export class SqliteJournalStore implements JournalStore {
       if ((riskAmount === null) !== (riskCurrency === null)) {
         throw new Error("A trade review has an incomplete initial-risk basis.");
       }
+      const definitionId = nullableText(row, "definition_playbook_id");
+      const definitionVersionId = nullableText(row, "definition_version_id");
+      const definitionRevision = nullableText(row, "definition_revision_sha256");
+      const definitionName = nullableText(row, "definition_name_snapshot");
+      if (
+        (definitionId === null) !== (definitionVersionId === null)
+        || (definitionId === null) !== (definitionRevision === null)
+        || (definitionId === null) !== (definitionName === null)
+      ) {
+        throw new Error("A trade review has an incomplete playbook definition link.");
+      }
+      const playbookDefinition = definitionId === null
+        || definitionVersionId === null
+        || definitionRevision === null
+        ? null
+        : {
+          id: definitionId,
+          versionId: definitionVersionId,
+          revision: definitionRevision,
+        };
+
       const terms = termsByReview.get(id) ?? {
         setup: null,
         mistakes: [],
@@ -2882,7 +3445,10 @@ export class SqliteJournalStore implements JournalStore {
         emotion: terms.emotion,
         tags: terms.tags,
         playbookId: nullableText(row, "playbook_id"),
-        playbookName: nullableText(row, "playbook_name"),
+        playbookName: definitionName === null
+          ? nullableText(row, "playbook_name")
+          : definitionName,
+        playbookDefinition,
         rules: rulesByReview.get(id) ?? [],
         initialRisk: riskAmount === null || riskCurrency === null
           ? null

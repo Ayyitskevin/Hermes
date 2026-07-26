@@ -25,9 +25,19 @@ export interface TradeReviewRuleInput {
   readonly outcome: TradeReviewRuleOutcome;
 }
 
+export interface TradeReviewPlaybookDefinitionReference {
+  /** Stable explicit library identity. Never inferred from the display name. */
+  readonly id: string;
+  /** Exact immutable library revision copied into this review draft. */
+  readonly versionId: string;
+  readonly revision: string;
+}
+
 export interface TradeReviewPlaybookInput {
   readonly name: string;
   readonly rules: readonly TradeReviewRuleInput[];
+  /** Omitted/null means authored ad hoc text, never an inferred library link. */
+  readonly definition?: TradeReviewPlaybookDefinitionReference | null;
 }
 
 export interface TradeReviewInitialRiskInput {
@@ -58,6 +68,7 @@ export interface PreparedTradeReviewRule {
 export interface PreparedTradeReviewPlaybook {
   readonly name: string;
   readonly rules: readonly PreparedTradeReviewRule[];
+  readonly definition: TradeReviewPlaybookDefinitionReference | null;
 }
 
 export interface PreparedTradeReviewInitialRisk {
@@ -146,14 +157,26 @@ function validatedIdentifier(value: string, label: string): string {
   return value;
 }
 
-function validatedSubmissionId(value: string): string {
+function validatedHash(
+  value: string,
+  label: string,
+  code: "invalid_submission_id" | "invalid_identifier",
+): string {
   if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) {
     fail(
-      "invalid_submission_id",
-      "Trade review submission ID must be a 256-bit lowercase hexadecimal value.",
+      code,
+      `${label} must be a 256-bit lowercase hexadecimal value.`,
     );
   }
   return value;
+}
+
+function validatedSubmissionId(value: string): string {
+  return validatedHash(
+    value,
+    "Trade review submission ID",
+    "invalid_submission_id",
+  );
 }
 
 function normalizedNote(value: string): string {
@@ -277,9 +300,30 @@ function normalizedPlaybook(
   if (typeof playbook !== "object") {
     fail("invalid_content", "Playbook must include a name and reviewed rules.");
   }
+  const candidate = playbook.definition ?? null;
+  const definition = candidate === null
+    ? null
+    : Object.freeze({
+        id: validatedHash(
+          candidate.id,
+          "Playbook definition ID",
+          "invalid_identifier",
+        ),
+        versionId: validatedHash(
+          candidate.versionId,
+          "Playbook definition version ID",
+          "invalid_identifier",
+        ),
+        revision: validatedHash(
+          candidate.revision,
+          "Playbook definition revision",
+          "invalid_identifier",
+        ),
+      });
   return Object.freeze({
     name: normalizedLabel(playbook.name, "Playbook name"),
     rules: normalizedRules(playbook.rules),
+    definition,
   });
 }
 
@@ -348,6 +392,13 @@ function playbookSnapshot(playbook: PreparedTradeReviewPlaybook | null): unknown
   return playbook === null
     ? null
     : [
+        playbook.definition === null
+          ? null
+          : [
+              playbook.definition.id,
+              playbook.definition.versionId,
+              playbook.definition.revision,
+            ],
         vocabularyIdentity(playbook.name),
         playbook.rules.map((rule) => [vocabularyIdentity(rule.name), rule.outcome]),
       ];
@@ -360,7 +411,7 @@ function playbookSnapshot(playbook: PreparedTradeReviewPlaybook | null): unknown
  */
 export function tradeReviewRevision(input: TradeReviewRevisionInput): string {
   return sha256Hex(JSON.stringify([
-    "hermes-trade-review-v1",
+    "hermes-trade-review-v2",
     input.submissionId,
     input.tradeSubjectId,
     input.expectedPreviousReviewId,

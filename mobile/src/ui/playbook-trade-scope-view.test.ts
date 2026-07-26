@@ -156,7 +156,7 @@ describe("playbook trade scope view", () => {
     );
 
     const emptyHtml = renderPlaybookScope(EMPTY_WORKSPACE);
-    expect(emptyHtml).toContain("No playbooks yet");
+    expect(emptyHtml).toContain("No review-derived playbooks yet");
     expect(emptyHtml).not.toContain("data-playbook-trade-scope-route=");
   });
 

@@ -6,7 +6,13 @@ import {
   createJournalExportArtifact,
   type JournalArchiveJson,
 } from "../../application/journal-archive";
+import { prepareCsvImport } from "../../application/prepare-csv-import";
 import { prepareDailyJournalEntry } from "../../application/prepare-daily-journal";
+import { preparePlaybookDefinition } from "../../application/prepare-playbook-definition";
+import {
+  prepareTradeReview,
+  tradeReviewBatchRevision,
+} from "../../application/prepare-trade-review";
 import type {
   SqlDatabase,
   SqlParameters,
@@ -17,13 +23,22 @@ import {
   portableStateDigestInput,
   readSqliteJournalArchive,
   SQLITE_JOURNAL_ARCHIVE_TABLES,
+  SQLITE_JOURNAL_ARCHIVE_V1_TABLES,
+  SQLITE_JOURNAL_ARCHIVE_V5_TABLES,
   type SqliteArchiveTable,
 } from "./journal-archive";
+import {
+  assertSqliteRestoreDatabaseHealthy,
+  classifySqliteRestoreDestination,
+  restoreSqliteJournalTables,
+  sqlitePortableTablesEqual,
+} from "./journal-restore-database";
 import {
   decodeSqliteJournalRestoreArchive,
   sqliteRestoreArchiveTable,
 } from "./journal-restore";
 import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./schema";
+import { SqliteJournalStore } from "./sqlite-journal-store";
 
 class SqlJsRestorePayloadDatabase implements SqlDatabase {
   private inTransaction = false;
@@ -73,6 +88,235 @@ class SqlJsRestorePayloadDatabase implements SqlDatabase {
 
   async close(): Promise<void> {
     this.database.close();
+  }
+}
+
+async function migratedRestoreDatabase(): Promise<SqlJsRestorePayloadDatabase> {
+  const SQL = await initSqlJs();
+  const database = new SqlJsRestorePayloadDatabase(new SQL.Database());
+  await database.execute("PRAGMA foreign_keys = ON");
+  await database.transaction(async () => {
+    for (const migration of MOBILE_SCHEMA_MIGRATIONS) {
+      for (const statement of migration.statements) await database.execute(statement);
+    }
+    const current = MOBILE_SCHEMA_MIGRATIONS.at(-1);
+    if (current === undefined) throw new Error("Missing test migration.");
+    await database.execute(`PRAGMA user_version = ${current.toVersion}`);
+  });
+  return database;
+}
+
+function legacyPreparedTradeReviewRevision(
+  review: ReturnType<typeof prepareTradeReview>,
+): string {
+  return sha256Hex(JSON.stringify([
+    "hermes-trade-review-v1",
+    review.submissionId,
+    review.tradeSubjectId,
+    review.expectedPreviousReviewId,
+    review.state,
+    review.note,
+    review.setup === null ? null : review.setup.toLocaleLowerCase("en-US"),
+    review.mistakes.map((value) => value.toLocaleLowerCase("en-US")),
+    review.tags.map((value) => value.toLocaleLowerCase("en-US")),
+    review.emotion === null ? null : review.emotion.toLocaleLowerCase("en-US"),
+    review.playbook === null
+      ? null
+      : [
+          review.playbook.name.toLocaleLowerCase("en-US"),
+          review.playbook.rules.map((rule) => [
+            rule.name.toLocaleLowerCase("en-US"),
+            rule.outcome,
+          ]),
+        ],
+    review.initialRisk === null
+      ? null
+      : [review.initialRisk.amount, review.initialRisk.currency],
+    review.plannedStop,
+    ["result-r", review.resultRVersion],
+    ["percent-return", review.percentReturnVersion],
+  ]));
+}
+
+async function unlinkedReviewArchiveContents(
+  revisionVersion: 1 | 2,
+): Promise<string> {
+  const database = await migratedRestoreDatabase();
+  let idSequence = 0;
+  let clockMs = 1_800_000_100_000;
+  const store = new SqliteJournalStore(database, {
+    nowMs() {
+      const value = clockMs;
+      clockMs += 1;
+      return value;
+    },
+    newId(prefix) {
+      idSequence += 1;
+      return `${prefix}:unlinked-${String(idSequence).padStart(4, "0")}`;
+    },
+  });
+  try {
+    const imported = await store.commitCsvImport(prepareCsvImport({
+      rawInput: "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+        + "unlinked-1,NVDA,BTO,1,100,0.10,USD,2026-07-02T13:30:00Z\r\n"
+        + "unlinked-2,NVDA,STC,1,105,0.10,USD,2026-07-02T14:30:00Z",
+      sourceName: "unlinked-review.csv",
+      accountName: "Main brokerage",
+      timeZone: "America/New_York",
+      defaultCurrency: "USD",
+    }));
+    const tradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+    if (tradeSubjectId === undefined) throw new Error("Missing unlinked review trade subject.");
+    const review = prepareTradeReview({
+      submissionId: "9".repeat(64),
+      tradeSubjectId,
+      expectedPreviousReviewId: null,
+      state: "completed",
+      note: "Reviewed a standalone playbook.",
+      setup: "Breakout",
+      mistakes: ["Chased entry"],
+      tags: ["A setup"],
+      emotion: "Calm",
+      playbook: {
+        name: "Standalone",
+        rules: [
+          { name: "Wait for confirmation", outcome: "followed" },
+          { name: "Respect the stop", outcome: "broken" },
+        ],
+      },
+      initialRisk: { amount: "50", currency: "USD" },
+      plannedStop: "95",
+    });
+    const batchId = "unlinked-review";
+    await store.commitTradeReviews({
+      batchId,
+      reviews: [review],
+      revision: tradeReviewBatchRevision(batchId, [review]),
+    });
+    const contents = (await store.exportUserData()).contents;
+    if (revisionVersion === 2) return contents;
+    const archive = mutableArchive(contents);
+    const versions = table(archive, "trade_review_versions");
+    const row = versions.rows[0];
+    if (row === undefined) throw new Error("Unlinked review fixture lost its version.");
+    setRowCell(versions, row, "revision_sha256", legacyPreparedTradeReviewRevision(review));
+    recomputeChangedTables(archive, "trade_review_versions");
+    return legacyV1ArchiveContents(resign(archive));
+  } finally {
+    await store.close();
+  }
+}
+
+async function versionedPlaybookArchiveContents(): Promise<string> {
+  const database = await migratedRestoreDatabase();
+  let idSequence = 0;
+  let clockMs = 1_800_000_000_000;
+  const store = new SqliteJournalStore(database, {
+    nowMs() {
+      const value = clockMs;
+      clockMs += 1;
+      return value;
+    },
+    newId(prefix) {
+      idSequence += 1;
+      return `${prefix}:archive-${String(idSequence).padStart(4, "0")}`;
+    },
+  });
+  try {
+    const imported = await store.commitCsvImport(prepareCsvImport({
+      rawInput: "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+        + "fill-1,AAPL,BTO,2,100,0.10,USD,2026-07-01T13:30:00Z\r\n"
+        + "fill-2,AAPL,STC,2,110,0.10,USD,2026-07-01T14:30:00Z\r\n"
+        + "fill-3,MSFT,BTO,2,200,0.10,USD,2026-07-01T15:30:00Z\r\n"
+        + "fill-4,MSFT,STC,2,210,0.10,USD,2026-07-01T16:30:00Z",
+      sourceName: "archive-v5.csv",
+      accountName: "Main brokerage",
+      timeZone: "America/New_York",
+      defaultCurrency: "USD",
+    }));
+    const legacyTradeSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+    const linkedTradeSubjectId = imported.ledger.tradeSubjects[1]?.tradeSubjectId;
+    if (legacyTradeSubjectId === undefined || linkedTradeSubjectId === undefined) {
+      throw new Error("Missing v5 archive trade subjects.");
+    }
+
+    const create = preparePlaybookDefinition({
+      submissionId: "1".repeat(64),
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "Momentum",
+      rules: ["Wait for confirmation", "Respect the stop"],
+    });
+    const created = (await store.commitPlaybookDefinition(create)).definition;
+    const edited = (await store.commitPlaybookDefinition(preparePlaybookDefinition({
+      submissionId: "2".repeat(64),
+      action: "edit",
+      playbookId: created.id,
+      expectedPreviousVersionId: created.versionId,
+      name: "Momentum revised",
+      rules: ["Enter after the close", "Use a hard stop"],
+    }))).definition;
+    await store.commitPlaybookDefinition(preparePlaybookDefinition({
+      submissionId: "3".repeat(64),
+      action: "archive",
+      playbookId: edited.id,
+      expectedPreviousVersionId: edited.versionId,
+      name: edited.name,
+      rules: edited.rules,
+    }));
+
+    const legacyReview = prepareTradeReview({
+      submissionId: "4".repeat(64),
+      tradeSubjectId: legacyTradeSubjectId,
+      expectedPreviousReviewId: null,
+      state: "completed",
+      note: "Established the legacy shared vocabulary casing.",
+      setup: null,
+      mistakes: [],
+      tags: [],
+      emotion: null,
+      playbook: {
+        name: "MOMENTUM",
+        rules: [
+          { name: "WAIT FOR CONFIRMATION", outcome: "followed" },
+          { name: "RESPECT THE STOP", outcome: "broken" },
+        ],
+      },
+      initialRisk: null,
+      plannedStop: null,
+    });
+    const linkedReview = prepareTradeReview({
+      submissionId: "5".repeat(64),
+      tradeSubjectId: linkedTradeSubjectId,
+      expectedPreviousReviewId: null,
+      state: "completed",
+      note: "Followed the original definition exactly.",
+      setup: null,
+      mistakes: [],
+      tags: [],
+      emotion: null,
+      playbook: {
+        name: created.name,
+        definition: {
+          id: created.id,
+          versionId: created.versionId,
+          revision: created.revision,
+        },
+        rules: created.rules.map((name) => ({ name, outcome: "followed" as const })),
+      },
+      initialRisk: null,
+      plannedStop: null,
+    });
+    const batchId = "archive-v5-review";
+    await store.commitTradeReviews({
+      batchId,
+      reviews: [legacyReview, linkedReview],
+      revision: tradeReviewBatchRevision(batchId, [legacyReview, linkedReview]),
+    });
+    return (await store.exportUserData()).contents;
+  } finally {
+    await store.close();
   }
 }
 
@@ -175,6 +419,23 @@ function recomputeChangedTables(
 ): void {
   for (const name of names) sortAndRecomputeTable(table(archive, name));
   recomputeState(archive);
+}
+
+function legacyV1ArchiveContents(contents: string): string {
+  const archive = mutableArchive(contents);
+  const legacyNames: ReadonlySet<string> = new Set(SQLITE_JOURNAL_ARCHIVE_V1_TABLES);
+  archive.payload.version = 1;
+  archive.source.schemaUserVersion = 4;
+  archive.source.migrations = archive.source.migrations.filter(({ version }) => version <= 4);
+  archive.payload.data.tables = archive.payload.data.tables.filter(
+    ({ name }) => legacyNames.has(String(name)),
+  );
+  const migrations = table(archive, "schema_migrations");
+  const versionIndex = columnPosition(migrations, "version");
+  migrations.rows = migrations.rows.filter((row) => row[versionIndex] !== "5");
+  sortAndRecomputeTable(migrations);
+  recomputeState(archive);
+  return resign(archive);
 }
 
 function rowFor(
@@ -379,11 +640,11 @@ beforeAll(async () => {
 });
 
 describe("SQLite journal restore payload decoder", () => {
-  it("accepts the exact native v1 table set and returns deeply immutable verified data", () => {
+  it("accepts the exact native v2 table set and returns deeply immutable verified data", () => {
     const decoded = decodeSqliteJournalRestoreArchive(baselineContents);
 
     expect(decoded.payloadKind).toBe("sqlite-table-set");
-    expect(decoded.payloadVersion).toBe(1);
+    expect(decoded.payloadVersion).toBe(2);
     expect(decoded.tables.map((candidate) => candidate.name))
       .toEqual(SQLITE_JOURNAL_ARCHIVE_TABLES);
     expect(decoded.summary).toEqual({
@@ -402,7 +663,7 @@ describe("SQLite journal restore payload decoder", () => {
       attachments: "0",
       attachmentBytes: "0",
     });
-    expect(sqliteRestoreArchiveTable(decoded, "schema_migrations").rows).toHaveLength(4);
+    expect(sqliteRestoreArchiveTable(decoded, "schema_migrations").rows).toHaveLength(5);
     expect(Object.isFrozen(decoded)).toBe(true);
     expect(Object.isFrozen(decoded.tables)).toBe(true);
     expect(Object.isFrozen(decoded.tables[0]?.columns)).toBe(true);
@@ -411,6 +672,272 @@ describe("SQLite journal restore payload decoder", () => {
       const firstRow = decoded.tables[0]?.rows[0] as string[];
       firstRow[0] = "99";
     }).toThrow(TypeError);
+  });
+
+  it("migrates schema-v4 payload-v1 archives to an empty v5 library", async () => {
+    const contents = legacyV1ArchiveContents(populatedContents);
+    const envelope = mutableArchive(contents);
+    const decoded = decodeSqliteJournalRestoreArchive(contents);
+
+    expect(decoded.payloadVersion).toBe(1);
+    expect(decoded.source.schemaUserVersion).toBe(4);
+    expect(decoded.tables.map(({ name }) => name)).toEqual(SQLITE_JOURNAL_ARCHIVE_V1_TABLES);
+    expect(sqliteRestoreArchiveTable(decoded, "schema_migrations").rows).toHaveLength(5);
+    expect(decoded.stateSha256).toBe(envelope.stateSha256);
+    expect(decoded.summary).toEqual(envelope.summary);
+    expect(decoded.claimedReportSha256).toBe(envelope.reportSha256);
+
+    const target = await migratedRestoreDatabase();
+    try {
+      const destination = await target.transaction(() => readSqliteJournalArchive(target));
+      expect(classifySqliteRestoreDestination(destination.tables, decoded.tables)).toBe("empty");
+      await target.transaction(async () => {
+        await restoreSqliteJournalTables(target, decoded);
+      });
+      await assertSqliteRestoreDatabaseHealthy(target);
+      const restored = await target.transaction(() => readSqliteJournalArchive(target));
+      expect(sqlitePortableTablesEqual(restored.tables, decoded.tables)).toBe(true);
+      expect(restored.stateSha256).toBe(decoded.stateSha256);
+      for (const name of SQLITE_JOURNAL_ARCHIVE_V5_TABLES) {
+        const restoredTable = restored.tables.find((candidate) => candidate.name === name);
+        expect(restoredTable?.rows).toHaveLength(0);
+      }
+    } finally {
+      await target.close();
+    }
+  });
+
+  it("accepts an exact legacy v1 revision for an unlinked review", async () => {
+    const decoded = decodeSqliteJournalRestoreArchive(
+      await unlinkedReviewArchiveContents(1),
+    );
+
+    expect(decoded.payloadVersion).toBe(1);
+    expect(decoded.source.schemaUserVersion).toBe(4);
+    expect(sqliteRestoreArchiveTable(decoded, "trade_review_versions").rows).toHaveLength(1);
+    expect(sqliteRestoreArchiveTable(decoded, "trade_review_rule_results").rows).toHaveLength(2);
+  });
+
+  it("accepts exact current v2 content for an unlinked review and rejects stale content", async () => {
+    const contents = await unlinkedReviewArchiveContents(2);
+    const decoded = decodeSqliteJournalRestoreArchive(contents);
+
+    expect(decoded.payloadVersion).toBe(2);
+    expect(sqliteRestoreArchiveTable(decoded, "trade_review_versions").rows).toHaveLength(1);
+    expect(sqliteRestoreArchiveTable(
+      decoded,
+      "trade_review_playbook_definition_links",
+    ).rows).toHaveLength(0);
+
+    const tampered = mutableArchive(contents);
+    const versions = table(tampered, "trade_review_versions");
+    const review = versions.rows[0];
+    if (review === undefined) throw new Error("Unlinked review fixture lost its version.");
+    setRowCell(versions, review, "note_text", "Changed after review.");
+    recomputeChangedTables(tampered, "trade_review_versions");
+    expect(() => decodeSqliteJournalRestoreArchive(resign(tampered)))
+      .toThrow(/trade-review revision does not bind its canonical content/i);
+  });
+
+  it("round-trips v5 with a normalized legacy collision and rejects a forged link", async () => {
+    const contents = await versionedPlaybookArchiveContents();
+    const decoded = decodeSqliteJournalRestoreArchive(contents);
+    expect(decoded.payloadVersion).toBe(2);
+    for (const name of SQLITE_JOURNAL_ARCHIVE_V5_TABLES) {
+      const sourceTable = decoded.tables.find((candidate) => candidate.name === name);
+      expect(sourceTable?.rows.length).toBeGreaterThan(0);
+    }
+
+    const source = mutableArchive(contents);
+    const sharedPlaybooks = table(source, "playbooks");
+    const sharedPlaybook = sharedPlaybooks.rows[0];
+    const definitionVersions = table(source, "playbook_definition_versions");
+    const definitionVersion = definitionVersions.rows.find(
+      (row) => row[columnPosition(definitionVersions, "version_number")] === "1",
+    );
+    const sharedRules = table(source, "playbook_rules");
+    const sharedRule = sharedRules.rows.find(
+      (row) => row[columnPosition(sharedRules, "normalized_rule_text")] === "wait for confirmation",
+    );
+    const definitionRules = table(source, "playbook_definition_rules");
+    const definitionRule = definitionVersion === undefined
+      ? undefined
+      : definitionRules.rows.find((row) => (
+          row[columnPosition(definitionRules, "definition_version_id")]
+            === definitionVersion[columnPosition(definitionVersions, "id")]
+          && row[columnPosition(definitionRules, "ordinal")] === "0"
+        ));
+    if (
+      sharedPlaybook === undefined
+      || definitionVersion === undefined
+      || sharedRule === undefined
+      || definitionRule === undefined
+    ) {
+      throw new Error("V5 archive fixture lost its normalized vocabulary collision.");
+    }
+    expect(sharedPlaybook[columnPosition(sharedPlaybooks, "name")]).toBe("MOMENTUM");
+    expect(definitionVersion[columnPosition(definitionVersions, "name_snapshot")])
+      .toBe("Momentum");
+    expect(sharedPlaybook[columnPosition(sharedPlaybooks, "normalized_name")])
+      .toBe(definitionVersion[columnPosition(definitionVersions, "normalized_name")]);
+    expect(sharedRule[columnPosition(sharedRules, "rule_text")]).toBe("WAIT FOR CONFIRMATION");
+    expect(definitionRule[columnPosition(definitionRules, "rule_text_snapshot")])
+      .toBe("Wait for confirmation");
+    expect(sharedRule[columnPosition(sharedRules, "normalized_rule_text")])
+      .toBe(definitionRule[columnPosition(definitionRules, "normalized_rule_text")]);
+    expect(table(source, "trade_review_versions").rows).toHaveLength(2);
+    expect(table(source, "trade_review_playbook_definition_links").rows).toHaveLength(1);
+
+    const target = await migratedRestoreDatabase();
+    try {
+      const destination = await target.transaction(() => readSqliteJournalArchive(target));
+      expect(classifySqliteRestoreDestination(destination.tables, decoded.tables)).toBe("empty");
+      await target.transaction(async () => {
+        await restoreSqliteJournalTables(target, decoded);
+      });
+      await assertSqliteRestoreDatabaseHealthy(target);
+      const restored = await target.transaction(() => readSqliteJournalArchive(target));
+      expect(sqlitePortableTablesEqual(restored.tables, decoded.tables)).toBe(true);
+      expect(restored.stateSha256).toBe(decoded.stateSha256);
+      for (const name of SQLITE_JOURNAL_ARCHIVE_V5_TABLES) {
+        const sourceTable = decoded.tables.find((candidate) => candidate.name === name);
+        const restoredTable = restored.tables.find((candidate) => candidate.name === name);
+        expect(restoredTable).toEqual(sourceTable);
+      }
+    } finally {
+      await target.close();
+    }
+
+    const tampered = mutableArchive(contents);
+    const links = table(tampered, "trade_review_playbook_definition_links");
+    const link = links.rows[0];
+    if (link === undefined) {
+      throw new Error("V5 archive fixture lost its definition link.");
+    }
+    setRowCell(links, link, "revision_sha256", "f".repeat(64));
+    recomputeChangedTables(tampered, "trade_review_playbook_definition_links");
+    expect(() => decodeSqliteJournalRestoreArchive(resign(tampered)))
+      .toThrow(/inexact playbook definition review link/i);
+  });
+
+  it("rejects resigned raw snapshot mismatches and archive content drift", async () => {
+    const contents = await versionedPlaybookArchiveContents();
+
+    const rawNameMismatch = mutableArchive(contents);
+    const rawNameVersions = table(rawNameMismatch, "playbook_definition_versions");
+    const rawNameVersion = rawNameVersions.rows.find(
+      (row) => row[columnPosition(rawNameVersions, "version_number")] === "1",
+    );
+    const rawNameLinks = table(rawNameMismatch, "trade_review_playbook_definition_links");
+    const rawNameLink = rawNameLinks.rows[0];
+    if (rawNameVersion === undefined || rawNameLink === undefined) {
+      throw new Error("V5 archive fixture lost its version-one definition link.");
+    }
+    const uppercaseCreate = preparePlaybookDefinition({
+      submissionId: "1".repeat(64),
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "MOMENTUM",
+      rules: ["Wait for confirmation", "Respect the stop"],
+    });
+    setRowCell(rawNameVersions, rawNameVersion, "name_snapshot", uppercaseCreate.name);
+    setRowCell(rawNameVersions, rawNameVersion, "normalized_name", uppercaseCreate.normalizedName);
+    setRowCell(rawNameVersions, rawNameVersion, "revision_sha256", uppercaseCreate.revision);
+    setRowCell(rawNameLinks, rawNameLink, "revision_sha256", uppercaseCreate.revision);
+    recomputeChangedTables(
+      rawNameMismatch,
+      "playbook_definition_versions",
+      "trade_review_playbook_definition_links",
+    );
+    expect(() => decodeSqliteJournalRestoreArchive(resign(rawNameMismatch)))
+      .toThrow(/trade-review revision does not bind its canonical content/i);
+
+    const rawRuleMismatch = mutableArchive(contents);
+    const rawRuleVersions = table(rawRuleMismatch, "playbook_definition_versions");
+    const rawRuleVersion = rawRuleVersions.rows.find(
+      (row) => row[columnPosition(rawRuleVersions, "version_number")] === "1",
+    );
+    const rawRules = table(rawRuleMismatch, "playbook_definition_rules");
+    const rawRule = rawRules.rows.find(
+      (row) => (
+        row[columnPosition(rawRules, "definition_version_id")] === uppercaseCreate.versionId
+        && row[columnPosition(rawRules, "ordinal")] === "0"
+      ),
+    );
+    const rawRuleLinks = table(rawRuleMismatch, "trade_review_playbook_definition_links");
+    const rawRuleLink = rawRuleLinks.rows[0];
+    if (
+      rawRuleVersion === undefined
+      || rawRule === undefined
+      || rawRuleLink === undefined
+    ) {
+      throw new Error("V5 archive fixture lost its version-one rule link.");
+    }
+    const uppercaseRuleCreate = preparePlaybookDefinition({
+      submissionId: "1".repeat(64),
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "Momentum",
+      rules: ["WAIT FOR CONFIRMATION", "Respect the stop"],
+    });
+    setRowCell(rawRuleVersions, rawRuleVersion, "revision_sha256", uppercaseRuleCreate.revision);
+    setRowCell(rawRules, rawRule, "rule_text_snapshot", uppercaseRuleCreate.rules[0]?.text ?? null);
+    setRowCell(
+      rawRules,
+      rawRule,
+      "normalized_rule_text",
+      uppercaseRuleCreate.rules[0]?.normalizedText ?? null,
+    );
+    setRowCell(rawRuleLinks, rawRuleLink, "revision_sha256", uppercaseRuleCreate.revision);
+    recomputeChangedTables(
+      rawRuleMismatch,
+      "playbook_definition_versions",
+      "playbook_definition_rules",
+      "trade_review_playbook_definition_links",
+    );
+    expect(() => decodeSqliteJournalRestoreArchive(resign(rawRuleMismatch)))
+      .toThrow(/trade-review revision does not bind its canonical content/i);
+
+    const lifecycleDrift = mutableArchive(contents);
+    const lifecycleVersions = table(lifecycleDrift, "playbook_definition_versions");
+    const archiveVersion = lifecycleVersions.rows.find(
+      (row) => row[columnPosition(lifecycleVersions, "action")] === "archive",
+    );
+    const lifecycleHeads = table(lifecycleDrift, "playbook_definition_heads");
+    const lifecycleHead = lifecycleHeads.rows[0];
+    if (archiveVersion === undefined || lifecycleHead === undefined) {
+      throw new Error("V5 archive fixture lost its archived lifecycle head.");
+    }
+    const edited = preparePlaybookDefinition({
+      submissionId: "2".repeat(64),
+      action: "edit",
+      playbookId: uppercaseCreate.playbookId,
+      expectedPreviousVersionId: uppercaseCreate.versionId,
+      name: "Momentum revised",
+      rules: ["Enter after the close", "Use a hard stop"],
+    });
+    const driftedArchive = preparePlaybookDefinition({
+      submissionId: "3".repeat(64),
+      action: "archive",
+      playbookId: edited.playbookId,
+      expectedPreviousVersionId: edited.versionId,
+      name: "Archived Momentum",
+      rules: ["Enter after the close", "Use a hard stop"],
+    });
+    setRowCell(lifecycleVersions, archiveVersion, "name_snapshot", driftedArchive.name);
+    setRowCell(lifecycleVersions, archiveVersion, "normalized_name", driftedArchive.normalizedName);
+    setRowCell(lifecycleVersions, archiveVersion, "revision_sha256", driftedArchive.revision);
+    setRowCell(lifecycleHeads, lifecycleHead, "normalized_current_name", driftedArchive.normalizedName);
+    recomputeChangedTables(
+      lifecycleDrift,
+      "playbook_definition_versions",
+      "playbook_definition_heads",
+
+    );
+    expect(() => decodeSqliteJournalRestoreArchive(resign(lifecycleDrift)))
+      .toThrow(/valid lifecycle chain/i);
   });
 
   it("recomputes a populated journal summary and accepts signed 64-bit fee boundaries", () => {
@@ -518,7 +1045,7 @@ describe("SQLite journal restore payload decoder", () => {
 
   it("rejects unsupported payload versions and table-format versions", () => {
     const payloadVersion = mutableArchive(baselineContents);
-    payloadVersion.payload.version = 2;
+    payloadVersion.payload.version = 3;
     expect(() => decodeSqliteJournalRestoreArchive(resign(payloadVersion)))
       .toThrow(/supported native SQLite journal payload/i);
 
@@ -558,7 +1085,7 @@ describe("SQLite journal restore payload decoder", () => {
       .toThrow(/migration table does not match its source/i);
   });
 
-  it("requires all 35 trusted tables exactly once and in canonical order", () => {
+  it("requires all 40 trusted tables exactly once and in canonical order", () => {
     const missing = mutableArchive(baselineContents);
     missing.payload.data.tables.pop();
     expect(() => decodeSqliteJournalRestoreArchive(resign(missing)))
@@ -591,7 +1118,7 @@ describe("SQLite journal restore payload decoder", () => {
     recomputeState(archive);
 
     expect(() => decodeSqliteJournalRestoreArchive(resign(archive)))
-      .toThrow(/pinned export-v1 column manifest/i);
+      .toThrow(/pinned payload-v2 column manifest/i);
   });
 
   it("rejects wrong row widths, nulls in required columns, and non-text TEXT cells", () => {

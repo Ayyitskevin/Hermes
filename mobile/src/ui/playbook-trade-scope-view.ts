@@ -89,10 +89,10 @@ export function playbookTradeScopeSection(
     : `${library.playbooks.map((playbook, index) => (
       playbookCard(playbook, index, library.playbooks.length)
     )).join("")}
-      ${library.playbooks.length === 0 ? `<article class="empty-state"><h3>No playbooks yet</h3><p>Setup classification will turn imported trades into playbook analytics.</p></article>` : ""}`;
+      ${library.playbooks.length === 0 ? `<article class="empty-state"><h3>No review-derived playbooks yet</h3><p>Ad hoc review classifications appear here without becoming saved library definitions.</p></article>` : ""}`;
   return `<section data-playbook-trade-scope aria-labelledby="playbooks-title">
-    <div class="section-title"><h2 id="playbooks-title">Playbooks</h2><span>Rules + results</span></div>
-    <p class="helper-text">Open the exact completed reviews behind any playbook card, or its current draft reviews when present. Temporary account, date, day, search, and other card filters are cleared so the selected count and visible Trades agree.</p>
+    <div class="section-title"><h2 id="playbooks-title">Review-derived playbook history</h2><span>Saved review snapshots</span></div>
+    <p class="helper-text">This historical view preserves ad hoc names and rules from reviews; Hermes never promotes or guesses them into the editable Playbook Library. Open the exact completed or draft reviews behind a card. Temporary account, date, day, search, and other card filters are cleared so the selected count and visible Trades agree.</p>
     <div class="journal-list">
       ${cards}
     </div>

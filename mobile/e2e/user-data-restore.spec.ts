@@ -32,9 +32,9 @@ interface BrowserDailyJournalPayload {
 function dailyJournalPayload(archive: JournalArchive): BrowserDailyJournalPayload {
   if (
     archive.payload.kind !== "browser-session-state"
-    || archive.payload.version !== 2
+    || archive.payload.version !== 3
   ) {
-    throw new Error("Expected a browser-session-state v2 recovery fixture.");
+    throw new Error("Expected a browser-session-state v3 recovery fixture.");
   }
   return archive.payload.data as unknown as BrowserDailyJournalPayload;
 }
@@ -151,7 +151,7 @@ async function restoreArchive(
     `${source.archive.summary.reviewVersions} review version${source.archive.summary.reviewVersions === "1" ? "" : "s"}`,
   );
   await expect(restoreCard.locator("#user-data-restore-payload"))
-    .toHaveText("browser-session-state v2 · empty target verified");
+    .toHaveText("browser-session-state v3 · empty target verified");
   await expect(restoreCard.locator("#user-data-restore-state-digest"))
     .toHaveText(source.archive.stateSha256);
   await expect(restoreCard.locator("#user-data-restore-report-digest"))

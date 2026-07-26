@@ -7,7 +7,9 @@ import type {
   JournalImportReviewEvidence,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
+  JournalPlaybookDefinitionRecord,
   JournalPlaybookRecord,
+  PlaybookDefinitionCommitResult,
   JournalReviewTermCategory,
   JournalReviewTermRecord,
   JournalStore,
@@ -24,6 +26,7 @@ import {
   JournalDailyEntryError,
   JournalImportError,
   JournalManualExecutionError,
+  JournalPlaybookDefinitionError,
   JournalRestoreError,
   JournalTradeReviewError,
 } from "../application/journal-store";
@@ -54,6 +57,10 @@ import {
   type PreparedDailyJournalEntry,
   verifyPreparedDailyJournalEntry,
 } from "../application/prepare-daily-journal";
+import {
+  type PreparedPlaybookDefinitionCommand,
+  verifyPreparedPlaybookDefinition,
+} from "../application/prepare-playbook-definition";
 import { currencyMinorUnit } from "../core/currency";
 import type {
   LedgerExecution,
@@ -66,10 +73,14 @@ import {
   sessionJournalPayloadFromState,
   sessionJournalPayloadsEqual,
   sessionJournalReportSha256,
+  sessionPlaybookLibraryFromHistory,
   sessionJournalStateSha256,
   sessionJournalSummary,
   SessionRestoreValidationError,
   type SessionJournalState,
+  type SessionPlaybookDefinitionIdentity,
+  type SessionPlaybookDefinitionSubmission,
+  type SessionPlaybookDefinitionVersion,
   verifySessionJournalRestore,
 } from "./session-journal-restore";
 import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./sqlite/schema";
@@ -152,6 +163,13 @@ function sessionDailyEntryError(
   return new JournalDailyEntryError({ code, message });
 }
 
+function sessionPlaybookDefinitionError(
+  code: "submission_changed" | "definition_changed" | "duplicate_name" | "invalid_transition",
+  message: string,
+): JournalPlaybookDefinitionError {
+  return new JournalPlaybookDefinitionError({ code, message });
+}
+
 function ensureReviewTerm(
   terms: JournalReviewTermRecord[],
   category: JournalReviewTermCategory,
@@ -177,7 +195,8 @@ function materializeReviewVocabulary(
   review: PreparedTradeReview,
 ): Pick<
   JournalTradeReviewRecord,
-  "setup" | "mistakes" | "emotion" | "tags" | "playbookId" | "playbookName" | "rules"
+  "setup" | "mistakes" | "emotion" | "tags" | "playbookId" | "playbookName"
+  | "playbookDefinition" | "rules"
 > {
   const setup = review.setup === null
     ? null
@@ -197,6 +216,7 @@ function materializeReviewVocabulary(
       tags: Object.freeze(tags),
       playbookId: null,
       playbookName: null,
+      playbookDefinition: null,
       rules: Object.freeze([]),
     };
   }
@@ -217,6 +237,7 @@ function materializeReviewVocabulary(
   let playbook = playbooks[playbookIndex];
   if (playbook === undefined) throw new Error("A session playbook could not be materialized.");
   const playbookId = playbook.id;
+  const linkedDefinition = review.playbook.definition !== null;
   const nextRules = [...playbook.rules];
   const reviewRules = review.playbook.rules.map((rule) => {
     const ruleKey = normalizedName(rule.name);
@@ -231,7 +252,7 @@ function materializeReviewVocabulary(
     }
     return Object.freeze({
       ruleId: storedRule.id,
-      text: storedRule.text,
+      text: linkedDefinition ? rule.name : storedRule.text,
       outcome: rule.outcome,
     });
   });
@@ -245,7 +266,10 @@ function materializeReviewVocabulary(
     emotion,
     tags: Object.freeze(tags),
     playbookId: playbook.id,
-    playbookName: playbook.name,
+    playbookName: linkedDefinition ? review.playbook.name : playbook.name,
+    playbookDefinition: review.playbook.definition === null
+      ? null
+      : Object.freeze({ ...review.playbook.definition }),
     rules: Object.freeze(reviewRules),
   };
 }
@@ -292,7 +316,7 @@ function preparedSessionRestore(
     reportSha256: candidate.reportSha256,
     exportedAtUs: candidate.archive.exportedAtUs,
     payloadKind: "browser-session-state",
-    payloadVersion: 2,
+    payloadVersion: candidate.sourcePayloadVersion,
     summary: candidate.summary,
     target,
   });
@@ -312,6 +336,14 @@ export class SessionJournalStore implements JournalStore {
   private reviewHeadByTradeSubjectId = new Map<string, string>();
   private reviewTerms: JournalReviewTermRecord[] = [];
   private playbooks: JournalPlaybookRecord[] = [];
+  /** Stable identities and immutable versions remain separate from review-derived vocabulary. */
+  private playbookDefinitionIdentities: SessionPlaybookDefinitionIdentity[] = [];
+  private playbookDefinitionVersions: SessionPlaybookDefinitionVersion[] = [];
+  private playbookDefinitionHeadById = new Map<string, string>();
+  private playbookDefinitionSubmissionById = new Map<
+    string,
+    SessionPlaybookDefinitionSubmission
+  >();
   private reviewSubmissionById = new Map<string, SessionReviewSubmission>();
   /** Append-only history; only dailyEntryHeadByDate is projected by load(). */
   private dailyEntryVersions: JournalDailyEntryRecord[] = [];
@@ -322,11 +354,13 @@ export class SessionJournalStore implements JournalStore {
   }>();
   private lastReviewRecordedAtMs = -1;
   private lastDailyEntryRecordedAtMs = -1;
+  private lastPlaybookDefinitionRecordedAtMs = -1;
   private nextExecutionSequence = 1;
   private nextReceiptOrdinal = 0;
   private closed = false;
 
   constructor(private readonly runtime: SessionJournalRuntime = DEFAULT_RUNTIME) {}
+
   private sessionState(): SessionJournalState {
     return {
       workspace: this.workspace,
@@ -341,12 +375,17 @@ export class SessionJournalStore implements JournalStore {
       reviewHeads: this.reviewHeadByTradeSubjectId,
       reviewTerms: this.reviewTerms,
       playbooks: this.playbooks,
+      playbookDefinitionIdentities: this.playbookDefinitionIdentities,
+      playbookDefinitionVersions: this.playbookDefinitionVersions,
+      playbookDefinitionHeads: this.playbookDefinitionHeadById,
+      playbookDefinitionSubmissions: this.playbookDefinitionSubmissionById,
       reviewSubmissions: this.reviewSubmissionById,
       dailyEntryVersions: this.dailyEntryVersions,
       dailyEntryHeads: this.dailyEntryHeadByDate,
       dailyEntrySubmissions: this.dailyEntrySubmissionById,
       lastReviewRecordedAtMs: this.lastReviewRecordedAtMs,
       lastDailyEntryRecordedAtMs: this.lastDailyEntryRecordedAtMs,
+      lastPlaybookDefinitionRecordedAtMs: this.lastPlaybookDefinitionRecordedAtMs,
       nextExecutionSequence: this.nextExecutionSequence,
       nextReceiptOrdinal: this.nextReceiptOrdinal,
     };
@@ -356,6 +395,13 @@ export class SessionJournalStore implements JournalStore {
     return this.loadSnapshot();
   }
 
+  async loadPlaybookLibrary(): Promise<readonly JournalPlaybookDefinitionRecord[]> {
+    this.assertOpen();
+    return sessionPlaybookLibraryFromHistory(
+      this.playbookDefinitionVersions,
+      this.playbookDefinitionHeadById,
+    );
+  }
   async loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence> {
     this.assertOpen();
     const matches = this.receipts.filter((receipt) => receipt.id === receiptId);
@@ -456,7 +502,7 @@ export class SessionJournalStore implements JournalStore {
       },
       payload: {
         kind: "browser-session-state",
-        version: 2,
+        version: 3,
         data: archiveData,
       },
       attachments: { version: 1, entries: [] },
@@ -545,6 +591,13 @@ export class SessionJournalStore implements JournalStore {
       ...playbook,
       rules: [...playbook.rules],
     }));
+    const nextPlaybookDefinitionIdentities = [...payload.playbookDefinitionIdentities];
+    const nextPlaybookDefinitionVersions = payload.playbookDefinitionVersions.map((version) => ({
+      ...version,
+      rules: [...version.rules],
+    }));
+    const nextPlaybookDefinitionHeads = new Map(payload.playbookDefinitionHeads);
+    const nextPlaybookDefinitionSubmissions = new Map(payload.playbookDefinitionSubmissions);
     const nextReviewSubmissions = new Map(payload.reviewSubmissions);
     const nextDailyEntryVersions = [...payload.dailyEntryVersions];
     const nextDailyEntryHeads = new Map(payload.dailyEntryHeads);
@@ -552,6 +605,9 @@ export class SessionJournalStore implements JournalStore {
     const nextLastReviewRecordedAtMs = Number(payload.counters.lastReviewRecordedAtMs);
     const nextLastDailyEntryRecordedAtMs = Number(
       payload.counters.lastDailyEntryRecordedAtMs,
+    );
+    const nextLastPlaybookDefinitionRecordedAtMs = Number(
+      payload.counters.lastPlaybookDefinitionRecordedAtMs,
     );
     const nextExecutionSequence = Number(payload.counters.nextExecutionSequence);
     const nextReceiptOrdinal = Number(payload.counters.nextReceiptOrdinal);
@@ -569,12 +625,17 @@ export class SessionJournalStore implements JournalStore {
     this.reviewHeadByTradeSubjectId = nextReviewHeads;
     this.reviewTerms = nextReviewTerms;
     this.playbooks = nextPlaybooks;
+    this.playbookDefinitionIdentities = nextPlaybookDefinitionIdentities;
+    this.playbookDefinitionVersions = nextPlaybookDefinitionVersions;
+    this.playbookDefinitionHeadById = nextPlaybookDefinitionHeads;
+    this.playbookDefinitionSubmissionById = nextPlaybookDefinitionSubmissions;
     this.reviewSubmissionById = nextReviewSubmissions;
     this.dailyEntryVersions = nextDailyEntryVersions;
     this.dailyEntryHeadByDate = nextDailyEntryHeads;
     this.dailyEntrySubmissionById = nextDailyEntrySubmissions;
     this.lastReviewRecordedAtMs = nextLastReviewRecordedAtMs;
     this.lastDailyEntryRecordedAtMs = nextLastDailyEntryRecordedAtMs;
+    this.lastPlaybookDefinitionRecordedAtMs = nextLastPlaybookDefinitionRecordedAtMs;
     this.nextExecutionSequence = nextExecutionSequence;
     this.nextReceiptOrdinal = nextReceiptOrdinal;
 
@@ -964,6 +1025,29 @@ export class SessionJournalStore implements JournalStore {
         continue;
       }
 
+      const definitionReference = review.playbook?.definition ?? null;
+      if (definitionReference !== null) {
+        const storedDefinition = this.playbookDefinitionVersions.find((version) => (
+          version.versionId === definitionReference.versionId
+        ));
+        const snapshotRules = review.playbook?.rules.map((rule) => rule.name) ?? [];
+        const rulesMatch = storedDefinition !== undefined
+          && storedDefinition.rules.length === snapshotRules.length
+          && storedDefinition.rules.every((rule, index) => rule === snapshotRules[index]);
+        if (
+          storedDefinition === undefined
+          || storedDefinition.playbookId !== definitionReference.id
+          || storedDefinition.revision !== definitionReference.revision
+          || storedDefinition.name !== review.playbook?.name
+          || !rulesMatch
+        ) {
+          throw sessionReviewError(
+            "review_changed",
+            "The selected playbook definition version no longer matches this review draft.",
+          );
+        }
+      }
+
       const activeTrade = activeTradeBySubjectId.get(review.tradeSubjectId);
       if (activeTrade === undefined) {
         throw sessionReviewError(
@@ -1099,6 +1183,182 @@ export class SessionJournalStore implements JournalStore {
     };
   }
 
+  async commitPlaybookDefinition(
+    command: PreparedPlaybookDefinitionCommand,
+  ): Promise<PlaybookDefinitionCommitResult> {
+    this.assertOpen();
+    let definition: PreparedPlaybookDefinitionCommand;
+    try {
+      definition = verifyPreparedPlaybookDefinition(command);
+    } catch (error) {
+      throw sessionPlaybookDefinitionError(
+        "definition_changed",
+        error instanceof Error ? error.message : "The playbook definition is invalid.",
+      );
+    }
+
+    const priorSubmission = this.playbookDefinitionSubmissionById.get(
+      definition.submissionId,
+    );
+    if (priorSubmission !== undefined) {
+      if (priorSubmission.revision !== definition.revision) {
+        throw sessionPlaybookDefinitionError(
+          "submission_changed",
+          "This playbook submission was already saved with different values.",
+        );
+      }
+      const priorVersion = this.playbookDefinitionVersions.find((version) => (
+        version.versionId === priorSubmission.versionId
+      ));
+      if (priorVersion === undefined) {
+        throw new Error("A playbook submission lost its immutable version.");
+      }
+      const library = await this.loadPlaybookLibrary();
+      const submitted = sessionPlaybookLibraryFromHistory(
+        this.playbookDefinitionVersions,
+        [[priorVersion.playbookId, priorVersion.versionId]],
+      )[0];
+      if (submitted === undefined) {
+        throw new Error("A duplicate playbook submission lost its immutable definition.");
+      }
+      return Object.freeze({ outcome: "duplicate", definition: submitted, library });
+    }
+
+    const identity = this.playbookDefinitionIdentities.find((candidate) => (
+      candidate.id === definition.playbookId
+    ));
+    const currentHeadId = this.playbookDefinitionHeadById.get(definition.playbookId);
+    const currentVersion = currentHeadId === undefined
+      ? undefined
+      : this.playbookDefinitionVersions.find((version) => version.versionId === currentHeadId);
+    if (definition.action === "create") {
+      if (
+        identity !== undefined
+        || currentHeadId !== undefined
+        || definition.expectedPreviousVersionId !== null
+      ) {
+        throw sessionPlaybookDefinitionError(
+          "definition_changed",
+          "This playbook identity already exists. Create it with a new submission.",
+        );
+      }
+    } else if (
+      identity === undefined
+      || currentHeadId === undefined
+      || currentVersion === undefined
+      || currentHeadId !== definition.expectedPreviousVersionId
+    ) {
+      throw sessionPlaybookDefinitionError(
+        "definition_changed",
+        "This playbook changed after it was opened. Reload the latest definition.",
+      );
+    }
+
+    if (this.playbookDefinitionVersions.some((version) => (
+      version.versionId === definition.versionId
+    ))) {
+      throw sessionPlaybookDefinitionError(
+        "definition_changed",
+        "This playbook version identity is already in use.",
+      );
+    }
+
+    if (currentVersion !== undefined) {
+      const sameRules = currentVersion.rules.length === definition.rules.length
+        && currentVersion.rules.every((rule, index) => rule === definition.rules[index]?.text);
+      const unchangedContent = currentVersion.name === definition.name && sameRules;
+      const validTransition = definition.action === "edit"
+        ? currentVersion.state === "active" && definition.state === "active"
+        : definition.action === "archive"
+          ? currentVersion.state === "active"
+            && definition.state === "archived"
+            && unchangedContent
+          : definition.action === "restore"
+            && currentVersion.state === "archived"
+            && definition.state === "active"
+            && unchangedContent;
+      if (!validTransition) {
+        throw sessionPlaybookDefinitionError(
+          "invalid_transition",
+          "The requested playbook lifecycle transition is not valid for its current head.",
+        );
+      }
+    }
+
+    const currentLibrary = sessionPlaybookLibraryFromHistory(
+      this.playbookDefinitionVersions,
+      this.playbookDefinitionHeadById,
+    );
+    const duplicateName = currentLibrary.find((candidate) => (
+      candidate.id !== definition.playbookId
+      && normalizedName(candidate.name) === definition.normalizedName
+    ));
+    if (duplicateName !== undefined) {
+      throw sessionPlaybookDefinitionError(
+        "duplicate_name",
+        "Another active or archived playbook already uses this name.",
+      );
+    }
+
+    const observedNowMs = this.runtime.nowMs();
+    if (!Number.isSafeInteger(observedNowMs) || observedNowMs < 0) {
+      throw sessionPlaybookDefinitionError(
+        "submission_changed",
+        "The browser session clock is outside the playbook definition range.",
+      );
+    }
+    const recordedAtMs = Math.max(
+      observedNowMs,
+      this.lastPlaybookDefinitionRecordedAtMs + 1,
+    );
+    const versionNumber = (currentVersion?.version ?? 0) + 1;
+    if (!Number.isSafeInteger(recordedAtMs) || !Number.isSafeInteger(versionNumber)) {
+      throw sessionPlaybookDefinitionError(
+        "definition_changed",
+        "This playbook exhausted its immutable version range.",
+      );
+    }
+    const recordedAtUs = `${recordedAtMs}000`;
+    const createdVersion: SessionPlaybookDefinitionVersion = Object.freeze({
+      playbookId: definition.playbookId,
+      versionId: definition.versionId,
+      version: versionNumber,
+      action: definition.action,
+      expectedPreviousVersionId: definition.expectedPreviousVersionId,
+      revision: definition.revision,
+      name: definition.name,
+      state: definition.state,
+      rules: Object.freeze(definition.rules.map((rule) => rule.text)),
+      recordedAtUs,
+    });
+    const nextIdentities = definition.action === "create"
+      ? [...this.playbookDefinitionIdentities, Object.freeze({
+          id: definition.playbookId,
+          createdAtUs: recordedAtUs,
+        })]
+      : [...this.playbookDefinitionIdentities];
+    const nextVersions = [...this.playbookDefinitionVersions, createdVersion];
+    const nextHeads = new Map(this.playbookDefinitionHeadById);
+    nextHeads.set(definition.playbookId, definition.versionId);
+    const nextSubmissions = new Map(this.playbookDefinitionSubmissionById);
+    nextSubmissions.set(definition.submissionId, Object.freeze({
+      revision: definition.revision,
+      versionId: definition.versionId,
+    }));
+    const nextLibrary = sessionPlaybookLibraryFromHistory(nextVersions, nextHeads);
+    const current = nextLibrary.find((candidate) => candidate.id === definition.playbookId);
+    if (current === undefined) {
+      throw new Error("The committed playbook definition lost its current head.");
+    }
+
+    // Copy-and-swap only after every command, transition, and projection check succeeds.
+    this.playbookDefinitionIdentities = nextIdentities;
+    this.playbookDefinitionVersions = nextVersions;
+    this.playbookDefinitionHeadById = nextHeads;
+    this.playbookDefinitionSubmissionById = nextSubmissions;
+    this.lastPlaybookDefinitionRecordedAtMs = recordedAtMs;
+    return Object.freeze({ outcome: "committed", definition: current, library: nextLibrary });
+  }
   async commitDailyJournalEntry(
     command: PreparedDailyJournalEntry,
   ): Promise<DailyJournalCommitResult> {

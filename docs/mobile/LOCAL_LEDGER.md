@@ -1,10 +1,13 @@
 # Hermes Journal local ledger contract
 
-Status: implemented execution + versioned trade/day review + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore + journal integrity suite (unsupported-instrument fail-closed, golden fixtures, projection invariants, active-head void/rollback report exclusion, open/partial realized consistency) · 2026-07-20
+Status: implemented execution + versioned trade/day review + schema-v5 Local Playbook Library + receipt/rhythm projections + ten governed derived reports + trade-browser scope/facets + local restore + journal integrity suite (unsupported-instrument fail-closed, golden fixtures, projection invariants, active-head void/rollback report exclusion, open/partial realized consistency) · 2026-07-25
 
 The current workspace contains 38 bounded Slice D increments: 32 derived-only
 presentation/projection increments and six write-capable exceptions.
 Reports exposes 12 semantic targets and ten governed reports.
+Local Playbook Library V1 is a separate Core product increment outside those
+historical counters; the preserved 38/32/6 tally is not reclassified.
+
 
 This document describes the source-of-truth boundary for the iOS journal. The
 legacy desktop journal schema is not part of this contract.
@@ -52,6 +55,18 @@ legacy desktop journal schema is not part of this contract.
     version with a content-bound revision and optimistic predecessor; the date
     never changes. A reflection requires at least one authored signal. Its
     optional process score is self-reported and excluded from governed reports.
+14. A saved playbook definition owns one stable ID and an immutable create/edit/
+    archive/restore version chain. Every version freezes the exact normalized
+    name and ordered rule snapshot; a deterministic current head is the only
+    mutable pointer.
+15. Applying a library revision to a trade review is explicit and records that
+    exact `{id, versionId, revision}` snapshot. A later rename/archive cannot
+    rewrite it. Free-text playbook work stays ad hoc with a null definition link.
+16. Legacy review-derived names are never guessed or promoted into the editable
+    library. Legacy native/browser restore creates an empty library and null
+    review-definition links only after the original state, report, and summary
+    claims verify.
+
 
 ## Import sequence
 
@@ -761,6 +776,36 @@ not repeat the write. No schema, migration, store operation, archive/digest/
 export shape, report cohort/formula, preference, dependency, native source, or
 network boundary changed.
 
+## Local Playbook Library sequence
+
+```text
+explicit create/edit/archive/restore intent
+  → normalize bounded name + exact ordered rules
+  → stable definition ID + random submission ID + deterministic revision
+  → validate expected current head and lifecycle predecessor
+  → BEGIN transaction
+      reconcile an exact historical submission retry
+      append one immutable definition version
+      append the complete ordered rule snapshot
+      advance the deterministic definition head
+    COMMIT
+  → rebuild detached current-head projections in stable order
+
+explicit Apply from a saved review editor
+  → select one concrete current or historical library revision
+  → snapshot exact ID + version ID + revision with the review version
+  → never infer identity from matching free text
+```
+
+Schema v5 owns exactly five durable tables:
+`playbook_definitions`, `playbook_definition_versions`,
+`playbook_definition_rules`, `playbook_definition_heads`, and
+`trade_review_playbook_definition_links`. Stable IDs and all lifecycle versions
+are append-only; current heads advance deterministically. Exact same-submission
+retries return the original historical version, stale heads and changed payloads
+fail closed, and create/edit/archive/restore are atomic in both SQLite and the
+browser-session adapter. User-authored reflection templates remain open work.
+
 ## Daily-journal sequence
 
 ```text
@@ -932,6 +977,12 @@ derived slice. CRUD requires a separate stable-ID schema/migration plus archive
 and export decisions. No playbook scope, card, or failure state enters SQLite,
 browser journal state, export/restore, archives, digests, reports, formulas,
 preferences, or native storage.
+
+Those sentences preserve the earlier derived-only milestone contract. Local
+Playbook Library V1 now supplies the separately gated stable-ID store without
+changing the facet/card scope: the derived route still consumes current review
+assignments, never promotes matching text, and writes no scope state. Only an
+explicit review Apply creates an exact durable definition-revision link.
 
 Exact Playbook Draft Scope v1 extends only that derived library and route. Each
 frozen card separately counts exact current assignments whose review state is
@@ -1318,10 +1369,11 @@ deduplication still prevents a second copy while the restored receipt is active.
 Native SQLCipher operation, Keychain loss/reinstall behavior, actual device and
 iCloud backup inclusion, restore with its Keychain item, CocoaPods resolution,
 and kill/relaunch migration recovery remain Mac/physical-device gates. The v1
-ledger, v2 command reconciliation, v3 trade-review statements, and v4
-daily-journal statements are replay-safe for the plugin's statement/user-version
-commit gap, but only interruption tests across v2→v3 and v3→v4 can prove the
-native lifecycle. No privacy or recovery claim may be strengthened
+ledger, v2 command reconciliation, v3 trade-review statements, v4 daily-journal
+statements, and v5 playbook-library statements are replay-safe in source for the
+plugin's statement/user-version commit gap, but retained-data/interruption tests
+through v4→v5 are NOT RUN and are required to prove the native lifecycle. No
+privacy or recovery claim may be strengthened
 until those behaviors are observed. Because SQLCipher is bundled, App Store
 export-compliance answers also require a human determination.
 
@@ -1336,17 +1388,17 @@ or plugin-runtime evidence.
   transaction; it never substitutes the lossy current-ledger projection for raw
   source rows, inactive/history facts, immutable review versions, submission
   receipts, formula definitions, or stable trade subjects.
-- Native payload v1 is `sqlite-table-set`. Its table and ordered column
-  signatures are pinned to schema v4, SQLite integers are emitted as canonical
-  decimal strings, rows and JSON keys are deterministic, and table-set or
-  ordered-column metadata drift fails closed. Live table-SQL hashes remain
-  diagnostic; export v1 does not claim complete constraint, index, or trigger
-  pinning. Migration application timestamps stay in provenance but are excluded
-  from the portable user-state digest.
-- Browser development uses a separate `browser-session-state` v2 payload. It
-  captures the complete in-memory store, can restore only into the browser
-  development runtime, disappears on reload, and is not native recovery
-  evidence.
+- Current native payload v2 is `sqlite-table-set`. Its 40-table, 314-ordered-
+  column signature is pinned to schema v5 and includes every playbook definition,
+  immutable version, ordered rule, current head, submission, and exact review
+  link. SQLite integers are canonical decimal strings; rows and JSON keys are
+  deterministic; table-set or column drift fails closed. Live table-SQL hashes
+  remain diagnostic, and migration timestamps stay in provenance but outside
+  the portable user-state digest. The outer envelope remains v1.
+- Browser development uses `browser-session-state` payload v3. It captures the
+  complete in-memory store including full playbook history and links, can restore
+  only into the browser development runtime, disappears on reload, and is not
+  native recovery evidence.
 - `archiveSha256` detects accidental content corruption over canonical semantic
   JSON; `stateSha256` identifies durable user state and `reportSha256`
   identifies the versioned exact report input. These are unkeyed checksums, not
@@ -1362,11 +1414,12 @@ or plugin-runtime evidence.
   archive containing attachments. Blob/File delivery and parsing can multiply
   the 64 MiB input in memory; native near-limit and low-storage behavior remain
   device gates.
-- Native restore accepts only current-migration `sqlite-table-set` v1. The
-  decoder verifies the envelope checksum, all 35 tables and 280 pinned ordered
-  columns, canonical strict row order, primary-key uniqueness, nullable/type
-  rules, signed SQLite 64-bit integers, row counts, table and portable-state
-  digests, and a recomputed summary. It never executes archive SQL; live
+- Native restore accepts current payload v2/schema v5 and legacy payload v1/
+  schema v4. The decoder verifies the envelope checksum, exact pinned table/
+  column signature, canonical strict row order, primary-key uniqueness,
+  nullable/type rules, signed SQLite 64-bit integers, row counts, portable-state
+  digest, governed-report digest, and summary. It never executes archive SQL;
+  live
   `createSqlSha256` values remain diagnostic rather than compatibility input.
 - Preview runs in the real destination transaction. It verifies the migration
   and metric-definition baseline, refuses different nonempty state, inserts
@@ -1378,16 +1431,19 @@ or plugin-runtime evidence.
   inside the transaction, then rereads and verifies the committed state in a
   fresh transaction. An exact already-restored table set returns
   `already-restored`; different nonempty state is never merged or overwritten.
-- Browser restore fully verifies a separate immutable candidate before one
-  synchronous state swap. It accepts only `browser-session-state` v2, requires
-  an empty session unless the exact state is already present, and cannot be
-  cited as native restore evidence.
-- Restore compatibility is intentionally exact-runtime during this pre-release
-  phase. This build rejects browser v1 and pre-v4 native table sets rather than
-  guessing at archive conversion. The recovery path is to restore the file in
-  its exact old runtime, then open/migrate that live journal and export a new
-  current-runtime file. On-device v3→v4 migration is implemented, but retained
-  database and interruption evidence remains a Mac/iPhone gate.
+- Browser restore verifies a separate immutable candidate before one synchronous
+  state swap. It accepts current payload v3 and legacy payload v2, requires an
+  empty session unless exact state is already present, and is not native restore
+  evidence.
+- Legacy native v1 and browser v2 archives first verify their original state,
+  governed-report, and summary claims. Only then do they migrate with an empty
+  explicit playbook library and null review-definition links. Hermes never
+  guesses or promotes review-derived names. Browser v1 and pre-v4 native table
+  sets remain unsupported.
+- Current native v2/schema-v5 and browser-v3 restore preserve exact definition/
+  version/rule/head/submission/link history. Continued immutable writes succeed,
+  and re-export reproduces exact portable state/report digests and summary.
+  On-device v4→v5 retained-data/interruption proof remains a Mac/iPhone gate.
 - More exposes restore below the export card only for the local empty journal.
   The UI rejects `File.size` above 64 MiB before `File.text()`, invalidates stale
   previews on file change/cancel, displays adapter-recomputed summary and
@@ -1398,12 +1454,12 @@ or plugin-runtime evidence.
 - Recovery Continuity browser evidence composes Daily Journal authoring with
   that boundary: export → empty-session restore preserves the draft head,
   continued writing appends one successor, and the continued export restores
-  again with two immutable versions, one current head, and two submission
-  receipts. A deterministically delayed superseded file read cannot reveal
-  details, move focus, enable confirmation/commit, or mutate the empty
-  destination; the replacement file must earn its own preview. Successful
-  commit focuses the stable rendered screen after the old commit control is
-  removed.
+  again. Playbook-library evidence additionally round-trips complete immutable
+  history and exact review snapshots, continues lifecycle/review writes, and
+  reproduces exact state/report digests and summary. A delayed superseded file
+  read cannot reveal details, move focus, enable confirmation/commit, or mutate
+  the empty destination; the replacement file must earn its own preview.
+  Successful commit focuses stable rendered content.
 - All ten governed reports remain derived-only across native and browser
   export/restore. A matching-runtime restored snapshot must recompute identical
   versions, checksums, cohorts, exclusions, fixed or exact group order, evidence
@@ -1462,9 +1518,25 @@ signed-integer validation, digest/summary tampering, transactional preview
 rollback, stale-preview rejection, exact already-restored retry, different
 nonempty-state refusal, restore failure atomicity, post-commit reconciliation,
 response-loss recovery, browser candidate validation, 64 MiB pre-read UI
-rejection, and demo/nonempty restore isolation. Exact final integration counts
-and publication evidence remain in the active handoff rather than this
-contract. Daily Journal coverage adds normalized Unicode boundaries, immutable
+rejection, and demo/nonempty restore isolation.
+
+Local Playbook Library Linux evidence covers stable IDs, immutable create/edit/
+archive/restore history, exact ordered-rule snapshots, deterministic heads,
+idempotent historical retry, stale/duplicate/lifecycle failure atomicity, and
+explicit review application with ad hoc null links. Schema-v5 SQL.js tests pass
+15/15 with checksum
+`52ab663289a86a97bab754ccacf58b9f111fa87a55c166162d343fb0ae115e52`
+and the five-table trigger contract. Focused browser-session lifecycle/review/
+restore tests pass 28/28, including legacy payload-v2 migration, current payload-
+v3 exact history restore, continued writes, tamper rejection, and re-export.
+The production Chromium playbook journey passes 1/1 at 320×568 with create,
+edit, archive, restore, explicit Apply, historical review snapshot after rename,
+demo privacy isolation, and zero external requests. TypeScript passes on the
+hardened schema-v5 head.
+
+Exact final integration counts and publication evidence remain in the active
+handoff rather than this contract. Daily Journal coverage adds normalized
+Unicode boundaries, immutable
 dates/version chains, submission idempotency, optimistic conflicts, atomic
 session/SQLite commits, lost-response reconciliation, v3→v4 migration,
 content-bound native/browser restore validation, trading/no-trade display,
@@ -1703,6 +1775,15 @@ rollback, restore equality, VoiceOver, hardware-keyboard focus, lifecycle/two-
 scene refresh, preference/SQLite/network neutrality, and 320/421-width 200%
 Dynamic Type on the Mac/iPhone candidate; browser proof must not be treated as
 native acceptance.
+Local Playbook Library native acceptance is NOT RUN. Prove v4→v5 retained-data
+and interrupted-migration replay, all five durable tables, stable heads,
+immutable history, exact review-definition snapshots, response-loss retries,
+legacy native payload-v1 migration and current payload-v2 exact re-export,
+SQLCipher/Keychain/Files/WKWebView behavior, background/foreground and multi-
+scene refresh, VoiceOver, Dynamic Type, hardware-keyboard flow, and physical-
+iPhone behavior. Linux SQL.js and production Chromium evidence must not be
+treated as native acceptance.
+
 These results do not establish final integration counts or native acceptance.
 Native Files selection, lifecycle/interruption, Daily Journal relaunch and
 migration, Review Session Coverage continuation/save/restore equality, low

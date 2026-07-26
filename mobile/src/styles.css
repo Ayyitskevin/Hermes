@@ -761,6 +761,59 @@ p { line-height: 1.55; }
 .playbook-card > p, .playbook-card ul { grid-column: 1 / -1; margin: 0; }
 .playbook-card ul { padding-left: 1.2rem; color: var(--muted); line-height: 1.7; }
 
+.playbook-library-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: .75rem;
+}
+.playbook-library-card {
+  min-width: 0;
+  display: grid;
+  gap: .75rem;
+  align-content: start;
+}
+.playbook-library-card .section-title { align-items: start; }
+.playbook-library-card h3 { margin: .35rem 0 0; overflow-wrap: anywhere; }
+.playbook-library-card ol { margin: 0; padding-left: 1.4rem; color: var(--muted); line-height: 1.65; }
+.playbook-library-card li { overflow-wrap: anywhere; }
+.playbook-library-archive {
+  min-width: 0;
+  padding: .8rem;
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  background: #0b0e14;
+}
+.playbook-library-archive > summary {
+  min-height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #cdbfff;
+  font-weight: 700;
+}
+.playbook-library-archive[open] > summary { margin-bottom: .75rem; }
+.playbook-definition-sheet { width: min(100%, 42rem); }
+.playbook-definition-sheet form,
+.playbook-definition-sheet label { min-width: 0; display: grid; gap: .45rem; }
+.playbook-definition-sheet input,
+.playbook-definition-sheet textarea { min-width: 0; max-width: 100%; }
+.review-playbook-library {
+  min-width: 0;
+  grid-column: 1 / -1;
+  padding: .75rem;
+  border: 1px solid rgb(155 124 255 / 28%);
+  border-radius: .8rem;
+  background: rgb(155 124 255 / 6%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .6rem;
+  align-items: end;
+}
+.review-playbook-library label { min-width: 0; display: grid; gap: .4rem; }
+.review-playbook-library select { min-width: 0; max-width: 100%; }
+.review-playbook-library .helper-text { grid-column: 1 / -1; margin: 0; }
+
 .report-navigation {
   min-width: 0;
   display: grid;
@@ -1454,6 +1507,8 @@ input[type="file"]::file-selector-button {
   .review-queue-item > .secondary-button { grid-column: 1 / -1; }
   .quick-review-progress,
   .trade-review-sheet .field-grid,
+  .review-playbook-library,
+  .playbook-definition-sheet .quick-actions,
   .trade-review-sheet .review-metric-grid,
   .trade-review-sheet .quick-actions,
   .daily-journal-sheet .field-grid,

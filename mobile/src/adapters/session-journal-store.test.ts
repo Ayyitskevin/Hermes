@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { prepareCsvImport } from "../application/prepare-csv-import";
+import type { JournalPlaybookDefinitionRecord } from "../application/journal-store";
+import { preparePlaybookDefinition } from "../application/prepare-playbook-definition";
 import {
   prepareManualExecution,
   type ManualExecutionInput,
@@ -42,6 +44,37 @@ function manual(
     fee: "0",
     executedAt: "2026-07-01T09:30:00",
     ...overrides,
+  });
+}
+
+function playbookCreate(
+  submissionDigit: string,
+  name = "Momentum",
+  rules: readonly string[] = ["Wait for confirmation", "Respect the stop"],
+) {
+  return preparePlaybookDefinition({
+    submissionId: submissionDigit.repeat(64),
+    action: "create",
+    playbookId: null,
+    expectedPreviousVersionId: null,
+    name,
+    rules,
+  });
+}
+
+function playbookRevision(
+  submissionDigit: string,
+  action: "edit" | "archive" | "restore",
+  current: JournalPlaybookDefinitionRecord,
+  overrides: { readonly name?: string; readonly rules?: readonly string[] } = {},
+) {
+  return preparePlaybookDefinition({
+    submissionId: submissionDigit.repeat(64),
+    action,
+    playbookId: current.id,
+    expectedPreviousVersionId: current.versionId,
+    name: overrides.name ?? current.name,
+    rules: overrides.rules ?? current.rules,
   });
 }
 
@@ -285,6 +318,146 @@ describe("browser session journal ownership", () => {
 
       expect(committed.receipt.importedAtUs).toBe("2000000");
       expect(rolledBack.imports[0]?.rolledBackAtUs).toBe("2000000");
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("keeps stable playbook identities, immutable retry results, and lifecycle heads", async () => {
+    const times = [2_000, 1_000];
+    const store = new SessionJournalStore({ nowMs: () => times.shift() ?? 1_000 });
+    try {
+      const create = playbookCreate("1", "Zulu");
+      const created = await store.commitPlaybookDefinition(create);
+      expect(created).toMatchObject({
+        outcome: "committed",
+        definition: {
+          id: create.playbookId,
+          versionId: create.versionId,
+          version: 1,
+          revision: create.revision,
+          name: "Zulu",
+          state: "active",
+          rules: ["Wait for confirmation", "Respect the stop"],
+          recordedAtUs: "2000000",
+        },
+      });
+
+      const immediateRetry = await store.commitPlaybookDefinition(create);
+      expect(immediateRetry).toMatchObject({
+        outcome: "duplicate",
+        definition: {
+          versionId: create.versionId,
+          revision: create.revision,
+          version: 1,
+          name: "Zulu",
+          rules: ["Wait for confirmation", "Respect the stop"],
+        },
+      });
+      await expect(store.commitPlaybookDefinition(
+        playbookCreate("1", "Changed after submission"),
+      )).rejects.toMatchObject({ conflict: { code: "submission_changed" } });
+      await expect(store.commitPlaybookDefinition(
+        playbookCreate("2", "zULU"),
+      )).rejects.toMatchObject({ conflict: { code: "duplicate_name" } });
+      expect(await store.loadPlaybookLibrary()).toEqual([created.definition]);
+
+      const staleEdit = playbookRevision("4", "edit", created.definition, {
+        name: "Stale edit",
+      });
+      const edit = playbookRevision("3", "edit", created.definition, {
+        name: "Gamma",
+        rules: ["Enter on the close", "Risk one unit"],
+      });
+      const edited = await store.commitPlaybookDefinition(edit);
+      expect(edited.definition).toMatchObject({
+        id: created.definition.id,
+        versionId: edit.versionId,
+        revision: edit.revision,
+        version: 2,
+        name: "Gamma",
+        state: "active",
+        rules: ["Enter on the close", "Risk one unit"],
+        recordedAtUs: "2001000",
+      });
+
+      const historicalRetry = await store.commitPlaybookDefinition(create);
+      expect(historicalRetry).toMatchObject({
+        outcome: "duplicate",
+        definition: {
+          id: create.playbookId,
+          versionId: create.versionId,
+          revision: create.revision,
+          version: 1,
+          name: "Zulu",
+          state: "active",
+          rules: ["Wait for confirmation", "Respect the stop"],
+          recordedAtUs: "2000000",
+        },
+        library: [{
+          versionId: edited.definition.versionId,
+          version: 2,
+          name: "Gamma",
+        }],
+      });
+      await expect(store.commitPlaybookDefinition(staleEdit))
+        .rejects.toMatchObject({ conflict: { code: "definition_changed" } });
+      expect(await store.loadPlaybookLibrary()).toEqual([edited.definition]);
+
+      const archived = await store.commitPlaybookDefinition(
+        playbookRevision("5", "archive", edited.definition),
+      );
+      expect(archived.definition).toMatchObject({
+        id: created.definition.id,
+        version: 3,
+        name: "Gamma",
+        state: "archived",
+        rules: edited.definition.rules,
+        recordedAtUs: "2002000",
+      });
+      expect(await store.loadPlaybookLibrary()).toEqual([archived.definition]);
+      await expect(store.commitPlaybookDefinition(
+        playbookCreate("6", "gAmMa"),
+      )).rejects.toMatchObject({ conflict: { code: "duplicate_name" } });
+      await expect(store.commitPlaybookDefinition(
+        playbookRevision("7", "edit", archived.definition, { name: "Not allowed" }),
+      )).rejects.toMatchObject({ conflict: { code: "invalid_transition" } });
+      expect(await store.loadPlaybookLibrary()).toEqual([archived.definition]);
+
+      const restored = await store.commitPlaybookDefinition(
+        playbookRevision("8", "restore", archived.definition),
+      );
+      expect(restored.definition).toMatchObject({
+        id: created.definition.id,
+        version: 4,
+        name: "Gamma",
+        state: "active",
+        recordedAtUs: "2003000",
+      });
+      const alpha = await store.commitPlaybookDefinition(
+        playbookCreate("9", "Alpha", ["Define invalidation"]),
+      );
+      expect((await store.loadPlaybookLibrary()).map(({ name }) => name))
+        .toEqual(["Alpha", "Gamma"]);
+      expect(alpha.library.map(({ id }) => id))
+        .toEqual([alpha.definition.id, restored.definition.id]);
+      expect((await store.load()).playbooks).toEqual([]);
+
+      const artifact = await store.exportUserData();
+      const payload = artifact.archive.payload.data as unknown as {
+        readonly stateVersion: number;
+        readonly playbookDefinitionIdentities: readonly unknown[];
+        readonly playbookDefinitionVersions: readonly unknown[];
+        readonly playbookDefinitionHeads: readonly unknown[];
+        readonly playbookDefinitionSubmissions: readonly unknown[];
+      };
+      expect(artifact.archive.payload.version).toBe(3);
+      expect(payload.stateVersion).toBe(3);
+      expect(payload.playbookDefinitionIdentities).toHaveLength(2);
+      expect(payload.playbookDefinitionVersions).toHaveLength(5);
+      expect(payload.playbookDefinitionHeads).toHaveLength(2);
+      expect(payload.playbookDefinitionSubmissions).toHaveLength(5);
+      expect(artifact.archive.summary.playbooks).toBe("2");
     } finally {
       await store.close();
     }

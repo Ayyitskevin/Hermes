@@ -132,11 +132,51 @@ describe("prepared trade review", () => {
           rules: [{ name: "Wait for volume", outcome: "unreviewed" }],
         },
       },
+      {
+        ...prepared,
+        playbook: {
+          ...prepared.playbook!,
+          definition: {
+            id: "b".repeat(64),
+            versionId: "c".repeat(64),
+            revision: "c".repeat(64),
+          },
+        },
+      },
       { ...prepared, plannedStop: "181" as PreparedTradeReview["plannedStop"] },
     ];
     for (const changed of changedPayloads) {
       expect(() => verifyPreparedTradeReview(changed)).toThrow(/changed after review/);
     }
+  });
+
+  it("keeps ad hoc text unlinked and binds only an explicit immutable revision", () => {
+    const adHoc = prepareTradeReview(input());
+    expect(adHoc.playbook?.definition).toBeNull();
+
+    const definition = {
+      id: "b".repeat(64),
+      versionId: "c".repeat(64),
+      revision: "d".repeat(64),
+    } as const;
+    const linked = prepareTradeReview(input({
+      playbook: {
+        name: "ORB",
+        rules: [
+          { name: "Wait for volume", outcome: "followed" },
+        ],
+        definition,
+      },
+    }));
+    expect(linked.playbook?.definition).toEqual(definition);
+    expect(linked.revision).not.toBe(adHoc.revision);
+
+    expect(() => prepareTradeReview(input({
+      playbook: { name: "ORB", rules: [], definition: { ...definition, revision: "D".repeat(64) } },
+    }))).toThrow(/256-bit lowercase hexadecimal/);
+    expect(() => prepareTradeReview(input({
+      playbook: { name: "ORB", rules: [], definition: { ...definition, id: "B".repeat(64) } },
+    }))).toThrow(/256-bit lowercase hexadecimal/);
   });
 
   it("hashes reusable vocabulary by its case-insensitive identity", () => {

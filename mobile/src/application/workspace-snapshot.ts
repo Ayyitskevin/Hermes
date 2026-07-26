@@ -475,6 +475,7 @@ function mapTrade(
       tags: review?.tags ?? [],
       followedPlan: followedPlanForReview(review),
       playbook: review?.playbookName ?? null,
+      playbookDefinition: review?.playbookDefinition ?? null,
       rules: review?.rules ?? [],
       initialRisk: review?.initialRisk ?? null,
       plannedStop: review?.plannedStop ?? null,

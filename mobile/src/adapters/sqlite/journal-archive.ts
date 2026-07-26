@@ -8,13 +8,14 @@ import type { SqlDatabase, SqlRow } from "../../application/sql-database";
 import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./schema";
 
 export const SQLITE_JOURNAL_ARCHIVE_PAYLOAD_KIND = "sqlite-table-set" as const;
-export const SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION = 1 as const;
+export const SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION = 1 as const;
+export const SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION = 2 as const;
 
 /**
  * Pinned export-v1 coverage. A new schema table requires an explicit archive
  * compatibility decision instead of being silently omitted or accepted.
  */
-export const SQLITE_JOURNAL_ARCHIVE_TABLES = Object.freeze([
+export const SQLITE_JOURNAL_ARCHIVE_V1_TABLES = Object.freeze([
   "schema_migrations",
   "currencies",
   "workspaces",
@@ -52,7 +53,24 @@ export const SQLITE_JOURNAL_ARCHIVE_TABLES = Object.freeze([
   "daily_journal_entry_heads",
 ] as const);
 
-export type SqliteJournalArchiveTableName = typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number];
+export const SQLITE_JOURNAL_ARCHIVE_V5_TABLES = Object.freeze([
+  "playbook_definitions",
+  "playbook_definition_versions",
+  "playbook_definition_rules",
+  "playbook_definition_heads",
+  "trade_review_playbook_definition_links",
+] as const);
+
+/** Current payload-v2 coverage: the v1-v4 set plus every v5 durable table. */
+export const SQLITE_JOURNAL_ARCHIVE_TABLES = Object.freeze([
+  ...SQLITE_JOURNAL_ARCHIVE_V1_TABLES,
+  ...SQLITE_JOURNAL_ARCHIVE_V5_TABLES,
+] as const);
+
+export type SqliteJournalArchiveV1TableName =
+  typeof SQLITE_JOURNAL_ARCHIVE_V1_TABLES[number];
+export type SqliteJournalArchiveTableName =
+  typeof SQLITE_JOURNAL_ARCHIVE_TABLES[number];
 
 /**
  * Export-v1 column contracts generated from the v1-v4 migrations with
@@ -60,7 +78,7 @@ export type SqliteJournalArchiveTableName = typeof SQLITE_JOURNAL_ARCHIVE_TABLES
  * nullability, primary-key position, SQL default, and hidden value.
  */
 export const SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256: Readonly<
-  Record<SqliteJournalArchiveTableName, string>
+  Record<SqliteJournalArchiveV1TableName, string>
 > = Object.freeze({
   schema_migrations: "fd0f626652721faa3cee1ed299b0fbf1ea18f39c06f1bf326fdb008f0680a6e6",
   currencies: "9f485f107902f56d3852dbb5b6ff806abcc8f9aef8d4c5102b8c024c54704f1e",
@@ -98,9 +116,22 @@ export const SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256: Readonly<
   daily_journal_entry_term_assignments: "bb50f27fabb51891037d58e7a2551c2a0d7cc770d31be595a2851683ec3d7e50",
   daily_journal_entry_heads: "b561ff83a8e1e083f52585cd6d7a81ea59f065bf2b8afc718aa88f0fa68873d2",
 });
+/** Payload-v2 adds the exact v5 column contracts to the legacy manifest. */
+export const SQLITE_JOURNAL_ARCHIVE_V2_COLUMN_SHA256: Readonly<
+  Record<SqliteJournalArchiveTableName, string>
+> = Object.freeze({
+  ...SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256,
+  playbook_definitions: "58e1822547cbfc4abe7f9d5e4a3b29191038b34d242dd008df10dd798a137b51",
+  playbook_definition_versions: "cf7e50d4d0f8e8362e5898d3aa5fcead7c8ea1b6f65a8d9ac63d2a2dcac4ae7b",
+  playbook_definition_rules: "473428da47394e306c133aee88dc5ba870bfb272e7f5ae4df63671f60c726900",
+  playbook_definition_heads: "04d5272fbda207b1f53560ee14be4b33ae83386e01f31cffcd3c298740ab1062",
+  trade_review_playbook_definition_links: "5c96d77a2b36cad67e717daede9498add9a65026e07d3df5d1b61ea9f8c9537a",
+});
 
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;
 const CANONICAL_INTEGER_PATTERN = /^(?:0|-?[1-9][0-9]*)$/;
+const V5_TABLE_NAMES: ReadonlySet<string> = new Set(SQLITE_JOURNAL_ARCHIVE_V5_TABLES);
+
 
 export type SqliteArchiveColumnType = "INTEGER" | "TEXT";
 
@@ -181,12 +212,19 @@ export function tableDigestInput(table: Omit<SqliteArchiveTable, "tableSha256">)
 export function portableStateDigestInput(
   tables: readonly SqliteArchiveTable[],
 ): JournalArchiveJson {
+  const hasVersionedPlaybookState = tables.some((table) => (
+    V5_TABLE_NAMES.has(table.name) && table.rows.length > 0
+  ));
+
   return asArchiveJson({
     tableFormatVersion: 1,
     // Migration application timestamps describe the destination environment,
     // not the user's portable journal. Version/name/checksum remain in source.
     tables: tables
-      .filter((table) => table.name !== "schema_migrations")
+      .filter((table) => (
+        table.name !== "schema_migrations"
+        && (hasVersionedPlaybookState || !V5_TABLE_NAMES.has(table.name))
+      ))
       .map((table) => ({
         name: table.name,
         columns: table.columns.map((column) => ({
@@ -259,10 +297,10 @@ async function loadColumns(
     });
   });
   const actualSha256 = sha256Hex(JSON.stringify(columns));
-  const expectedSha256 = SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256[tableName];
+  const expectedSha256 = SQLITE_JOURNAL_ARCHIVE_V2_COLUMN_SHA256[tableName];
   if (actualSha256 !== expectedSha256) {
     throw new Error(
-      `Journal archive table ${tableName} column manifest does not match export v1 (expected ${expectedSha256}, received ${actualSha256}).`,
+      `Journal archive table ${tableName} column manifest does not match export v2 (expected ${expectedSha256}, received ${actualSha256}).`,
     );
   }
   return Object.freeze(columns);
@@ -329,7 +367,7 @@ export async function readSqliteJournalArchive(
     : requireSafeInteger(userVersionRows[0], "user_version");
   const current = MOBILE_SCHEMA_MIGRATIONS.at(-1);
   if (current === undefined || userVersion !== current.toVersion) {
-    throw new Error("The journal schema version is incompatible with export v1.");
+    throw new Error("The journal schema version is incompatible with export v2.");
   }
   await verifyMigrationHistory(database);
   const schemaRows = await database.query<SqlRow>(

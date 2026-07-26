@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-07-19",
+  "as_of": "2026-07-25",
   "title": "TradeZella benefit translation ledger for Hermes Journal",
   "scope": "A source-backed product decision ledger. TradeZella is a capability benchmark only; Hermes remains an original, local-first journal and does not copy TradeZella naming, copy, trade dress, or interaction design.",
   "method": "Official TradeZella product and help pages establish advertised capabilities. Repository paths establish current Hermes behavior and holds. Dispositions are roadmap decisions, not estimates of market share, feature quality, retention, profitability, or causal impact.",
@@ -88,17 +88,19 @@
       "hermes_evidence_paths": [
         "mobile/src/ui/trade-review-sheet.ts",
         "mobile/src/ui/trades-view.ts",
+        "mobile/src/application/prepare-playbook-definition.ts",
         "mobile/src/application/playbook-trade-scope.ts",
         "mobile/src/ui/playbook-trade-scope-view.ts",
         "mobile/e2e/playbook-trade-scope.spec.ts",
+        "mobile/e2e/playbook-library.spec.ts",
         "mobile/src/application/journal-store.ts",
         "docs/mobile/PRODUCT_BLUEPRINT.md"
       ],
-      "current_status": "Immutable executions, stable trade subjects, versioned review heads, notes, exact vocabulary facets, playbooks, rule outcomes, and user-confirmed risk evidence are implemented. Exact Playbook Scope and Draft Scope now reconcile the current playbook library, its completed-review counts, and separate current draft-assignment counts, then open the exact completed cohort or a positive current draft cohort in the Trade Browser without mutating review evidence. Screenshot attachments are tracked separately.",
+      "current_status": "Immutable executions, stable trade subjects, versioned review heads, notes, exact vocabulary facets, rule outcomes, and user-confirmed risk evidence are implemented. A saved playbook revision is applied explicitly and the review retains its exact stable definition ID, version ID, revision, name, and ordered rules after later edits or archive. Free-text remains ad hoc with a null definition link; Hermes never guesses from matching legacy review text. Exact Playbook Scope and Draft Scope remain derived cohort navigation. Screenshot attachments are tracked separately.",
       "disposition": "shipped",
       "rationale": "This is the central Hermes job and converts raw capture into reflection without altering execution facts.",
       "gate": "No financial metric may be inferred from free-text review fields; percent and R remain available only with versioned, inspectable denominators.",
-      "success_metric": "A keyboard and touch user can complete and later edit a review in the target under-60-second flow while all annotations survive a projection rebuild and archive round trip."
+      "success_metric": "A keyboard and touch user can complete and later edit a review in the target under-60-second flow while its explicit saved-revision snapshot or ad hoc null link survives projection rebuild and exact archive round trip."
     },
     {
       "id": "dashboard-calendar-continuation",
@@ -286,19 +288,25 @@
         }
       ],
       "hermes_evidence_paths": [
+        "mobile/src/application/prepare-playbook-definition.ts",
         "mobile/src/application/journal-store.ts",
+        "mobile/src/adapters/sqlite/schema/v5.ts",
+        "mobile/src/adapters/sqlite/sqlite-journal-store.ts",
+        "mobile/src/adapters/session-journal-store.ts",
         "mobile/src/ui/trade-review-sheet.ts",
+        "mobile/src/ui/playbook-library-view.ts",
         "mobile/src/application/playbook-trade-scope.ts",
         "mobile/src/ui/playbook-trade-scope-view.ts",
         "mobile/e2e/playbook-trade-scope.spec.ts",
+        "mobile/e2e/playbook-library.spec.ts",
         "mobile/src/core/plan-adherence-report.ts",
         "docs/mobile/PRODUCT_BLUEPRINT.md"
       ],
-      "current_status": "Current playbooks, ordered rules, review assignments, observational Plan Check reporting, and derived-only Exact Playbook Scope and Draft Scope are implemented. The scopes reconcile immutable library cards to exact current assignment identities, completed-review counts, and separate current draft counts, then link each card to its completed cohort or positive draft cohort. Standalone Playbook CRUD, user-facing template creation, and fuller vocabulary/playbook management remain open.",
+      "current_status": "Local Playbook Library V1 is delivered with stable IDs, immutable create/edit/archive/restore versions, exact ordered name/rule snapshots, deterministic current heads, explicit saved-revision review application, ad hoc null links, adapter parity, and exact current/legacy archive migration. Derived Exact Playbook Scope and Draft Scope still provide cohort navigation. User-authored reflection templates and fuller vocabulary management remain open.",
       "disposition": "prioritize-local",
-      "rationale": "Templates reduce review effort and reinforce Hermes's process-first positioning without creating signals or recommendations.",
-      "gate": "Templates must never auto-classify a trade, overwrite review evidence, or present observational cohort differences as causal or statistically significant.",
-      "success_metric": "A user can create, edit, apply, and export a reusable template with ordered rules; every saved application is explicit, versioned, and reproduced after restore."
+      "rationale": "Playbook CRUD is shipped; this combined domain remains a local priority only because user-authored reflection templates can reduce review effort without becoming signals or recommendations.",
+      "gate": "Templates must use explicit preview/application and never auto-classify a trade, overwrite evidence, or present observational cohort differences as causal or statistically significant.",
+      "success_metric": "A user can create, edit, preview, explicitly apply, export, and restore a reflection template with exact ordered content while ad hoc review work remains unaffected."
     },
     {
       "id": "reflection-rhythm",
@@ -383,12 +391,14 @@
         "mobile/src/ui/user-data-export.ts",
         "mobile/src/ui/user-data-restore.ts",
         "mobile/src/application/journal-archive.ts",
+        "mobile/src/adapters/sqlite/sqlite-journal-archive.ts",
+        "mobile/src/adapters/session-journal-store.ts",
         "docs/mobile/MAC_HANDOFF.md"
       ],
-      "current_status": "The iPhone-first shell, offline design, versioned export, and matching-runtime empty-journal restore are implemented in source and Linux evidence. Native acceptance, nonempty migration evidence, attachment lifecycle, and verified Delete All Data remain held.",
+      "current_status": "The iPhone-first shell and offline design are implemented. Current native export is sqlite-table-set payload v2/schema v5 (40 tables, 314 ordered columns) and browser development export is browser-session-state payload v3. Legacy native v1/schema v4 and browser v2 restore only after original state/report/summary verification, then migrate with an empty library and null review links. Current exact history, continued writes, and re-export are Linux/browser verified. Native acceptance, v4→v5 retained-data/interruption evidence, attachment lifecycle, and verified Delete All Data remain held.",
       "disposition": "prioritize-local",
       "rationale": "A dependable native data lifecycle is Hermes's clearest structural advantage over a broad web subscription and should precede hosted expansion.",
-      "gate": "Mac/iPhone acceptance is required for SQLCipher and Keychain lifecycle, Files import/export, photos, interruption and low-storage behavior, VoiceOver, and Dynamic Type. Delete All Data is irreversible and requires explicit human approval and recovery evidence first.",
+      "gate": "Mac/iPhone acceptance is required for v4→v5 migration, playbook history and exact review-link persistence, SQLCipher and Keychain lifecycle, Files/WKWebView, photos, interruption and low-storage behavior, VoiceOver, Dynamic Type, and physical-device restore. Delete All Data is irreversible and requires explicit human approval and recovery evidence first.",
       "success_metric": "On a current iPhone, export, empty-device restore, continued write, re-export, attachment add/remove, and approved delete-all journeys preserve or remove the documented database, Keychain, and file state exactly, including interruption tests and zero unintended network requests."
     },
     {

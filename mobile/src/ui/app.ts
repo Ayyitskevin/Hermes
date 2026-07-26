@@ -1,5 +1,8 @@
 import { JournalApplication } from "../application/journal-application";
-import type { JournalImportReceipt } from "../application/journal-store";
+import type {
+  JournalImportReceipt,
+  JournalPlaybookDefinitionRecord,
+} from "../application/journal-store";
 import { OnboardingPreferences } from "../application/onboarding-preferences";
 import {
   buildReviewQueue,
@@ -131,6 +134,10 @@ import {
 import { bindUserDataExport, userDataExportCard } from "./user-data-export";
 import { bindUserDataRestore, userDataRestoreCard } from "./user-data-restore";
 import { bindTradesView, tradesView } from "./trades-view";
+import {
+  bindPlaybookLibrary,
+  playbookLibrarySection,
+} from "./playbook-library-view";
 
 interface AppDependencies {
   readonly root: HTMLElement;
@@ -607,6 +614,7 @@ function journalView(
   snapshot: JournalWorkspaceSnapshot,
   playbookTradeScope: PlaybookTradeScopeProjection,
   planCheckContinuation: ReviewClearPlanCheckContinuation | null,
+  playbookLibrary: readonly JournalPlaybookDefinitionRecord[],
 ): string {
   const today = snapshot.provenance === "local"
     ? workspaceTodayIsoDate(snapshot.timeZone)
@@ -666,6 +674,10 @@ function journalView(
         ${snapshot.dailyJournal.length === 0 ? `<article class="empty-state"><h3>No daily reflections yet</h3><p>${snapshot.provenance === "local" ? "Capture process, emotion, or a lesson for any calendar day." : "Daily reflections appear here once your journal is established."}</p></article>` : ""}
       </div>
     </section>
+    ${playbookLibrarySection(
+      snapshot.provenance === "local" ? playbookLibrary : [],
+      snapshot.provenance === "local",
+    )}
     ${playbookTradeScopeSection(playbookTradeScope)}
   </section>`;
 }
@@ -739,6 +751,7 @@ function viewFor(
   importReceiptReviewPageStart: number,
   pendingImportReceiptReview: ImportReceiptReviewFailureContext | null,
   playbookTradeScope: PlaybookTradeScopeProjection | null,
+  playbookLibrary: readonly JournalPlaybookDefinitionRecord[],
 ): string {
   switch (tab) {
     case "dashboard": return dashboardView(
@@ -756,6 +769,7 @@ function viewFor(
         snapshot,
         playbookTradeScope,
         reviewClearPlanCheckContinuation,
+        playbookLibrary,
       );
     case "reports": return reportsView(snapshot);
     case "more": return moreView(
@@ -1134,6 +1148,7 @@ function bindOnboarding(
 
 export async function startApp({ root, application, onboarding }: AppDependencies): Promise<void> {
   let snapshot = await application.loadWorkspace();
+  let playbookLibrary = await application.loadPlaybookLibrary();
   root.innerHTML = shellTemplate();
   const screen = root.querySelector<HTMLElement>("#screen");
   const announcer = root.querySelector<HTMLElement>("#route-announcer");
@@ -1490,6 +1505,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         importReceiptReviewPageStart,
         tab === "more" ? pendingImportReceiptReview : null,
         playbookTradeScope,
+        playbookLibrary,
       );
       clearImportReceiptReviewViewBindings(root);
       if (pendingManualCaptureReference !== null) {
@@ -1642,6 +1658,22 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         },
       );
     }
+    if (tab === "journal") {
+      bindPlaybookLibrary(root, application, playbookLibrary, {
+        setBackgroundInert,
+        refresh: async (result, announcement) => {
+          playbookLibrary = result.library;
+          render("journal", false);
+          announceStatus(announcement);
+          const title = root.querySelector<HTMLElement>("#playbook-library-title");
+          if (title !== null) {
+            focusChromeSafeElement(root, title);
+          } else {
+            root.querySelector<HTMLElement>("#screen")?.focus({ preventScroll: true });
+          }
+        },
+      });
+    }
     if (tab === "journal" && playbookTradeScope !== null) {
       bindPlaybookTradeScope(root, playbookTradeScope, {
         openPlaybook: (playbookName, reviewState, expectedTradeCount) => {
@@ -1756,6 +1788,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
       if (!confirmedImportRecovery) {
         bindUserDataRestore(root, application, async (announcement) => {
           snapshot = await application.loadWorkspace();
+          playbookLibrary = await application.loadPlaybookLibrary();
           render(currentTab, false);
           announceStatus(announcement);
         });
@@ -1985,6 +2018,7 @@ export async function startApp({ root, application, onboarding }: AppDependencie
         announceStatus(announcement);
         return snapshot;
       },
+      snapshot.provenance === "local" ? playbookLibrary : [],
     );
     if (tab === "journal" || tab === "trades") {
       bindDailyJournalActions(
@@ -2477,6 +2511,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
+    if (mode === "local") {
+      playbookLibrary = await application.loadPlaybookLibrary();
+    }
     manualRecoveryScanIsPending = mode === "local";
     clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;
@@ -2497,6 +2534,9 @@ export async function startApp({ root, application, onboarding }: AppDependencie
     snapshot = mode === "local"
       ? await application.startJournal()
       : await application.exploreDemo();
+    if (mode === "local") {
+      playbookLibrary = await application.loadPlaybookLibrary();
+    }
     manualRecoveryScanIsPending = mode === "local";
     clearAllCaptureGuidanceForWorkspace();
     tradeBrowserState = EMPTY_TRADE_BROWSER_STATE;

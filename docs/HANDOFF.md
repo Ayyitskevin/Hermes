@@ -1,9 +1,118 @@
 # Hermes Journal — active mobile handoff
 
-Status: Account Review Coverage v1 locally verified · direct-main publication
-and exact-head hosted CI pending · updated 2026-07-19
+
+Status: Local Playbook Library V1 locally verified · final integration and
+publication evidence pending · updated 2026-07-25
 
 ## Current handoff
+
+task: Ship a local, user-owned Playbook Library with stable identity, immutable
+definition history, explicit review application, and exact export/restore
+compatibility without guessing from legacy review vocabulary.
+
+stage: codex
+
+lane: fleet-handoff
+
+produced:
+
+- Implemented Local Playbook Library V1 as a separate Core product increment
+  outside the preserved historical Slice D count. The existing 38 bounded Slice
+  D / 32 derived-only / six write-capable counters are not reclassified.
+- Stable playbook IDs own immutable create, edit, archive, and restore versions.
+  Each version binds its exact normalized name, ordered rules, predecessor,
+  lifecycle state, submission identity, revision, and monotonic recorded time;
+  only the deterministic current head changes.
+- Review application is explicit. A saved review retains the exact
+  `{id, versionId, revision}` definition snapshot selected by the user, including
+  historical name and ordered rules after a later rename/archive. Free-text
+  playbook work remains ad hoc with a null definition link. Hermes never guesses
+  or promotes legacy review-derived names into the editable library.
+- Added checksum-pinned schema v5 migration
+  `versioned_playbook_definition_library`, checksum
+  `52ab663289a86a97bab754ccacf58b9f111fa87a55c166162d343fb0ae115e52`.
+  Its five durable tables are `playbook_definitions`,
+  `playbook_definition_versions`, `playbook_definition_rules`,
+  `playbook_definition_heads`, and
+  `trade_review_playbook_definition_links`. SQLite constraints/triggers and the
+  store transaction keep identities/history immutable, heads forward-only,
+  names unique across active and archived heads, rules complete/ordered, and
+  review links exact.
+- Both SQLite and browser-session adapters expose the same library lifecycle,
+  idempotent exact retries, optimistic stale-head rejection, duplicate-name and
+  lifecycle errors, copy/transaction atomicity, exact historical retry results,
+  and deterministic current-head ordering.
+- The outer `hermes-journal-export` envelope remains v1. Current native export
+  is `sqlite-table-set` payload v2 for schema v5 (40 tables and 314 ordered
+  columns); current browser development export is `browser-session-state`
+  payload v3. Full definition/version/rule/head/submission/link history is
+  included and exact current restore/re-export preserves state/report/summary.
+- Restore accepts the prior schema-v4 native payload v1 and browser payload v2.
+  Each decoder verifies the original archive state, report, and summary before
+  migration. Legacy restore adds an empty explicit library and null definition
+  links; it never infers definitions from the older review vocabulary.
+- Added the Playbook Library screen and editor flow for create/edit/archive/
+  restore plus an explicit saved-revision selector in trade review. Ad hoc text
+  remains available and visibly unlinked. The production Chromium journey
+  covers a narrow offline flow, explicit apply, later rename, immutable saved
+  review snapshot, archive/restore, demo isolation, and zero external requests.
+- Updated README, Local Ledger, Product Blueprint, iOS Roadmap, Mac handoff, and
+  the generated TradeZella parity inputs/report. Playbook CRUD is delivered;
+  user-authored reflection templates remain open and are not conflated with
+  review-derived vocabulary.
+
+verified:
+
+- `cd mobile && npm run typecheck` — exit 0 on the hardened schema-v5 head.
+- `cd mobile && npx vitest run src/adapters/sqlite/schema/schema.test.ts` —
+  15/15 passed, including the final v5 checksum and exact-snapshot trigger
+  contract.
+- `cd mobile && npx vitest run src/adapters/session-journal-store.test.ts
+  src/adapters/session-journal-store.review.test.ts
+  src/adapters/session-journal-restore.test.ts` — 28/28 passed for lifecycle,
+  exact historical retry, explicit/historical review links, v3 history restore,
+  v2 migration, tamper rejection, continued write, and exact re-export.
+- `cd mobile && npx playwright test e2e/playbook-library.spec.ts` — 1/1 passed
+  in production Chromium at the narrow local boundary.
+- `jq empty docs/mobile/tradezella-parity/capability-ledger.json
+  docs/mobile/tradezella-parity/artifact.json` — exit 0; the ledger remains 20
+  domains with shipped/prioritize-local/gated-funded/non-goal counts 6/6/6/2.
+- `cd docs/mobile/tradezella-parity && node build-report.mjs artifact.json
+  report.html` — `ok: true`; validation, package, and verification passed; six
+  priority rows and 20 ledger domains reconciled; source dialog, desktop/mobile
+  viewports, and semantic fallback passed.
+- `git diff --check -- README.md docs/HANDOFF.md docs/mobile/PRODUCT_BLUEPRINT.md
+  docs/mobile/IOS_ROADMAP.md docs/mobile/LOCAL_LEDGER.md
+  docs/mobile/MAC_HANDOFF.md docs/mobile/tradezella-parity/` — exit 0 after the
+  generated report and source inputs were updated.
+
+assumptions:
+
+- The explicit definition library and legacy review-derived playbook vocabulary
+  remain different sources. Matching text is never identity evidence.
+- Linux SQL.js/Vitest and production Chromium prove deterministic repository,
+  archive, UI, and browser-accessibility contracts only. They do not prove the
+  Capacitor SQLite plugin, SQLCipher, Keychain, Files, WKWebView, lifecycle, or
+  physical-device behavior.
+
+open:
+
+- HOLD native acceptance until v4→v5 retained-data and interrupted-migration
+  replay, exact library/history persistence, review snapshot links, response-
+  loss reconciliation, native v1→v2 archive restore/re-export, SQLCipher,
+  Keychain, Files, backup/reinstall, lifecycle/multi-scene, VoiceOver, Dynamic
+  Type, hardware-keyboard, and physical-iPhone behavior are recorded on a
+  current Mac/iPhone. All are NOT RUN in this Linux lane.
+- User-authored reflection templates remain open. They must be separately
+  designed so application is explicit and never auto-classifies, overwrites
+  evidence, or implies causality.
+- Final integration counts, publication/CI evidence, guard-layer evidence, and
+  Sonnet Stage 2 sign-off remain downstream gates.
+
+## Prior milestone — Account Review Coverage v1
+
+Status: Account Review Coverage v1 locally verified · direct-main publication
+and exact-head hosted CI pending · updated 2026-07-19
 
 task: Add one checksum-pinned, count-only Account Review Coverage report that
 conserves every current trade across each retained account and routes only exact

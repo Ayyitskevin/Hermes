@@ -5,10 +5,12 @@ import type {
   CsvImportCommitResult,
   DailyJournalCommitResult,
   JournalImportReceipt,
+  JournalPlaybookDefinitionRecord,
   JournalRestoreCommitResult,
   JournalStore,
   JournalTradeReviewRecord,
   ManualExecutionCommitResult,
+  PlaybookDefinitionCommitResult,
   PreparedCsvImport,
   PreparedTradeReviewBatch,
   TradeReviewCommitResult,
@@ -16,6 +18,7 @@ import type {
 } from "./journal-store";
 import {
   JournalDailyEntryError,
+  JournalPlaybookDefinitionError,
   JournalRestoreError,
   JournalTradeReviewError,
 } from "./journal-store";
@@ -46,6 +49,12 @@ import {
   type PreparedDailyJournalEntry,
 } from "./prepare-daily-journal";
 import {
+  createPlaybookDefinitionSubmissionId,
+  preparePlaybookDefinition,
+  type PlaybookDefinitionInput,
+  type PreparedPlaybookDefinitionCommand,
+} from "./prepare-playbook-definition";
+import {
   workspaceSnapshotFromLedger,
 } from "./workspace-snapshot";
 
@@ -71,6 +80,16 @@ export class ManualExecutionCommitStatusUncertainError extends Error {
       { cause },
     );
     this.name = "ManualExecutionCommitStatusUncertainError";
+  }
+}
+
+export class PlaybookDefinitionCommitStatusUncertainError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Hermes could not confirm whether this exact playbook change committed. Keep this sheet open and retry the same save.",
+      { cause },
+    );
+    this.name = "PlaybookDefinitionCommitStatusUncertainError";
   }
 }
 
@@ -235,6 +254,61 @@ export class JournalApplication {
       throw new ManualExecutionCommitStatusUncertainError(error);
     }
     throw lastError;
+  }
+
+  async loadPlaybookLibrary(): Promise<readonly JournalPlaybookDefinitionRecord[]> {
+    if (this.viewMode === "demo") return Object.freeze([]);
+    return this.store.loadPlaybookLibrary();
+  }
+
+  createPlaybookDefinitionSubmissionId(): string {
+    this.assertLocalReviewMode();
+    return createPlaybookDefinitionSubmissionId();
+  }
+
+  preparePlaybookDefinition(
+    input: PlaybookDefinitionInput,
+  ): PreparedPlaybookDefinitionCommand {
+    this.assertLocalReviewMode();
+    return preparePlaybookDefinition(input);
+  }
+
+  async commitPlaybookDefinition(
+    prepared: PreparedPlaybookDefinitionCommand,
+  ): Promise<PlaybookDefinitionCommitResult> {
+    this.assertLocalReviewMode();
+    const result = await this.store.commitPlaybookDefinition(prepared);
+    this.viewMode = "local";
+    return result;
+  }
+
+  async commitPlaybookDefinitionSafely(
+    prepared: PreparedPlaybookDefinitionCommand,
+  ): Promise<PlaybookDefinitionCommitResult> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.commitPlaybookDefinition(prepared);
+      } catch (error) {
+        if (error instanceof JournalPlaybookDefinitionError) throw error;
+        lastError = error;
+      }
+    }
+    try {
+      const library = await this.store.loadPlaybookLibrary();
+      const current = library.find(({ id }) => id === prepared.playbookId);
+      if (current?.versionId !== prepared.versionId || current.revision !== prepared.revision) {
+        throw new PlaybookDefinitionCommitStatusUncertainError(lastError);
+      }
+      return {
+        outcome: "duplicate",
+        definition: current,
+        library,
+      };
+    } catch (error) {
+      if (error instanceof PlaybookDefinitionCommitStatusUncertainError) throw error;
+      throw new PlaybookDefinitionCommitStatusUncertainError(error);
+    }
   }
 
   createReviewSubmissionId(): string {
@@ -439,6 +513,7 @@ export class JournalApplication {
                 name: rule.text,
                 outcome: rule.outcome,
               })),
+              definition: current.playbookDefinition,
             },
         initialRisk: current?.initialRisk ?? null,
         plannedStop: current?.plannedStop ?? null,

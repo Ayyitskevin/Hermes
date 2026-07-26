@@ -8,6 +8,10 @@ Xcode installed.
 The current source contains 38 bounded Slice D increments: 32 derived-only and
 six write-capable exceptions. Reports exposes 12 semantic targets and
 ten governed reports. These source counts do not strengthen any native claim.
+Local Playbook Library V1 is a separate Core product increment outside that
+historical 38/32/6 tally; do not reclassify the counters. Its native acceptance
+is a new explicit row and remains NOT RUN until this procedure records it.
+
 
 ## Branch reconciliation record
 
@@ -218,6 +222,11 @@ and an App Store disclosure.
   statement/user-version boundary. Relaunch and confirm all ledger/review facts
   remain intact, the checksum-pinned receipt replays safely, and Daily Journal
   reads/writes begin only after schema v4 is fully acknowledged.
+- Repeat from a retained schema-v4 database while interrupting v4-to-v5 at the
+  statement/user-version boundary. Relaunch and confirm all execution, review,
+  and Daily Journal history remains exact, the checksum-pinned migration receipt
+  replays safely, exactly five playbook-library tables exist, and library/read/
+  review-link writes begin only after schema v5 is fully acknowledged.
 - Exercise a daylight-saving gap and repeated clock hour. The gap must fail;
   the repeated hour must require the explicit UTC-offset field and save the
   intended instant.
@@ -320,6 +329,30 @@ and an App Store disclosure.
   with VoiceOver, hardware keyboard, background/foreground, force quit/relaunch,
   two scenes, and 320/421-width 200% Dynamic Type before marking Exact Playbook
   Draft Scope native acceptance PASS.
+- Exercise Local Playbook Library V1 separately from the derived Journal cards.
+  Create one saved definition with a stable ID and ordered rules; edit/rename it,
+  archive it, and restore it. After each operation relaunch and confirm one
+  immutable successor version, exact predecessor/submission/revision, complete
+  ordered name/rule snapshot, and one deterministic current head. An exact retry
+  must return the historical result without another version; a changed retry or
+  stale head must fail without partial state.
+- Explicitly Apply the original saved revision to one trade review. Then rename
+  and archive the definition and confirm the saved review still exposes the
+  original exact `{id, versionId, revision}`, name, and ordered rules. Save a
+  separate free-text/ad hoc review and confirm its definition link stays null.
+  Seed legacy review text equal to a library name and prove Hermes neither
+  guesses nor promotes it into the editable library.
+- Force a lost bridge response before and after each lifecycle commit, then
+  restart/retry the frozen command. Prove pre-commit loss leaves no version and
+  post-commit loss reconciles the exact version. Repeat with background/
+  foreground, force quit/relaunch, and two scenes without head duplication.
+- Repeat create/edit/archive/restore and explicit review Apply with VoiceOver,
+  200% Dynamic Type, hardware and onscreen keyboards, and 320/421-point widths.
+  Confirm focus, announcements, errors, ordering, and the archived/active
+  distinction remain understandable. Record the SQLite five-table/head/link
+  evidence and zero network requests before marking Local Playbook Library
+  native acceptance PASS.
+
 - With VoiceOver and a hardware keyboard, confirm account/range/day/search/facet
   state survives tab navigation and valid ledger refreshes. Clearing a selected
   day must retain account/range and card filters; Clear search and filters must
@@ -547,11 +580,12 @@ and an App Store disclosure.
   requested—never saved or completed.
 - Confirm the plaintext warning before handoff, then reopen the saved file from
   Files with an approved diagnostic tool. Confirm the filename, custom JSON
-  media type/fallback behavior, format
-  v1, all schema-v4 table/column signatures, raw CSV/manual provenance,
-  historical/current trade and daily-review chains, formula definitions, stable
-  subjects, empty attachment catalog, and outer checksum. Do not log journal
-  content.
+  media type/fallback behavior, outer format v1, native `sqlite-table-set`
+  payload v2, schema v5 with 40 tables and 314 ordered columns, raw CSV/manual
+  provenance, historical/current trade and daily-review chains, the complete
+  playbook definition/version/rule/head/submission/link history, formula
+  definitions, stable subjects, empty attachment catalog, and outer checksum.
+  Do not log journal content.
 - Export the unchanged journal twice. Confirm state/report digests match while
   export timestamps/archive digests differ. Then mutate one fact and confirm the
   user-state digest changes.
@@ -561,8 +595,8 @@ and an App Store disclosure.
 - Confirm a file larger than 64 MiB is rejected before it is read. Exercise an
   approved near-67,108,864-byte fixture while observing peak memory and low
   storage; record any termination or duplicate in-memory copies.
-- Select the matching native `sqlite-table-set` v1 archive. Confirm preview
-  verifies all 35 tables and 280 ordered columns, shows recomputed workspace,
+- Select the matching native `sqlite-table-set` payload-v2 archive. Confirm
+  preview verifies all 40 tables and 314 ordered columns, shows recomputed workspace,
   count, and digest claims alongside checksum-verified export time and
   adapter-validated payload metadata, and leaves the empty journal unchanged
   after the trial transaction rolls back.
@@ -572,17 +606,24 @@ and an App Store disclosure.
 - Cancel preview and confirm the prepared approval is invalidated and focus
   returns to the file chooser. Change the file during an asynchronous preview
   and confirm stale results never enable restore.
-- Try a browser `browser-session-state` v2 file, browser v1 file, wrong payload
-  version, stale
-  migration set, changed table/column shape, noncanonical/out-of-range integer,
-  row/table/state/report/summary tamper, and an attachment-bearing fixture.
-  Every case must fail visibly without changing the destination; do not log
-  journal contents.
+- Separately restore a valid legacy schema-v4 native payload v1 and a valid
+  legacy browser payload v2 in their respective runtimes. Before migration, each
+  must satisfy its original state/report/summary claims; afterward the explicit
+  playbook library must be empty and every review-definition link null. No
+  legacy review name may become a definition. Continue one write and confirm the
+  current re-export is native v2 or browser v3 as appropriate.
+- Try a browser payload v3 in the native adapter, browser v1, pre-v4 native,
+  wrong payload version, changed table/column shape, noncanonical/out-of-range
+  integer, row/table/state/report/summary tamper, and an attachment-bearing
+  fixture. Every incompatible or tampered case must fail visibly without
+  changing the destination; do not log journal contents.
 - Confirm the final checkbox is required, then restore the valid native archive
   in airplane mode. Force quit/relaunch and reconcile raw provenance, inactive
   history, trade-review and Daily Journal chains/heads/ordered vocabulary,
-  metric definitions, stable subjects, ledger, report digest, and state digest
-  against the source. Save another reflection after restore, export again, and
+  metric definitions, stable subjects, complete immutable playbook history and
+  exact review-definition snapshots, ledger, report digest, summary, and state
+  digest against the source. Save another reflection and playbook successor
+  after restore, export again, and
   restore that file into a second empty container to prove continued writes.
   After each successful restore refresh, confirm focus lands on the stable
   rendered screen rather than the removed commit control or browser chrome.
@@ -915,6 +956,7 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
 | Exact Playbook Draft Scope | status | live separate completed/draft count reconciliation + conditional draft action + exact draft cohort + all-state clear + disappearing-last-draft/tamper rollback + no editor auto-open + VoiceOver/keyboard/layout/lifecycle/SQLite/preference/network evidence |
 | Daily Reflection Return Focus | status | direct/replay/refresh exact-date focus + fallback/lifecycle evidence |
 | Exact Scoped Activity-Day Stepper | status | scoped adjacency + retained filters + cross-month/tamper/focus/lifecycle evidence |
+| Local Playbook Library | status | v4→v5 replay + five tables + stable IDs/immutable lifecycle/current heads + explicit historical review snapshot/ad hoc null link + legacy v1 migration/current v2 exact re-export + SQLCipher/Files/lifecycle/accessibility evidence |
 
     open: <every skipped, blocked, failed, or ambiguous item>
 
@@ -945,6 +987,13 @@ PASS, FAIL, NOT RUN, or BLOCKED; a blank row is not a pass.
   teardown ownership contract only. Native Keychain/integrity/connection
   failure injection, same-journal retry, close-failure relaunch, VoiceOver, and
   Dynamic Type remain unobserved.
+- Local Playbook Library native acceptance is NOT RUN. Linux SQL.js and
+  production Chromium prove source/repository/browser behavior only. Record
+  v4→v5 retained-data/interruption replay, all five durable tables, immutable
+  lifecycle history, deterministic heads, exact review links, response-loss
+  retry, legacy native-v1 migration/current-v2 exact re-export, SQLCipher,
+  Keychain, Files, WKWebView, background/foreground, multi-scene, VoiceOver,
+  Dynamic Type, hardware keyboard, and physical-iPhone evidence before PASS.
 - Native plugin diagnostics and error logging have not been audited on device.
   Do not claim that journal paths or technical failure details stay out of the
   Xcode/device console until that dependency/runtime audit has recorded evidence.

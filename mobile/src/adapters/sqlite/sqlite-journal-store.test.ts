@@ -7,7 +7,10 @@ import type {
   SqlRow,
   SqlRunResult,
 } from "../../application/sql-database";
-import type { JournalLedgerSnapshot } from "../../application/journal-store";
+import type {
+  JournalLedgerSnapshot,
+  JournalPlaybookDefinitionRecord,
+} from "../../application/journal-store";
 import {
   createJournalExportArtifact,
   parseJournalArchive,
@@ -21,6 +24,7 @@ import {
   prepareManualExecution,
   type ManualExecutionInput,
 } from "../../application/prepare-manual-execution";
+import { preparePlaybookDefinition } from "../../application/prepare-playbook-definition";
 import {
   type PreparedTradeReview,
   prepareTradeReview,
@@ -111,6 +115,8 @@ class SqlJsDatabase implements SqlDatabase {
 class RestoreFaultDatabase implements SqlDatabase {
   private failExecutionInsertAt: number | null = null;
   private executionInsertCount = 0;
+  private failPlaybookRuleInsertAt: number | null = null;
+  private playbookRuleInsertCount = 0;
   private failNextQuery = false;
   private armPostCommitVerificationFailure = false;
   private loseNextTransactionResponse = false;
@@ -121,6 +127,11 @@ class RestoreFaultDatabase implements SqlDatabase {
     this.failExecutionInsertAt = number;
     this.executionInsertCount = 0;
   }
+  failOnPlaybookRuleInsert(number: number): void {
+    this.failPlaybookRuleInsertAt = number;
+    this.playbookRuleInsertCount = 0;
+  }
+
 
   loseNextCommittedResponse(): void {
     this.loseNextTransactionResponse = true;
@@ -143,6 +154,16 @@ class RestoreFaultDatabase implements SqlDatabase {
       if (this.executionInsertCount === this.failExecutionInsertAt) {
         this.failExecutionInsertAt = null;
         throw new Error("Injected restore insert failure.");
+      }
+    }
+    if (
+      this.failPlaybookRuleInsertAt !== null
+      && statement.startsWith("INSERT INTO playbook_definition_rules")
+    ) {
+      this.playbookRuleInsertCount += 1;
+      if (this.playbookRuleInsertCount === this.failPlaybookRuleInsertAt) {
+        this.failPlaybookRuleInsertAt = null;
+        throw new Error("Injected playbook rule insert failure.");
       }
     }
     return this.delegate.run(statement, values);
@@ -351,6 +372,37 @@ function preparedManual(
     fee: "0.10",
     executedAt: "2026-07-01T09:30:00",
     ...overrides,
+  });
+}
+
+function preparedPlaybookCreate(
+  submissionDigit: string,
+  name = "Momentum",
+  rules: readonly string[] = ["Wait for confirmation", "Respect the stop"],
+) {
+  return preparePlaybookDefinition({
+    submissionId: submissionDigit.repeat(64),
+    action: "create",
+    playbookId: null,
+    expectedPreviousVersionId: null,
+    name,
+    rules,
+  });
+}
+
+function preparedPlaybookRevision(
+  submissionDigit: string,
+  action: "edit" | "archive" | "restore",
+  current: JournalPlaybookDefinitionRecord,
+  overrides: { readonly name?: string; readonly rules?: readonly string[] } = {},
+) {
+  return preparePlaybookDefinition({
+    submissionId: submissionDigit.repeat(64),
+    action,
+    playbookId: current.id,
+    expectedPreviousVersionId: current.versionId,
+    name: overrides.name ?? current.name,
+    rules: overrides.rules ?? current.rules,
   });
 }
 
@@ -888,7 +940,7 @@ describe("SqliteJournalStore", () => {
       const archive = parseJournalArchive(artifact.contents);
       expect(archive).toEqual(artifact.archive);
       expect(artifact.mediaType).toBe("application/vnd.hermes.journal+json");
-      expect(archive.payload).toMatchObject({ kind: "sqlite-table-set", version: 1 });
+      expect(archive.payload).toMatchObject({ kind: "sqlite-table-set", version: 2 });
       expect(archive.stateSha256).toMatch(/^[0-9a-f]{64}$/);
       expect(archive.reportSha256).toMatch(/^[0-9a-f]{64}$/);
 
@@ -1096,7 +1148,7 @@ describe("SqliteJournalStore", () => {
       expect(prepared.preview).toMatchObject({
         target: "empty",
         payloadKind: "sqlite-table-set",
-        payloadVersion: 1,
+        payloadVersion: 2,
         stateSha256: artifact.archive.stateSha256,
         reportSha256: artifact.archive.reportSha256,
         summary: artifact.archive.summary,
@@ -2327,6 +2379,304 @@ describe("SqliteJournalStore", () => {
         database,
         "SELECT recorded_at_ms FROM import_rollbacks LIMIT 1",
       )).toBe(2_000);
+    } finally {
+      await store.close();
+    }
+  });
+  it("commits playbook definition lifecycle transitions with stable identity and deterministic heads", async () => {
+    const { database, store } = await createHarness();
+    try {
+      await store.commitCsvImport(preparedCsv());
+
+      const create = preparedPlaybookCreate("1", "Zulu");
+      const created = await store.commitPlaybookDefinition(create);
+      expect(created).toMatchObject({
+        outcome: "committed",
+        definition: {
+          id: create.playbookId,
+          versionId: create.versionId,
+          version: 1,
+          revision: create.revision,
+          name: "Zulu",
+          state: "active",
+          rules: ["Wait for confirmation", "Respect the stop"],
+        },
+      });
+
+      const duplicate = await store.commitPlaybookDefinition(create);
+      expect(duplicate).toMatchObject({
+        outcome: "duplicate",
+        definition: { id: created.definition.id, versionId: created.definition.versionId },
+      });
+      expect(await count(database, "playbook_definition_versions")).toBe(1);
+
+      await expect(store.commitPlaybookDefinition(
+        preparedPlaybookCreate("1", "Changed after submission"),
+      )).rejects.toMatchObject({ conflict: { code: "submission_changed" } });
+      await expect(store.commitPlaybookDefinition(
+        preparedPlaybookCreate("2", "zULU"),
+      )).rejects.toMatchObject({ conflict: { code: "duplicate_name" } });
+      expect(await count(database, "playbook_definitions")).toBe(1);
+
+      const staleEdit = preparedPlaybookRevision("4", "edit", created.definition, {
+        name: "Stale edit",
+      });
+      const edited = await store.commitPlaybookDefinition(
+        preparedPlaybookRevision("3", "edit", created.definition, {
+          name: "Gamma",
+          rules: ["Enter on the close", "Risk one unit"],
+        }),
+      );
+      expect(edited.definition).toMatchObject({
+        id: created.definition.id,
+        version: 2,
+        name: "Gamma",
+        state: "active",
+        rules: ["Enter on the close", "Risk one unit"],
+      });
+      const exactHistoricalRetry = await store.commitPlaybookDefinition(create);
+      expect(exactHistoricalRetry).toMatchObject({
+        outcome: "duplicate",
+        definition: {
+          id: created.definition.id,
+          versionId: created.definition.versionId,
+          version: 1,
+          name: "Zulu",
+        },
+        library: [{
+          versionId: edited.definition.versionId,
+          version: 2,
+          name: "Gamma",
+        }],
+      });
+      await expect(store.commitPlaybookDefinition(staleEdit))
+        .rejects.toMatchObject({ conflict: { code: "definition_changed" } });
+
+      const archived = await store.commitPlaybookDefinition(
+        preparedPlaybookRevision("5", "archive", edited.definition),
+      );
+      expect(archived.definition).toMatchObject({
+        id: created.definition.id,
+        version: 3,
+        name: "Gamma",
+        state: "archived",
+        rules: edited.definition.rules,
+      });
+      expect(await store.loadPlaybookLibrary()).toEqual([archived.definition]);
+
+      await expect(store.commitPlaybookDefinition(
+        preparedPlaybookCreate("6", "gAmMa"),
+      )).rejects.toMatchObject({ conflict: { code: "duplicate_name" } });
+      await expect(store.commitPlaybookDefinition(
+        preparedPlaybookRevision("7", "edit", archived.definition, { name: "Not allowed" }),
+      )).rejects.toMatchObject({ conflict: { code: "invalid_transition" } });
+
+      const restored = await store.commitPlaybookDefinition(
+        preparedPlaybookRevision("8", "restore", archived.definition),
+      );
+      expect(restored.definition).toMatchObject({
+        id: created.definition.id,
+        version: 4,
+        name: "Gamma",
+        state: "active",
+      });
+      const alpha = await store.commitPlaybookDefinition(
+        preparedPlaybookCreate("9", "Alpha", ["Define invalidation"]),
+      );
+      expect((await store.loadPlaybookLibrary()).map(({ name }) => name))
+        .toEqual(["Alpha", "Gamma"]);
+      expect(alpha.library.map(({ id }) => id))
+        .toEqual([alpha.definition.id, restored.definition.id]);
+
+      expect(await database.query(
+        "SELECT version_number, action, state FROM playbook_definition_versions "
+          + "WHERE playbook_id = ? ORDER BY version_number",
+        [created.definition.id],
+      )).toEqual([
+        { version_number: 1, action: "create", state: "active" },
+        { version_number: 2, action: "edit", state: "active" },
+        { version_number: 3, action: "archive", state: "archived" },
+        { version_number: 4, action: "restore", state: "active" },
+      ]);
+      expect(await count(database, "playbook_definitions")).toBe(2);
+      expect(await count(database, "playbook_definition_versions")).toBe(5);
+      expect(await count(database, "playbook_definition_heads")).toBe(2);
+      await expect(database.run(
+        "UPDATE playbook_definition_versions SET name_snapshot = 'Mutated' WHERE id = ?",
+        [created.definition.versionId],
+      )).rejects.toThrow(/immutable/);
+      await expect(database.run(
+        "UPDATE playbook_definition_rules SET rule_text_snapshot = 'Mutated' "
+          + "WHERE definition_version_id = ? AND ordinal = 0",
+        [created.definition.versionId],
+      )).rejects.toThrow(/immutable/);
+      await expectHealthyDatabase(database);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("rolls back incomplete playbook versions and recovers an exact lost-response retry", async () => {
+    const harness = await createHarness();
+    const faultDatabase = new RestoreFaultDatabase(harness.database);
+    const store = new SqliteJournalStore(faultDatabase, deterministicRuntime());
+    try {
+      await store.commitCsvImport(preparedCsv());
+      const command = preparedPlaybookCreate("a");
+
+      faultDatabase.failOnPlaybookRuleInsert(2);
+      await expect(store.commitPlaybookDefinition(command))
+        .rejects.toThrow("Injected playbook rule insert failure.");
+      expect(await count(faultDatabase, "playbook_definitions")).toBe(0);
+      expect(await count(faultDatabase, "playbook_definition_versions")).toBe(0);
+      expect(await count(faultDatabase, "playbook_definition_rules")).toBe(0);
+      expect(await count(faultDatabase, "playbook_definition_heads")).toBe(0);
+
+      faultDatabase.loseNextCommittedResponse();
+      await expect(store.commitPlaybookDefinition(command))
+        .rejects.toThrow("Injected committed response loss.");
+      const recovered = await store.commitPlaybookDefinition(command);
+      expect(recovered).toMatchObject({
+        outcome: "duplicate",
+        definition: {
+          id: command.playbookId,
+          versionId: command.versionId,
+          revision: command.revision,
+          version: 1,
+        },
+      });
+      expect(await count(faultDatabase, "playbook_definitions")).toBe(1);
+      expect(await count(faultDatabase, "playbook_definition_versions")).toBe(1);
+      expect(await count(faultDatabase, "playbook_definition_rules")).toBe(2);
+      expect(await count(faultDatabase, "playbook_definition_heads")).toBe(1);
+      await expectHealthyDatabase(faultDatabase);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("loads exact historical playbook links after rename and archive while legacy reviews stay null", async () => {
+    const { database, store } = await createHarness();
+    try {
+      const twoTradeCsv = "Execution ID,Symbol,Side,Quantity,Price,Fee,Currency,Timestamp\r\n"
+        + "fill-1,AAPL,BTO,2,100,0.10,USD,2026-07-01T13:30:00Z\r\n"
+        + "fill-2,AAPL,STC,2,110,0.10,USD,2026-07-01T14:30:00Z\r\n"
+        + "fill-3,MSFT,BTO,1,400,0.10,USD,2026-07-01T15:30:00Z\r\n"
+        + "fill-4,MSFT,STC,1,410,0.10,USD,2026-07-01T16:30:00Z";
+      const imported = await store.commitCsvImport(preparedCsv(twoTradeCsv));
+      const firstSubjectId = imported.ledger.tradeSubjects[0]?.tradeSubjectId;
+      const secondSubjectId = imported.ledger.tradeSubjects[1]?.tradeSubjectId;
+      if (firstSubjectId === undefined || secondSubjectId === undefined) {
+        throw new Error("Expected two durable trade subjects.");
+      }
+
+      const firstVersion = (await store.commitPlaybookDefinition(
+        preparedPlaybookCreate("b"),
+      )).definition;
+      const renamed = (await store.commitPlaybookDefinition(
+        preparedPlaybookRevision("c", "edit", firstVersion, {
+          name: "Momentum revised",
+          rules: ["Enter after the close", "Use a hard stop"],
+        }),
+      )).definition;
+      const archived = (await store.commitPlaybookDefinition(
+        preparedPlaybookRevision("d", "archive", renamed),
+      )).definition;
+      expect(archived.state).toBe("archived");
+
+      const historicalReference = {
+        id: firstVersion.id,
+        versionId: firstVersion.versionId,
+        revision: firstVersion.revision,
+      };
+      const batch = preparedReviewBatch("historical-definition-and-legacy", [
+        preparedReview(secondSubjectId, "f", {
+          playbook: {
+            name: "MOMENTUM",
+            rules: [
+              { name: "WAIT FOR CONFIRMATION", outcome: "followed" },
+              { name: "RESPECT THE STOP", outcome: "followed" },
+            ],
+          },
+        }),
+        preparedReview(firstSubjectId, "e", {
+          playbook: {
+            name: firstVersion.name,
+            definition: historicalReference,
+            rules: firstVersion.rules.map((name) => ({
+              name,
+              outcome: "followed" as const,
+            })),
+          },
+        }),
+      ]);
+      const committed = await store.commitTradeReviews(batch);
+      expect(committed.outcome).toBe("committed");
+      const historicalReview = committed.ledger.tradeReviews.find(
+        ({ tradeSubjectId }) => tradeSubjectId === firstSubjectId,
+      );
+      const legacyReview = committed.ledger.tradeReviews.find(
+        ({ tradeSubjectId }) => tradeSubjectId === secondSubjectId,
+      );
+      expect(historicalReview).toMatchObject({
+        playbookName: firstVersion.name,
+        playbookDefinition: historicalReference,
+      });
+      expect(historicalReview?.rules.map(({ text }) => text)).toEqual(firstVersion.rules);
+      expect(legacyReview).toMatchObject({
+        playbookName: "MOMENTUM",
+        playbookDefinition: null,
+      });
+      expect(legacyReview?.rules.map(({ text }) => text)).toEqual([
+        "WAIT FOR CONFIRMATION",
+        "RESPECT THE STOP",
+      ]);
+      expect(committed.ledger.playbooks).toEqual([expect.objectContaining({
+        name: "MOMENTUM",
+      })]);
+
+      const retry = await store.commitTradeReviews(batch);
+      expect(retry).toMatchObject({
+        outcome: "duplicate",
+        reviewIds: committed.reviewIds,
+      });
+      expect(await database.query(
+        "SELECT review_version_id, playbook_id, definition_version_id, revision_sha256 "
+          + "FROM trade_review_playbook_definition_links",
+      )).toEqual([{
+        review_version_id: historicalReview?.id,
+        playbook_id: historicalReference.id,
+        definition_version_id: historicalReference.versionId,
+        revision_sha256: historicalReference.revision,
+      }]);
+
+      const reloaded = await store.load();
+      expect(reloaded.tradeReviews.find(
+        ({ tradeSubjectId }) => tradeSubjectId === firstSubjectId,
+      )?.playbookDefinition).toEqual(historicalReference);
+      expect(reloaded.tradeReviews.find(
+        ({ tradeSubjectId }) => tradeSubjectId === secondSubjectId,
+      )?.playbookDefinition).toBeNull();
+
+      if (historicalReview === undefined) throw new Error("Expected the historical review.");
+      const mismatched = preparedReview(firstSubjectId, "0", {
+        expectedPreviousReviewId: historicalReview.id,
+        playbook: {
+          name: archived.name,
+          definition: historicalReference,
+          rules: archived.rules.map((name) => ({
+            name,
+            outcome: "followed" as const,
+          })),
+        },
+      });
+      await expect(store.commitTradeReviews(preparedReviewBatch(
+        "mismatched-historical-definition",
+        [mismatched],
+      ))).rejects.toMatchObject({ conflict: { code: "review_changed" } });
+      expect(await count(database, "trade_review_versions")).toBe(2);
+      expect(await count(database, "trade_review_playbook_definition_links")).toBe(1);
+      await expectHealthyDatabase(database);
     } finally {
       await store.close();
     }
