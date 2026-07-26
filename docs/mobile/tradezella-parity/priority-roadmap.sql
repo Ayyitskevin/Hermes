@@ -1,4 +1,4 @@
--- Source: capability-ledger.json (schema_version 1, as_of 2026-07-19).
+-- Source: capability-ledger.json (schema_version 1, as_of 2026-07-25).
 -- Sequence is a product recommendation, not measured impact or adoption.
 -- build-report.mjs proves that row count and sequence match the prioritize-local
 -- ledger count; recommendation text remains an explicitly reviewed decision.
@@ -16,10 +16,10 @@ WITH priority_roadmap(sequence, capability, first_increment, decision_gate, succ
       'Implement the first parser only after an anonymized real-format fixture and timezone, fee, identity, and asset semantics exist.',
       'No guessed format, credential storage, silent fallback, or broader asset claim.',
       'Golden files reconcile every row; repeat imports are idempotent and changed payloads fail visibly.'),
-    (4, 'Playbook and template management',
-      'Use the shipped derived-only Exact Playbook Scope and Draft Scope as the read-only entry points, then add standalone local CRUD for reusable playbooks, ordered rules, and user-authored reflection templates.',
-      'Templates never auto-classify, overwrite evidence, or imply causality.',
-      'Create, edit, apply, export, and restore reproduce exact ordered content and explicit application evidence.'),
+    (4, 'User-authored reflection templates',
+      'Build explicit preview and application for user-authored reflection templates on the shipped stable-ID, immutable-version Local Playbook Library; fuller vocabulary remains separate.',
+      'No auto-classification, evidence overwrite, guessed legacy promotion, or causal implication.',
+      'Create, edit, preview, explicitly apply, export, and restore reproduce exact ordered template content while ad hoc reviews remain unlinked and unchanged.'),
     (5, 'Deeper observational reports',
       'Use the shipped count-only Symbol Breakdown and Account Review Coverage foundations; define each later timing, drawdown, or financial-comparison family separately.',
       'Every report needs a version, checksum, conservation, exclusions, restore equality, and exact drill-down.',

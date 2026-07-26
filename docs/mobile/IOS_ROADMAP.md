@@ -1,6 +1,6 @@
 # Hermes Journal iOS product roadmap
 
-Status: active delivery roadmap · updated 2026-07-19
+Status: active delivery roadmap · updated 2026-07-25
 
 The authoritative product, audience, stack, pricing, and validation decisions
 live in [the product blueprint](PRODUCT_BLUEPRINT.md). This document tracks the
@@ -60,14 +60,14 @@ under the provisional identifier until that gate is cleared.
   Preview Feedback Focus v1, Import Receipt Reconciliation v1, Daily Reflection
   Rhythm v1, Guided Account Overview v1, Manual Capture Review Continuation v1,
   Generic CSV Receipt Review Continuation v1, Compact Trades Filters v1,
-  Quick Review Continuation v1, Dashboard Import Continuation v1, export, and
-  matching-runtime local restore are implemented.
-  Browser Recovery
-  Continuity proves a restored daily draft can append and survive a second
-  restore; Exact-Command Recovery proves an ambiguous daily save retains and
-  replays only its original command. However, native restore acceptance,
-  verified deletion, deeper reports, attachments, and Mac/device evidence
-  remain incomplete.
+  Quick Review Continuation v1, Dashboard Import Continuation v1, Local
+  Playbook Library V1, export, and matching-runtime local restore are
+  implemented. Browser Recovery Continuity proves a restored daily draft can
+  append and survive a second restore; Exact-Command Recovery proves an
+  ambiguous daily save retains and replays only its original command. However,
+  native schema-v5/playbook persistence and restore acceptance, verified
+  deletion, deeper reports, attachments, and Mac/device evidence remain
+  incomplete.
 
 TradeZella's current help-center pricing, reverified 2026-07-17, lists Essential
 at $35 monthly/$315 annually, Pro at $59/$531, and Ultra at $99/$891. That gives
@@ -283,39 +283,40 @@ observed plugin/device behavior:
 - Trade-detail execution inspection, durable review edits, pending/draft/
   completed queues, atomic batch tagging, and session streaks that follow the
   blueprint's any-execution-date/at-least-one-saved-review definition.
-- Slice C-B user-owned data v1: Slice C-A's transactional native table-set and
-  development-only browser export now have matching-runtime local restore
-  implementations. The native restore adapter, covered by Linux repository and
-  codec tests, accepts only current-migration `sqlite-table-set` v1 and verifies
-  the checksum, 35 tables, 280 ordered columns, canonical rows/signed integers,
-  table/state digests, and recomputed summary without executing archive SQL.
-  Preview trial-restores in the real destination transaction, verifies table,
-  report, summary, foreign-key, and `quick_check` evidence, then rolls back.
-  Commit reparses/rederives, atomically rechecks empty state, verifies inside
-  the transaction and after commit, and reconciles an exact already-restored
-  retry without duplicating data. Different nonempty state is never merged or
-  overwritten.
-- Browser development accepts only `browser-session-state` v2 and is not native
-  recovery evidence. The local UI is absent in demo, blocks nonempty journals,
-  requires a verified preview and explicit confirmation, rejects `File.size`
-  above 64 MiB before reading, and relies on an independent 67,108,864-byte
-  UTF-8 parser limit.
-- Recovery Continuity v1 adds browser composition evidence without changing
-  those contracts: a UI-authored daily draft survives offline empty-session
-  restore, appends exactly one successor through the restored optimistic head,
-  re-exports with two versions/one head/two submissions, and survives a second
-  restore. A delayed file read that is superseded by another selection cannot
-  expose preview evidence or approval, and successful restore focuses the
-  stable rendered screen.
-- The current matching-runtime archive is restorable but is not a complete
-  native backup: attachment catalog v1 is empty, archives with attachments are
-  rejected, and native Files/lifecycle/low-storage/near-limit-memory behavior
-  remains unverified. Delete All Data is unavailable.
-- Compatibility remains exact-runtime during pre-release: this build rejects
-  browser v1 and pre-v4 native table sets. A legacy file must be restored in its
-  exact old runtime, then the live journal opened/migrated and exported again.
-  On-device v3→v4 migration exists but retained-data/interruption proof remains
-  a Mac/iPhone gate.
+- Local Playbook Library V1 provides stable definition IDs, immutable create/
+  edit/archive/restore versions, exact ordered name/rule snapshots, and
+  deterministic current heads. Applying a saved revision is explicit and binds
+  that immutable identity to the review. Free-text stays ad hoc with a null
+  link, and legacy review-derived names are never guessed or promoted. This is
+  a separate Core increment outside the preserved 38 Slice D / 32 derived-only /
+  six write-capable counters. User-authored reflection templates remain open.
+- Slice C-B user-owned data v1 keeps the outer `hermes-journal-export` envelope
+  at v1. Current native export is `sqlite-table-set` payload v2 for schema v5
+  with 40 tables and 314 ordered columns; current browser development export is
+  `browser-session-state` payload v3. Both include complete playbook definition/
+  version/rule/head/submission/link history. Trial restore and commit recompute
+  table, state, governed-report, summary, foreign-key, and `quick_check`
+  evidence, reject different nonempty state, and reconcile an exact already-
+  restored retry.
+- Restore also accepts prior schema-v4 native payload v1 and browser payload v2,
+  but only after verifying their original state, report, and summary claims.
+  Migration creates an empty explicit library and null review-definition links;
+  it never promotes legacy text. Current v2/schema-v5 and browser-v3 round trips
+  preserve full history, continued immutable writes, and exact re-export.
+- Browser development remains non-native evidence. The local UI is absent in
+  demo, blocks nonempty journals, requires verified preview and confirmation,
+  rejects `File.size` above 64 MiB before reading, and enforces an independent
+  67,108,864-byte UTF-8 parser limit.
+- Recovery Continuity v1 still proves that a restored daily draft can append and
+  survive a second restore, and superseded file reads cannot expose approval.
+  Current playbook restore tests additionally prove exact history and links,
+  continued writes, and deterministic re-export.
+- The current archive remains incomplete as a native backup: attachment catalog
+  v1 is empty, archives with attachments are rejected, and native Files,
+  WKWebView/lifecycle, low-storage, near-limit-memory, SQLCipher/Keychain,
+  VoiceOver, Dynamic Type, and physical-device behavior are NOT RUN. Delete All
+  Data is unavailable. Browser v1 and pre-v4 native table sets are unsupported;
+  on-device v4→v5 retained-data/interruption proof remains a Mac/iPhone gate.
 - The first governed insight slice is local and derived-only: Plan Check uses
   current projections and current completed review heads to reconcile exact
   followed/broken cash cohorts, accepts only replay-matching `result-r-v1`
@@ -886,8 +887,9 @@ Still required in Phase 1:
   journal opens, clean retry reopens the same data, and unconfirmed teardown
   requires a full app relaunch at 320 CSS pixels and 200% Dynamic Type.
 - Deepen the delivered Trades review detail and scope with saved presets,
-  optional persistent/report scope, fuller account management,
-  vocabulary/playbook management, and the remaining reconciled report families.
+  optional persistent/report scope, fuller account and vocabulary management,
+  user-authored reflection templates, and the remaining reconciled report
+  families. Stable-ID Playbook CRUD itself is delivered.
 - Add a human-gated generic-CSV asset-class contract before claiming ETF/
   options/futures/crypto file coverage; the current generic CSV adapter
   intentionally records rows as stock.
@@ -912,9 +914,9 @@ passes duplicate, corruption, currency, fee, partial-fill, and long/short tests.
 - Add prioritized broker-specific CSV adapters behind the generic mapping core.
 - Add options/futures contract fields and commission-aware calculations.
 - Add attachments/screenshots with quota, export, deletion, and orphan cleanup.
-- Add templates, reminders, saved view presets only after an approved encrypted
-  preference owner/migration and archive-export exclusion contract, fuller vocabulary/playbook
-  management, drawdown/time-of-day/comparison reports, deeper setup
+- Add user-authored reflection templates, reminders, and saved view presets only
+  after their explicit-application and protected-preference contracts; add fuller
+  vocabulary management, drawdown/time-of-day/comparison reports, deeper setup
   comparisons, and explainable report drill-down.
 - Add app-local privacy policy, help, disclaimers, and a complete data-management surface.
 - Add optional local or user-funded intelligence only after privacy and cost review.
@@ -996,6 +998,18 @@ The Report, Dashboard, and Quick Review continuations reuse the existing
 versioned trade-review path; the calendar-day and rhythm continuations reuse the
 existing Daily Journal path without changing either persistence contract. Exact
 Playbook Scope and Draft Scope add no durable state.
+Local Playbook Library V1 is a separate Core product increment outside that
+historical tally. Schema v5 adds exactly five durable tables for stable IDs,
+immutable lifecycle versions, ordered rules, deterministic heads, and exact
+review-definition snapshots; checksum
+`52ab663289a86a97bab754ccacf58b9f111fa87a55c166162d343fb0ae115e52`.
+The native archive payload is v2 and the browser payload is v3. Legacy native
+v1/schema v4 and browser v2 restore only after original state/report/summary
+verification, then migrate with an empty library and null links. Current restore
+preserves full history, continued writes, and exact re-export. Explicit Apply
+stores the selected revision; ad hoc text stays null-linked and legacy names are
+never guessed. User-authored reflection templates remain open.
+
 Startup Recovery v1 and the Linux-to-Mac evidence boundary harden application
 initialization and CI handoff without changing a schema, migration, financial
 definition, or native readiness claim.
@@ -1008,8 +1022,10 @@ schema or strengthening any native claim. Atomic batch ambiguous recovery
 remains a human-gated HIGH pending a durable batch-receipt design; the narrower
 Batch Tag Known-Commit Refresh-Only Recovery v1 now prevents resolved saves
 from being submitted again after redraw failure.
-Native v3→v4 migration/relaunch and Daily Journal device acceptance, native
-restore acceptance, verified Delete All Data, account CRUD/broker identity,
-financial account comparisons, remaining report families, and later attachment
-round-trip remain—not broker connectivity, hosted sync, Android, recurring AI,
-or legacy cockpit extraction.
+Native v4→v5 retained-data/interruption migration, playbook history and exact
+review-link persistence, SQLCipher/Keychain, Files, WKWebView/lifecycle,
+VoiceOver, Dynamic Type, physical-device and restore acceptance, verified
+Delete All Data, account CRUD/broker identity, user-authored reflection
+templates, financial account comparisons, remaining report families, and later
+attachment round-trip remain NOT RUN or open—not broker connectivity, hosted
+sync, Android, recurring AI, or legacy cockpit extraction.
