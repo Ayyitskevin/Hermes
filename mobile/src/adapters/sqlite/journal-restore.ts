@@ -8,20 +8,33 @@ import {
 import { MOBILE_SCHEMA_MIGRATIONS, sha256Hex } from "./schema";
 import {
   portableStateDigestInput,
+  SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION,
   SQLITE_JOURNAL_ARCHIVE_PAYLOAD_KIND,
   SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION,
   SQLITE_JOURNAL_ARCHIVE_TABLES,
   SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256,
+  SQLITE_JOURNAL_ARCHIVE_V1_TABLES,
+  SQLITE_JOURNAL_ARCHIVE_V2_COLUMN_SHA256,
   tableDigestInput,
   type SqliteArchiveColumn,
   type SqliteArchiveColumnType,
   type SqliteArchiveTable,
   type SqliteJournalArchiveTableName,
+  type SqliteJournalArchiveV1TableName,
 } from "./journal-archive";
 import {
   prepareDailyJournalEntry,
   validateDailyJournalIdentifier,
 } from "../../application/prepare-daily-journal";
+import { preparePlaybookDefinition } from "../../application/prepare-playbook-definition";
+import {
+  PERCENT_RETURN_METRIC_ID,
+  PERCENT_RETURN_METRIC_VERSION,
+  prepareTradeReview,
+  RESULT_R_METRIC_ID,
+  RESULT_R_METRIC_VERSION,
+  type TradeReviewRuleOutcome,
+} from "../../application/prepare-trade-review";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;
@@ -29,13 +42,15 @@ const CANONICAL_SIGNED_INTEGER_PATTERN = /^(?:0|-?[1-9][0-9]*)$/;
 const MIN_SQLITE_INTEGER = -9_223_372_036_854_775_808n;
 const MAX_SQLITE_INTEGER = 9_223_372_036_854_775_807n;
 const PRIMARY_WORKSPACE_ID = "workspace:primary";
+const LEGACY_SCHEMA_USER_VERSION = 4;
 
 export interface DecodedSqliteJournalRestoreArchive {
   readonly archiveSha256: string;
   readonly exportedAtUs: string;
   readonly source: JournalArchiveSource;
   readonly payloadKind: typeof SQLITE_JOURNAL_ARCHIVE_PAYLOAD_KIND;
-  readonly payloadVersion: typeof SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION;
+  readonly payloadVersion: typeof SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION
+    | typeof SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION;
   readonly tableFormatVersion: 1;
   readonly tables: readonly SqliteArchiveTable[];
   /** Recomputed from the validated portable table set, never copied from the envelope. */
@@ -202,6 +217,8 @@ function parseRow(
 function parseTable(
   value: unknown,
   expectedName: SqliteJournalArchiveTableName,
+  expectedColumnSha256: string,
+  payloadVersion: number,
 ): SqliteArchiveTable {
   const label = "SQLite restore table " + expectedName;
   const record = requireRecord(value, label);
@@ -228,9 +245,10 @@ function parseTable(
     throw new Error(label + " contains duplicate column names.");
   }
   const actualColumnSha256 = sha256Hex(JSON.stringify(columns));
-  const expectedColumnSha256 = SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256[expectedName];
   if (actualColumnSha256 !== expectedColumnSha256) {
-    throw new Error(label + " does not match the pinned export-v1 column manifest.");
+    throw new Error(
+      label + " does not match the pinned payload-v" + payloadVersion + " column manifest.",
+    );
   }
   if (!Array.isArray(record.rows)) throw new Error(label + " rows must be an array.");
   const rows = Object.freeze(
@@ -282,17 +300,25 @@ function parseTable(
   return Object.freeze({ ...withoutDigest, tableSha256 });
 }
 
-function assertCurrentMigrationSource(source: JournalArchiveSource): void {
-  const current = MOBILE_SCHEMA_MIGRATIONS.at(-1);
+function assertSupportedMigrationSource(
+  source: JournalArchiveSource,
+  payloadVersion: number,
+): void {
+  const expectedMigrations = payloadVersion === SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION
+    ? MOBILE_SCHEMA_MIGRATIONS.filter(
+        (migration) => migration.toVersion <= LEGACY_SCHEMA_USER_VERSION,
+      )
+    : MOBILE_SCHEMA_MIGRATIONS;
+  const current = expectedMigrations.at(-1);
   if (
     current === undefined
     || source.schemaUserVersion !== current.toVersion
-    || source.migrations.length !== MOBILE_SCHEMA_MIGRATIONS.length
+    || source.migrations.length !== expectedMigrations.length
   ) {
     throw new Error("SQLite restore migration source is not supported by this app build.");
   }
   source.migrations.forEach((migration, index) => {
-    const expected = MOBILE_SCHEMA_MIGRATIONS[index];
+    const expected = expectedMigrations[index];
     if (
       expected === undefined
       || migration.version !== expected.toVersion
@@ -370,14 +396,55 @@ function assertMigrationTable(
     }
   });
 }
+function upgradeLegacyMigrationTable(
+  tables: readonly SqliteArchiveTable[],
+): readonly SqliteArchiveTable[] {
+  const table = tables[0];
+  const migration = MOBILE_SCHEMA_MIGRATIONS.find(
+    (candidate) => candidate.toVersion === LEGACY_SCHEMA_USER_VERSION + 1,
+  );
+  if (table === undefined || table.name !== "schema_migrations" || migration === undefined) {
+    throw new Error("SQLite restore cannot upgrade the legacy migration baseline.");
+  }
+  const migrationRow = Object.freeze(table.columns.map((column): string | null => {
+    if (column.name === "version") return String(migration.toVersion);
+    if (column.name === "name") return migration.name;
+    if (column.name === "checksum_sha256") return migration.checksumSha256;
+    if (column.name === "applied_at_ms") return "0";
+    throw new Error("SQLite restore migration table has an unsupported column.");
+  }));
+  const rows = Object.freeze([...table.rows, migrationRow].sort((left, right) => {
+    const leftJson = canonicalJournalArchiveJson(asArchiveJson(left));
+    const rightJson = canonicalJournalArchiveJson(asArchiveJson(right));
+    return leftJson < rightJson ? -1 : leftJson > rightJson ? 1 : 0;
+  }));
+  const withoutDigest = Object.freeze({
+    name: table.name,
+    createSqlSha256: table.createSqlSha256,
+    columns: table.columns,
+    rows,
+    rowCount: String(rows.length),
+  });
+  const upgraded = Object.freeze({
+    ...withoutDigest,
+    tableSha256: sha256Hex(canonicalJournalArchiveJson(tableDigestInput(withoutDigest))),
+  });
+  return Object.freeze([upgraded, ...tables.slice(1)]);
+}
+
+function optionalTableByName(
+  tables: readonly SqliteArchiveTable[],
+  name: SqliteJournalArchiveTableName,
+): SqliteArchiveTable | undefined {
+  return tables.find((table) => table.name === name);
+}
 
 function tableByName(
   tables: readonly SqliteArchiveTable[],
   name: SqliteJournalArchiveTableName,
 ): SqliteArchiveTable {
-  const index = SQLITE_JOURNAL_ARCHIVE_TABLES.indexOf(name);
-  const table = tables[index];
-  if (table === undefined || table.name !== name) {
+  const table = optionalTableByName(tables, name);
+  if (table === undefined) {
     throw new Error("SQLite restore table " + name + " is missing.");
   }
   return table;
@@ -559,6 +626,703 @@ function assertReviewVersionChains(
   }
 }
 
+interface PlaybookDefinitionVersionFact {
+  readonly id: string;
+  readonly row: readonly (string | null)[];
+  readonly workspaceId: string;
+  readonly playbookId: string;
+  readonly version: bigint;
+  readonly supersedesId: string | null;
+  readonly action: string;
+  readonly state: string;
+  readonly name: string;
+  readonly normalizedName: string;
+}
+
+interface LinkedReviewPlaybookSnapshot {
+  readonly definitionId: string;
+  readonly definitionVersionId: string;
+  readonly definitionRevision: string;
+  readonly name: string;
+  readonly rules: readonly string[];
+}
+
+function assertPlaybookDefinitionChains(
+  tables: readonly SqliteArchiveTable[],
+): ReadonlyMap<string, LinkedReviewPlaybookSnapshot> {
+  const linkedReviewSnapshots = new Map<string, LinkedReviewPlaybookSnapshot>();
+  const definitions = optionalTableByName(tables, "playbook_definitions");
+  if (definitions === undefined) return linkedReviewSnapshots;
+  const versions = tableByName(tables, "playbook_definition_versions");
+  const rules = tableByName(tables, "playbook_definition_rules");
+  const heads = tableByName(tables, "playbook_definition_heads");
+  const links = tableByName(tables, "trade_review_playbook_definition_links");
+  const definitionById = indexUniqueRows(definitions, "id");
+  const versionById = new Map<string, PlaybookDefinitionVersionFact>();
+  const versionsByPlaybook = new Map<string, PlaybookDefinitionVersionFact[]>();
+  for (const row of versions.rows) {
+    const playbookId = textCell(versions, row, "playbook_id");
+    const identity = definitionById.get(playbookId);
+    const workspaceId = textCell(versions, row, "workspace_id");
+    if (
+      identity === undefined
+      || textCell(definitions, identity, "workspace_id") !== workspaceId
+    ) {
+      throw new Error("SQLite restore contains an orphaned playbook definition version.");
+    }
+    const fact: PlaybookDefinitionVersionFact = {
+      id: textCell(versions, row, "id"),
+      row,
+      workspaceId,
+      playbookId,
+      version: BigInt(textCell(versions, row, "version_number")),
+      supersedesId: cell(versions, row, "supersedes_version_id"),
+      action: textCell(versions, row, "action"),
+      state: textCell(versions, row, "state"),
+      name: textCell(versions, row, "name_snapshot"),
+      normalizedName: textCell(versions, row, "normalized_name"),
+    };
+    versionById.set(fact.id, fact);
+    const chain = versionsByPlaybook.get(playbookId) ?? [];
+    chain.push(fact);
+    versionsByPlaybook.set(playbookId, chain);
+  }
+
+  const rulesByVersion = new Map<
+    string,
+    { readonly ordinal: bigint; readonly text: string; readonly normalizedText: string }[]
+  >();
+  for (const row of rules.rows) {
+    const versionId = textCell(rules, row, "definition_version_id");
+    const version = versionById.get(versionId);
+    if (
+      version === undefined
+      || textCell(rules, row, "workspace_id") !== version.workspaceId
+      || textCell(rules, row, "playbook_id") !== version.playbookId
+    ) {
+      throw new Error("SQLite restore contains an orphaned playbook definition rule.");
+    }
+    const values = rulesByVersion.get(versionId) ?? [];
+    values.push({
+      ordinal: BigInt(textCell(rules, row, "ordinal")),
+      text: textCell(rules, row, "rule_text_snapshot"),
+      normalizedText: textCell(rules, row, "normalized_rule_text"),
+    });
+    rulesByVersion.set(versionId, values);
+  }
+
+  const orderedRulesForVersion = (versionId: string) => {
+    const ordered = [...(rulesByVersion.get(versionId) ?? [])].sort((left, right) => (
+      left.ordinal < right.ordinal ? -1 : left.ordinal > right.ordinal ? 1 : 0
+    ));
+    ordered.forEach((rule, index) => {
+      if (rule.ordinal !== BigInt(index)) {
+        throw new Error("SQLite restore playbook definition rules must be contiguous.");
+      }
+    });
+    return ordered;
+  };
+
+  const headByPlaybook = indexUniqueRows(heads, "playbook_id");
+  for (const [playbookId, identity] of definitionById) {
+    const chain = versionsByPlaybook.get(playbookId);
+    const head = headByPlaybook.get(playbookId);
+    if (chain === undefined || chain.length === 0 || head === undefined) {
+      throw new Error("Every SQLite restore playbook definition needs one current head.");
+    }
+    chain.sort((left, right) => (
+      left.version < right.version ? -1 : left.version > right.version ? 1 : 0
+    ));
+    chain.forEach((version, index) => {
+      const orderedRules = orderedRulesForVersion(version.id);
+      const previous = index === 0 ? undefined : chain[index - 1];
+      const previousRules = previous === undefined ? [] : orderedRulesForVersion(previous.id);
+      const validTransition = index === 0
+        ? version.action === "create"
+          && version.state === "active"
+          && version.supersedesId === null
+          && textCell(versions, version.row, "submission_id")
+            === textCell(definitions, identity, "create_submission_id")
+        : previous !== undefined
+          && version.supersedesId === previous.id
+          && (
+            (version.action === "edit"
+              && previous.state === "active" && version.state === "active")
+            || (version.action === "archive"
+              && previous.state === "active" && version.state === "archived")
+            || (version.action === "restore"
+              && previous.state === "archived" && version.state === "active")
+          );
+      const preservesLifecycleSnapshot = (
+        version.action !== "archive" && version.action !== "restore"
+      ) || (
+        previous !== undefined
+        && version.name === previous.name
+        && orderedRules.length === previousRules.length
+        && orderedRules.every((rule, ruleIndex) => rule.text === previousRules[ruleIndex]?.text)
+      );
+      if (version.version !== BigInt(index + 1) || !validTransition || !preservesLifecycleSnapshot) {
+        throw new Error(
+          "SQLite restore playbook definition versions must form one valid lifecycle chain.",
+        );
+      }
+      let prepared: ReturnType<typeof preparePlaybookDefinition>;
+      try {
+        const submissionId = textCell(versions, version.row, "submission_id");
+        const authoredRules = orderedRules.map((rule) => rule.text);
+        if (version.action === "create") {
+          prepared = preparePlaybookDefinition({
+            submissionId,
+            action: "create",
+            playbookId: null,
+            expectedPreviousVersionId: null,
+            name: version.name,
+            rules: authoredRules,
+          });
+        } else if (
+          version.action === "edit"
+          || version.action === "archive"
+          || version.action === "restore"
+        ) {
+          if (version.supersedesId === null) {
+            throw new Error("A revised playbook definition has no predecessor.");
+          }
+          prepared = preparePlaybookDefinition({
+            submissionId,
+            action: version.action,
+            playbookId: version.playbookId,
+            expectedPreviousVersionId: version.supersedesId,
+            name: version.name,
+            rules: authoredRules,
+          });
+        } else {
+          throw new Error("The playbook definition action is unsupported.");
+        }
+      } catch (error) {
+        throw new Error(
+          "SQLite restore playbook definition content violates the authoring contract.",
+          { cause: error },
+        );
+      }
+      if (
+        prepared.playbookId !== version.playbookId
+        || prepared.versionId !== version.id
+        || prepared.revision !== textCell(versions, version.row, "revision_sha256")
+        || prepared.name !== version.name
+        || prepared.normalizedName !== version.normalizedName
+        || prepared.state !== version.state
+        || prepared.rules.length !== orderedRules.length
+        || prepared.rules.some((rule, ruleIndex) => (
+          rule.ordinal !== Number(orderedRules[ruleIndex]?.ordinal)
+          || rule.text !== orderedRules[ruleIndex]?.text
+          || rule.normalizedText !== orderedRules[ruleIndex]?.normalizedText
+        ))
+      ) {
+        throw new Error(
+          "SQLite restore playbook definition revision does not bind its exact normalized content.",
+        );
+      }
+    });
+    const latest = chain.at(-1);
+    if (
+      latest === undefined
+      || textCell(heads, head, "workspace_id") !== latest.workspaceId
+      || textCell(heads, head, "definition_version_id") !== latest.id
+      || textCell(heads, head, "normalized_current_name") !== latest.normalizedName
+      || textCell(heads, head, "current_state") !== latest.state
+    ) {
+      throw new Error("SQLite restore playbook definition head must point to its latest version.");
+    }
+  }
+  for (const playbookId of headByPlaybook.keys()) {
+    if (!definitionById.has(playbookId)) {
+      throw new Error("SQLite restore contains an orphaned playbook definition head.");
+    }
+  }
+
+  const reviewVersions = tableByName(tables, "trade_review_versions");
+  const reviewById = indexUniqueRows(reviewVersions, "id");
+  const reviewPlaybooks = tableByName(tables, "playbooks");
+  const reviewPlaybookById = indexUniqueRows(reviewPlaybooks, "id");
+  const reviewRules = tableByName(tables, "playbook_rules");
+  const reviewRuleById = indexUniqueRows(reviewRules, "id");
+  const results = tableByName(tables, "trade_review_rule_results");
+  const resultsByReview = new Map<
+    string, (readonly (string | null)[])[]
+  >();
+  for (const row of results.rows) {
+    const reviewId = textCell(results, row, "review_version_id");
+    const values = resultsByReview.get(reviewId) ?? [];
+    values.push(row);
+    resultsByReview.set(reviewId, values);
+  }
+  for (const row of links.rows) {
+    const reviewId = textCell(links, row, "review_version_id");
+    const review = reviewById.get(reviewId);
+    const version = versionById.get(textCell(links, row, "definition_version_id"));
+    const playbookId = textCell(links, row, "playbook_id");
+    const reviewPlaybookId = review === undefined
+      ? null
+      : cell(reviewVersions, review, "playbook_id");
+    const reviewPlaybook = reviewPlaybookId === null
+      ? undefined
+      : reviewPlaybookById.get(reviewPlaybookId);
+    if (
+      linkedReviewSnapshots.has(reviewId)
+    ) {
+      throw new Error("SQLite restore contains duplicate playbook definition review links.");
+    }
+    if (
+      review === undefined
+      || version === undefined
+      || version.playbookId !== playbookId
+      || textCell(links, row, "workspace_id") !== version.workspaceId
+      || textCell(links, row, "workspace_id")
+        !== textCell(reviewVersions, review, "workspace_id")
+      || textCell(links, row, "trade_subject_id")
+        !== textCell(reviewVersions, review, "trade_subject_id")
+      || textCell(links, row, "revision_sha256")
+        !== textCell(versions, version.row, "revision_sha256")
+      || reviewPlaybook === undefined
+      || textCell(reviewPlaybooks, reviewPlaybook, "normalized_name")
+        !== version.normalizedName
+    ) {
+      throw new Error("SQLite restore contains an inexact playbook definition review link.");
+    }
+    const definitionRules = orderedRulesForVersion(version.id);
+    const reviewResults = [...(resultsByReview.get(reviewId) ?? [])].sort((left, right) => (
+      BigInt(textCell(results, left, "ordinal")) < BigInt(textCell(results, right, "ordinal"))
+        ? -1
+        : 1
+    ));
+    if (reviewResults.length !== definitionRules.length) {
+      throw new Error("SQLite restore playbook definition link has a different rule count.");
+    }
+    definitionRules.forEach((definitionRule, index) => {
+      const result = reviewResults[index];
+      const reviewRule = result === undefined
+        ? undefined
+        : reviewRuleById.get(textCell(results, result, "playbook_rule_id"));
+      if (
+        result === undefined
+        || BigInt(textCell(results, result, "ordinal")) !== definitionRule.ordinal
+        || reviewRule === undefined
+        || textCell(reviewRules, reviewRule, "normalized_rule_text")
+          !== definitionRule.normalizedText
+      ) {
+        throw new Error(
+          "SQLite restore playbook definition link rules do not share normalized identity.",
+        );
+      }
+    });
+    linkedReviewSnapshots.set(reviewId, {
+      definitionId: version.playbookId,
+      definitionVersionId: version.id,
+      definitionRevision: textCell(versions, version.row, "revision_sha256"),
+      name: version.name,
+      rules: definitionRules.map((rule) => rule.text),
+    });
+  }
+  return linkedReviewSnapshots;
+}
+
+interface ReviewTermFact {
+  readonly ordinal: bigint;
+  readonly name: string;
+}
+
+interface ReviewRuleFact {
+  readonly ordinal: bigint;
+  readonly name: string;
+  readonly normalizedName: string;
+  readonly outcome: TradeReviewRuleOutcome;
+}
+
+function reviewVocabularyIdentity(
+  value: string,
+  label: string,
+  characterLimit: number,
+): string {
+  const canonical = value.normalize("NFC").trim().replace(/\s+/gu, " ");
+  if (
+    canonical.length === 0
+    || canonical !== value
+    || [...canonical].length > characterLimit
+    || [...canonical.toLocaleLowerCase("en-US")].length > characterLimit
+    || /[\u0000-\u001f\u007f-\u009f]/u.test(canonical)
+  ) {
+    throw new Error(
+      `SQLite restore ${label} must be canonical single-line text of at most ${characterLimit} characters.`,
+    );
+  }
+  return canonical.toLocaleLowerCase("en-US");
+}
+
+function legacyTradeReviewRevision(
+  review: ReturnType<typeof prepareTradeReview>,
+): string {
+  return sha256Hex(JSON.stringify([
+    "hermes-trade-review-v1",
+    review.submissionId,
+    review.tradeSubjectId,
+    review.expectedPreviousReviewId,
+    review.state,
+    review.note,
+    review.setup === null ? null : review.setup.toLocaleLowerCase("en-US"),
+    review.mistakes.map((value) => value.toLocaleLowerCase("en-US")),
+    review.tags.map((value) => value.toLocaleLowerCase("en-US")),
+    review.emotion === null ? null : review.emotion.toLocaleLowerCase("en-US"),
+    review.playbook === null
+      ? null
+      : [
+          review.playbook.name.toLocaleLowerCase("en-US"),
+          review.playbook.rules.map((rule) => [
+            rule.name.toLocaleLowerCase("en-US"),
+            rule.outcome,
+          ]),
+        ],
+    review.initialRisk === null
+      ? null
+      : [review.initialRisk.amount, review.initialRisk.currency],
+    review.plannedStop,
+    [RESULT_R_METRIC_ID, review.resultRVersion],
+    [PERCENT_RETURN_METRIC_ID, review.percentReturnVersion],
+  ]));
+}
+
+function assertTradeReviewRevisions(
+  tables: readonly SqliteArchiveTable[],
+  linkedReviewSnapshots: ReadonlyMap<string, LinkedReviewPlaybookSnapshot>,
+): void {
+  const versions = tableByName(tables, "trade_review_versions");
+  const assignments = tableByName(tables, "trade_review_term_assignments");
+  const terms = tableByName(tables, "review_terms");
+  const playbooks = tableByName(tables, "playbooks");
+  const playbookRules = tableByName(tables, "playbook_rules");
+  const ruleResults = tableByName(tables, "trade_review_rule_results");
+  const versionById = indexUniqueRows(versions, "id");
+  const termById = indexUniqueRows(terms, "id");
+  const playbookById = indexUniqueRows(playbooks, "id");
+  const playbookRuleById = indexUniqueRows(playbookRules, "id");
+  const termsByReviewCategory = new Map<string, ReviewTermFact[]>();
+  const assignmentOrdinals = new Set<string>();
+  const assignedTerms = new Set<string>();
+
+  for (const row of assignments.rows) {
+    const reviewId = textCell(assignments, row, "review_version_id");
+    const review = versionById.get(reviewId);
+    const termId = textCell(assignments, row, "term_id");
+    const term = termById.get(termId);
+    const category = textCell(assignments, row, "category");
+    const ordinal = BigInt(textCell(assignments, row, "ordinal"));
+    if (
+      review === undefined
+      || term === undefined
+      || !["setup", "mistake", "emotion", "tag"].includes(category)
+      || ordinal < 0n
+      || ordinal > 19n
+      || ((category === "setup" || category === "emotion") && ordinal !== 0n)
+      || textCell(assignments, row, "workspace_id")
+        !== textCell(versions, review, "workspace_id")
+      || textCell(assignments, row, "trade_subject_id")
+        !== textCell(versions, review, "trade_subject_id")
+      || textCell(terms, term, "workspace_id")
+        !== textCell(assignments, row, "workspace_id")
+      || textCell(terms, term, "category") !== category
+    ) {
+      throw new Error("SQLite restore contains an inconsistent trade-review term assignment.");
+    }
+    const name = textCell(terms, term, "name");
+    if (
+      textCell(terms, term, "normalized_name")
+        !== reviewVocabularyIdentity(name, "review-term name", 120)
+    ) {
+      throw new Error("SQLite restore review-term normalized identity is inconsistent.");
+    }
+    const categoryKey = JSON.stringify([reviewId, category]);
+    const ordinalKey = JSON.stringify([reviewId, category, ordinal.toString()]);
+    const termKey = JSON.stringify([reviewId, termId]);
+    if (assignmentOrdinals.has(ordinalKey) || assignedTerms.has(termKey)) {
+      throw new Error("SQLite restore contains duplicate trade-review term assignments.");
+    }
+    assignmentOrdinals.add(ordinalKey);
+    assignedTerms.add(termKey);
+    const facts = termsByReviewCategory.get(categoryKey) ?? [];
+    facts.push({ ordinal, name });
+    termsByReviewCategory.set(categoryKey, facts);
+  }
+
+  const orderedTerms = (reviewId: string, category: string): readonly string[] => {
+    const facts = [...(termsByReviewCategory.get(JSON.stringify([reviewId, category])) ?? [])]
+      .sort((left, right) => (
+        left.ordinal < right.ordinal ? -1 : left.ordinal > right.ordinal ? 1 : 0
+      ));
+    facts.forEach((fact, index) => {
+      if (fact.ordinal !== BigInt(index)) {
+        throw new Error("SQLite restore trade-review term ordinals must be contiguous.");
+      }
+    });
+    if ((category === "setup" || category === "emotion") && facts.length > 1) {
+      throw new Error("SQLite restore trade reviews support one setup and one emotion.");
+    }
+    return facts.map((fact) => fact.name);
+  };
+
+  const rulesByReview = new Map<string, ReviewRuleFact[]>();
+  const resultOrdinals = new Set<string>();
+  const reviewedRules = new Set<string>();
+  const outcomes: ReadonlySet<string> = new Set<TradeReviewRuleOutcome>([
+    "followed",
+    "broken",
+    "not_applicable",
+    "unreviewed",
+  ]);
+  for (const row of ruleResults.rows) {
+    const reviewId = textCell(ruleResults, row, "review_version_id");
+    const review = versionById.get(reviewId);
+    const reviewPlaybookId = review === undefined
+      ? null
+      : cell(versions, review, "playbook_id");
+    const ruleId = textCell(ruleResults, row, "playbook_rule_id");
+    const rule = playbookRuleById.get(ruleId);
+    const ordinal = BigInt(textCell(ruleResults, row, "ordinal"));
+    const outcome = textCell(ruleResults, row, "outcome");
+    if (
+      review === undefined
+      || reviewPlaybookId === null
+      || rule === undefined
+      || ordinal < 0n
+      || ordinal > 19n
+      || !outcomes.has(outcome)
+      || textCell(ruleResults, row, "workspace_id")
+        !== textCell(versions, review, "workspace_id")
+      || textCell(ruleResults, row, "trade_subject_id")
+        !== textCell(versions, review, "trade_subject_id")
+      || textCell(playbookRules, rule, "workspace_id")
+        !== textCell(ruleResults, row, "workspace_id")
+      || textCell(playbookRules, rule, "playbook_id") !== reviewPlaybookId
+    ) {
+      throw new Error("SQLite restore contains an inconsistent trade-review rule result.");
+    }
+    const name = textCell(ruleResults, row, "rule_name_snapshot");
+    const normalizedName = reviewVocabularyIdentity(name, "review-rule snapshot", 500);
+    const sharedName = textCell(playbookRules, rule, "rule_text");
+    const sharedNormalizedName = reviewVocabularyIdentity(
+      sharedName,
+      "shared review-rule name",
+      500,
+    );
+    if (
+      textCell(playbookRules, rule, "normalized_rule_text") !== sharedNormalizedName
+      || normalizedName !== sharedNormalizedName
+    ) {
+      throw new Error("SQLite restore trade-review rules do not share normalized identity.");
+    }
+    const ordinalKey = JSON.stringify([reviewId, ordinal.toString()]);
+    const ruleKey = JSON.stringify([reviewId, ruleId]);
+    if (resultOrdinals.has(ordinalKey) || reviewedRules.has(ruleKey)) {
+      throw new Error("SQLite restore contains duplicate trade-review rule results.");
+    }
+    resultOrdinals.add(ordinalKey);
+    reviewedRules.add(ruleKey);
+    const facts = rulesByReview.get(reviewId) ?? [];
+    facts.push({
+      ordinal,
+      name,
+      normalizedName,
+      outcome: outcome as TradeReviewRuleOutcome,
+    });
+    rulesByReview.set(reviewId, facts);
+  }
+
+  for (const row of versions.rows) {
+    const reviewId = textCell(versions, row, "id");
+    const workspaceId = textCell(versions, row, "workspace_id");
+    const tradeSubjectId = textCell(versions, row, "trade_subject_id");
+    const state = textCell(versions, row, "state");
+    const recordedAt = BigInt(textCell(versions, row, "recorded_at_ms"));
+    const completedAt = cell(versions, row, "completed_at_ms");
+    if (
+      (state === "draft" && completedAt !== null)
+      || (
+        state === "completed"
+        && (completedAt === null || BigInt(completedAt) < recordedAt)
+      )
+      || (state !== "draft" && state !== "completed")
+    ) {
+      throw new Error("SQLite restore contains an inconsistent trade-review state.");
+    }
+    if (
+      textCell(versions, row, "result_r_metric_id") !== RESULT_R_METRIC_ID
+      || textCell(versions, row, "result_r_metric_version")
+        !== String(RESULT_R_METRIC_VERSION)
+      || textCell(versions, row, "percent_return_metric_id") !== PERCENT_RETURN_METRIC_ID
+      || textCell(versions, row, "percent_return_metric_version")
+        !== String(PERCENT_RETURN_METRIC_VERSION)
+    ) {
+      throw new Error("SQLite restore trade-review metric definitions are unsupported.");
+    }
+
+    const setupValues = orderedTerms(reviewId, "setup");
+    const mistakeValues = orderedTerms(reviewId, "mistake");
+    const tagValues = orderedTerms(reviewId, "tag");
+    const emotionValues = orderedTerms(reviewId, "emotion");
+    const ruleFacts = [...(rulesByReview.get(reviewId) ?? [])].sort((left, right) => (
+      left.ordinal < right.ordinal ? -1 : left.ordinal > right.ordinal ? 1 : 0
+    ));
+    ruleFacts.forEach((fact, index) => {
+      if (fact.ordinal !== BigInt(index)) {
+        throw new Error("SQLite restore trade-review rule ordinals must be contiguous.");
+      }
+    });
+
+    const linkedSnapshot = linkedReviewSnapshots.get(reviewId) ?? null;
+    const sharedPlaybookId = cell(versions, row, "playbook_id");
+    let playbook: Parameters<typeof prepareTradeReview>[0]["playbook"] = null;
+    if (sharedPlaybookId === null) {
+      if (ruleFacts.length > 0 || linkedSnapshot !== null) {
+        throw new Error("SQLite restore trade-review playbook content is inconsistent.");
+      }
+    } else {
+      const sharedPlaybook = playbookById.get(sharedPlaybookId);
+      if (
+        sharedPlaybook === undefined
+        || textCell(playbooks, sharedPlaybook, "workspace_id") !== workspaceId
+      ) {
+        throw new Error("SQLite restore contains an orphaned trade-review playbook.");
+      }
+      const sharedName = textCell(playbooks, sharedPlaybook, "name");
+      const sharedNormalizedName = reviewVocabularyIdentity(
+        sharedName,
+        "shared review-playbook name",
+        120,
+      );
+      if (textCell(playbooks, sharedPlaybook, "normalized_name") !== sharedNormalizedName) {
+        throw new Error("SQLite restore playbook normalized identity is inconsistent.");
+      }
+      if (
+        linkedSnapshot !== null
+        && (
+          reviewVocabularyIdentity(linkedSnapshot.name, "linked playbook name", 120)
+            !== sharedNormalizedName
+          || linkedSnapshot.rules.length !== ruleFacts.length
+          || linkedSnapshot.rules.some((ruleName, index) => (
+            reviewVocabularyIdentity(ruleName, "linked playbook rule", 500)
+              !== ruleFacts[index]?.normalizedName
+          ))
+        )
+      ) {
+        throw new Error("SQLite restore linked review lost its definition snapshot identity.");
+      }
+      playbook = {
+        name: linkedSnapshot?.name ?? sharedName,
+        definition: linkedSnapshot === null
+          ? null
+          : {
+              id: linkedSnapshot.definitionId,
+              versionId: linkedSnapshot.definitionVersionId,
+              revision: linkedSnapshot.definitionRevision,
+            },
+        rules: ruleFacts.map((fact, index) => ({
+          name: linkedSnapshot?.rules[index] ?? fact.name,
+          outcome: fact.outcome,
+        })),
+      };
+    }
+
+    const riskAmount = cell(versions, row, "initial_risk_amount_text");
+    const riskCurrency = cell(versions, row, "risk_currency_code");
+    if ((riskAmount === null) !== (riskCurrency === null)) {
+      throw new Error("SQLite restore trade-review initial risk is incomplete.");
+    }
+    const initialRisk = riskAmount === null || riskCurrency === null
+      ? null
+      : { amount: riskAmount, currency: riskCurrency };
+    const exact = {
+      submissionId: textCell(versions, row, "submission_id"),
+      tradeSubjectId,
+      expectedPreviousReviewId: cell(versions, row, "supersedes_version_id"),
+      state,
+      note: textCell(versions, row, "note_text"),
+      setup: setupValues[0] ?? null,
+      mistakes: mistakeValues,
+      tags: tagValues,
+      emotion: emotionValues[0] ?? null,
+      playbook,
+      initialRisk,
+      plannedStop: cell(versions, row, "planned_stop_price_text"),
+    } as const;
+    let prepared: ReturnType<typeof prepareTradeReview>;
+    try {
+      prepared = prepareTradeReview(exact);
+    } catch (error) {
+      throw new Error("SQLite restore trade-review content violates the authoring contract.", {
+        cause: error,
+      });
+    }
+    const exactDefinition = exact.playbook === null
+      ? null
+      : exact.playbook.definition ?? null;
+    const exactContent = JSON.stringify([
+      exact.note,
+      exact.setup,
+      exact.mistakes,
+      exact.tags,
+      exact.emotion,
+      exact.playbook === null
+        ? null
+        : [
+            exact.playbook.name,
+            exactDefinition === null
+              ? null
+              : [
+                  exactDefinition.id,
+                  exactDefinition.versionId,
+                  exactDefinition.revision,
+                ],
+            exact.playbook.rules.map((rule) => [rule.name, rule.outcome]),
+          ],
+      exact.initialRisk === null
+        ? null
+        : [exact.initialRisk.amount, exact.initialRisk.currency],
+      exact.plannedStop,
+    ]);
+    const preparedContent = JSON.stringify([
+      prepared.note,
+      prepared.setup,
+      prepared.mistakes,
+      prepared.tags,
+      prepared.emotion,
+      prepared.playbook === null
+        ? null
+        : [
+            prepared.playbook.name,
+            prepared.playbook.definition === null
+              ? null
+              : [
+                  prepared.playbook.definition.id,
+                  prepared.playbook.definition.versionId,
+                  prepared.playbook.definition.revision,
+                ],
+            prepared.playbook.rules.map((rule) => [rule.name, rule.outcome]),
+          ],
+      prepared.initialRisk === null
+        ? null
+        : [prepared.initialRisk.amount, prepared.initialRisk.currency],
+      prepared.plannedStop,
+    ]);
+    const storedRevision = textCell(versions, row, "revision_sha256");
+    const revisionMatches = linkedSnapshot === null
+      ? storedRevision === prepared.revision
+        || storedRevision === legacyTradeReviewRevision(prepared)
+      : storedRevision === prepared.revision;
+    if (exactContent !== preparedContent || !revisionMatches) {
+      throw new Error(
+        "SQLite restore trade-review revision does not bind its canonical content.",
+      );
+    }
+  }
+}
 function assertDailyEntryVersionChains(
   tables: readonly SqliteArchiveTable[],
 ): void {
@@ -841,7 +1605,10 @@ function recomputeSummary(
     currentReviews: String(currentReviews),
     reviewVersions: tableByName(tables, "trade_review_versions").rowCount,
     reviewTerms: tableByName(tables, "review_terms").rowCount,
-    playbooks: tableByName(tables, "playbooks").rowCount,
+    playbooks: String(
+      tableByName(tables, "playbooks").rows.length
+        + (optionalTableByName(tables, "playbook_definitions")?.rows.length ?? 0),
+    ),
     attachments: "0",
     attachmentBytes: "0",
   });
@@ -852,58 +1619,81 @@ function summaryJson(summary: JournalArchiveSummary): string {
 }
 
 /**
- * Decodes only native SQLite archive payload v1. The generic envelope parser
- * runs first; every payload identifier, table, column, row, and digest is then
- * independently checked against this app build's trusted export contract.
+ * Decodes current schema-v5/payload-v2 archives and the prior
+ * schema-v4/payload-v1 contract. Legacy digests and summaries are checked
+ * before its migration table is upgraded for replay into the current schema.
  */
 export function decodeSqliteJournalRestoreArchive(
   rawInput: string,
 ): DecodedSqliteJournalRestoreArchive {
   const archive = parseJournalArchive(rawInput);
+  const legacyPayload = archive.payload.version
+    === SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION;
   if (
     archive.payload.kind !== SQLITE_JOURNAL_ARCHIVE_PAYLOAD_KIND
-    || archive.payload.version !== SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION
+    || (
+      !legacyPayload
+      && archive.payload.version !== SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION
+    )
   ) {
     throw new Error("This archive does not contain a supported native SQLite journal payload.");
   }
-  assertCurrentMigrationSource(archive.source);
+  const payloadVersion = legacyPayload
+    ? SQLITE_JOURNAL_ARCHIVE_LEGACY_PAYLOAD_VERSION
+    : SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION;
+  assertSupportedMigrationSource(archive.source, payloadVersion);
   const data = requireRecord(archive.payload.data, "SQLite restore payload data");
   assertExactKeys(data, ["tableFormatVersion", "tables"], "SQLite restore payload data");
   if (data.tableFormatVersion !== 1) {
     throw new Error("SQLite restore table format version is not supported.");
   }
+  const expectedTables: readonly SqliteJournalArchiveTableName[] = legacyPayload
+    ? SQLITE_JOURNAL_ARCHIVE_V1_TABLES
+    : SQLITE_JOURNAL_ARCHIVE_TABLES;
   const payloadTables = data.tables;
-  if (
-    !Array.isArray(payloadTables)
-    || payloadTables.length !== SQLITE_JOURNAL_ARCHIVE_TABLES.length
-  ) {
+  if (!Array.isArray(payloadTables) || payloadTables.length !== expectedTables.length) {
     throw new Error("SQLite restore payload must contain every pinned table exactly once.");
   }
-  const tables = Object.freeze(SQLITE_JOURNAL_ARCHIVE_TABLES.map((tableName, index) => (
-    parseTable(payloadTables[index], tableName)
-  )));
-  assertMigrationTable(tables, archive.source);
-  assertSingleWorkspaceContract(tables);
-  assertExecutionVersionChains(tables);
-  assertReviewVersionChains(tables);
-  assertDailyEntryVersionChains(tables);
+  const parsedTables = Object.freeze(expectedTables.map((tableName, index) => {
+    const expectedColumnSha256 = legacyPayload
+      ? SQLITE_JOURNAL_ARCHIVE_V1_COLUMN_SHA256[
+          tableName as SqliteJournalArchiveV1TableName
+        ]
+      : SQLITE_JOURNAL_ARCHIVE_V2_COLUMN_SHA256[tableName];
+    return parseTable(
+      payloadTables[index],
+      tableName,
+      expectedColumnSha256,
+      payloadVersion,
+    );
+  }));
+  assertMigrationTable(parsedTables, archive.source);
+  assertSingleWorkspaceContract(parsedTables);
+  assertExecutionVersionChains(parsedTables);
+  assertReviewVersionChains(parsedTables);
+  const linkedReviewSnapshots = assertPlaybookDefinitionChains(parsedTables);
+  assertTradeReviewRevisions(parsedTables, linkedReviewSnapshots);
+  assertDailyEntryVersionChains(parsedTables);
 
   const stateSha256 = sha256Hex(
-    canonicalJournalArchiveJson(portableStateDigestInput(tables)),
+    canonicalJournalArchiveJson(portableStateDigestInput(parsedTables)),
   );
   if (stateSha256 !== archive.stateSha256) {
     throw new Error("SQLite restore state digest does not match its validated tables.");
   }
-  const summary = recomputeSummary(tables);
+  const summary = recomputeSummary(parsedTables);
   if (summaryJson(summary) !== summaryJson(archive.summary)) {
     throw new Error("SQLite restore summary does not match its validated tables.");
   }
+  const tables = legacyPayload
+    ? upgradeLegacyMigrationTable(parsedTables)
+    : parsedTables;
   return Object.freeze({
     archiveSha256: archive.archiveSha256,
     exportedAtUs: archive.exportedAtUs,
     source: archive.source,
     payloadKind: SQLITE_JOURNAL_ARCHIVE_PAYLOAD_KIND,
-    payloadVersion: SQLITE_JOURNAL_ARCHIVE_PAYLOAD_VERSION,
+    payloadVersion,
     tableFormatVersion: 1 as const,
     tables,
     stateSha256,

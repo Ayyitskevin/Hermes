@@ -23,12 +23,18 @@ import {
   V4_MIGRATION_NAME,
   V4_MIGRATION_STATEMENTS,
   V4_MIGRATION_VERSION,
+  V5_MIGRATION_BODY,
+  V5_MIGRATION_CHECKSUM_SHA256,
+  V5_MIGRATION_NAME,
+  V5_MIGRATION_STATEMENTS,
+  V5_MIGRATION_VERSION,
   createCapacitorSchemaUpgrades,
   sha256Hex,
   v1MigrationChecksumInput,
   v2MigrationChecksumInput,
   v3MigrationChecksumInput,
   v4MigrationChecksumInput,
+  v5MigrationChecksumInput,
 } from "./index";
 
 const REQUIRED_TABLES = [
@@ -45,6 +51,10 @@ const REQUIRED_TABLES = [
   "import_batches",
   "import_execution_occurrences",
   "import_issues",
+  "playbook_definition_heads",
+  "playbook_definition_rules",
+  "playbook_definition_versions",
+  "playbook_definitions",
   "import_receipts",
   "import_rollbacks",
   "import_source_rows",
@@ -56,6 +66,7 @@ const REQUIRED_TABLES = [
   "projection_active_state",
   "projection_rebuild_runs",
   "review_terms",
+  "trade_review_playbook_definition_links",
   "schema_migrations",
   "trade_execution_allocations",
   "trade_lot_matches",
@@ -83,6 +94,12 @@ const REQUIRED_INDEXES = [
   "import_batches_dedupe_idx",
   "import_batches_workspace_time_idx",
   "import_execution_occurrences_execution_idx",
+  "playbook_definition_heads_version_idx",
+  "playbook_definition_rules_version_idx",
+  "playbook_definition_versions_submission_idx",
+  "playbook_definition_versions_supersedes_idx",
+  "playbook_definition_versions_workspace_state_idx",
+  "playbook_definitions_workspace_created_idx",
   "import_issues_batch_severity_idx",
   "import_source_rows_batch_hash_idx",
   "instruments_non_option_identity_idx",
@@ -93,6 +110,7 @@ const REQUIRED_INDEXES = [
   "playbooks_workspace_name_idx",
   "projection_rebuild_runs_workspace_status_idx",
   "review_terms_workspace_category_idx",
+  "trade_review_playbook_definition_links_definition_idx",
   "trade_execution_allocations_version_idx",
   "trade_lot_matches_entry_idx",
   "trade_lot_matches_exit_idx",
@@ -180,6 +198,21 @@ async function createV3Database(): Promise<Database> {
   return db;
 }
 
+async function createV4Database(): Promise<Database> {
+  const db = await createV3Database();
+  db.run("BEGIN IMMEDIATE");
+  try {
+    for (const statement of V4_MIGRATION_STATEMENTS) db.run(statement);
+    db.run("PRAGMA user_version = 4");
+    db.run("COMMIT");
+  } catch (error) {
+    db.run("ROLLBACK");
+    db.close();
+    throw error;
+  }
+  return db;
+}
+
 function seedTradeSubject(db: Database): void {
   db.run("INSERT INTO currencies VALUES ('USD', 2, 'US Dollar')");
   db.run(
@@ -242,12 +275,68 @@ function insertReviewVersion(db: Database, fixture: ReviewVersionFixture): void 
   );
 }
 
+interface PlaybookDefinitionVersionFixture {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly versionNumber: number;
+  readonly supersedesVersionId: string | null;
+  readonly action: "create" | "edit" | "archive" | "restore";
+  readonly submissionId: string;
+  readonly revision: string;
+  readonly name?: string;
+  readonly normalizedName?: string;
+  readonly state: "active" | "archived";
+  readonly recordedAtMs: number;
+}
+
+function insertPlaybookDefinitionVersion(
+  db: Database,
+  fixture: PlaybookDefinitionVersionFixture,
+): void {
+  db.run(
+    `INSERT INTO playbook_definition_versions (
+      id, workspace_id, playbook_id, version_number, supersedes_version_id,
+      action, submission_id, revision_sha256, name_snapshot, normalized_name,
+      state, recorded_at_ms
+    ) VALUES (?, 'workspace-1', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      fixture.id,
+      fixture.playbookId,
+      fixture.versionNumber,
+      fixture.supersedesVersionId,
+      fixture.action,
+      fixture.submissionId,
+      fixture.revision,
+      fixture.name ?? "Opening Range Breakout",
+      fixture.normalizedName ?? "opening range breakout",
+      fixture.state,
+      fixture.recordedAtMs,
+    ],
+  );
+}
+
+function insertPlaybookDefinitionRule(
+  db: Database,
+  versionId: string,
+  playbookId: string,
+  ordinal: number,
+  text: string,
+): void {
+  db.run(
+    `INSERT INTO playbook_definition_rules (
+      definition_version_id, workspace_id, playbook_id, ordinal,
+      rule_text_snapshot, normalized_rule_text
+    ) VALUES (?, 'workspace-1', ?, ?, ?, ?)`,
+    [versionId, playbookId, ordinal, text, text.toLocaleLowerCase("en-US")],
+  );
+}
+
 describe("mobile SQLite migration contract", () => {
   it("uses stable ordered migration inputs and fresh Capacitor-compatible arrays", () => {
     expect(sha256Hex("")).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     expect(sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 
-    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1, 2, 3, 4]);
+    expect(MOBILE_SCHEMA_MIGRATIONS.map(({ toVersion }) => toVersion)).toEqual([1, 2, 3, 4, 5]);
     expect(MOBILE_SCHEMA_MIGRATIONS[0]).toMatchObject({
       toVersion: V1_MIGRATION_VERSION,
       name: V1_MIGRATION_NAME,
@@ -285,6 +374,16 @@ describe("mobile SQLite migration contract", () => {
       "d48bffb0ce4420de7dbb881811f6479e0798e702a295dba902cb9eb525468938",
     );
 
+    expect(MOBILE_SCHEMA_MIGRATIONS[4]).toMatchObject({
+      toVersion: V5_MIGRATION_VERSION,
+      name: V5_MIGRATION_NAME,
+      checksumSha256: V5_MIGRATION_CHECKSUM_SHA256,
+      checksumInput: v5MigrationChecksumInput(),
+    });
+    expect(V5_MIGRATION_CHECKSUM_SHA256).toBe(
+      "52ab663289a86a97bab754ccacf58b9f111fa87a55c166162d343fb0ae115e52",
+    );
+
     const firstCopy = createCapacitorSchemaUpgrades();
     const secondCopy = createCapacitorSchemaUpgrades();
     expect(firstCopy).toEqual([
@@ -292,6 +391,7 @@ describe("mobile SQLite migration contract", () => {
       { toVersion: 2, statements: [...V2_MIGRATION_STATEMENTS] },
       { toVersion: 3, statements: [...V3_MIGRATION_STATEMENTS] },
       { toVersion: 4, statements: [...V4_MIGRATION_STATEMENTS] },
+      { toVersion: 5, statements: [...V5_MIGRATION_STATEMENTS] },
     ]);
     expect(secondCopy).toEqual(firstCopy);
     expect(secondCopy).not.toBe(firstCopy);
@@ -343,6 +443,7 @@ describe("mobile SQLite migration contract", () => {
       ...V2_MIGRATION_BODY,
       ...V3_MIGRATION_BODY,
       ...V4_MIGRATION_BODY,
+      ...V5_MIGRATION_BODY,
     ].join("\n");
 
     for (const tableName of REQUIRED_TABLES) {
@@ -380,6 +481,10 @@ describe("mobile SQLite migration contract", () => {
       "trade_review_rule_results",
       "daily_journal_entry_versions",
       "daily_journal_entry_term_assignments",
+      "playbook_definitions",
+      "playbook_definition_versions",
+      "playbook_definition_rules",
+      "trade_review_playbook_definition_links",
     ]) {
       expect(bodySql).toContain(`CREATE TRIGGER IF NOT EXISTS ${tableName}_reject_update`);
       expect(bodySql).toContain(`CREATE TRIGGER IF NOT EXISTS ${tableName}_reject_delete`);
@@ -406,13 +511,18 @@ describe("mobile SQLite migration contract", () => {
     expect(bodySql).toMatch(/initial_risk_amount_text TEXT CHECK/);
     expect(bodySql).toMatch(/planned_stop_price_text TEXT CHECK/);
     expect(bodySql).toContain("CREATE TRIGGER IF NOT EXISTS trade_review_heads_require_forward_update");
+    expect(bodySql).toContain("CREATE TRIGGER IF NOT EXISTS playbook_definition_heads_require_forward_update");
+    expect(bodySql).toMatch(/UNIQUE \(workspace_id, normalized_current_name\)/);
+    expect(bodySql).toContain("next.name_snapshot = previous.name_snapshot");
+    expect(bodySql).not.toMatch(/INSERT INTO playbook_definitions[\s\S]+SELECT[\s\S]+FROM playbooks/i);
+    expect(bodySql).not.toMatch(/INSERT INTO playbook_definition_versions[\s\S]+SELECT/i);
   });
 
   it("executes the complete migration chain with foreign keys and integrity checks enabled", async () => {
     const db = await createMigratedDatabase();
     try {
       expect(queryColumn(db, "PRAGMA foreign_keys")).toEqual([1]);
-      expect(queryColumn(db, "PRAGMA user_version")).toEqual([4]);
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([5]);
       expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
       expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
 
@@ -441,7 +551,7 @@ describe("mobile SQLite migration contract", () => {
         expect(indexes).toContain(indexName);
       }
 
-      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version")).toEqual([1, 2, 3, 4]);
+      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version")).toEqual([1, 2, 3, 4, 5]);
       expect(queryColumn(
         db,
         "SELECT checksum_sha256 FROM schema_migrations ORDER BY version",
@@ -450,6 +560,7 @@ describe("mobile SQLite migration contract", () => {
         V2_MIGRATION_CHECKSUM_SHA256,
         V3_MIGRATION_CHECKSUM_SHA256,
         V4_MIGRATION_CHECKSUM_SHA256,
+        V5_MIGRATION_CHECKSUM_SHA256,
       ]);
 
       expect(db.exec(
@@ -764,6 +875,391 @@ describe("mobile SQLite migration contract", () => {
         .toEqual(["daily-1"]);
       expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version"))
         .toEqual([1, 2, 3, 4]);
+      expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("upgrades and replays v5 without promoting review-derived playbooks", async () => {
+    const db = await createV4Database();
+    try {
+      seedTradeSubject(db);
+      db.run(
+        "INSERT INTO playbooks VALUES ('legacy-playbook', 'workspace-1', 'Legacy review', 'legacy review', 2)",
+      );
+      db.run(
+        "INSERT INTO playbook_rules VALUES ('legacy-rule', 'workspace-1', 'legacy-playbook', 'Historical rule', 'historical rule', 2)",
+      );
+
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V5_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([4]);
+      expect(queryColumn(
+        db,
+        "SELECT count(*) FROM schema_migrations WHERE version = 5",
+      )).toEqual([1]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbook_definitions")).toEqual([0]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbook_definition_versions")).toEqual([0]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbooks")).toEqual([1]);
+
+      const definitionId = "a".repeat(64);
+      const createSubmissionId = "1".repeat(64);
+      const versionId = "b".repeat(64);
+      db.run(
+        "INSERT INTO playbook_definitions VALUES (?, 'workspace-1', ?, 3)",
+        [definitionId, createSubmissionId],
+      );
+      insertPlaybookDefinitionVersion(db, {
+        id: versionId,
+        playbookId: definitionId,
+        versionNumber: 1,
+        supersedesVersionId: null,
+        action: "create",
+        submissionId: createSubmissionId,
+        revision: "2".repeat(64),
+        state: "active",
+        recordedAtMs: 3,
+      });
+      insertPlaybookDefinitionRule(
+        db,
+        versionId,
+        definitionId,
+        0,
+        "Wait for confirmation",
+      );
+      db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'opening range breakout', 'active', 3)",
+        [definitionId, versionId],
+      );
+
+      db.run("BEGIN IMMEDIATE");
+      for (const statement of V5_MIGRATION_STATEMENTS) db.run(statement);
+      db.run("PRAGMA user_version = 5");
+      db.run("COMMIT");
+
+      expect(queryColumn(db, "PRAGMA user_version")).toEqual([5]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbook_definitions")).toEqual([1]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbook_definition_versions")).toEqual([1]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbooks")).toEqual([1]);
+      expect(queryColumn(db, "SELECT definition_version_id FROM playbook_definition_heads"))
+        .toEqual([versionId]);
+      expect(queryColumn(db, "SELECT version FROM schema_migrations ORDER BY version"))
+        .toEqual([1, 2, 3, 4, 5]);
+      expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("enforces immutable definition history, unique names, and guarded lifecycle heads", async () => {
+    const db = await createMigratedDatabase();
+    try {
+      seedTradeSubject(db);
+      const definitionId = "a".repeat(64);
+      const createSubmissionId = "1".repeat(64);
+      const firstVersionId = "b".repeat(64);
+      db.run(
+        "INSERT INTO playbook_definitions VALUES (?, 'workspace-1', ?, 2)",
+        [definitionId, createSubmissionId],
+      );
+      insertPlaybookDefinitionVersion(db, {
+        id: firstVersionId,
+        playbookId: definitionId,
+        versionNumber: 1,
+        supersedesVersionId: null,
+        action: "create",
+        submissionId: createSubmissionId,
+        revision: "2".repeat(64),
+        state: "active",
+        recordedAtMs: 2,
+      });
+      insertPlaybookDefinitionRule(
+        db,
+        firstVersionId,
+        definitionId,
+        1,
+        "Size from invalidation",
+      );
+      expect(() => db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'opening range breakout', 'active', 2)",
+        [definitionId, firstVersionId],
+      )).toThrow(/complete version one/i);
+      insertPlaybookDefinitionRule(
+        db,
+        firstVersionId,
+        definitionId,
+        0,
+        "Wait for confirmation",
+      );
+      expect(() => insertPlaybookDefinitionRule(
+        db,
+        firstVersionId,
+        definitionId,
+        2,
+        "WAIT FOR CONFIRMATION",
+      )).toThrow();
+      db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'opening range breakout', 'active', 2)",
+        [definitionId, firstVersionId],
+      );
+
+      expect(() => insertPlaybookDefinitionVersion(db, {
+        id: "9".repeat(64),
+        playbookId: definitionId,
+        versionNumber: 3,
+        supersedesVersionId: firstVersionId,
+        action: "edit",
+        submissionId: "8".repeat(64),
+        revision: "7".repeat(64),
+        state: "active",
+        recordedAtMs: 3,
+      })).toThrow(/extend the current lifecycle head by one/i);
+
+      const editedVersionId = "c".repeat(64);
+      insertPlaybookDefinitionVersion(db, {
+        id: editedVersionId,
+        playbookId: definitionId,
+        versionNumber: 2,
+        supersedesVersionId: firstVersionId,
+        action: "edit",
+        submissionId: "3".repeat(64),
+        revision: "4".repeat(64),
+        name: "ORB Continuation",
+        normalizedName: "orb continuation",
+        state: "active",
+        recordedAtMs: 3,
+      });
+      db.run(
+        "UPDATE playbook_definition_heads SET definition_version_id = ?, normalized_current_name = 'orb continuation', current_state = 'active', changed_at_ms = 3 WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+        [editedVersionId, definitionId],
+      );
+      expect(() => db.run(
+        "UPDATE playbook_definition_heads SET changed_at_ms = 4 WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+        [definitionId],
+      )).toThrow(/advance one complete/i);
+
+      const secondDefinitionId = "d".repeat(64);
+      const secondVersionId = "e".repeat(64);
+      db.run(
+        "INSERT INTO playbook_definitions VALUES (?, 'workspace-1', ?, 3)",
+        [secondDefinitionId, "5".repeat(64)],
+      );
+      insertPlaybookDefinitionVersion(db, {
+        id: secondVersionId,
+        playbookId: secondDefinitionId,
+        versionNumber: 1,
+        supersedesVersionId: null,
+        action: "create",
+        submissionId: "5".repeat(64),
+        revision: "6".repeat(64),
+        name: "ORB Continuation",
+        normalizedName: "orb continuation",
+        state: "active",
+        recordedAtMs: 3,
+      });
+      expect(() => db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'orb continuation', 'active', 3)",
+        [secondDefinitionId, secondVersionId],
+      )).toThrow();
+
+      db.run("SAVEPOINT reject_changed_archive");
+      try {
+        const changedArchiveVersionId = "9".repeat(64);
+        insertPlaybookDefinitionVersion(db, {
+          id: changedArchiveVersionId,
+          playbookId: definitionId,
+          versionNumber: 3,
+          supersedesVersionId: editedVersionId,
+          action: "archive",
+          submissionId: "6".repeat(64),
+          revision: "7".repeat(64),
+          name: "ORB Continuation",
+          normalizedName: "orb continuation",
+          state: "archived",
+          recordedAtMs: 4,
+        });
+        insertPlaybookDefinitionRule(
+          db,
+          changedArchiveVersionId,
+          definitionId,
+          0,
+          "Added during archive",
+        );
+        expect(() => db.run(
+          "UPDATE playbook_definition_heads SET definition_version_id = ?, current_state = 'archived', changed_at_ms = 4 WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+          [changedArchiveVersionId, definitionId],
+        )).toThrow(/advance one complete/i);
+      } finally {
+        db.run("ROLLBACK TO reject_changed_archive");
+        db.run("RELEASE reject_changed_archive");
+      }
+
+      const archivedVersionId = "f".repeat(64);
+      insertPlaybookDefinitionVersion(db, {
+        id: archivedVersionId,
+        playbookId: definitionId,
+        versionNumber: 3,
+        supersedesVersionId: editedVersionId,
+        action: "archive",
+        submissionId: "7".repeat(64),
+        revision: "8".repeat(64),
+        name: "ORB Continuation",
+        normalizedName: "orb continuation",
+        state: "archived",
+        recordedAtMs: 4,
+      });
+      db.run(
+        "UPDATE playbook_definition_heads SET definition_version_id = ?, current_state = 'archived', changed_at_ms = 4 WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+        [archivedVersionId, definitionId],
+      );
+      expect(() => db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'orb continuation', 'active', 4)",
+        [secondDefinitionId, secondVersionId],
+      )).toThrow();
+      expect(() => insertPlaybookDefinitionVersion(db, {
+        id: "0".repeat(64),
+        playbookId: definitionId,
+        versionNumber: 4,
+        supersedesVersionId: archivedVersionId,
+        action: "edit",
+        submissionId: "9".repeat(64),
+        revision: "a".repeat(64),
+        name: "ORB Continuation",
+        normalizedName: "orb continuation",
+        state: "active",
+        recordedAtMs: 5,
+      })).toThrow(/lifecycle head/i);
+
+      const restoredVersionId = "1".repeat(64);
+      insertPlaybookDefinitionVersion(db, {
+        id: restoredVersionId,
+        playbookId: definitionId,
+        versionNumber: 4,
+        supersedesVersionId: archivedVersionId,
+        action: "restore",
+        submissionId: "a".repeat(64),
+        revision: "b".repeat(64),
+        name: "ORB Continuation",
+        normalizedName: "orb continuation",
+        state: "active",
+        recordedAtMs: 5,
+      });
+      db.run(
+        "UPDATE playbook_definition_heads SET definition_version_id = ?, current_state = 'active', changed_at_ms = 5 WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+        [restoredVersionId, definitionId],
+      );
+
+      for (const statement of [
+        "UPDATE playbook_definitions SET created_at_ms = 9",
+        "UPDATE playbook_definition_versions SET name_snapshot = 'Changed'",
+        "UPDATE playbook_definition_rules SET rule_text_snapshot = 'Changed'",
+      ]) {
+        expect(() => db.run(statement)).toThrow(/immutable/i);
+      }
+      expect(() => db.run(
+        "DELETE FROM playbook_definition_heads WHERE workspace_id = 'workspace-1' AND playbook_id = ?",
+        [definitionId],
+      )).toThrow(/cannot be deleted/i);
+      expect(queryColumn(
+        db,
+        `SELECT current_state FROM playbook_definition_heads WHERE playbook_id = '${definitionId}'`,
+      )).toEqual(["active"]);
+      expect(queryColumn(db, "SELECT count(*) FROM playbook_definition_versions WHERE playbook_id = '" + definitionId + "'"))
+        .toEqual([4]);
+      expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
+      expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("links a review only to its exact immutable definition revision and ordered rules", async () => {
+    const db = await createMigratedDatabase();
+    try {
+      seedTradeSubject(db);
+      db.run(
+        "INSERT INTO playbooks VALUES ('legacy-playbook', 'workspace-1', 'Opening Range Breakout', 'opening range breakout', 2)",
+      );
+      db.run(
+        "INSERT INTO playbook_rules VALUES ('legacy-rule-1', 'workspace-1', 'legacy-playbook', 'Wait for confirmation', 'wait for confirmation', 2)",
+      );
+      db.run(
+        "INSERT INTO playbook_rules VALUES ('legacy-rule-2', 'workspace-1', 'legacy-playbook', 'Size from invalidation', 'size from invalidation', 2)",
+      );
+
+      const definitionId = "a".repeat(64);
+      const versionId = "b".repeat(64);
+      const revision = "2".repeat(64);
+      db.run(
+        "INSERT INTO playbook_definitions VALUES (?, 'workspace-1', ?, 2)",
+        [definitionId, "1".repeat(64)],
+      );
+      insertPlaybookDefinitionVersion(db, {
+        id: versionId,
+        playbookId: definitionId,
+        versionNumber: 1,
+        supersedesVersionId: null,
+        action: "create",
+        submissionId: "1".repeat(64),
+        revision,
+        state: "active",
+        recordedAtMs: 2,
+      });
+      insertPlaybookDefinitionRule(
+        db,
+        versionId,
+        definitionId,
+        0,
+        "Wait for confirmation",
+      );
+      insertPlaybookDefinitionRule(
+        db,
+        versionId,
+        definitionId,
+        1,
+        "Size from invalidation",
+      );
+      db.run(
+        "INSERT INTO playbook_definition_heads VALUES ('workspace-1', ?, ?, 'opening range breakout', 'active', 2)",
+        [definitionId, versionId],
+      );
+
+      insertReviewVersion(db, {
+        id: "review-1",
+        versionNumber: 1,
+        supersedesVersionId: null,
+        submissionId: "4".repeat(64),
+        playbookId: "legacy-playbook",
+        recordedAtMs: 3,
+      });
+      db.run(
+        "INSERT INTO trade_review_rule_results VALUES ('review-1', 'workspace-1', 'trade-1', 'legacy-rule-1', 'followed', 'Wait for confirmation', 0)",
+      );
+      const insertLink = (linkedRevision: string) => db.run(
+        "INSERT INTO trade_review_playbook_definition_links VALUES ('review-1', 'workspace-1', 'trade-1', ?, ?, ?)",
+        [definitionId, versionId, linkedRevision],
+      );
+      expect(() => insertLink(revision)).toThrow(/exact playbook definition snapshot/i);
+
+      db.run(
+        "INSERT INTO trade_review_rule_results VALUES ('review-1', 'workspace-1', 'trade-1', 'legacy-rule-2', 'unreviewed', 'Size from invalidation', 1)",
+      );
+      expect(() => insertLink("3".repeat(64))).toThrow(/exact playbook definition snapshot/i);
+      insertLink(revision);
+
+      expect(() => db.run(
+        "UPDATE trade_review_playbook_definition_links SET revision_sha256 = ? WHERE review_version_id = 'review-1'",
+        ["3".repeat(64)],
+      )).toThrow(/immutable/i);
+      expect(queryColumn(
+        db,
+        "SELECT definition_version_id FROM trade_review_playbook_definition_links",
+      )).toEqual([versionId]);
       expect(db.exec("PRAGMA foreign_key_check")).toEqual([]);
       expect(queryColumn(db, "PRAGMA quick_check")).toEqual(["ok"]);
     } finally {

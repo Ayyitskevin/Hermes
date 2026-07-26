@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { journalArchiveReportSha256 } from "./journal-archive-derived";
 import type { LedgerExecution } from "../core/ledger";
 import { normalizeTrades } from "../core/normalize-trades";
 import { buildDirectionMixReport } from "../core/direction-mix-report";
@@ -104,6 +105,7 @@ function review(
     tags: ["A+"],
     playbookId: "playbook-1",
     playbookName: "Momentum",
+    playbookDefinition: null,
     rules: [{
       ruleId: "rule-1",
       text: "Wait for confirmation",
@@ -956,5 +958,38 @@ describe("journal workspace snapshot", () => {
         name: "Orphaned",
       }],
     }))).toThrow(/facts exist without a workspace/);
+  });
+});
+
+describe("playbook definition report provenance", () => {
+  it("does not change governed report input while preserving snapshot facts", () => {
+    const base = ledger();
+    const historical = review("subject-report-provenance");
+    const withoutDefinition: JournalLedgerSnapshot = {
+      ...base,
+      tradeReviews: [{ ...historical, playbookDefinition: null }],
+    };
+    const withDefinition: JournalLedgerSnapshot = {
+      ...base,
+      tradeReviews: [{
+        ...historical,
+        playbookDefinition: {
+          id: "b".repeat(64),
+          versionId: "c".repeat(64),
+          revision: "d".repeat(64),
+        },
+      }],
+    };
+
+    expect(journalArchiveReportSha256(withDefinition)).toBe(
+      journalArchiveReportSha256(withoutDefinition),
+    );
+    expect(journalArchiveReportSha256({
+      ...withDefinition,
+      tradeReviews: [{
+        ...withDefinition.tradeReviews[0]!,
+        playbookName: "A different historical snapshot",
+      }],
+    })).not.toBe(journalArchiveReportSha256(withDefinition));
   });
 });

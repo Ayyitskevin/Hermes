@@ -160,7 +160,7 @@ describe("browser-session durable daily journal", () => {
       const artifact = await source.exportUserData();
       expect(artifact.archive.payload).toMatchObject({
         kind: "browser-session-state",
-        version: 2,
+        version: 3,
       });
       const prepared = await destination.prepareUserDataRestore(artifact.contents);
       const restored = await destination.commitUserDataRestore(prepared);

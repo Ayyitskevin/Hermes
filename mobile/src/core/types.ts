@@ -53,6 +53,15 @@ export interface TradePreview {
   readonly tags: readonly string[];
   readonly followedPlan: boolean | null;
   readonly playbook: string | null;
+  /**
+   * Present only when the user explicitly applied an immutable library
+   * revision. Historical/ad-hoc playbook text remains null or omitted.
+   */
+  readonly playbookDefinition?: {
+    readonly id: string;
+    readonly versionId: string;
+    readonly revision: string;
+  } | null;
   readonly rules: readonly TradeRuleReviewPreview[];
   readonly initialRisk: {
     readonly amount: string;

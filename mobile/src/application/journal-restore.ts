@@ -14,8 +14,8 @@ export interface JournalRestorePreview {
   readonly reportSha256: string;
   readonly exportedAtUs: string;
   readonly payloadKind: JournalRestorePayloadKind;
-  /** Native table archives remain v1; browser state archives are v2. */
-  readonly payloadVersion: 1 | 2;
+  /** Native table archives may be legacy v1 or current v2; browser state may be v2 or v3. */
+  readonly payloadVersion: 1 | 2 | 3;
   /** Recomputed by the payload-specific adapter; never copied from the envelope. */
   readonly summary: JournalArchiveSummary;
   /** Destination state observed during the adapter's verified preview transaction. */
@@ -115,8 +115,14 @@ export function createPreparedJournalRestore(
     (preview.payloadKind !== "sqlite-table-set"
       && preview.payloadKind !== "browser-session-state")
     || !(
-      (preview.payloadKind === "sqlite-table-set" && preview.payloadVersion === 1)
-      || (preview.payloadKind === "browser-session-state" && preview.payloadVersion === 2)
+      (
+        preview.payloadKind === "sqlite-table-set"
+        && (preview.payloadVersion === 1 || preview.payloadVersion === 2)
+      )
+      || (
+        preview.payloadKind === "browser-session-state"
+        && (preview.payloadVersion === 2 || preview.payloadVersion === 3)
+      )
     )
     || (preview.target !== "empty" && preview.target !== "already-restored")
   ) {

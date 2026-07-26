@@ -7,6 +7,7 @@ import {
   type PreparedTradeReviewBatch,
 } from "../application/journal-store";
 import { prepareCsvImport } from "../application/prepare-csv-import";
+import { preparePlaybookDefinition } from "../application/prepare-playbook-definition";
 import {
   prepareManualExecution,
   type ManualExecutionInput,
@@ -239,6 +240,73 @@ describe("browser session trade reviews", () => {
       expect((await store.load()).tradeReviews[0]?.id).toBe(edited.reviewIds[0]);
     } finally {
       await store.close();
+    }
+  });
+
+  it("keeps an explicit definition snapshot exact beside same-normalized legacy text", async () => {
+    const store = new SessionJournalStore({ nowMs: () => 3_000 });
+    const restored = new SessionJournalStore({ nowMs: () => 4_000 });
+    try {
+      const tradeSubjectId = await addClosedTrade(store, "AAPL", "1", "2");
+      const legacy = await store.commitTradeReviews(batch("legacy-review", [
+        review("a", tradeSubjectId),
+      ]));
+      const legacyHead = legacy.ledger.tradeReviews[0];
+      if (legacyHead === undefined) throw new Error("Expected a legacy review head.");
+
+      const create = preparePlaybookDefinition({
+        submissionId: "c".repeat(64),
+        action: "create",
+        playbookId: null,
+        expectedPreviousVersionId: null,
+        name: "OPENING DRIVE",
+        rules: ["WAIT FOR VOLUME"],
+      });
+      const definition = (await store.commitPlaybookDefinition(create)).definition;
+      const linkedCommand = review("b", tradeSubjectId, {
+        expectedPreviousReviewId: legacyHead.id,
+        playbook: {
+          name: definition.name,
+          definition: {
+            id: definition.id,
+            versionId: definition.versionId,
+            revision: definition.revision,
+          },
+          rules: definition.rules.map((name) => ({
+            name,
+            outcome: "followed" as const,
+          })),
+        },
+      });
+      const linked = await store.commitTradeReviews(batch("linked-review", [linkedCommand]));
+      expect(linked.ledger.playbooks).toEqual([expect.objectContaining({
+        name: "Opening Drive",
+        rules: [expect.objectContaining({ text: "Wait for volume" })],
+      })]);
+      expect(linked.ledger.tradeReviews[0]).toMatchObject({
+        playbookName: "OPENING DRIVE",
+        playbookDefinition: {
+          id: definition.id,
+          versionId: definition.versionId,
+          revision: definition.revision,
+        },
+        rules: [{ text: "WAIT FOR VOLUME", outcome: "followed" }],
+      });
+
+      const exported = await store.exportUserData();
+      const preview = await restored.prepareUserDataRestore(exported.contents);
+      const replay = await restored.commitUserDataRestore(preview);
+      expect(replay.ledger.tradeReviews[0]).toMatchObject({
+        playbookName: "OPENING DRIVE",
+        rules: [{ text: "WAIT FOR VOLUME", outcome: "followed" }],
+      });
+      expect(replay.ledger.playbooks[0]).toMatchObject({
+        name: "Opening Drive",
+        rules: [expect.objectContaining({ text: "Wait for volume" })],
+      });
+    } finally {
+      await store.close();
+      await restored.close();
     }
   });
 
@@ -597,6 +665,129 @@ describe("browser session user-data export", () => {
       expect(afterMutation.archive.reportSha256).not.toBe(artifact.archive.reportSha256);
     } finally {
       await store.close();
+    }
+  });
+
+  it("keeps explicit historical definition snapshots while legacy review playbooks stay null", async () => {
+    let nowMs = 30_000;
+    const store = new SessionJournalStore({ nowMs: () => nowMs++ });
+    const restoredStore = new SessionJournalStore({ nowMs: () => nowMs++ });
+    try {
+      const linkedSubjectId = await addClosedTrade(store, "AAPL", "1", "2");
+      const legacySubjectId = await addClosedTrade(store, "MSFT", "3", "4");
+      const create = preparePlaybookDefinition({
+        submissionId: "5".repeat(64),
+        action: "create",
+        playbookId: null,
+        expectedPreviousVersionId: null,
+        name: "Opening Drive",
+        rules: ["Wait for volume", "Respect the stop"],
+      });
+      const firstVersion = (await store.commitPlaybookDefinition(create)).definition;
+      const rename = preparePlaybookDefinition({
+        submissionId: "6".repeat(64),
+        action: "edit",
+        playbookId: firstVersion.id,
+        expectedPreviousVersionId: firstVersion.versionId,
+        name: "Opening Drive Revised",
+        rules: ["Wait for confirmation", "Use a hard stop"],
+      });
+      const renamed = (await store.commitPlaybookDefinition(rename)).definition;
+      const archive = preparePlaybookDefinition({
+        submissionId: "7".repeat(64),
+        action: "archive",
+        playbookId: renamed.id,
+        expectedPreviousVersionId: renamed.versionId,
+        name: renamed.name,
+        rules: renamed.rules,
+      });
+      const archived = (await store.commitPlaybookDefinition(archive)).definition;
+      const historicalReference = {
+        id: firstVersion.id,
+        versionId: firstVersion.versionId,
+        revision: firstVersion.revision,
+      };
+
+      const linked = review("a", linkedSubjectId, {
+        playbook: {
+          name: firstVersion.name,
+          definition: historicalReference,
+          rules: firstVersion.rules.map((name) => ({
+            name,
+            outcome: "followed" as const,
+          })),
+        },
+      });
+      const legacy = review("b", legacySubjectId, {
+        playbook: {
+          name: "Discretionary",
+          rules: [{ name: "Wait for confirmation", outcome: "followed" }],
+        },
+      });
+      const committed = await store.commitTradeReviews(batch(
+        "historical-definition-and-legacy",
+        [linked, legacy],
+      ));
+      const linkedReview = committed.ledger.tradeReviews.find((candidate) => (
+        candidate.tradeSubjectId === linkedSubjectId
+      ));
+      const legacyReview = committed.ledger.tradeReviews.find((candidate) => (
+        candidate.tradeSubjectId === legacySubjectId
+      ));
+      expect(linkedReview).toMatchObject({
+        playbookName: firstVersion.name,
+        playbookDefinition: historicalReference,
+      });
+      expect(linkedReview?.rules.map(({ text }) => text)).toEqual(firstVersion.rules);
+      expect(legacyReview).toMatchObject({
+        playbookName: "Discretionary",
+        playbookDefinition: null,
+      });
+      expect((await store.loadPlaybookLibrary())[0]).toEqual(archived);
+
+      const retry = await store.commitTradeReviews(batch(
+        "historical-definition-and-legacy",
+        [linked, legacy],
+      ));
+      expect(retry).toMatchObject({
+        outcome: "duplicate",
+        reviewIds: committed.reviewIds,
+      });
+
+      if (linkedReview === undefined) throw new Error("Expected the linked review head.");
+      const mismatched = review("c", linkedSubjectId, {
+        expectedPreviousReviewId: linkedReview.id,
+        playbook: {
+          name: archived.name,
+          definition: historicalReference,
+          rules: archived.rules.map((name) => ({
+            name,
+            outcome: "followed" as const,
+          })),
+        },
+      });
+      await store.commitTradeReviews(batch("mismatched-history", [mismatched]))
+        .then(() => { throw new Error("Expected an immutable definition mismatch."); })
+        .catch((error: unknown) => expectConflictCode(error, "review_changed"));
+      expect((await store.load()).tradeReviews).toHaveLength(2);
+
+      const artifact = await store.exportUserData();
+      const prepared = await restoredStore.prepareUserDataRestore(artifact.contents);
+      await restoredStore.commitUserDataRestore(prepared);
+      const restored = await restoredStore.load();
+      expect(restored.tradeReviews.find((candidate) => (
+        candidate.tradeSubjectId === linkedSubjectId
+      ))).toMatchObject({
+        playbookName: firstVersion.name,
+        playbookDefinition: historicalReference,
+      });
+      expect(restored.tradeReviews.find((candidate) => (
+        candidate.tradeSubjectId === legacySubjectId
+      ))?.playbookDefinition).toBeNull();
+      expect(await restoredStore.loadPlaybookLibrary()).toEqual([archived]);
+    } finally {
+      await store.close();
+      await restoredStore.close();
     }
   });
 });

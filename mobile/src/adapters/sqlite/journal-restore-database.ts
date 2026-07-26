@@ -9,6 +9,7 @@ import type {
 } from "../../application/sql-database";
 import {
   SQLITE_JOURNAL_ARCHIVE_TABLES,
+  SQLITE_JOURNAL_ARCHIVE_V5_TABLES,
   type SqliteArchiveTable,
 } from "./journal-archive";
 import type { DecodedSqliteJournalRestoreArchive } from "./journal-restore";
@@ -50,6 +51,8 @@ const INSERT_ORDER: readonly SqliteJournalArchiveTableName[] = Object.freeze([
 ]);
 
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;
+const V5_TABLE_NAMES: ReadonlySet<string> = new Set(SQLITE_JOURNAL_ARCHIVE_V5_TABLES);
+
 
 function asArchiveJson(value: unknown): JournalArchiveJson {
   return value as JournalArchiveJson;
@@ -71,6 +74,13 @@ export function sqliteRestoreTable(
   return table;
 }
 
+function optionalRestoreTable(
+  tables: readonly SqliteArchiveTable[],
+  name: SqliteJournalArchiveTableName,
+): SqliteArchiveTable | undefined {
+  return tables.find((candidate) => candidate.name === name);
+}
+
 function portableTableValue(table: SqliteArchiveTable): JournalArchiveJson {
   return asArchiveJson({
     name: table.name,
@@ -85,11 +95,22 @@ export function sqlitePortableTablesEqual(
 ): boolean {
   for (const name of SQLITE_JOURNAL_ARCHIVE_TABLES) {
     if (name === "schema_migrations") continue;
-    const leftValue = portableTableValue(sqliteRestoreTable(left, name));
-    const rightValue = portableTableValue(sqliteRestoreTable(right, name));
+    const leftTable = left.find((candidate) => candidate.name === name);
+    const rightTable = right.find((candidate) => candidate.name === name);
+    if (leftTable === undefined || rightTable === undefined) {
+      const present = leftTable ?? rightTable;
+      if (
+        V5_TABLE_NAMES.has(name)
+        && present !== undefined
+        && present.rows.length === 0
+      ) {
+        continue;
+      }
+      return false;
+    }
     if (
-      canonicalJournalArchiveJson(leftValue)
-      !== canonicalJournalArchiveJson(rightValue)
+      canonicalJournalArchiveJson(portableTableValue(leftTable))
+      !== canonicalJournalArchiveJson(portableTableValue(rightTable))
     ) {
       return false;
     }
@@ -343,6 +364,166 @@ async function restoreReviewChains(
   }
 }
 
+interface PlaybookDefinitionRestoreVersion {
+  readonly row: readonly (string | null)[];
+  readonly id: string;
+  readonly playbookId: string;
+  readonly version: bigint;
+  readonly normalizedName: string;
+  readonly state: string;
+}
+
+interface PlaybookDefinitionRestoreHead {
+  readonly row: readonly (string | null)[];
+  readonly workspaceId: string;
+  readonly playbookId: string;
+  readonly definitionVersionId: string;
+  readonly changedAtMs: string;
+}
+
+async function restorePlaybookDefinitionChains(
+  database: SqlDatabase,
+  tables: readonly SqliteArchiveTable[],
+): Promise<void> {
+  const definitionTable = optionalRestoreTable(tables, "playbook_definitions");
+  if (definitionTable === undefined) return;
+  const versionTable = sqliteRestoreTable(tables, "playbook_definition_versions");
+  const ruleTable = sqliteRestoreTable(tables, "playbook_definition_rules");
+  const headTable = sqliteRestoreTable(tables, "playbook_definition_heads");
+  await insertTableRows(database, tables, "playbook_definitions");
+
+  const versionIdIndex = requiredColumnIndex(versionTable, "id");
+  const versionPlaybookIndex = requiredColumnIndex(versionTable, "playbook_id");
+  const versionNumberIndex = requiredColumnIndex(versionTable, "version_number");
+  const versionNameIndex = requiredColumnIndex(versionTable, "normalized_name");
+  const versionStateIndex = requiredColumnIndex(versionTable, "state");
+  const versionsByPlaybook = new Map<string, PlaybookDefinitionRestoreVersion[]>();
+  for (const row of versionTable.rows) {
+    const playbookId = requiredText(
+      row,
+      versionPlaybookIndex,
+      "Playbook-definition version playbook",
+    );
+    const versions = versionsByPlaybook.get(playbookId) ?? [];
+    versions.push({
+      row,
+      id: requiredText(row, versionIdIndex, "Playbook-definition version id"),
+      playbookId,
+      version: BigInt(requiredText(
+        row,
+        versionNumberIndex,
+        "Playbook-definition version number",
+      )),
+      normalizedName: requiredText(
+        row,
+        versionNameIndex,
+        "Playbook-definition normalized name",
+      ),
+      state: requiredText(row, versionStateIndex, "Playbook-definition state"),
+    });
+    versionsByPlaybook.set(playbookId, versions);
+  }
+  for (const [playbookId, versions] of versionsByPlaybook) {
+    versions.sort((left, right) => (
+      left.version < right.version ? -1 : left.version > right.version ? 1 : 0
+    ));
+    versionsByPlaybook.set(playbookId, versions);
+  }
+
+  const ruleVersionIndex = requiredColumnIndex(ruleTable, "definition_version_id");
+  const rulesByVersion = new Map<string, (readonly (string | null)[])[]>();
+  for (const row of ruleTable.rows) {
+    const versionId = requiredText(row, ruleVersionIndex, "Playbook-definition rule version");
+    const rules = rulesByVersion.get(versionId) ?? [];
+    rules.push(row);
+    rulesByVersion.set(versionId, rules);
+  }
+
+  const headWorkspaceIndex = requiredColumnIndex(headTable, "workspace_id");
+  const headPlaybookIndex = requiredColumnIndex(headTable, "playbook_id");
+  const headVersionIndex = requiredColumnIndex(headTable, "definition_version_id");
+  const headChangedIndex = requiredColumnIndex(headTable, "changed_at_ms");
+  const headByPlaybook = new Map<string, PlaybookDefinitionRestoreHead>();
+  for (const row of headTable.rows) {
+    const playbookId = requiredText(row, headPlaybookIndex, "Playbook-definition head id");
+    headByPlaybook.set(playbookId, {
+      row,
+      workspaceId: requiredText(
+        row,
+        headWorkspaceIndex,
+        "Playbook-definition head workspace",
+      ),
+      playbookId,
+      definitionVersionId: requiredText(
+        row,
+        headVersionIndex,
+        "Playbook-definition head version",
+      ),
+      changedAtMs: requiredText(
+        row,
+        headChangedIndex,
+        "Playbook-definition head timestamp",
+      ),
+    });
+  }
+
+  const insertVersion = async (version: PlaybookDefinitionRestoreVersion): Promise<void> => {
+    await insertRow(database, versionTable, version.row);
+    for (const rule of rulesByVersion.get(version.id) ?? []) {
+      await insertRow(database, ruleTable, rule);
+    }
+  };
+  for (const playbookId of [...versionsByPlaybook.keys()].sort()) {
+    const versions = versionsByPlaybook.get(playbookId);
+    const first = versions?.[0];
+    const latest = versions?.at(-1);
+    const head = headByPlaybook.get(playbookId);
+    if (
+      versions === undefined
+      || first === undefined
+      || latest === undefined
+      || head === undefined
+      || head.definitionVersionId !== latest.id
+    ) {
+      throw new Error("A playbook-definition history is missing its current head.");
+    }
+    await insertVersion(first);
+    if (versions.length === 1) {
+      await insertRow(database, headTable, head.row);
+      continue;
+    }
+    const temporaryHead = [...head.row];
+    temporaryHead[headVersionIndex] = first.id;
+    temporaryHead[requiredColumnIndex(headTable, "normalized_current_name")]
+      = first.normalizedName;
+    temporaryHead[requiredColumnIndex(headTable, "current_state")] = first.state;
+    await insertRow(database, headTable, temporaryHead);
+    for (let index = 1; index < versions.length; index += 1) {
+      const version = versions[index];
+      if (version === undefined) {
+        throw new Error("A playbook-definition chain is incomplete.");
+      }
+      await insertVersion(version);
+      const result = await database.run(
+        `UPDATE "playbook_definition_heads"
+            SET "definition_version_id" = ?, "normalized_current_name" = ?,
+                "current_state" = ?, "changed_at_ms" = CAST(? AS INTEGER)
+          WHERE "workspace_id" = ? AND "playbook_id" = ?`,
+        [
+          version.id,
+          version.normalizedName,
+          version.state,
+          head.changedAtMs,
+          head.workspaceId,
+          head.playbookId,
+        ],
+      );
+      if (result.changes !== 1) {
+        throw new Error("Restore could not advance one playbook-definition head.");
+      }
+    }
+  }
+}
 interface DailyEntryVersionRow {
   readonly row: readonly (string | null)[];
   readonly id: string;
@@ -511,9 +692,16 @@ export async function restoreSqliteJournalTables(
 ): Promise<void> {
   const tables = source.tables;
   for (const name of INSERT_ORDER) await insertTableRows(database, tables, name);
+  await restorePlaybookDefinitionChains(database, tables);
   await restoreReviewChains(database, tables);
   await insertTableRows(database, tables, "trade_review_term_assignments");
   await insertTableRows(database, tables, "trade_review_rule_results");
+  if (
+    optionalRestoreTable(tables, "trade_review_playbook_definition_links")
+    !== undefined
+  ) {
+    await insertTableRows(database, tables, "trade_review_playbook_definition_links");
+  }
   await restoreDailyEntryChains(database, tables);
   await insertTableRows(database, tables, "daily_journal_entry_term_assignments");
 }

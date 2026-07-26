@@ -15,6 +15,7 @@ import type {
   JournalImportReceipt,
   JournalInstrumentRecord,
   JournalLedgerSnapshot,
+  JournalPlaybookDefinitionRecord,
   JournalPlaybookRecord,
   JournalReviewTermRecord,
   JournalTradeReviewRecord,
@@ -22,6 +23,18 @@ import type {
   UnacknowledgedManualExecution,
 } from "../application/journal-store";
 import { prepareDailyJournalEntry } from "../application/prepare-daily-journal";
+import {
+  preparePlaybookDefinition,
+  type PlaybookDefinitionAction,
+  type PlaybookDefinitionState,
+} from "../application/prepare-playbook-definition";
+import {
+  PERCENT_RETURN_METRIC_ID,
+  PERCENT_RETURN_METRIC_VERSION,
+  prepareTradeReview,
+  RESULT_R_METRIC_ID,
+  RESULT_R_METRIC_VERSION,
+} from "../application/prepare-trade-review";
 import { workspaceSnapshotFromLedger } from "../application/workspace-snapshot";
 import { currencyMinorUnit } from "../core/currency";
 import { canonicalizeDecimal } from "../core/decimal";
@@ -62,6 +75,67 @@ export interface SessionDailyEntrySubmission {
   readonly entryVersionId: string;
 }
 
+export interface SessionPlaybookDefinitionIdentity {
+  readonly id: string;
+  readonly createdAtUs: string;
+}
+
+export interface SessionPlaybookDefinitionVersion {
+  readonly playbookId: string;
+  readonly versionId: string;
+  readonly version: number;
+  readonly action: PlaybookDefinitionAction;
+  readonly expectedPreviousVersionId: string | null;
+  readonly revision: string;
+  readonly name: string;
+  readonly state: PlaybookDefinitionState;
+  readonly rules: readonly string[];
+  readonly recordedAtUs: string;
+}
+
+export interface SessionPlaybookDefinitionSubmission {
+  readonly revision: string;
+  readonly versionId: string;
+}
+
+export type SessionLegacyTradeReviewRecord = Omit<
+  JournalTradeReviewRecord,
+  "playbookDefinition"
+>;
+
+function playbookDefinitionRecord(
+  version: SessionPlaybookDefinitionVersion,
+): JournalPlaybookDefinitionRecord {
+  return Object.freeze({
+    id: version.playbookId,
+    versionId: version.versionId,
+    version: version.version,
+    revision: version.revision,
+    name: version.name,
+    state: version.state,
+    rules: Object.freeze([...version.rules]),
+    recordedAtUs: version.recordedAtUs,
+  });
+}
+
+export function sessionPlaybookLibraryFromHistory(
+  versions: readonly SessionPlaybookDefinitionVersion[],
+  heads: ReadonlyMap<string, string> | readonly (readonly [string, string])[],
+): readonly JournalPlaybookDefinitionRecord[] {
+  const versionById = new Map(versions.map((version) => [version.versionId, version]));
+  const entries = heads instanceof Map ? [...heads.entries()] : [...heads];
+  return Object.freeze(entries.map(([playbookId, versionId]) => {
+    const version = versionById.get(versionId);
+    if (version === undefined || version.playbookId !== playbookId) {
+      throw new Error("A playbook definition head lost its immutable version.");
+    }
+    return playbookDefinitionRecord(version);
+  }).sort((left, right) => (
+    stableCompare(normalizedName(left.name), normalizedName(right.name))
+    || stableCompare(left.id, right.id)
+  )));
+}
+
 export interface SessionJournalState {
   readonly workspace: JournalWorkspaceRecord | null;
   readonly accounts: readonly JournalAccountRecord[];
@@ -75,19 +149,24 @@ export interface SessionJournalState {
   readonly reviewHeads: ReadonlyMap<string, string>;
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
+  readonly playbookDefinitionIdentities: readonly SessionPlaybookDefinitionIdentity[];
+  readonly playbookDefinitionVersions: readonly SessionPlaybookDefinitionVersion[];
+  readonly playbookDefinitionHeads: ReadonlyMap<string, string>;
+  readonly playbookDefinitionSubmissions: ReadonlyMap<string, SessionPlaybookDefinitionSubmission>;
   readonly reviewSubmissions: ReadonlyMap<string, SessionReviewSubmission>;
   readonly dailyEntryVersions: readonly JournalDailyEntryRecord[];
   readonly dailyEntryHeads: ReadonlyMap<string, string>;
   readonly dailyEntrySubmissions: ReadonlyMap<string, SessionDailyEntrySubmission>;
   readonly lastReviewRecordedAtMs: number;
   readonly lastDailyEntryRecordedAtMs: number;
+  readonly lastPlaybookDefinitionRecordedAtMs: number;
   readonly nextExecutionSequence: number;
   readonly nextReceiptOrdinal: number;
 }
 
 export interface SessionJournalPayload {
   readonly adapter: "browser-session";
-  readonly stateVersion: 2;
+  readonly stateVersion: 3;
   readonly workspace: JournalWorkspaceRecord | null;
   readonly accounts: readonly JournalAccountRecord[];
   readonly instruments: readonly JournalInstrumentRecord[];
@@ -101,6 +180,10 @@ export interface SessionJournalPayload {
   readonly reviewTerms: readonly JournalReviewTermRecord[];
   readonly playbooks: readonly JournalPlaybookRecord[];
   readonly reviewSubmissions: readonly (readonly [string, SessionReviewSubmission])[];
+  readonly playbookDefinitionIdentities: readonly SessionPlaybookDefinitionIdentity[];
+  readonly playbookDefinitionVersions: readonly SessionPlaybookDefinitionVersion[];
+  readonly playbookDefinitionHeads: readonly (readonly [string, string])[];
+  readonly playbookDefinitionSubmissions: readonly (readonly [string, SessionPlaybookDefinitionSubmission])[];
   readonly dailyEntryVersions: readonly JournalDailyEntryRecord[];
   readonly dailyEntryHeads: readonly (readonly [string, string])[];
   readonly dailyEntrySubmissions: readonly (readonly [string, SessionDailyEntrySubmission])[];
@@ -108,9 +191,30 @@ export interface SessionJournalPayload {
     readonly lastReviewRecordedAtMs: string;
     readonly lastDailyEntryRecordedAtMs: string;
     readonly nextExecutionSequence: string;
+    readonly lastPlaybookDefinitionRecordedAtMs: string;
     readonly nextReceiptOrdinal: string;
   };
 }
+export type SessionJournalPayloadV2 = Omit<
+  SessionJournalPayload,
+  | "stateVersion"
+  | "reviewVersions"
+  | "playbookDefinitionIdentities"
+  | "playbookDefinitionVersions"
+  | "playbookDefinitionHeads"
+  | "playbookDefinitionSubmissions"
+  | "counters"
+> & {
+  readonly stateVersion: 2;
+  readonly reviewVersions: readonly SessionLegacyTradeReviewRecord[];
+  readonly counters: {
+    readonly lastReviewRecordedAtMs: string;
+    readonly lastDailyEntryRecordedAtMs: string;
+    readonly nextExecutionSequence: string;
+    readonly nextReceiptOrdinal: string;
+  };
+};
+
 
 export type SessionRestoreValidationCode =
   | "invalid_archive"
@@ -133,6 +237,7 @@ export class SessionRestoreValidationError extends Error {
 export interface VerifiedSessionRestoreCandidate {
   readonly archive: JournalArchive;
   readonly payload: SessionJournalPayload;
+  readonly sourcePayloadVersion: 2 | 3;
   readonly ledger: JournalLedgerSnapshot;
   readonly summary: JournalArchiveSummary;
   readonly stateSha256: string;
@@ -182,7 +287,7 @@ export function sessionJournalPayloadFromState(
 ): SessionJournalPayload {
   return {
     adapter: "browser-session",
-    stateVersion: 2,
+    stateVersion: 3,
     workspace: state.workspace,
     accounts: byId(state.accounts),
     instruments: byId(state.instruments),
@@ -198,6 +303,14 @@ export function sessionJournalPayloadFromState(
       ...playbook,
       rules: byId(playbook.rules),
     })),
+    playbookDefinitionIdentities: byId(state.playbookDefinitionIdentities),
+    playbookDefinitionVersions: [...state.playbookDefinitionVersions]
+      .sort((left, right) => stableCompare(left.versionId, right.versionId))
+      .map((version) => ({ ...version, rules: [...version.rules] })),
+    playbookDefinitionHeads: byKey(state.playbookDefinitionHeads.entries()),
+    playbookDefinitionSubmissions: byKey(
+      state.playbookDefinitionSubmissions.entries(),
+    ),
     reviewSubmissions: byKey(state.reviewSubmissions.entries()),
     dailyEntryVersions: byId(state.dailyEntryVersions),
     dailyEntryHeads: byKey(state.dailyEntryHeads.entries()),
@@ -205,6 +318,7 @@ export function sessionJournalPayloadFromState(
     counters: {
       lastReviewRecordedAtMs: String(state.lastReviewRecordedAtMs),
       lastDailyEntryRecordedAtMs: String(state.lastDailyEntryRecordedAtMs),
+      lastPlaybookDefinitionRecordedAtMs: String(state.lastPlaybookDefinitionRecordedAtMs),
       nextExecutionSequence: String(state.nextExecutionSequence),
       nextReceiptOrdinal: String(state.nextReceiptOrdinal),
     },
@@ -221,12 +335,15 @@ function tradeSubjectsForProjection(
 }
 
 export function sessionJournalLedgerFromPayload(
-  payload: SessionJournalPayload,
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
 ): JournalLedgerSnapshot {
   const executions: readonly LedgerExecution[] = payload.activeExecutions;
   const projection = normalizeTrades(executions);
+  const reviewVersions: readonly JournalTradeReviewRecord[] = payload.stateVersion === 2
+    ? payload.reviewVersions.map((review) => ({ ...review, playbookDefinition: null }))
+    : payload.reviewVersions;
   const headIds = new Set(payload.reviewHeads.map(([, reviewId]) => reviewId));
-  const tradeReviews = payload.reviewVersions
+  const tradeReviews = reviewVersions
     .filter((review) => headIds.has(review.id))
     .sort((left, right) => (
       BigInt(left.recordedAtUs) < BigInt(right.recordedAtUs) ? -1
@@ -265,7 +382,7 @@ export function sessionJournalLedgerFromPayload(
 }
 
 export function sessionJournalSummary(
-  payload: SessionJournalPayload,
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
   ledger: JournalLedgerSnapshot,
 ): JournalArchiveSummary {
   return journalArchiveSummary(ledger, {
@@ -278,11 +395,16 @@ export function sessionJournalSummary(
     ),
     reviewVersions: String(payload.reviewVersions.length),
     reviewTerms: String(payload.reviewTerms.length),
-    playbooks: String(payload.playbooks.length),
+    playbooks: String(
+      payload.playbooks.length
+      + (payload.stateVersion === 3 ? payload.playbookDefinitionIdentities.length : 0),
+    ),
   });
 }
 
-export function sessionJournalStateSha256(payload: SessionJournalPayload): string {
+export function sessionJournalStateSha256(
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
+): string {
   return sha256Hex(canonicalJournalArchiveJson(payload as unknown as JournalArchiveJson));
 }
 
@@ -298,7 +420,9 @@ export function sessionJournalPayloadsEqual(
     === canonicalJournalArchiveJson(right as unknown as JournalArchiveJson);
 }
 
-export function isEmptySessionJournalPayload(payload: SessionJournalPayload): boolean {
+function isEmptySessionJournalBasePayload(
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
+): boolean {
   return payload.workspace === null
     && payload.accounts.length === 0
     && payload.instruments.length === 0
@@ -319,6 +443,15 @@ export function isEmptySessionJournalPayload(payload: SessionJournalPayload): bo
     && payload.counters.lastDailyEntryRecordedAtMs === "-1"
     && payload.counters.nextExecutionSequence === "1"
     && payload.counters.nextReceiptOrdinal === "0";
+}
+
+export function isEmptySessionJournalPayload(payload: SessionJournalPayload): boolean {
+  return isEmptySessionJournalBasePayload(payload)
+    && payload.playbookDefinitionIdentities.length === 0
+    && payload.playbookDefinitionVersions.length === 0
+    && payload.playbookDefinitionHeads.length === 0
+    && payload.playbookDefinitionSubmissions.length === 0
+    && payload.counters.lastPlaybookDefinitionRecordedAtMs === "-1";
 }
 type Validator = (value: unknown, label: string) => void;
 
@@ -543,7 +676,12 @@ const reviewRuleShape = objectShape({
   text,
   outcome: oneOf("followed", "broken", "not_applicable", "unreviewed"),
 });
-const reviewShape = objectShape({
+const playbookDefinitionReferenceShape = objectShape({
+  id: hash,
+  versionId: hash,
+  revision: hash,
+});
+const reviewShapeFields = {
   id: identifier,
   tradeSubjectId: identifier,
   version: positiveSafeInteger,
@@ -565,6 +703,11 @@ const reviewShape = objectShape({
   percentReturnMetricVersion: oneOf(1),
   recordedAtUs: canonicalUnsignedInteger,
   completedAtUs: nullable(canonicalUnsignedInteger),
+} as const;
+const legacyReviewShape = objectShape(reviewShapeFields);
+const reviewShape = objectShape({
+  ...reviewShapeFields,
+  playbookDefinition: nullable(playbookDefinitionReferenceShape),
 });
 const reviewSubmissionShape = objectShape({
   revision: hash,
@@ -589,7 +732,28 @@ const dailyEntrySubmissionShape = objectShape({
   entryVersionId: dailyIdentifier,
 });
 
-const payloadShape = objectShape({
+const playbookDefinitionIdentityShape = objectShape({
+  id: hash,
+  createdAtUs: canonicalUnsignedInteger,
+});
+const playbookDefinitionVersionShape = objectShape({
+  playbookId: hash,
+  versionId: hash,
+  version: positiveSafeInteger,
+  action: oneOf("create", "edit", "archive", "restore"),
+  expectedPreviousVersionId: nullable(hash),
+  revision: hash,
+  name: text,
+  state: oneOf("active", "archived"),
+  rules: arrayOf(text),
+  recordedAtUs: canonicalUnsignedInteger,
+});
+const playbookDefinitionSubmissionShape = objectShape({
+  revision: hash,
+  versionId: hash,
+});
+
+const payloadShapeV2 = objectShape({
   adapter: oneOf("browser-session"),
   stateVersion: oneOf(2),
   workspace: nullable(workspaceShape),
@@ -600,7 +764,7 @@ const payloadShape = objectShape({
   receipts: arrayOf(receiptShape),
   receiptByRevision: arrayOf(tupleOf(hash, identifier)),
   manualSubmissions: arrayOf(tupleOf(hash, manualSubmissionShape)),
-  reviewVersions: arrayOf(reviewShape),
+  reviewVersions: arrayOf(legacyReviewShape),
   reviewHeads: arrayOf(tupleOf(identifier, identifier)),
   reviewTerms: arrayOf(reviewTermShape),
   playbooks: arrayOf(playbookShape),
@@ -615,6 +779,38 @@ const payloadShape = objectShape({
     nextReceiptOrdinal: canonicalCounter,
   }),
 });
+
+const payloadShape = objectShape({
+  adapter: oneOf("browser-session"),
+  stateVersion: oneOf(3),
+  workspace: nullable(workspaceShape),
+  accounts: arrayOf(accountShape),
+  instruments: arrayOf(instrumentShape),
+  activeExecutions: arrayOf(executionShape),
+  inactiveExecutions: arrayOf(tupleOf(identifier, executionShape)),
+  receipts: arrayOf(receiptShape),
+  receiptByRevision: arrayOf(tupleOf(hash, identifier)),
+  manualSubmissions: arrayOf(tupleOf(hash, manualSubmissionShape)),
+  reviewVersions: arrayOf(reviewShape),
+  reviewHeads: arrayOf(tupleOf(identifier, identifier)),
+  reviewTerms: arrayOf(reviewTermShape),
+  playbooks: arrayOf(playbookShape),
+  playbookDefinitionIdentities: arrayOf(playbookDefinitionIdentityShape),
+  playbookDefinitionVersions: arrayOf(playbookDefinitionVersionShape),
+  playbookDefinitionHeads: arrayOf(tupleOf(hash, hash)),
+  playbookDefinitionSubmissions: arrayOf(tupleOf(hash, playbookDefinitionSubmissionShape)),
+  reviewSubmissions: arrayOf(tupleOf(hash, reviewSubmissionShape)),
+  dailyEntryVersions: arrayOf(dailyEntryShape),
+  dailyEntryHeads: arrayOf(tupleOf(text, dailyIdentifier)),
+  dailyEntrySubmissions: arrayOf(tupleOf(hash, dailyEntrySubmissionShape)),
+  counters: objectShape({
+    lastReviewRecordedAtMs: canonicalCounter,
+    lastDailyEntryRecordedAtMs: canonicalCounter,
+    lastPlaybookDefinitionRecordedAtMs: canonicalCounter,
+    nextExecutionSequence: canonicalCounter,
+    nextReceiptOrdinal: canonicalCounter,
+  }),
+});
 function assertStrictOrder(values: readonly string[], label: string): void {
   for (let index = 1; index < values.length; index += 1) {
     const previous = values[index - 1];
@@ -625,7 +821,9 @@ function assertStrictOrder(values: readonly string[], label: string): void {
   }
 }
 
-function assertPayloadOrder(payload: SessionJournalPayload): void {
+function assertPayloadOrder(
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
+): void {
   assertStrictOrder(payload.accounts.map((value) => value.id), "Session accounts");
   assertStrictOrder(payload.instruments.map((value) => value.id), "Session instruments");
   assertStrictOrder(payload.activeExecutions.map((value) => value.id), "Active executions");
@@ -637,6 +835,15 @@ function assertPayloadOrder(payload: SessionJournalPayload): void {
   assertStrictOrder(payload.reviewHeads.map(([key]) => key), "Review heads");
   assertStrictOrder(payload.reviewTerms.map((value) => value.id), "Review terms");
   assertStrictOrder(payload.playbooks.map((value) => value.id), "Playbooks");
+  if (payload.stateVersion === 3) {
+    assertStrictOrder(
+      payload.playbookDefinitionIdentities.map((value) => value.id),
+      "Playbook definition identities",
+    );
+    assertStrictOrder(payload.playbookDefinitionVersions.map((value) => value.versionId), "Playbook definition versions");
+    assertStrictOrder(payload.playbookDefinitionHeads.map(([key]) => key), "Playbook definition heads");
+    assertStrictOrder(payload.playbookDefinitionSubmissions.map(([key]) => key), "Playbook definition submissions");
+  }
   assertStrictOrder(payload.reviewSubmissions.map(([key]) => key), "Review submissions");
   assertStrictOrder(payload.dailyEntryVersions.map((value) => value.id), "Daily entry versions");
   assertStrictOrder(payload.dailyEntryHeads.map(([key]) => key), "Daily entry heads");
@@ -650,17 +857,411 @@ function assertUnique(values: readonly string[], label: string): void {
   if (new Set(values).size !== values.length) throw new Error(label + " contains duplicates.");
 }
 
+function sameOrderedStrings(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
+function reviewVocabularyIdentity(
+  value: string,
+  label: string,
+  characterLimit: number,
+): string {
+  const canonical = value.normalize("NFC").trim().replace(/\s+/gu, " ");
+  if (
+    canonical.length === 0
+    || canonical !== value
+    || [...canonical].length > characterLimit
+    || [...canonical.toLocaleLowerCase("en-US")].length > characterLimit
+    || /[\u0000-\u001f\u007f-\u009f]/u.test(canonical)
+  ) {
+    throw new Error(
+      `Browser session ${label} must be canonical single-line text of at most ${characterLimit} characters.`,
+    );
+  }
+  return canonical.toLocaleLowerCase("en-US");
+}
+
+function legacyTradeReviewRevision(
+  review: ReturnType<typeof prepareTradeReview>,
+): string {
+  return sha256Hex(JSON.stringify([
+    "hermes-trade-review-v1",
+    review.submissionId,
+    review.tradeSubjectId,
+    review.expectedPreviousReviewId,
+    review.state,
+    review.note,
+    review.setup === null ? null : review.setup.toLocaleLowerCase("en-US"),
+    review.mistakes.map((value) => value.toLocaleLowerCase("en-US")),
+    review.tags.map((value) => value.toLocaleLowerCase("en-US")),
+    review.emotion === null ? null : review.emotion.toLocaleLowerCase("en-US"),
+    review.playbook === null
+      ? null
+      : [
+          review.playbook.name.toLocaleLowerCase("en-US"),
+          review.playbook.rules.map((rule) => [
+            rule.name.toLocaleLowerCase("en-US"),
+            rule.outcome,
+          ]),
+        ],
+    review.initialRisk === null
+      ? null
+      : [review.initialRisk.amount, review.initialRisk.currency],
+    review.plannedStop,
+    [RESULT_R_METRIC_ID, review.resultRVersion],
+    [PERCENT_RETURN_METRIC_ID, review.percentReturnVersion],
+  ]));
+}
+
+function assertTradeReviewRevision(
+  review: JournalTradeReviewRecord,
+  submissionId: string,
+  expectedPreviousReviewId: string | null,
+  playbooks: ReadonlyMap<string, JournalPlaybookRecord>,
+  definitionVersions: ReadonlyMap<string, SessionPlaybookDefinitionVersion>,
+  reviewVocabulary: ReadonlySet<string>,
+): void {
+  let playbook: Parameters<typeof prepareTradeReview>[0]["playbook"] = null;
+  if (review.playbookId === null) {
+    if (
+      review.playbookName !== null
+      || review.rules.length !== 0
+      || review.playbookDefinition !== null
+    ) {
+      throw new Error("A review without a playbook contains playbook data.");
+    }
+  } else {
+    const sharedPlaybook = playbooks.get(review.playbookId);
+    if (sharedPlaybook === undefined || review.playbookName === null) {
+      throw new Error("A review references missing playbook metadata.");
+    }
+    const sharedNameIdentity = reviewVocabularyIdentity(
+      sharedPlaybook.name,
+      "shared review-playbook name",
+      120,
+    );
+    if (
+      reviewVocabularyIdentity(review.playbookName, "review playbook snapshot", 120)
+        !== sharedNameIdentity
+    ) {
+      throw new Error("A review playbook does not share its vocabulary identity.");
+    }
+    const sharedRules = new Map(sharedPlaybook.rules.map((rule) => [rule.id, rule]));
+    for (const rule of review.rules) {
+      const sharedRule = sharedRules.get(rule.ruleId);
+      if (
+        sharedRule === undefined
+        || reviewVocabularyIdentity(rule.text, "review-rule snapshot", 500)
+          !== reviewVocabularyIdentity(sharedRule.text, "shared review-rule name", 500)
+      ) {
+        throw new Error("A review rule snapshot conflicts with its playbook vocabulary.");
+      }
+    }
+
+    let exactName = review.playbookName;
+    let exactRuleNames = review.rules.map((rule) => rule.text);
+    const definitionReference = review.playbookDefinition;
+    if (definitionReference !== null) {
+      const version = definitionVersions.get(definitionReference.versionId);
+      if (
+        version === undefined
+        || version.playbookId !== definitionReference.id
+        || version.revision !== definitionReference.revision
+        || version.name !== review.playbookName
+        || !sameOrderedStrings(version.rules, exactRuleNames)
+      ) {
+        throw new Error(
+          "A review playbook definition snapshot conflicts with immutable history.",
+        );
+      }
+      exactName = version.name;
+      exactRuleNames = [...version.rules];
+    }
+    playbook = {
+      name: exactName,
+      definition: definitionReference,
+      rules: review.rules.map((rule, index) => ({
+        name: exactRuleNames[index] as string,
+        outcome: rule.outcome,
+      })),
+    };
+  }
+
+  if (
+    review.resultRMetricId !== RESULT_R_METRIC_ID
+    || review.resultRMetricVersion !== RESULT_R_METRIC_VERSION
+    || review.percentReturnMetricId !== PERCENT_RETURN_METRIC_ID
+    || review.percentReturnMetricVersion !== PERCENT_RETURN_METRIC_VERSION
+  ) {
+    throw new Error("A trade review uses unsupported metric definitions.");
+  }
+
+  const exact = {
+    submissionId,
+    tradeSubjectId: review.tradeSubjectId,
+    expectedPreviousReviewId,
+    state: review.state,
+    note: review.note,
+    setup: review.setup,
+    mistakes: review.mistakes,
+    tags: review.tags,
+    emotion: review.emotion,
+    playbook,
+    initialRisk: review.initialRisk,
+    plannedStop: review.plannedStop,
+  } as const;
+  let prepared: ReturnType<typeof prepareTradeReview>;
+  try {
+    prepared = prepareTradeReview(exact);
+  } catch (error) {
+    throw new Error("A trade review does not satisfy the authored-content contract.", {
+      cause: error,
+    });
+  }
+  const exactDefinition = exact.playbook?.definition ?? null;
+
+  const exactContent = JSON.stringify([
+    exact.note,
+    exact.setup,
+    exact.mistakes,
+    exact.tags,
+    exact.emotion,
+    exact.playbook === null
+      ? null
+      : [
+          exact.playbook.name,
+          exactDefinition === null
+            ? null
+            : [
+                exactDefinition.id,
+                exactDefinition.versionId,
+                exactDefinition.revision,
+              ],
+          exact.playbook.rules.map((rule) => [rule.name, rule.outcome]),
+        ],
+    exact.initialRisk === null
+      ? null
+      : [exact.initialRisk.amount, exact.initialRisk.currency],
+    exact.plannedStop,
+  ]);
+  const preparedContent = JSON.stringify([
+    prepared.note,
+    prepared.setup,
+    prepared.mistakes,
+    prepared.tags,
+    prepared.emotion,
+    prepared.playbook === null
+      ? null
+      : [
+          prepared.playbook.name,
+          prepared.playbook.definition === null
+            ? null
+            : [
+                prepared.playbook.definition.id,
+                prepared.playbook.definition.versionId,
+                prepared.playbook.definition.revision,
+              ],
+          prepared.playbook.rules.map((rule) => [rule.name, rule.outcome]),
+        ],
+    prepared.initialRisk === null
+      ? null
+      : [prepared.initialRisk.amount, prepared.initialRisk.currency],
+    prepared.plannedStop,
+  ]);
+  const revisionMatches = review.playbookDefinition === null
+    ? review.revision === prepared.revision
+      || review.revision === legacyTradeReviewRevision(prepared)
+    : review.revision === prepared.revision;
+  const expectedReviewId = `session-review:${sha256Hex(JSON.stringify([
+    review.tradeSubjectId,
+    submissionId,
+    review.revision,
+  ]))}`;
+  if (
+    exactContent !== preparedContent
+    || !revisionMatches
+    || review.id !== expectedReviewId
+  ) {
+    throw new Error("A trade review revision does not bind its exact canonical content.");
+  }
+  if (
+    (prepared.setup !== null
+      && !reviewVocabulary.has(`setup\u0000${normalizedName(prepared.setup)}`))
+    || prepared.mistakes.some((mistake) => (
+      !reviewVocabulary.has(`mistake\u0000${normalizedName(mistake)}`)
+    ))
+    || (prepared.emotion !== null
+      && !reviewVocabulary.has(`emotion\u0000${normalizedName(prepared.emotion)}`))
+    || prepared.tags.some((tag) => (
+      !reviewVocabulary.has(`tag\u0000${normalizedName(tag)}`)
+    ))
+  ) {
+    throw new Error("A trade review references missing shared review vocabulary.");
+  }
+}
+
+function assertPlaybookDefinitionSemantics(payload: SessionJournalPayload): void {
+  const identities = new Map(
+    payload.playbookDefinitionIdentities.map((identity) => [identity.id, identity]),
+  );
+  const versions = new Map(
+    payload.playbookDefinitionVersions.map((version) => [version.versionId, version]),
+  );
+  const heads = new Map(payload.playbookDefinitionHeads);
+  const submissions = new Map(payload.playbookDefinitionSubmissions);
+  if (
+    identities.size !== payload.playbookDefinitionIdentities.length
+    || versions.size !== payload.playbookDefinitionVersions.length
+    || heads.size !== payload.playbookDefinitionHeads.length
+    || submissions.size !== payload.playbookDefinitionSubmissions.length
+    || identities.size !== heads.size
+    || versions.size !== submissions.size
+  ) {
+    throw new Error("Playbook definition history contains duplicate or incomplete indexes.");
+  }
+
+  const submissionIdByVersion = new Map<string, string>();
+  for (const [submissionId, submission] of payload.playbookDefinitionSubmissions) {
+    const version = versions.get(submission.versionId);
+    if (
+      version === undefined
+      || version.revision !== submission.revision
+      || submissionIdByVersion.has(submission.versionId)
+    ) {
+      throw new Error("A playbook definition submission index is inconsistent.");
+    }
+    submissionIdByVersion.set(submission.versionId, submissionId);
+  }
+
+  const chains = new Map<string, SessionPlaybookDefinitionVersion[]>();
+  const recordedTimes = new Set<string>();
+  let maximumRecordedAtMs = -1n;
+  for (const version of payload.playbookDefinitionVersions) {
+    if (!identities.has(version.playbookId)) {
+      throw new Error("A playbook definition version references a missing stable identity.");
+    }
+    const submissionId = submissionIdByVersion.get(version.versionId);
+    if (submissionId === undefined) {
+      throw new Error("A playbook definition version is missing its submission receipt.");
+    }
+    const prepared = preparePlaybookDefinition(version.action === "create" ? {
+      submissionId,
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: version.name,
+      rules: version.rules,
+    } : {
+      submissionId,
+      action: version.action,
+      playbookId: version.playbookId,
+      expectedPreviousVersionId: version.expectedPreviousVersionId as string,
+      name: version.name,
+      rules: version.rules,
+    });
+    if (
+      prepared.playbookId !== version.playbookId
+      || prepared.versionId !== version.versionId
+      || prepared.revision !== version.revision
+      || prepared.state !== version.state
+      || prepared.name !== version.name
+      || !sameOrderedStrings(prepared.rules.map((rule) => rule.text), version.rules)
+    ) {
+      throw new Error("A playbook definition version does not bind its exact canonical command.");
+    }
+    const recordedAtUs = BigInt(version.recordedAtUs);
+    if (recordedAtUs % 1_000n !== 0n || recordedTimes.has(version.recordedAtUs)) {
+      throw new Error("Playbook definition timestamps must be unique millisecond values.");
+    }
+    recordedTimes.add(version.recordedAtUs);
+    const recordedAtMs = recordedAtUs / 1_000n;
+    if (recordedAtMs > maximumRecordedAtMs) maximumRecordedAtMs = recordedAtMs;
+    const chain = chains.get(version.playbookId) ?? [];
+    chain.push(version);
+    chains.set(version.playbookId, chain);
+  }
+  if (chains.size !== identities.size) {
+    throw new Error("Every playbook definition identity must own immutable history.");
+  }
+
+  for (const [playbookId, chain] of chains) {
+    chain.sort((left, right) => left.version - right.version);
+    const identity = identities.get(playbookId);
+    const first = chain[0];
+    if (
+      identity === undefined
+      || first === undefined
+      || identity.createdAtUs !== first.recordedAtUs
+      || first.action !== "create"
+      || first.expectedPreviousVersionId !== null
+      || first.state !== "active"
+    ) {
+      throw new Error("A playbook definition identity has an invalid creation version.");
+    }
+    let previous: SessionPlaybookDefinitionVersion | null = null;
+    for (const [index, version] of chain.entries()) {
+      if (
+        version.version !== index + 1
+        || (previous !== null && BigInt(version.recordedAtUs) <= BigInt(previous.recordedAtUs))
+        || (previous !== null && version.expectedPreviousVersionId !== previous.versionId)
+      ) {
+        throw new Error("Playbook definition versions are not contiguous immutable history.");
+      }
+      if (previous !== null) {
+        const unchanged = previous.name === version.name
+          && sameOrderedStrings(previous.rules, version.rules);
+        const validTransition = version.action === "edit"
+          ? previous.state === "active" && version.state === "active"
+          : version.action === "archive"
+            ? previous.state === "active" && version.state === "archived" && unchanged
+            : version.action === "restore"
+              && previous.state === "archived" && version.state === "active" && unchanged;
+        if (!validTransition) {
+          throw new Error("A playbook definition lifecycle transition is invalid.");
+        }
+      }
+      previous = version;
+    }
+    if (heads.get(playbookId) !== chain.at(-1)?.versionId) {
+      throw new Error("A playbook definition head is not its latest immutable version.");
+    }
+  }
+
+  const names = new Set<string>();
+  for (const definition of sessionPlaybookLibraryFromHistory(
+    payload.playbookDefinitionVersions,
+    payload.playbookDefinitionHeads,
+  )) {
+    const key = normalizedName(definition.name);
+    if (names.has(key)) {
+      throw new Error("Current playbook definition names must be unique case-insensitively.");
+    }
+    names.add(key);
+  }
+  if (BigInt(payload.counters.lastPlaybookDefinitionRecordedAtMs) !== maximumRecordedAtMs) {
+    throw new Error("The playbook definition timestamp counter is inconsistent.");
+  }
+}
+
 function assertPayloadSemantics(
-  payload: SessionJournalPayload,
+  payload: SessionJournalPayload | SessionJournalPayloadV2,
   ledger: JournalLedgerSnapshot,
 ): void {
   assertPayloadOrder(payload);
+  if (payload.stateVersion === 3) assertPlaybookDefinitionSemantics(payload);
   if (payload.workspace === null) {
-    if (!isEmptySessionJournalPayload(payload)) {
-      throw new Error("A browser session without a workspace must be exactly empty.");
+    if (!isEmptySessionJournalBasePayload(payload)) {
+      throw new Error("A browser session without a workspace must have empty journal data.");
     }
     return;
   }
+  const reviewVersions: readonly JournalTradeReviewRecord[] = payload.stateVersion === 2
+    ? payload.reviewVersions.map((review) => ({ ...review, playbookDefinition: null }))
+    : payload.reviewVersions;
 
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: payload.workspace.timeZone }).format(new Date(0));
@@ -670,7 +1271,14 @@ function assertPayloadSemantics(
 
   const dailyVocabulary = new Set<string>();
   for (const term of payload.reviewTerms) {
-    const key = `${term.category}\u0000${normalizedName(canonicalReviewTermName(term.name))}`;
+    const canonicalName = canonicalReviewTermName(term.name);
+    const normalizedTermName = normalizedName(canonicalName);
+    const expectedTermId = `session-review-term:${sha256Hex(JSON.stringify([
+      term.category,
+      normalizedTermName,
+    ]))}`;
+    if (term.id !== expectedTermId) throw new Error("A review vocabulary ID is inconsistent.");
+    const key = `${term.category}\u0000${normalizedTermName}`;
     if (dailyVocabulary.has(key)) {
       throw new Error("Review vocabulary contains duplicate normalized terms.");
     }
@@ -814,7 +1422,7 @@ function assertPayloadSemantics(
     throw new Error("Manual executions cannot appear in inactive import history.");
   }
 
-  const reviews = new Map(payload.reviewVersions.map((review) => [review.id, review]));
+  const reviews = new Map(reviewVersions.map((review) => [review.id, review]));
   const reviewHeadBySubject = new Map<string, string>();
   for (const [tradeSubjectId, reviewId] of payload.reviewHeads) {
     const review = reviews.get(reviewId);
@@ -827,9 +1435,10 @@ function assertPayloadSemantics(
     }
     reviewHeadBySubject.set(tradeSubjectId, reviewId);
   }
+  const expectedPreviousReviewIdByReview = new Map<string, string | null>();
   const chains = new Map<string, JournalTradeReviewRecord[]>();
   let maximumReviewMs = -1n;
-  for (const review of payload.reviewVersions) {
+  for (const review of reviewVersions) {
     const chain = chains.get(review.tradeSubjectId) ?? [];
     chain.push(review);
     chains.set(review.tradeSubjectId, chain);
@@ -849,8 +1458,16 @@ function assertPayloadSemantics(
   }
   for (const [tradeSubjectId, chain] of chains) {
     chain.sort((left, right) => left.version - right.version);
+    let expectedPreviousReviewId: string | null = null;
+    let previousRecordedAtUs = -1n;
     chain.forEach((review, index) => {
-      if (review.version !== index + 1) throw new Error("Review versions are not contiguous.");
+      const recordedAtUs = BigInt(review.recordedAtUs);
+      if (review.version !== index + 1 || recordedAtUs <= previousRecordedAtUs) {
+        throw new Error("Review versions are not contiguous.");
+      }
+      expectedPreviousReviewIdByReview.set(review.id, expectedPreviousReviewId);
+      expectedPreviousReviewId = review.id;
+      previousRecordedAtUs = recordedAtUs;
     });
     if (reviewHeadBySubject.get(tradeSubjectId) !== chain.at(-1)?.id) {
       throw new Error("A review head is not the latest immutable version.");
@@ -861,6 +1478,7 @@ function assertPayloadSemantics(
   }
 
   const submissionsByReview = new Set<string>();
+  const submissionIdByReview = new Map<string, string>();
   for (const [submissionId, submission] of payload.reviewSubmissions) {
     if (submissionId.length !== 64) throw new Error("A review submission ID is invalid.");
     const review = reviews.get(submission.reviewId);
@@ -872,8 +1490,9 @@ function assertPayloadSemantics(
       throw new Error("The review submission index is inconsistent.");
     }
     submissionsByReview.add(submission.reviewId);
+    submissionIdByReview.set(submission.reviewId, submissionId);
   }
-  if (submissionsByReview.size !== payload.reviewVersions.length) {
+  if (submissionsByReview.size !== reviewVersions.length) {
     throw new Error("The review submission index does not cover every review.");
   }
 
@@ -1021,26 +1640,58 @@ function assertPayloadSemantics(
   }
 
   const playbooks = new Map(payload.playbooks.map((playbook) => [playbook.id, playbook]));
+  const definitionVersions = payload.stateVersion === 3
+    ? new Map(payload.playbookDefinitionVersions.map((version) => [version.versionId, version]))
+    : new Map<string, SessionPlaybookDefinitionVersion>();
+  const playbookNames = new Set<string>();
   for (const playbook of payload.playbooks) {
-    if (playbook.rules.some((rule) => rule.playbookId !== playbook.id)) {
-      throw new Error("A playbook rule references a different playbook.");
+    const playbookName = reviewVocabularyIdentity(
+      playbook.name,
+      "shared review-playbook name",
+      120,
+    );
+    const expectedPlaybookId = `session-playbook:${sha256Hex(playbookName)}`;
+    if (playbook.id !== expectedPlaybookId || playbookNames.has(playbookName)) {
+      throw new Error("Shared review playbooks contain inconsistent normalized identity.");
+    }
+    playbookNames.add(playbookName);
+    const ruleNames = new Set<string>();
+    for (const rule of playbook.rules) {
+      const ruleName = reviewVocabularyIdentity(
+        rule.text,
+        "shared review-rule name",
+        500,
+      );
+      const expectedRuleId = `session-playbook-rule:${sha256Hex(JSON.stringify([
+        playbook.id,
+        ruleName,
+      ]))}`;
+      if (
+        rule.playbookId !== playbook.id
+        || rule.id !== expectedRuleId
+        || ruleNames.has(ruleName)
+      ) {
+        throw new Error("A shared review-playbook rule has inconsistent normalized identity.");
+      }
+      ruleNames.add(ruleName);
     }
   }
-  for (const review of payload.reviewVersions) {
-    if (review.playbookId === null) {
-      if (review.playbookName !== null || review.rules.length !== 0) {
-        throw new Error("A review without a playbook contains playbook data.");
-      }
-      continue;
+  for (const review of reviewVersions) {
+    const submissionId = submissionIdByReview.get(review.id);
+    if (
+      submissionId === undefined
+      || !expectedPreviousReviewIdByReview.has(review.id)
+    ) {
+      throw new Error("A trade review is missing its durable command identity.");
     }
-    const playbook = playbooks.get(review.playbookId);
-    if (playbook === undefined || playbook.name !== review.playbookName) {
-      throw new Error("A review references missing playbook metadata.");
-    }
-    const rules = new Map(playbook.rules.map((rule) => [rule.id, rule]));
-    if (review.rules.some((rule) => rules.get(rule.ruleId)?.text !== rule.text)) {
-      throw new Error("A review rule snapshot conflicts with its playbook.");
-    }
+    assertTradeReviewRevision(
+      review,
+      submissionId,
+      expectedPreviousReviewIdByReview.get(review.id) ?? null,
+      playbooks,
+      definitionVersions,
+      dailyVocabulary,
+    );
   }
 
   if (ledger.tradeSubjects.length !== ledger.projection.trades.length) {
@@ -1048,16 +1699,20 @@ function assertPayloadSemantics(
   }
 }
 
-function assertCurrentSchema(archive: JournalArchive): void {
-  const expectedVersion = MOBILE_SCHEMA_MIGRATIONS.at(-1)?.toVersion ?? 0;
+function assertSchemaVersion(
+  archive: JournalArchive,
+  expectedVersion: number,
+): void {
+  const expectedMigrations = MOBILE_SCHEMA_MIGRATIONS.slice(0, expectedVersion);
   if (
     archive.source.schemaUserVersion !== expectedVersion
-    || archive.source.migrations.length !== MOBILE_SCHEMA_MIGRATIONS.length
+    || expectedMigrations.at(-1)?.toVersion !== expectedVersion
+    || archive.source.migrations.length !== expectedMigrations.length
   ) {
     throw new Error("The browser-session schema version is incompatible.");
   }
   archive.source.migrations.forEach((migration, index) => {
-    const expected = MOBILE_SCHEMA_MIGRATIONS[index];
+    const expected = expectedMigrations[index];
     if (
       expected === undefined
       || migration.version !== expected.toVersion
@@ -1080,6 +1735,24 @@ function deepFreeze<Value>(value: Value): Value {
   return Object.freeze(value);
 }
 
+function migrateSessionJournalPayloadV2(
+  payload: SessionJournalPayloadV2,
+): SessionJournalPayload {
+  return {
+    ...payload,
+    stateVersion: 3,
+    reviewVersions: payload.reviewVersions.map((review) => ({
+      ...review,
+      playbookDefinition: null,
+    })),
+    playbookDefinitionIdentities: [],
+    playbookDefinitionVersions: [],
+    playbookDefinitionHeads: [],
+    playbookDefinitionSubmissions: [],
+    counters: { ...payload.counters, lastPlaybookDefinitionRecordedAtMs: "-1" },
+  };
+}
+
 export function verifySessionJournalRestore(
   contents: string,
 ): VerifiedSessionRestoreCandidate {
@@ -1093,14 +1766,23 @@ export function verifySessionJournalRestore(
       { cause: error },
     );
   }
-  if (archive.payload.kind !== "browser-session-state" || archive.payload.version !== 2) {
+  if (
+    archive.payload.kind !== "browser-session-state"
+    || (archive.payload.version !== 2 && archive.payload.version !== 3)
+  ) {
     throw new SessionRestoreValidationError(
       "unsupported_payload",
-      "The browser journal restores only browser-session-state version 2 exports.",
+      "The browser journal restores browser-session-state version 2 or 3 exports.",
     );
   }
+  const sourcePayloadVersion = archive.payload.version;
   try {
-    assertCurrentSchema(archive);
+    assertSchemaVersion(
+      archive,
+      sourcePayloadVersion === 2
+        ? 4
+        : MOBILE_SCHEMA_MIGRATIONS.at(-1)?.toVersion ?? 0,
+    );
   } catch (error) {
     throw new SessionRestoreValidationError(
       "incompatible_schema",
@@ -1109,16 +1791,21 @@ export function verifySessionJournalRestore(
     );
   }
 
-  let payload: SessionJournalPayload;
-  let ledger: JournalLedgerSnapshot;
-  let summary: JournalArchiveSummary;
+  let sourcePayload: SessionJournalPayload | SessionJournalPayloadV2;
+  let sourceLedger: JournalLedgerSnapshot;
+  let sourceSummary: JournalArchiveSummary;
   try {
-    payloadShape(archive.payload.data, "Browser session payload");
-    payload = archive.payload.data as unknown as SessionJournalPayload;
-    ledger = sessionJournalLedgerFromPayload(payload);
-    assertPayloadSemantics(payload, ledger);
-    workspaceSnapshotFromLedger(ledger);
-    summary = sessionJournalSummary(payload, ledger);
+    if (sourcePayloadVersion === 2) {
+      payloadShapeV2(archive.payload.data, "Browser session v2 payload");
+      sourcePayload = archive.payload.data as unknown as SessionJournalPayloadV2;
+    } else {
+      payloadShape(archive.payload.data, "Browser session v3 payload");
+      sourcePayload = archive.payload.data as unknown as SessionJournalPayload;
+    }
+    sourceLedger = sessionJournalLedgerFromPayload(sourcePayload);
+    assertPayloadSemantics(sourcePayload, sourceLedger);
+    if (sourceLedger.workspace !== null) workspaceSnapshotFromLedger(sourceLedger);
+    sourceSummary = sessionJournalSummary(sourcePayload, sourceLedger);
   } catch (error) {
     throw new SessionRestoreValidationError(
       "invalid_payload",
@@ -1127,21 +1814,48 @@ export function verifySessionJournalRestore(
     );
   }
 
-  const stateSha256 = sessionJournalStateSha256(payload);
-  const reportSha256 = sessionJournalReportSha256(ledger);
+  const sourceStateSha256 = sessionJournalStateSha256(sourcePayload);
+  const sourceReportSha256 = sessionJournalReportSha256(sourceLedger);
   if (
-    stateSha256 !== archive.stateSha256
-    || reportSha256 !== archive.reportSha256
-    || !sameJson(summary, archive.summary)
+    sourceStateSha256 !== archive.stateSha256
+    || sourceReportSha256 !== archive.reportSha256
+    || !sameJson(sourceSummary, archive.summary)
   ) {
     throw new SessionRestoreValidationError(
       "verification_failed",
       "The browser-session state, report input, or summary does not match its payload.",
     );
   }
+
+  const payload = sourcePayloadVersion === 2
+    ? migrateSessionJournalPayloadV2(sourcePayload as SessionJournalPayloadV2)
+    : sourcePayload as SessionJournalPayload;
+  let ledger: JournalLedgerSnapshot;
+  let summary: JournalArchiveSummary;
+  try {
+    ledger = sessionJournalLedgerFromPayload(payload);
+    assertPayloadSemantics(payload, ledger);
+    if (ledger.workspace !== null) workspaceSnapshotFromLedger(ledger);
+    summary = sessionJournalSummary(payload, ledger);
+  } catch (error) {
+    throw new SessionRestoreValidationError(
+      "invalid_payload",
+      error instanceof Error ? error.message : "The migrated browser session payload is invalid.",
+      { cause: error },
+    );
+  }
+  const stateSha256 = sessionJournalStateSha256(payload);
+  const reportSha256 = sessionJournalReportSha256(ledger);
+  if (reportSha256 !== sourceReportSha256 || !sameJson(summary, sourceSummary)) {
+    throw new SessionRestoreValidationError(
+      "verification_failed",
+      "Browser-session migration changed governed report or summary inputs.",
+    );
+  }
   return deepFreeze({
     archive,
     payload,
+    sourcePayloadVersion,
     ledger,
     summary,
     stateSha256,

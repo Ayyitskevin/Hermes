@@ -89,6 +89,31 @@ describe("prepared journal restore", () => {
     })).toThrow(/changed after preview/i);
   });
 
+  it("accepts only the supported legacy and current payload-version pairs", () => {
+    expect(() => createPreparedJournalRestore("native-v1", verifiedPreview({
+      payloadVersion: 1,
+    }))).not.toThrow();
+    expect(() => createPreparedJournalRestore("native-v2", verifiedPreview({
+      payloadVersion: 2,
+    }))).not.toThrow();
+    expect(() => createPreparedJournalRestore("browser-v2", verifiedPreview({
+      payloadKind: "browser-session-state",
+      payloadVersion: 2,
+    }))).not.toThrow();
+    expect(() => createPreparedJournalRestore("browser-v3", verifiedPreview({
+      payloadKind: "browser-session-state",
+      payloadVersion: 3,
+    }))).not.toThrow();
+
+    expect(() => createPreparedJournalRestore("native-v3", verifiedPreview({
+      payloadVersion: 3,
+    }))).toThrow(/compatibility/i);
+    expect(() => createPreparedJournalRestore("browser-v1", verifiedPreview({
+      payloadKind: "browser-session-state",
+      payloadVersion: 1,
+    }))).toThrow(/compatibility/i);
+  });
+
   it("rejects invalid compatibility and count claims from adapters", () => {
     expect(() => createPreparedJournalRestore("archive", verifiedPreview({
       archiveSha256: "not-a-hash",

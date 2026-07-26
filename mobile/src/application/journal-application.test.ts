@@ -4,6 +4,8 @@ import { SessionJournalStore } from "../adapters/session-journal-store";
 import { parseJournalArchive } from "./journal-archive";
 import type {
   DailyJournalCommitResult,
+  JournalPlaybookDefinitionRecord,
+  PlaybookDefinitionCommitResult,
   JournalRestoreCommitResult,
   ManualExecutionCommitResult,
   PreparedTradeReviewBatch,
@@ -19,6 +21,7 @@ import {
   JournalApplication,
   JournalRestoreCommitStatusUncertainError,
   ManualExecutionCommitStatusUncertainError,
+  PlaybookDefinitionCommitStatusUncertainError,
   TradeReviewCommitStatusUncertainError,
 } from "./journal-application";
 import type { PreparedDailyJournalEntry } from "./prepare-daily-journal";
@@ -28,6 +31,10 @@ import {
   type PreparedManualExecution,
   prepareManualExecution,
 } from "./prepare-manual-execution";
+import {
+  preparePlaybookDefinition,
+  type PreparedPlaybookDefinitionCommand,
+} from "./prepare-playbook-definition";
 import {
   prepareTradeReview,
   tradeReviewBatchRevision,
@@ -89,6 +96,208 @@ function reviewInput(
     ...overrides,
   };
 }
+
+function playbookDefinitionRecord(
+  command: PreparedPlaybookDefinitionCommand,
+  overrides: Partial<JournalPlaybookDefinitionRecord> = {},
+): JournalPlaybookDefinitionRecord {
+  return Object.freeze({
+    id: command.playbookId,
+    versionId: command.versionId,
+    version: 1,
+    revision: command.revision,
+    name: command.name,
+    state: command.state,
+    rules: Object.freeze(command.rules.map(({ text }) => text)),
+    recordedAtUs: "1000000",
+    ...overrides,
+  });
+}
+
+class PlaybookFacadeStore extends SessionJournalStore {
+  commitCalls = 0;
+  libraryLoads = 0;
+  commands: PreparedPlaybookDefinitionCommand[] = [];
+  library: readonly JournalPlaybookDefinitionRecord[] = Object.freeze([]);
+
+  async loadPlaybookLibrary(): Promise<readonly JournalPlaybookDefinitionRecord[]> {
+    this.libraryLoads += 1;
+    return this.library;
+  }
+
+  async commitPlaybookDefinition(
+    command: PreparedPlaybookDefinitionCommand,
+  ): Promise<PlaybookDefinitionCommitResult> {
+    this.commitCalls += 1;
+    this.commands.push(command);
+    const existing = this.library.find(({ id }) => id === command.playbookId);
+    if (
+      existing?.versionId === command.versionId
+      && existing.revision === command.revision
+    ) {
+      return Object.freeze({
+        outcome: "duplicate",
+        definition: existing,
+        library: this.library,
+      });
+    }
+    const definition = playbookDefinitionRecord(command);
+    this.library = Object.freeze([definition]);
+    return Object.freeze({
+      outcome: "committed",
+      definition,
+      library: this.library,
+    });
+  }
+}
+
+describe("JournalApplication playbook definition workflow", () => {
+  it("delegates secure command preparation only in the local journal", async () => {
+    const store = new PlaybookFacadeStore();
+    const application = new JournalApplication(store, "browser-session");
+    const input = {
+      submissionId: "a".repeat(64),
+      action: "create" as const,
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "  Opening   Range Breakout ",
+      rules: [" Wait for confirmation "],
+    };
+    try {
+      expect(application.preparePlaybookDefinition(input))
+        .toEqual(preparePlaybookDefinition(input));
+      expect(application.createPlaybookDefinitionSubmissionId())
+        .toMatch(/^[a-f0-9]{64}$/);
+      expect(await application.loadPlaybookLibrary()).toEqual([]);
+      expect(store.libraryLoads).toBe(1);
+
+      await application.exploreDemo();
+      expect(() => application.preparePlaybookDefinition(input)).toThrow(/read-only/i);
+      expect(() => application.createPlaybookDefinitionSubmissionId()).toThrow(/read-only/i);
+      expect(await application.loadPlaybookLibrary()).toEqual([]);
+      expect(store.libraryLoads).toBe(1);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("passes committed and duplicate results through the facade", async () => {
+    const store = new PlaybookFacadeStore();
+    const application = new JournalApplication(store, "browser-session");
+    const command = application.preparePlaybookDefinition({
+      submissionId: "b".repeat(64),
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "Momentum",
+      rules: ["Respect the stop"],
+    });
+    try {
+      const committed = await application.commitPlaybookDefinition(command);
+      expect(committed).toMatchObject({
+        outcome: "committed",
+        definition: {
+          id: command.playbookId,
+          versionId: command.versionId,
+          revision: command.revision,
+          name: "Momentum",
+          rules: ["Respect the stop"],
+        },
+      });
+
+      const duplicate = await application.commitPlaybookDefinition(command);
+      expect(duplicate).toEqual({
+        outcome: "duplicate",
+        definition: committed.definition,
+        library: committed.library,
+      });
+      expect(store.commitCalls).toBe(2);
+      expect(store.commands).toEqual([command, command]);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it("reconciles a lost commit response only from the exact version and revision", async () => {
+    class LostPlaybookResponseStore extends PlaybookFacadeStore {
+      async commitPlaybookDefinition(
+        command: PreparedPlaybookDefinitionCommand,
+      ): Promise<PlaybookDefinitionCommitResult> {
+        this.commitCalls += 1;
+        this.commands.push(command);
+        if (this.library.length === 0) {
+          this.library = Object.freeze([playbookDefinitionRecord(command)]);
+        }
+        throw new Error("Native bridge response was lost.");
+      }
+    }
+
+    const store = new LostPlaybookResponseStore();
+    const application = new JournalApplication(store, "browser-session");
+    const command = application.preparePlaybookDefinition({
+      submissionId: "c".repeat(64),
+      action: "create",
+      playbookId: null,
+      expectedPreviousVersionId: null,
+      name: "Reversal",
+      rules: ["Wait for exhaustion"],
+    });
+    try {
+      const recovered = await application.commitPlaybookDefinitionSafely(command);
+      expect(recovered).toEqual({
+        outcome: "duplicate",
+        definition: store.library[0],
+        library: store.library,
+      });
+      expect(recovered.definition).toMatchObject({
+        id: command.playbookId,
+        versionId: command.versionId,
+        revision: command.revision,
+      });
+      expect(store.commitCalls).toBe(2);
+      expect(store.libraryLoads).toBe(1);
+    } finally {
+      await application.close();
+    }
+  });
+
+  it.each(["version", "revision"] as const)(
+    "keeps the result uncertain when the current %s does not match",
+    async (mismatch) => {
+      class UncertainPlaybookStore extends PlaybookFacadeStore {
+        async commitPlaybookDefinition(
+          command: PreparedPlaybookDefinitionCommand,
+        ): Promise<PlaybookDefinitionCommitResult> {
+          this.commitCalls += 1;
+          this.commands.push(command);
+          throw new Error("Native bridge is unavailable.");
+        }
+      }
+
+      const store = new UncertainPlaybookStore();
+      const application = new JournalApplication(store, "browser-session");
+      const command = application.preparePlaybookDefinition({
+        submissionId: "d".repeat(64),
+        action: "create",
+        playbookId: null,
+        expectedPreviousVersionId: null,
+        name: "Trend continuation",
+        rules: [],
+      });
+      store.library = Object.freeze([playbookDefinitionRecord(command, mismatch === "version"
+        ? { versionId: "f".repeat(64) }
+        : { revision: "e".repeat(64) })]);
+      try {
+        await expect(application.commitPlaybookDefinitionSafely(command))
+          .rejects.toBeInstanceOf(PlaybookDefinitionCommitStatusUncertainError);
+        expect(store.commitCalls).toBe(2);
+        expect(store.libraryLoads).toBe(1);
+      } finally {
+        await application.close();
+      }
+    },
+  );
+});
 
 describe("JournalApplication manual recovery", () => {
   it("reads a committed execution before acknowledging a lost save response", async () => {
@@ -967,7 +1176,7 @@ describe("JournalApplication user-data export", () => {
       expect(parsed).toMatchObject({
         kind: "hermes-journal-export",
         formatVersion: 1,
-        payload: { kind: "browser-session-state", version: 2 },
+        payload: { kind: "browser-session-state", version: 3 },
       });
       expect(artifact.fileName).toMatch(/^hermes-journal-export-.*\.json$/);
     } finally {

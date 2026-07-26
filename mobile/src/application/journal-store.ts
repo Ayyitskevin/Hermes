@@ -10,6 +10,7 @@ import type {
 import type { PreparedManualExecution } from "./prepare-manual-execution";
 import type { PreparedTradeReview } from "./prepare-trade-review";
 import type { PreparedDailyJournalEntry } from "./prepare-daily-journal";
+import type { PreparedPlaybookDefinitionCommand } from "./prepare-playbook-definition";
 import type { JournalExportArtifact } from "./journal-archive";
 import type { PreparedJournalRestore } from "./journal-restore";
 
@@ -82,6 +83,24 @@ export interface JournalPlaybookRecord {
   readonly rules: readonly JournalPlaybookRuleRecord[];
 }
 
+export type JournalPlaybookDefinitionState = "active" | "archived";
+
+/**
+ * The current immutable version for one stable user-authored playbook
+ * definition. Historical versions remain adapter-owned and are exported even
+ * though this read model projects only the current head.
+ */
+export interface JournalPlaybookDefinitionRecord {
+  readonly id: string;
+  readonly versionId: string;
+  readonly version: number;
+  readonly revision: string;
+  readonly name: string;
+  readonly state: JournalPlaybookDefinitionState;
+  readonly rules: readonly string[];
+  readonly recordedAtUs: string;
+}
+
 export interface JournalTradeReviewRuleResult {
   readonly ruleId: string;
   readonly text: string;
@@ -101,6 +120,15 @@ export interface JournalTradeReviewRecord {
   readonly tags: readonly string[];
   readonly playbookId: string | null;
   readonly playbookName: string | null;
+  /**
+   * Exact stable-definition/version identity selected explicitly by the user.
+   * Legacy free-text review playbooks remain null and are never guessed.
+   */
+  readonly playbookDefinition: {
+    readonly id: string;
+    readonly versionId: string;
+    readonly revision: string;
+  } | null;
   readonly rules: readonly JournalTradeReviewRuleResult[];
   readonly initialRisk: {
     readonly amount: string;
@@ -194,6 +222,12 @@ export interface DailyJournalCommitResult {
   readonly ledger: JournalLedgerSnapshot;
 }
 
+export interface PlaybookDefinitionCommitResult {
+  readonly outcome: "committed" | "duplicate";
+  readonly definition: JournalPlaybookDefinitionRecord;
+  readonly library: readonly JournalPlaybookDefinitionRecord[];
+}
+
 export interface JournalRestoreCommitResult {
   readonly outcome: "committed" | "already-restored";
   readonly ledger: JournalLedgerSnapshot;
@@ -250,6 +284,22 @@ export class JournalDailyEntryError extends Error {
   }
 }
 
+export interface PlaybookDefinitionConflict {
+  readonly code:
+    | "submission_changed"
+    | "definition_changed"
+    | "duplicate_name"
+    | "invalid_transition";
+  readonly message: string;
+}
+
+export class JournalPlaybookDefinitionError extends Error {
+  constructor(readonly conflict: PlaybookDefinitionConflict) {
+    super(conflict.message);
+    this.name = "JournalPlaybookDefinitionError";
+  }
+}
+
 export interface CsvImportConflict {
   readonly code: "preview_changed" | "execution_changed" | "duplicate_execution";
   readonly message: string;
@@ -284,6 +334,8 @@ export class JournalRestoreError extends Error {
 
 export interface JournalStore {
   load(): Promise<JournalLedgerSnapshot>;
+  /** Current heads for stable user-authored definitions, including archived entries. */
+  loadPlaybookLibrary(): Promise<readonly JournalPlaybookDefinitionRecord[]>;
   /** Read-only receipt occurrence evidence; never reconstruct this link from display fields. */
   loadImportReviewEvidence(receiptId: string): Promise<JournalImportReviewEvidence>;
   /** Complete archive boundary; unlike load(), this includes immutable history. */
@@ -294,6 +346,9 @@ export interface JournalStore {
   commitManualExecution(command: PreparedManualExecution): Promise<ManualExecutionCommitResult>;
   commitTradeReviews(command: PreparedTradeReviewBatch): Promise<TradeReviewCommitResult>;
   commitDailyJournalEntry(command: PreparedDailyJournalEntry): Promise<DailyJournalCommitResult>;
+  commitPlaybookDefinition(
+    command: PreparedPlaybookDefinitionCommand,
+  ): Promise<PlaybookDefinitionCommitResult>;
   loadUnacknowledgedManualExecutions(): Promise<readonly UnacknowledgedManualExecution[]>;
   acknowledgeManualExecution(submissionId: string): Promise<void>;
   rollbackImport(receiptId: string, reason: string): Promise<JournalLedgerSnapshot>;
